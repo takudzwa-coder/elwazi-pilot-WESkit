@@ -1,0 +1,12 @@
+name: wesnake
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.7.3
+  - connexion=2.5.0
+  - snakemake=5.8.2
+  - pylint=2.4.4
+  - gevent=1.4.0
+  - swagger-ui-bundle=0.0.6
