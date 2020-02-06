@@ -37,6 +37,8 @@ def GetRunStatus(run_id, *args, **kwargs):
 
 # get:/service-info
 def GetServiceInfo(*args, **kwargs):
+    config=current_app.config
+    print(config)
     print("GetServiceInfo")
     response = {
         "supported_wes_versions":"1.0.0",
@@ -80,6 +82,7 @@ def RunWorkflow(*args, **kwargs):
     return response, 200
 
 def _create_run(*args, **kwargs):
+    print("_create_run")
     #create run identifier
     charset = "0123456789abcdefghijklmnopqrstuvwxyz"
     length=8
