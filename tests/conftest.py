@@ -1,6 +1,6 @@
 import pytest
 
-from app import create_app
+from ga4gh.wes.app import create_app
 
 
 test_config = {

@@ -3,6 +3,8 @@
 import argparse
 import connexion
 import yaml
+from pymongo import MongoClient
+from ga4gh.wes.Database import Database
 
 # load arguments
 
@@ -23,10 +25,11 @@ def create_app(config):
     app.app.config['ENV'] = "development"
     app.app.config['TESTING'] = False
 
-
     #TODO setup database connection
+    app.database = Database(MongoClient(), "WES")
 
     return(app)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="WESnake")
