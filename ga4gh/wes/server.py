@@ -1,4 +1,4 @@
-from ga4gh.wes.Database import Database
+from ga4gh.wes.RunStatus import RunStatus
 import os, subprocess, json, yaml
 
 from datetime import datetime
@@ -61,26 +61,17 @@ def ListRuns(*args, **kwargs):
 # post:/runs
 def RunWorkflow(*args, **kwargs):
     print("RunWorkflow")
-    
-    # create run object
-    run_id = create_run_id(*args, **kwargs)
-
-    # store run object
-    current_app.database.store_run_id(run_id)
-    current_app.database.store_run_status(run_id)
-    current_app.database.store_run_request_time(run_id)
+    run = current_app.database.create_new_run(create_run_id(), kwargs)
 
     # create run environment
-    _create_environment(run_id)
+    run = _create_environment(run)
 
     # execute run
-    _execute_run(run_id)
-
-    response = current_app.database.information_run(run_id)
-    return response, 200
+    run = _execute_run(run)
+    return run.pretty(), 200
 
 
-def create_run_id(*args, **kwargs):
+def create_run_id():
     print("_create_run_id")
     # create run identifier
     charset = "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -91,29 +82,34 @@ def create_run_id(*args, **kwargs):
 
 def _execute_run(run):
     print("_execute_run")
-    tmp_dir = "tmp/" + current_app.database.get_run_id(run)
+    new_run = run.copy()
+    tmp_dir = "tmp/" + current_app.database.get_run_id(new_run)
     command = [
         "snakemake",
-        "--snakefile", run["request"]["workflow_url"],
+        "--snakefile", new_run["request"]["workflow_url"],
         "--directory", tmp_dir,
         "all"]
-    current_app.database.store_run_status(run)
-    current_app.database.store_run_start_time(run)
-    run["run_log"]["cmd"] = " ".join(command)
+    new_run.run_status = RunStatus.Running
+    new_run.start_time = current_app.database.get_current_time()
+    new_run["run_log"]["cmd"] = " ".join(command)
+    current_app.database.update_run(new_run)
     with open(tmp_dir + "/stdout.txt", "w") as fout:
         with open(tmp_dir + "/stderr.txt", "w") as ferr:
             subprocess.call(command, stdout=fout, stderr=ferr)
-    current_app.database.store_run_end_time()
-    current_app.database.store_run_status(run)
-
-    return current_app.database.information_run(run)
+    new_run.run_status = RunStatus.Complete
+    new_run.end_time = current_app.database.get_current_time()
+    current_app.database.update_run(new_run)
+    return new_run
 
 
 def _create_environment(run):
     tmp_dir = "tmp/"
     print("_create_environment")
-    run_dir = os.path.abspath(os.path.join(tmp_dir, current_app.database.get_run_id(run)))
+    run_dir = os.path.abspath(os.path.join(tmp_dir, run.run_id))
     os.makedirs(run_dir)
     with open(run_dir + "/config.yaml", "w") as ff:
         yaml.dump(json.loads(run["request"]["workflow_params"]), ff)
-    return True
+    new_run = run.copy()
+    new_run.environment_path = run_dir
+    current_app.database.update_run(new_run)
+    return new_run
