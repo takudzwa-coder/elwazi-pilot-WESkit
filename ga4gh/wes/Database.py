@@ -1,4 +1,5 @@
-from _datetime import datetime
+from datetime import datetime
+from bson.json_util import *
 from ga4gh.wes.RunStatus import RunStatus
 
 
@@ -7,61 +8,29 @@ class Database:
 
     def __init__(self, mongo_client, database_name):
         self.db = mongo_client[database_name]
+        self.client = mongo_client
 
-    def store_run_id(self, run_id):
-        if run_id is None:
-            raise ValueError("None can not be run_id!")
-        collection_name = run_id
-        self.db[collection_name].insert_one(
-            {"run_id": run_id}
-        )
-
-    def store_run_status(self, run_id, run_status=RunStatus.NotStarted):
-        collection_name = run_id
-        self.db[collection_name].insert_one(
-            {"run_status": run_status}
-        )
-
-    def store_run_request_time(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].insert_one(
-            {"request_time": self.get_current_time()}
-        )
-
-    def store_run_start_time(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].insert_one(
-            {"start_time": self.get_current_time()}
-        )
-
-    def store_run_end_time(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].insert_one(
-            {"end_time": self.get_current_time()}
-        )
-
-    def information_run(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].find()
+    def get_run(self, run_id, **kwargs):
+        return self._db_runs().find_one({}, filter={"run_id": run_id}, **kwargs)
 
     def delete_run(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].remove()
+        return self._db_runs().delete_one({"run_id": run_id}).acknowledged
 
-    def list_runs(self):
-        self.db.list_collections()
-
-    def get_run_id(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].findOne({}, {"run_id": 1})
+    def list_run_id_and_states(self):
+        return self._db_runs().find(
+            projection={"_id": False,
+                        "run_status": True,
+                        "run_id": True
+                        })
 
     def get_workflow_url(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].findOne({}, {"workflow_url": 1})
+        return self.get_run(run_id).workflow_url
 
     def get_workflow_params(self, run_id):
-        collection_name = run_id
-        self.db[collection_name].findOne({}, {"workflow_params": 1})
+        return self.get_run(run_id, projection={"_id": False,
+                                                "workflow_params": True
+                                                }
+                            ).workflow_params
 
     def disconnect(self):
         self.db.quit()
@@ -70,26 +39,27 @@ class Database:
         self.db.drop()
 
     def get_current_time(self):
-        datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
+        return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def create_new_run(self, run_id, request):
         if run_id is None:
             raise ValueError("None can not be run_id!")
         run = {
             "run_id": run_id,
-            "run_status": RunStatus.NotStarted,
+            "run_status": RunStatus.NotStarted.encode(),
             "request_time": self.get_current_time(),
             "request": request,
             "run_log": {},
             "task_logs": [],
             "outputs": {}
         }
-        collection_name = run_id
-        self.db[collection_name].insert_one(run)
+        self._db_runs().insert_one(run)
         return run
 
     def update_run(self, run):
         if run.run_id is None:
             raise ValueError("None can not be run_id!")
-        self.db[run.run_id].update_one(run)
+        return self._db_runs().update_one({"run_id": run.run_id}, run).acknowledged
+
+    def _db_runs(self):
+        return self.db["run"]

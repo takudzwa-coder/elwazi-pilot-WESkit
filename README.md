@@ -5,5 +5,5 @@ A GA4GH compliant Workflow-Execution-Service (WES) for Snakemake.
 ## tests
 
 ```bash
-python -m pytest -v
+WESNAKE_TEST=’mongodb://$user:$password@$host:$port/’ python -m pytest -v
 ```

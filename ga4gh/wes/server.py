@@ -11,7 +11,7 @@ from random import choice
 # get:/runs/{run_id}
 def GetRunLog(run_id, *args, **kwargs):
     print("GetRunLog")
-    response = current_app.database.information_run(run_id)
+    response = current_app.database.get_run(run_id)
     return response, 200
 
 
@@ -29,7 +29,7 @@ def CancelRun(run_id, *args, **kwargs):
 # get:/runs/{run_id}/status
 def GetRunStatus(run_id, *args, **kwargs):
     print("GetRunStatus")
-    response = current_app.database.information_run(run_id)
+    response = current_app.database.get_run(run_id)
     return response, 200
 
 
@@ -54,7 +54,7 @@ def GetServiceInfo(*args, **kwargs):
 # get:/runs
 def ListRuns(*args, **kwargs):
     print("ListRuns")
-    response = current_app.database.list_runs()
+    response = current_app.database.list_run_id_and_states()
     return response, 200
 
 
@@ -83,20 +83,20 @@ def create_run_id():
 def _execute_run(run):
     print("_execute_run")
     new_run = run.copy()
-    tmp_dir = "tmp/" + current_app.database.get_run_id(new_run)
+    tmp_dir = "tmp/" + run.run_id
     command = [
         "snakemake",
         "--snakefile", new_run["request"]["workflow_url"],
         "--directory", tmp_dir,
         "all"]
-    new_run.run_status = RunStatus.Running
+    new_run.run_status = RunStatus.Running.encode()
     new_run.start_time = current_app.database.get_current_time()
     new_run["run_log"]["cmd"] = " ".join(command)
     current_app.database.update_run(new_run)
     with open(tmp_dir + "/stdout.txt", "w") as fout:
         with open(tmp_dir + "/stderr.txt", "w") as ferr:
             subprocess.call(command, stdout=fout, stderr=ferr)
-    new_run.run_status = RunStatus.Complete
+    new_run.run_status = RunStatus.Complete.encode()
     new_run.end_time = current_app.database.get_current_time()
     current_app.database.update_run(new_run)
     return new_run
