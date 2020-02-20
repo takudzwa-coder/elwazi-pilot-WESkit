@@ -1,8 +1,6 @@
 from ga4gh.wes.RunStatus import RunStatus
 import os, subprocess, json, yaml
 from flask import current_app
-from connexion import NoContent
-from connexion import request
 from random import choice
 import pprint
 
