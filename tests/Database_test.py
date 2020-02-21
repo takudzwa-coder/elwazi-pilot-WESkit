@@ -8,7 +8,7 @@ from pymongo import MongoClient
 def database_connection():
     container = MongoDbContainer('mongo:4.2.3')
     container.start()
-    database = Database(MongoClient(container.get_connection_url()), "test_database")
+    database = Database(MongoClient(container.get_connection_url()), "WES_Test")
     yield database
     database._db_runs().drop()
 
