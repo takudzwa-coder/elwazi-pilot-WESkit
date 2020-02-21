@@ -1,0 +1,5 @@
+.wesnake.code-workspace
+tmp/
+trash/
+__pycache__/
+.idea/

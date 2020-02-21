@@ -1,0 +1,16 @@
+configfile: "config.yaml"
+
+rule all:
+    input:
+        file="hello_world.txt"
+
+rule step1:
+    output:
+        file="hello_world.txt"
+    params:
+        text=config["text"]
+    shell:
+        """
+        sleep 60
+        echo {params.text} > {output.file}
+        """
