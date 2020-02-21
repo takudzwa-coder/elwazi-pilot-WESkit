@@ -3,3 +3,5 @@ tmp/
 trash/
 __pycache__/
 .idea/
+build/
+wesnake.iml
