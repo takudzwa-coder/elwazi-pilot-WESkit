@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 setup(name='WESnake',
-      version='0.1',
-      description="A Workflow Execution Service (GA4GH) for Snakemake",
-      url="https://gitlab.com/one-touch-pipeline/wesnake",
-      packages=["ga4gh"],
-      license="MIT",    # TODO: What licence do we want?
-      )
+      packages=find_packages(),
+      version='0.0.1',
+      entry_points={
+            "console_scripts": [
+                  "wesnake = ga4gh.wes.wesnake:main"
+            ]
+      })
