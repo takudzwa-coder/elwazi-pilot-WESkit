@@ -1,12 +1,14 @@
 import ga4gh.wes.workflow_executor_service as wes
+import ga4gh.wes.logging as log
 from random import choice
 
 
 # get:/runs/{run_id}
 def GetRun(current_app, run_id, *args, **kwargs):
-    print("GetRun")
+    log.log_info("GetRun")
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
+        log.log_error("Could not find %s" % run_id)
         return {"msg": "Could not find %s" % run_id,
                 "status_code": 0
                 }, 404
@@ -16,9 +18,10 @@ def GetRun(current_app, run_id, *args, **kwargs):
 
 # post:/runs/{run_id}/cancel
 def CancelRun(current_app, run_id, *args, **kwargs):
-    print("CancelRun")
+    log.log_info("CancelRun")
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
+        log.log_error("Key %s not found" % run_id)
         return {"msg": "Key %s not found" % run_id,
                 "status_code": 0
                 }, 404
@@ -30,9 +33,10 @@ def CancelRun(current_app, run_id, *args, **kwargs):
 
 # get:/runs/{run_id}/status
 def GetRunStatus(current_app, run_id, *args, **kwargs):
-    print("GetRunStatus")
+    log.log_info("GetRunStatus")
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
+        log.log_error("Could not find %s" % run_id)
         return {"msg": "Could not find %s" % run_id,
                 "status_code": 0
                 }, 404
@@ -44,7 +48,7 @@ def GetRunStatus(current_app, run_id, *args, **kwargs):
 def GetServiceInfo(current_app, *args, **kwargs):
     config = current_app.config
     print(config)
-    print("GetServiceInfo")
+    log.log_info("GetServiceInfo")
     response = {
         "supported_wes_versions": "1.0.0",
         "supported_filesystem_protocols": "file",
@@ -60,16 +64,19 @@ def GetServiceInfo(current_app, *args, **kwargs):
 
 # get:/runs
 def ListRuns(current_app, *args, **kwargs):
-    print("ListRuns")
+    log.log_info("ListRuns")
     response = current_app.database.list_run_ids_and_states()
     return response, 200
 
 
 # post:/runs
 def RunWorkflow(current_app, *args, **kwargs):
-    print("RunWorkflow")
+    log_msg = log.log_info("RunWorkflow")
     run = current_app.database.create_new_run(create_run_id(), kwargs)
-
+    new_run = run.copy()
+    new_run["run_log"] = log_msg
+    current_app.database.update_run(new_run)
+    
     # create run environment
     run = wes.create_environment(current_app, run)
 
@@ -79,7 +86,7 @@ def RunWorkflow(current_app, *args, **kwargs):
 
 
 def create_run_id():
-    print("_create_run_id")
+    log.log_info("_create_run_id")
     # create run identifier
     charset = "0123456789abcdefghijklmnopqrstuvwxyz"
     length = 8
