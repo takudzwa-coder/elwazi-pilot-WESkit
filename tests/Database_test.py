@@ -8,7 +8,6 @@ from pymongo import MongoClient
 @pytest.fixture(scope="function")
 def database_connection():
     connection_url = os.environ["WESNAKE_TEST"]
-    print(connection_url)
     database = Database(MongoClient(connection_url), "WES_Test")
     yield database
     database._db_runs().drop()

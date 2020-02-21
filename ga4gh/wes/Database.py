@@ -18,12 +18,12 @@ class Database:
     
     def get_workflow_params(self, run_id):
         return self.get_run(run_id, projection={"_id": False,
-                                                "request"[0]["workflow_params": True]: False                            # fix: workflow_params should be in request   no usage
+                                                "request"[0]["workflow_params": True]: False
                                                 }
                             ).workflow_params
     
     def get_workflow_url(self, run_id):
-        return self.get_run(run_id).workflow_url                                                                        # why there is no projection?   no usage
+        return self.get_run(run_id).workflow_url
 
     def get_current_time(self):
         return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -42,7 +42,6 @@ class Database:
             "run_id": run_id,
             "run_status": RunStatus.NotStarted.encode(),
             "request_time": self.get_current_time(),
-            # "request": request,                                                                                       # workflow_params, workflow_url, workflow_type, workflow_type_version should be in request -> s. oben
             "request": [{"workflow_url": request,
                         "workflow_params": request
                          }],
