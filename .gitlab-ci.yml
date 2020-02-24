@@ -7,6 +7,12 @@ stages:
   - test
   - run
 
+cache:
+  paths:
+    - /opt/cache/pip
+    - /opt/conda/pkgs
+    - .conda/pkgs
+
 services:
   - docker:dind
 
@@ -14,16 +20,14 @@ variables:
   DOCKER_HOST: "tcp://docker:2375"
   DOCKER_DRIVER: overlay2
 
-before_job:
-  stage: before_script
-  script:
-    - python -V  # Print out python version for debugging
-    - export PIP_CACHE_DIR="/opt/cache/pip"
-    - conda init bash
-    - source /root/.bashrc
-    - conda env create -n wesnake -f environment.yaml
-    - conda activate wesnake
-    - pip install git+https://github.com/testcontainers/testcontainers-python.git
+before_script:
+  - python -V  # Print out python version for debugging
+  - export PIP_CACHE_DIR="/opt/cache/pip"
+  - conda init bash
+  - source /root/.bashrc
+  - conda env create -n wesnake -f environment.yaml
+  - conda activate wesnake
+  - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
 test_job:
   stage: test
