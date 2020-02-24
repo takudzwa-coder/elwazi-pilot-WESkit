@@ -1,0 +1,20 @@
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: continuumio/miniconda3:latest
+
+before_script:
+  - python -V  # Print out python version for debugging
+  - conda env create -n wesnake -f environment.yml
+  - conda activate wesnake
+  - pip install git+https://github.com/testcontainers/testcontainers-python.git
+
+test:
+  script:
+    - python -m pytest
+
+run:
+  script:
+    - python setup.py bdist_wheel
+  artifacts:
+    paths:
+      - dist/*.whl
