@@ -2,6 +2,25 @@
 
 A GA4GH compliant Workflow-Execution-Service (WES) for Snakemake.
 
+## Installation from sources
+
+Install a Conda environment as follows
+
+```bash
+conda env create -n wesnake -f environment.yaml
+conda activate wesnake
+```
+
+Then install the application
+
+```bash
+git clone https://gitlab.com/one-touch-pipeline/wesnake.git
+cd wesnake
+python setup.py install
+```
+
+By this, an executable called `wesnake` is installed.
+
 ## Tests
 
 Tests use [testcontainers-python](https://testcontainers-python.readthedocs.io/en/latest/database.html) > 2.6.
@@ -12,17 +31,13 @@ To set the environment correctly up you need to first install the conda environm
 
 ```bash
 conda activate wesnake
-git clone https://github.com/testcontainers/testcontainers-python.git
-cd testcontainers-python
-python setup.py build
-pip install ./
+pip install git+https://github.com/testcontainers/testcontainers-python.git
 ```
 
-## Installation from sources
+To run the tests
 
 ```bash
-cd wesnake
-python setup.py install
+python -m pytest
 ```
 
 ## Configuration
@@ -31,9 +46,8 @@ Please adapt the `config.yaml` file.
 
 ## Running
 
-An executable called `wesnake` is installed. Run it with
+Run it with
 
 ```bash
 wesnake --config config.yaml
 ```
-
