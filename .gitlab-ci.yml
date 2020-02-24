@@ -15,8 +15,6 @@ variables:
   DOCKER_DRIVER: overlay2
 
 before_job:
-  tags:
-    - wesnake
   stage: before_script
   script:
     - python -V  # Print out python version for debugging
@@ -28,15 +26,11 @@ before_job:
     - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
 test_job:
-  tags:
-    - wesnake
   stage: test
   script:
     - python -m pytest
 
 run_job:
-  tags:
-    - wesnake
   stage: run
   script:
     - python setup.py bdist_wheel
