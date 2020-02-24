@@ -2,20 +2,42 @@
 # https://hub.docker.com/r/library/python/tags/
 image: continuumio/miniconda3:latest
 
-before_script:
-  - python -V  # Print out python version for debugging
-  - export PIP_CACHE_DIR="/opt/cache/pip"
-  - conda env create -n wesnake -f environment.yaml
-  - conda init bash
-  - source /root/.bashrc
-  - conda activate wesnake
-  - pip install git+https://github.com/testcontainers/testcontainers-python.git
+stages:
+  - before_script
+  - test
+  - run
 
-test:
+services:
+  - docker:dind
+
+variables:
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_DRIVER: overlay2
+
+before_job:
+  tags:
+    - wesnake
+  stage: before_script
+  script:
+    - python -V  # Print out python version for debugging
+    - export PIP_CACHE_DIR="/opt/cache/pip"
+    - conda init bash
+    - source /root/.bashrc
+    - conda env create -n wesnake -f environment.yaml
+    - conda activate wesnake
+    - pip install git+https://github.com/testcontainers/testcontainers-python.git
+
+test_job:
+  tags:
+    - wesnake
+  stage: test
   script:
     - python -m pytest
 
-run:
+run_job:
+  tags:
+    - wesnake
+  stage: run
   script:
     - python setup.py bdist_wheel
   artifacts:
