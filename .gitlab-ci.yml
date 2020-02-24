@@ -6,7 +6,8 @@ before_script:
   - python -V  # Print out python version for debugging
   - export PIP_CACHE_DIR="/opt/cache/pip"
   - conda env create -n wesnake -f environment.yaml
-  - conda init
+  - conda init bash
+  - source /root/.bashrc
   - conda activate wesnake
   - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
