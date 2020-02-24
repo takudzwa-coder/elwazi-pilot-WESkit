@@ -2,16 +2,10 @@
 # https://hub.docker.com/r/library/python/tags/
 image: continuumio/miniconda3:latest
 
-stages:
-  - before_script
-  - test
-  - run
-
 cache:
   paths:
     - /opt/cache/pip
     - /opt/conda/pkgs
-    - .conda/pkgs
 
 services:
   - docker:dind
@@ -29,13 +23,11 @@ before_script:
   - conda activate wesnake
   - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
-test_job:
-  stage: test
+test:
   script:
-    - python -m pytest
+    - python -m pytest -v
 
-run_job:
-  stage: run
+run:
   script:
     - python setup.py bdist_wheel
   artifacts:
