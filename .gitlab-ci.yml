@@ -15,10 +15,12 @@ variables:
   DOCKER_DRIVER: overlay2
 
 before_script:
-  - python -V  # Print out python version for debugging
+  - python -V              # For debugging
   - export PIP_CACHE_DIR="/opt/cache/pip"
   - conda init bash
   - source /root/.bashrc
+  - conda info             # For debugging
+  - conda config --show    # For debugging
   - conda env create -n wesnake -f environment.yaml
   - conda activate wesnake
   - pip install git+https://github.com/testcontainers/testcontainers-python.git
