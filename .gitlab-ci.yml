@@ -1,11 +1,10 @@
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
-image: continuumio/miniconda3:latest
-
 cache:
   paths:
     - /opt/cache/pip
     - /opt/conda/pkgs
+    - /root/.conda/pkgs
 
 services:
   - docker:dind
@@ -26,10 +25,12 @@ before_script:
   - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
 test:
+  image: continuumio/miniconda3:latest
   script:
     - python -m pytest -v
 
 run:
+  image: continuumio/miniconda3:latest
   script:
     - python setup.py bdist_wheel
   artifacts:
