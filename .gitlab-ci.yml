@@ -4,7 +4,8 @@ image: continuumio/miniconda3:latest
 
 before_script:
   - python -V  # Print out python version for debugging
-  - conda env create -n wesnake -f environment.yml
+  - export PIP_CACHE_DIR="/opt/cache/pip"
+  - conda env create -n wesnake -f environment.yaml
   - conda activate wesnake
   - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
