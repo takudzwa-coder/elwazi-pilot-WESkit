@@ -12,10 +12,7 @@ To set the environment correctly up you need to first install the conda environm
 
 ```bash
 conda activate wesnake
-git clone https://github.com/testcontainers/testcontainers-python.git
-cd testcontainers-python
-python setup.py build
-pip install ./
+pip install git+https://github.com/testcontainers/testcontainers-python.git
 ```
 
 ## Installation from sources
