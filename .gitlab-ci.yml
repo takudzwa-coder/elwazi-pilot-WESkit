@@ -6,6 +6,10 @@ cache:
     - /opt/conda/pkgs
     - /root/.conda/pkgs
 
+
+services:
+  - docker:dind
+
 variables:
   DOCKER_HOST: "tcp://docker:2375"
   DOCKER_DRIVER: overlay2
@@ -23,15 +27,11 @@ before_script:
 
 test:
   image: continuumio/miniconda3:latest
-  services:
-    - docker:dind
   script:
-    - python -m pytest -v
+    - python -m pytest -v -s
 
 run:
   image: continuumio/miniconda3:latest
-  services:
-    - docker:dind
   script:
     - python setup.py bdist_wheel
   artifacts:
