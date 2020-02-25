@@ -23,7 +23,7 @@ before_script:
   - conda config --show    # For debugging
   - conda env create -n wesnake -f environment.yaml
   - conda activate wesnake
-  - pip install testcontainers[mongodb]
+  - pip install git+https://github.com/testcontainers/testcontainers-python.git
 
 test:
   image: continuumio/miniconda3:latest
