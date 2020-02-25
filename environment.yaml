@@ -32,5 +32,5 @@ dependencies:
     - colorama==0.4.3
     - crayons==0.3.0
     - docker==4.2.0
-    - testcontainers==2.5
+    - testcontainers==2.6
     - websocket-client==0.57.0
