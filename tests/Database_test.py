@@ -1,4 +1,5 @@
 import pytest
+import time
 from ga4gh.wes.Database import Database
 from ga4gh.wes.RunStatus import RunStatus
 from testcontainers.mongodb import MongoDbContainer
@@ -8,6 +9,7 @@ from pymongo import MongoClient
 def database_connection():
     container = MongoDbContainer('mongo:4.2.3')
     container.start()
+    time.sleep(120)
     database = Database(MongoClient(container.get_connection_url()), "WES_Test")
     yield database
     database._db_runs().drop()
