@@ -17,5 +17,5 @@ def test_post_run(snakemake_executor, database_connection):
     } 
 
     run = database_connection.create_new_run(create_run_id(), request=data)
-    response, status_code = snakemake_executor.post_run(run, database_connection)
+    _, status_code = snakemake_executor.post_run(run, database_connection)
     assert status_code == 200
