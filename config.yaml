@@ -1,0 +1,9 @@
+wes_server:
+  host: localhost
+  port: 9000
+
+mongo_server:
+  host:
+  port:
+
+debug: true
