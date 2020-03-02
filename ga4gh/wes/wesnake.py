@@ -7,7 +7,7 @@ from pymongo import MongoClient
 from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 
-def create_app(config):
+def create_app(config, database):
 
     # Set app
     app = connexion.App(__name__)
@@ -24,12 +24,16 @@ def create_app(config):
     app.app.config['TESTING'] = False
 
     ## Setup database connection
-    app.app.database = Database(MongoClient(), "WES")
+    app.app.database = database
 
     ## Setup snakemake executer
     app.app.snakemake = Snakemake()
     
     return app
+
+
+def create_database(config):
+    return Database(MongoClient(), "WES")
 
 import sys
 def main():
@@ -40,5 +44,5 @@ def main():
     with open(args.config, "r") as yamlfile:
             config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     
-    app = create_app(config)
+    app = create_app(config, create_database(config))
     app.run()

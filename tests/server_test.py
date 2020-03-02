@@ -11,13 +11,13 @@ test_config = {
 }
 
 @pytest.fixture
-def test_app():
-    app = create_app(test_config)
+def test_app(database_connection):
+    app = create_app(test_config, database_connection)
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
         ctx.push()
         yield testing_client
 
-def test_get_list_runs(test_app):
+def test_get_list_runs(test_app, database_connection):
     response = test_app.get("/ga4gh/wes/v1/runs")
     assert response.status_code == 200
