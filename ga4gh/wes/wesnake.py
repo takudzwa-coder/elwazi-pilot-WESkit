@@ -24,12 +24,16 @@ def create_app(config):
     app.app.config['TESTING'] = False
 
     ## Setup database connection
-    app.database = Database(MongoClient(), "WES")
-    app.snakemake = Snakemake(app.database)
-    return(app)
+    app.app.database = Database(MongoClient(), "WES")
 
+    ## Setup snakemake executer
+    app.app.snakemake = Snakemake()
+    
+    return app
 
+import sys
 def main():
+    print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
     args = parser.parse_args()
