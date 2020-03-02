@@ -3,6 +3,7 @@
 import argparse
 import connexion
 import yaml
+import ga4gh.wes.logging as log
 from pymongo import MongoClient
 from ga4gh.wes.Database import Database
 
@@ -10,22 +11,23 @@ from ga4gh.wes.Database import Database
 
 
 def create_app(config):
-    print("create app")
+    log.log_info("create app")
+    log.dict_config()
     # set app
     app = connexion.App(__name__)
     app.add_api("20191217_workflow_execution_service.swagger.yaml")
 
-    ## Replace Connexion app settings
+    # Replace Connexion app settings
     app.host = config["server"]["host"]
     app.port = config["server"]["port"]
     app.debug = config["server"]["debug"]
 
-    ## Replace Flask app settings
+    # Replace Flask app settings
     app.app.config['DEBUG'] = app.debug
     app.app.config['ENV'] = "development"
     app.app.config['TESTING'] = False
 
-    #TODO setup database connection
+    # TODO setup database connection
     app.database = Database(MongoClient(), "WES")
 
     return(app)
