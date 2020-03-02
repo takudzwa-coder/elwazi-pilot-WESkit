@@ -1,17 +1,4 @@
-import pytest
-import os
-from ga4gh.wes.Database import Database
 from ga4gh.wes.RunStatus import RunStatus
-from pymongo import MongoClient
-
-
-@pytest.fixture(scope="function")
-def database_connection():
-    connection_url = os.environ["WESNAKE_TEST"]
-    database = Database(MongoClient(connection_url), "WES_Test")
-    yield database
-    database._db_runs().drop()
-
 
 run_id = "test_store_and_retrieve_run_id"
     
