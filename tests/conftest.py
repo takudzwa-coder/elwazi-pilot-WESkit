@@ -13,6 +13,6 @@ def database_connection(scope="function"):
     database._db_runs().drop()
 
 @pytest.fixture(scope="function")
-def snakemake_executor(database_connection):
-    executor = Snakemake(database_connection)
+def snakemake_executor():
+    executor = Snakemake()
     yield executor

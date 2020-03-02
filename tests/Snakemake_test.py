@@ -3,9 +3,6 @@ import os, json, yaml
 from ga4gh.wes.RunStatus import RunStatus
 from ga4gh.wes.utils import create_run_id
 
-from pymongo import MongoClient
-
-
 
 
 def test_post_run(snakemake_executor, database_connection):
@@ -20,5 +17,5 @@ def test_post_run(snakemake_executor, database_connection):
     } 
 
     run = database_connection.create_new_run(create_run_id(), request=data)
-    response, status_code = snakemake_executor.post_run(run)
+    response, status_code = snakemake_executor.post_run(run, database_connection)
     assert status_code == 200
