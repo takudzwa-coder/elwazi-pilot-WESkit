@@ -5,6 +5,7 @@ import connexion
 import yaml
 from pymongo import MongoClient
 from ga4gh.wes.Database import Database
+from ga4gh.wes.Snakemake import Snakemake
 
 def create_app(config):
 
@@ -24,7 +25,7 @@ def create_app(config):
 
     ## Setup database connection
     app.database = Database(MongoClient(), "WES")
-
+    app.snakemake = Snakemake(app.database)
     return(app)
 
 
