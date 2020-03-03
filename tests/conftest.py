@@ -5,8 +5,8 @@ from ga4gh.wes.Snakemake import Snakemake
 from pymongo import MongoClient
 
 
-@pytest.fixture()
-def database_connection(scope="function"):
+@pytest.fixture(scope="function")
+def database_connection():
     connection_url = os.environ["WESNAKE_TEST"]
     database = Database(MongoClient(connection_url), "WES_Test")
     yield database
