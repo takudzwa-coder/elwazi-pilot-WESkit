@@ -27,7 +27,7 @@ before_script:
 test:
   image: continuumio/miniconda3:latest
   script:
-    - python -m pytest -v -s
+    - python -m pytest -v -s --log-cli-level=debug
 
 run:
   image: continuumio/miniconda3:latest
