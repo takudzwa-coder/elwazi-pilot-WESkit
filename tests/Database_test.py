@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 @pytest.fixture(scope="function")
 def database_connection():
-    container = MongoDbContainer('mongo:4.2.3')
+    container = MongoDbContainer('bitnami/mongodb:4.2.3')
     container.start()
     database = Database(MongoClient(container.get_connection_url()), "WES_Test")
     yield database
