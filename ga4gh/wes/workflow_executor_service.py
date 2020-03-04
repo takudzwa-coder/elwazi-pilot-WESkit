@@ -1,5 +1,5 @@
 from ga4gh.wes.RunStatus import RunStatus
-import ga4gh.wes.logging as log
+import ga4gh.wes.logging_configs as log
 import os, subprocess, yaml, json
 
 

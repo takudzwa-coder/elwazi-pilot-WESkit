@@ -3,7 +3,7 @@
 import argparse
 import connexion
 import yaml
-import ga4gh.wes.logging as log
+import ga4gh.wes.logging_configs as log
 from pymongo import MongoClient
 from ga4gh.wes.Database import Database
 
@@ -12,7 +12,6 @@ from ga4gh.wes.Database import Database
 
 def create_app(config):
     log.log_info("create app")
-    log.dict_config()
     # set app
     app = connexion.App(__name__)
     app.add_api("20191217_workflow_execution_service.swagger.yaml")
@@ -30,7 +29,7 @@ def create_app(config):
     # TODO setup database connection
     app.database = Database(MongoClient(), "WES")
 
-    return(app)
+    return app
 
 
 if __name__ == "__main__":
@@ -38,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, required=True)
     args = parser.parse_args()
     with open(args.config, "r") as yamlfile:
-            config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+        config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     
     app = create_app(config)
     app.run()

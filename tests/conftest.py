@@ -1,16 +1,15 @@
 import pytest
-
 from ga4gh.wes.app import create_app
 
-
 test_config = {
-    "server":{
+    "server": {
         "host": '0.0.0.0',
-        "port": 8080,
-        "debug": False
-    }
+        "port": 4080,
+        "debug": False},
+    "debug": True
 }
-    
+
+
 app = create_app(test_config)
 
 @pytest.fixture(scope='module')

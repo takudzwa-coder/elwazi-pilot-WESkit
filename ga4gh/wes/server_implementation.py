@@ -1,5 +1,5 @@
 import ga4gh.wes.workflow_executor_service as wes
-import ga4gh.wes.logging as log
+import ga4gh.wes.logging_configs as log
 from random import choice
 
 
