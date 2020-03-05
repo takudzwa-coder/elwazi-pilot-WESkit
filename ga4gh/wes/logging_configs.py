@@ -1,11 +1,12 @@
-import logging, yaml
+import logging, yaml, os
 from logging.config import dictConfig
 
 
 def log_config():
-    with open("log_config.yaml") as f:
+    path = os.path.abspath(os.path.join("../../wesnake/log_config.yaml"))
+    with open(path) as f:
         log_cfg = yaml.load(f, Loader=yaml.FullLoader)
-    dictConfig(log_cfg)
+    dictConfig(log_cfg["logging"])
 
 
 def log_info(msg):
