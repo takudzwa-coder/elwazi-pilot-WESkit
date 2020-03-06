@@ -1,0 +1,31 @@
+serviceInfo:
+    supported_filesystem_protocols:
+        https
+        http
+
+    workflow_engine_versions:
+        snakemake 5.8.2
+
+    default_workflow_engine_parameters:
+        name:
+            type:
+            default_value:
+        name:
+            type:
+            dafault_value:
+
+    system_state_counts:
+        running: 0
+        unkonown: 0
+        complete: 0
+        canceled: 0
+        failed: 0
+
+    auth_instructions_url:
+        
+
+    contact_info:
+        sven.twardziok@charite.de
+
+    tags:
+        

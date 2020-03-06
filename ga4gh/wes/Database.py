@@ -42,10 +42,8 @@ class Database:
             "run_id": run_id,
             "run_status": RunStatus.NotStarted.encode(),
             "request_time": self.get_current_time(),
-            "request": [{"workflow_url": request,
-                        "workflow_params": request
-                         }],
-            "environment_path": request,
+            "request": [],
+            "execution_path": request,
             "run_log": {},
             "task_logs": [],
             "outputs": {}

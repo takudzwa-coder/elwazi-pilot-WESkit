@@ -1,6 +1,8 @@
 import ga4gh.wes.workflow_executor_service as wes
 import ga4gh.wes.logging_configs as log
+from ga4gh.wes.RunStatus import load_yaml
 from random import choice
+import yaml, os
 
 
 # get:/runs/{run_id}
@@ -27,6 +29,7 @@ def CancelRun(current_app, run_id, *args, **kwargs):
                 }, 404
     else:
         current_app.database.delete_run(run_id)
+        log.log_info("Run %s deleted from database" % run_id)
         return {"run_id": run_id}, 200
     # ToDo: Cancel a running Snakemake process
 
@@ -49,15 +52,19 @@ def GetServiceInfo(current_app, *args, **kwargs):
     config = current_app.config
     print(config)
     log.log_info("GetServiceInfo")
+    path = os.path.abspath(os.path.join("2191217_workflow_execution_service.swagger.yaml"))
+    with open(path) as ff:
+        api_swagger = yaml.load(ff, Loader=yaml.FullLoader)
+    service_info_yaml = load_yaml()
     response = {
-        "supported_wes_versions": "1.0.0",
-        "supported_filesystem_protocols": "file",
-        "workflow_engine_versions": "snakemake 5.8.2",
-        "default_workflow_engine_parameters": [],
-        "system_state_counts": {},
-        "auth_instructions_url": "",
-        "contact_info_url": "sven.twardziok@charite.de",
-        "tags": {}
+        "supported_wes_versions": api_swagger["info"]["version"],
+        "supported_filesystem_protocols": service_info_yaml["supported_filesystem_protocols"],
+        "workflow_engine_versions": service_info_yaml["workflow_engine_versions"],
+        "default_workflow_engine_parameters": service_info_yaml["default_workflow_engine_parameters"],
+        "system_state_counts": service_info_yaml["system_state_counts"],
+        "auth_instructions_url": service_info_yaml["auth_instructions_url"],
+        "contact_info_url": service_info_yaml["contact_info_url"],
+        "tags": service_info_yaml["tags"]
     }
     return response, 200
 
