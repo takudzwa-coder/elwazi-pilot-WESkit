@@ -1,7 +1,9 @@
-serviceInfo:
+ServiceInfo:
+    workflow_type_versions:
+        snakemake 5.8.2
+
     supported_filesystem_protocols:
-        https
-        http
+
 
     workflow_engine_versions:
         snakemake 5.8.2
@@ -9,23 +11,33 @@ serviceInfo:
     default_workflow_engine_parameters:
         name:
             type:
-            default_value:
-        name:
+            description:
+        type:
             type:
-            dafault_value:
+            description:
+        default_value:
+            type:
+            description:
+
 
     system_state_counts:
-        running: 0
-        unkonown: 0
-        complete: 0
-        canceled: 0
-        failed: 0
+        Unknown: 0
+        Queued: 0
+        Initializing: 0
+        Running: 0
+        Paused: 0
+        Complete: 0
+        Executor_Error: 0
+        System_Error: 0
+        Canceled: 0
+        Canceling: 0
 
     auth_instructions_url:
-        
+        #ToDo: Create a web page with instructions
 
     contact_info:
         sven.twardziok@charite.de
 
     tags:
+      {}
         

@@ -1,6 +1,6 @@
 from ga4gh.wes.RunStatus import RunStatus
 import ga4gh.wes.logging_configs as log
-import ga4gh.wes.RunStatus as status
+import ga4gh.wes.service_info as info
 import os, subprocess, yaml, json
 
 
@@ -14,7 +14,7 @@ def execute_run(current_app, run):
         "--directory", tmp_dir,
         "all"]
     new_run["run_status"] = RunStatus.Running.encode()
-    status.count_states_running_up()
+    info.rewrite()
     new_run["start_time"] = current_app.database.get_current_time()
     new_run["run_log"] = log_msg
     new_run["run_log"]["cmd"] = " ".join(command)
@@ -23,8 +23,7 @@ def execute_run(current_app, run):
         with open(tmp_dir + "/stderr.txt", "w") as ferr:
             subprocess.call(command, stdout=fout, stderr=ferr)
     new_run["run_status"] = RunStatus.Complete.encode()
-    status.count_states_complete_up()
-    status.count_states_running_down()
+    info.rewrite()
     new_run["end_time"] = current_app.database.get_current_time()
     current_app.database.update_run(new_run)
     return new_run

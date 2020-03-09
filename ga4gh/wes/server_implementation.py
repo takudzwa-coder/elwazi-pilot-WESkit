@@ -1,6 +1,6 @@
 import ga4gh.wes.workflow_executor_service as wes
 import ga4gh.wes.logging_configs as log
-from ga4gh.wes.RunStatus import load_yaml
+import ga4gh.wes.service_info as info
 from random import choice
 import yaml, os
 
@@ -55,12 +55,13 @@ def GetServiceInfo(current_app, *args, **kwargs):
     path = os.path.abspath(os.path.join("2191217_workflow_execution_service.swagger.yaml"))
     with open(path) as ff:
         api_swagger = yaml.load(ff, Loader=yaml.FullLoader)
-    service_info_yaml = load_yaml()
+    service_info_yaml = info.load_yaml()
     response = {
-        "supported_wes_versions": api_swagger["info"]["version"],
-        "supported_filesystem_protocols": service_info_yaml["supported_filesystem_protocols"],
+        "workflow_type_versions": service_info_yaml["workflow_type_versions"],
+        "supported_wes_versions": [api_swagger["info"]["version"]],
+        "supported_filesystem_protocols": [service_info_yaml["supported_filesystem_protocols"]],
         "workflow_engine_versions": service_info_yaml["workflow_engine_versions"],
-        "default_workflow_engine_parameters": service_info_yaml["default_workflow_engine_parameters"],
+        "default_workflow_engine_parameters": [service_info_yaml["default_workflow_engine_parameters"]],
         "system_state_counts": service_info_yaml["system_state_counts"],
         "auth_instructions_url": service_info_yaml["auth_instructions_url"],
         "contact_info_url": service_info_yaml["contact_info_url"],
