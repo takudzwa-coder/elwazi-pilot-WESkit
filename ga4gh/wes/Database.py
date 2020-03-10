@@ -1,5 +1,5 @@
-from datetime import datetime
 from bson.json_util import *
+from ga4gh.wes.utils import get_current_time
 from ga4gh.wes.RunStatus import RunStatus
 
 
@@ -26,7 +26,7 @@ class Database:
         return self.get_run(run_id).workflow_url
 
     def get_current_time(self):
-        return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return get_current_time()
     
     def list_run_ids_and_states(self):
         return list(self._db_runs().find(
@@ -42,10 +42,8 @@ class Database:
             "run_id": run_id,
             "run_status": RunStatus.NotStarted.encode(),
             "request_time": self.get_current_time(),
-            "request": [{"workflow_url": request,
-                        "workflow_params": request
-                         }],
-            "environment_path": request,
+            "request": request,
+            "environment_path": request, # ?
             "run_log": {},
             "task_logs": [],
             "outputs": {}

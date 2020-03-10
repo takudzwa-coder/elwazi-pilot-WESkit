@@ -1,17 +1,4 @@
-import pytest
-from ga4gh.wes.Database import Database
 from ga4gh.wes.RunStatus import RunStatus
-from testcontainers.mongodb import MongoDbContainer
-from pymongo import MongoClient
-
-@pytest.fixture(scope="function")
-def database_connection():
-    container = MongoDbContainer('mongo:4.2.3')
-    container.start()
-    database = Database(MongoClient(container.get_connection_url()), "WES_Test")
-    yield database
-    database._db_runs().drop()
-
 
 run_id = "test_store_and_retrieve_run_id"
     

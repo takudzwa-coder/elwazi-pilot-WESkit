@@ -1,21 +1,18 @@
 import pytest
+from ga4gh.wes.Database import Database
+from ga4gh.wes.Snakemake import Snakemake
+from pymongo import MongoClient
+from testcontainers.mongodb import MongoDbContainer
 
-from ga4gh.wes.app import create_app
+@pytest.fixture(scope="function")
+def database_connection():
+    container = MongoDbContainer('mongo:4.2.3')
+    container.start()
+    database = Database(MongoClient(container.get_connection_url()), "WES_Test")
+    yield database
+    database._db_runs().drop()
 
-
-test_config = {
-    "server":{
-        "host": '0.0.0.0',
-        "port": 8080,
-        "debug": False
-    }
-}
-    
-app = create_app(test_config)
-
-@pytest.fixture(scope='module')
-def client():
-    print("test client")
-    with app.app.test_client() as c:
-        yield c
-
+@pytest.fixture(scope="function")
+def snakemake_executor():
+    executor = Snakemake()
+    yield executor

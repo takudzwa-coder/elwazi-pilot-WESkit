@@ -5,38 +5,44 @@ import connexion
 import yaml
 from pymongo import MongoClient
 from ga4gh.wes.Database import Database
+from ga4gh.wes.Snakemake import Snakemake
 
-# load arguments
+def create_app(config, database):
 
-
-def create_app(config):
-    print("create app")
-    # set app
+    # Set app
     app = connexion.App(__name__)
     app.add_api("20191217_workflow_execution_service.swagger.yaml")
 
     ## Replace Connexion app settings
-    app.host = config["server"]["host"]
-    app.port = config["server"]["port"]
-    app.debug = config["server"]["debug"]
+    app.host = config["wes_server"]["host"]
+    app.port = config["wes_server"]["port"]
+    app.debug = config["debug"]
 
     ## Replace Flask app settings
     app.app.config['DEBUG'] = app.debug
     app.app.config['ENV'] = "development"
     app.app.config['TESTING'] = False
 
-    #TODO setup database connection
-    app.database = Database(MongoClient(), "WES")
+    ## Setup database connection
+    app.app.database = database
 
-    return(app)
+    ## Setup snakemake executer
+    app.app.snakemake = Snakemake()
+    
+    return app
 
 
-if __name__ == "__main__":
+def create_database(config):
+    return Database(MongoClient(), "WES")
+
+import sys
+def main():
+    print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
     args = parser.parse_args()
     with open(args.config, "r") as yamlfile:
             config = yaml.load(yamlfile, Loader=yaml.FullLoader)
     
-    app = create_app(config)
+    app = create_app(config, create_database(config))
     app.run()
