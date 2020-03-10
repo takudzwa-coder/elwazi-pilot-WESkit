@@ -1,24 +1,15 @@
 from ga4gh.wes.RunStatus import RunStatus
 import os, subprocess, yaml, json
 
-# get:/runs/{run_id}
 class Snakemake:
 
-    # post:/runs/{run_id}/cancel
-    def post_run_cancel(self, run_id, database):
+    def cancel(self, run, database):
         # ToDo: Cancel a running Snakemake process
-        print("CancelRun")
-        query_result = database.get_run(run_id)
-        if query_result is None:
-            return {"msg": "Key %s not found" % run_id,
-                    "status_code": 0
-                    }, 404
-        else:
-            database.delete_run(run_id)
-            return {"run_id": run_id}, 200
+        run["run_status"] = RunStatus.CANCELED.encode()
+        database.update_run(run)
+        return run
 
-    # post:/runs
-    def post_run(self, run, database):
+    def execute(self, run, database):
         print("RunWorkflow")
         
         # create run environment
@@ -50,6 +41,6 @@ class Snakemake:
         run["end_time"] = database.get_current_time()
         database.update_run(run)
         
-        return {k: run[k] for k in ["run_id"]}, 200
+        return run
 
 

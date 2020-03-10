@@ -14,7 +14,16 @@ def GetRunLog(run_id, *args, **kwargs):
 
 # post:/runs/{run_id}/cancel
 def CancelRun(run_id, *args, **kwargs):
-    return current_app.snakemake.post_run_cancel(run_id, current_app.database)
+    run = current_app.database.get_run(run_id)
+    if run is None:
+        return {"msg": "Key %s not found" % run_id,
+                "status_code": 0
+        }, 404
+    else:
+        # TODO perform steps to delete run: set status on canceled and stop running processes
+        #database.delete_run(run_id)
+        run = current_app.snakemake.cancel(run)
+        return {"run_id": run.run_id}, 200
 
 
 # get:/runs/{run_id}/status
@@ -52,4 +61,5 @@ def ListRuns(*args, **kwargs):
 # post:/runs
 def RunWorkflow(*args, **kwargs):
        run = current_app.database.create_new_run(create_run_id(), request=kwargs)
-       return current_app.snakemake.post_run(run, current_app.database)
+       run = current_app.snakemake.execute(run, current_app.database)
+       return {k: run[k] for k in ["run_id"]}, 200
