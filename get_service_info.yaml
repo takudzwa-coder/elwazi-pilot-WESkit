@@ -2,20 +2,23 @@ ServiceInfo:
     workflow_type_versions:
         snakemake 5.8.2
 
-    supported_filesystem_protocols:
+    supported_wes_versions:
+      - 1.0.0
 
+    supported_filesystem_protocols:
+      - s3
 
     workflow_engine_versions:
         snakemake 5.8.2
 
     default_workflow_engine_parameters:
-        name:
+      - name:
             type:
             description:
-        type:
+      - type:
             type:
             description:
-        default_value:
+      - default_value:
             type:
             description:
 

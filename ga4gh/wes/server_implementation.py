@@ -58,10 +58,10 @@ def GetServiceInfo(current_app, *args, **kwargs):
     service_info_yaml = info.load_yaml()
     response = {
         "workflow_type_versions": service_info_yaml["workflow_type_versions"],
-        "supported_wes_versions": [api_swagger["info"]["version"]],
-        "supported_filesystem_protocols": [service_info_yaml["supported_filesystem_protocols"]],
+        "supported_wes_versions": api_swagger["info"]["version"],
+        "supported_filesystem_protocols": service_info_yaml["supported_filesystem_protocols"],
         "workflow_engine_versions": service_info_yaml["workflow_engine_versions"],
-        "default_workflow_engine_parameters": [service_info_yaml["default_workflow_engine_parameters"]],
+        "default_workflow_engine_parameters": service_info_yaml["default_workflow_engine_parameters"],
         "system_state_counts": service_info_yaml["system_state_counts"],
         "auth_instructions_url": service_info_yaml["auth_instructions_url"],
         "contact_info_url": service_info_yaml["contact_info_url"],
