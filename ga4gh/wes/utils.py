@@ -10,4 +10,4 @@ def create_run_id():
     return run_id
 
 def get_current_time():
-    return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
