@@ -30,6 +30,5 @@ An executable called `wesnake` is installed. Run it with
 
 ```bash
 wesnake --config config.yaml
->>>>>>> fix-testcontainers-test
 ```
 
