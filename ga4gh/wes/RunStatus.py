@@ -6,7 +6,7 @@ class RunStatus(enum.Enum):
     Failed = -1
     NotStarted = 0
     Complete = 2
-    CANCELED = 3
+    Canceled = 3
     
     def encode(self):
         return self.name

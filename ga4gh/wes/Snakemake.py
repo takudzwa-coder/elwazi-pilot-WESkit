@@ -5,7 +5,7 @@ class Snakemake:
 
     def cancel(self, run, database):
         # ToDo: Cancel a running Snakemake process
-        run["run_status"] = RunStatus.CANCELED.encode()
+        run["run_status"] = RunStatus.Canceled.encode()
         database.update_run(run)
         return run
 
