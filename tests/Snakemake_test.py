@@ -16,4 +16,4 @@ def test_execute(snakemake_executor, database_connection):
 
     run = database_connection.create_new_run(create_run_id(), request=data)
     run = snakemake_executor.execute(run, database_connection)
-    assert run["run_status"] == RunStatus.Complete.encode()
+    assert run["run_status"] == RunStatus.COMPLETE.encode()
