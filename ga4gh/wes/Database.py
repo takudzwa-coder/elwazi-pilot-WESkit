@@ -1,4 +1,3 @@
-from bson.json_util import *
 from ga4gh.wes.utils import get_current_time
 from ga4gh.wes.RunStatus import RunStatus
 
@@ -12,6 +11,9 @@ class Database:
 
     def _db_runs(self):
         return self.db["run"]
+    
+    def aggregate_states(self, runs):
+        return dict(self._db_runs().aggregate(runs))
     
     def get_run(self, run_id, **kwargs):
         return self._db_runs().find_one(filter={"run_id": run_id}, **kwargs)

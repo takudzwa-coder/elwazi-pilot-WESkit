@@ -4,7 +4,6 @@ from ga4gh.wes.RunStatus import RunStatus
 from ga4gh.wes.utils import create_run_id
 
 
-
 def test_post_run(snakemake_executor, database_connection):
     with open("tests/wf1/config.yaml") as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))

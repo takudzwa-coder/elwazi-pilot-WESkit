@@ -3,7 +3,7 @@ from logging.config import dictConfig
 
 
 def log_config():
-    path = os.path.abspath(os.path.join("../../PycharmProjects/wesnake/log_config.yaml"))
+    path = os.path.abspath(os.path.join("log_config.yaml"))
     with open(path) as f:
         log_cfg = yaml.load(f, Loader=yaml.FullLoader)
     dictConfig(log_cfg["logging"])

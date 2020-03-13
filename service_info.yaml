@@ -22,24 +22,11 @@ ServiceInfo:
             type:
             description:
 
-
-    system_state_counts:
-        Unknown: 0
-        Queued: 0
-        Initializing: 0
-        Running: 0
-        Paused: 0
-        Complete: 0
-        Executor_Error: 0
-        System_Error: 0
-        Canceled: 0
-        Canceling: 0
-
     auth_instructions_url:
         #ToDo: Create a web page with instructions
 
-    contact_info:
-        sven.twardziok@charite.de
+    contact_info_url:
+        your@email.de
 
     tags:
       {}
