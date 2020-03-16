@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 logging:
     version: 1
     disable_existing_loggers: False
@@ -18,9 +19,30 @@ logging:
             filename: app.log
     root:
         handlers: [file]
+=======
+version: 1
+disable_existing_loggers: False
+formatters:
+    standard:
+        format: "%(asctime)s %(levelname)s %(message)s"
+        datefmt: "%Y-%m-%dT%H:%M:%SZ"
+handlers:
+    console:
+        class: logging.StreamHandler
         level: INFO
-    loggers:
-        other:
-            level: INFO
-            handlers: [file]
-            propagate: false
+        formatter: standard
+        stream: ext://sys.stdout
+    file:
+        class: logging.FileHandler
+>>>>>>> Stashed changes
+        level: INFO
+        formatter: standard
+        filename: wesnake.log
+root:
+    handlers: [file]
+    level: INFO
+loggers:
+    other:
+        level: INFO
+        handlers: [file]
+        propagate: false
