@@ -11,8 +11,8 @@ test_config = {
 }
 
 @pytest.fixture
-def test_app(service_info, database_connection):
-    app = create_app(test_config, service_info, database_connection)
+def test_app(service_info, log_config, swagger, database_connection):
+    app = create_app(test_config, service_info, log_config, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()

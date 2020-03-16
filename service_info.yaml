@@ -1,33 +1,29 @@
-ServiceInfo:
-    workflow_type_versions:
-        snakemake 5.8.2
+workflow_type_versions:
+    snakemake 5.8.2
 
-    supported_wes_versions:
-      - 1.0.0
+supported_filesystem_protocols:
+  - s3
 
-    supported_filesystem_protocols:
-      - s3
+workflow_engine_versions:
+    snakemake 5.8.2
 
-    workflow_engine_versions:
-        snakemake 5.8.2
+default_workflow_engine_parameters:
+  - name:
+        type:
+        description:
+  - type:
+        type:
+        description:
+  - default_value:
+        type:
+        description:
 
-    default_workflow_engine_parameters:
-      - name:
-            type:
-            description:
-      - type:
-            type:
-            description:
-      - default_value:
-            type:
-            description:
+auth_instructions_url:
+    #ToDo: Create a web page with instructions
 
-    auth_instructions_url:
-        #ToDo: Create a web page with instructions
+contact_info_url:
+     your@email.de
 
-    contact_info_url:
-        your@email.de
-
-    tags:
-      {}
+tags:
+    {}
         

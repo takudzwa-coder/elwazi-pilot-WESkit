@@ -1,6 +1,4 @@
-import pytest
-import os, json, yaml
-from ga4gh.wes.RunStatus import RunStatus
+import json, yaml
 from ga4gh.wes.utils import create_run_id
 
 

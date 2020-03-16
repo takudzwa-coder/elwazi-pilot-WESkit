@@ -2,16 +2,16 @@ import enum
 
 
 class RunStatus(enum.Enum):
-    Unknown = 0
-    Queued = 1
-    Initializing = 2
-    Running = 3
-    Paused = 4
-    Complete = 5
-    Executor_Error = 6
-    System_Error = 7
-    Canceled = 8
-    Canceling = 9
+    UNKNOWN = 0
+    QUEUED = 1
+    INIZIALIZING = 2
+    RUNNING = 3
+    PAUSED = 4
+    COMPLETE = 5
+    EXECUTOR_ERROR = 6
+    SYSTEM_ERROR = 7
+    CANCELED = 8
+    CANCELING = 9
 
     def encode(self):
         return self.name

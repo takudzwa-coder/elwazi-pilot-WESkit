@@ -7,7 +7,7 @@ class Snakemake:
 
     def cancel(self, run, database):
         # ToDo: Cancel a running Snakemake process
-        run["run_status"] = RunStatus.Canceled.encode()
+        run["run_status"] = RunStatus.CANCELED.encode()
         database.update_run(run)
         return run
 
@@ -32,14 +32,14 @@ class Snakemake:
             "--snakefile", run["request"]["workflow_url"],
             "--directory", tmp_dir,
             "all"]
-        run["run_status"] = RunStatus.Running.encode()
+        run["run_status"] = RunStatus.RUNNING.encode()
         run["start_time"] = database.get_current_time()
         run["run_log"]["cmd"] = " ".join(command)
         database.update_run(run)
         with open(tmp_dir + "/stdout.txt", "w") as fout:
             with open(tmp_dir + "/stderr.txt", "w") as ferr:
                 subprocess.call(command, stdout=fout, stderr=ferr)
-        run["run_status"] = RunStatus.Complete.encode()
+        run["run_status"] = RunStatus.COMPLETE.encode()
         run["end_time"] = database.get_current_time()
         database.update_run(run)
         

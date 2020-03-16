@@ -29,5 +29,19 @@ def service_info(database_connection):
 
 @pytest.fixture(scope="function")
 def service_info_executor(service_info, database_connection):
-    executor = ServiceInfo(service_info, database_connection)
+    executor = ServiceInfo(service_info, swagger, database_connection)
     yield executor
+
+
+@pytest.fixture(scope="function")
+def log_config(database_connection):
+    with open("log_config.yaml", "r") as ff:
+        log_config = yaml.load(ff, Loader=yaml.FullLoader)
+    yield log_config
+
+
+@pytest.fixture(scope="function")
+def swagger(database_connection):
+    with open("ga4gh/wes/20191217_workflow_execution_service.swagger.yaml", "r") as ff:
+        swagger = yaml.load(ff, Loader=yaml.FullLoader)
+        yield swagger

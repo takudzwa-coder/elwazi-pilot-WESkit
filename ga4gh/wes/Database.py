@@ -42,7 +42,7 @@ class Database:
             raise ValueError("None can not be run_id!")
         run = {
             "run_id": run_id,
-            "run_status": RunStatus.Unknown.encode(),
+            "run_status": RunStatus.UNKNOWN.encode(),
             "request_time": self.get_current_time(),
             "request": [],
             "execution_path": request,
