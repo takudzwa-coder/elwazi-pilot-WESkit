@@ -1,0 +1,16 @@
+import uuid
+from datetime import datetime
+from flask import current_app
+import ga4gh.wes.logging_configs as log
+
+
+def create_run_id(log_config):
+    log.log_info(log_config, "create_run_id")
+    run_id = str(uuid.uuid4())
+    while current_app.database.get_run(run_id) == run_id:
+        run_id = str(uuid.uuid4())
+    return run_id
+
+
+def get_current_time():
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
