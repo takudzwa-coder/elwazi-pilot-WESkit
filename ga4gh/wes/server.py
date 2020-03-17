@@ -5,7 +5,7 @@ from ga4gh.wes.utils import create_run_id
 def GetRunLog(run_id, *args, **kwargs):
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
-        return {"msg": "Could not find %s" % run_id,
+        return {"msg": "Could not find run %s" % run_id,
                 "status_code": 0
                 }, 404
     else:
@@ -16,10 +16,11 @@ def GetRunLog(run_id, *args, **kwargs):
 def CancelRun(run_id, *args, **kwargs):
     run = current_app.database.get_run(run_id)
     if run is None:
-        return {"msg": "Key %s not found" % run_id,
-                "status_code": 0
-        }, 404
+        pass
     else:
+        return {"msg": "Could not find run %s" % run_id,
+                "status_code": 0
+                }, 404
         # TODO perform steps to delete run: set status on canceled and stop running processes
         #database.delete_run(run_id)
         run = current_app.snakemake.cancel(run)
@@ -30,7 +31,7 @@ def CancelRun(run_id, *args, **kwargs):
 def GetRunStatus(run_id, *args, **kwargs):
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
-        return {"msg": "Could not find %s" % run_id,
+        return {"msg": "Could not find run %s" % run_id,
                 "status_code": 0
                 }, 404
     else:

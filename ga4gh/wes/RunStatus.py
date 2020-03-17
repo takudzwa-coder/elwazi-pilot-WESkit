@@ -2,10 +2,10 @@ import enum
 
 
 class RunStatus(enum.Enum):
-    Running = 1
-    Failed = -1
-    NotStarted = 0
-    Complete = 2
+    RUNNING = 1
+    FAILED = -1
+    NOT_STARTED = 0
+    COMPLETE = 2
     CANCELED = 3
     
     def encode(self):

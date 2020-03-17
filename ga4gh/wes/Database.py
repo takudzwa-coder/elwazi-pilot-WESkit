@@ -40,7 +40,7 @@ class Database:
             raise ValueError("None can not be run_id!")
         run = {
             "run_id": run_id,
-            "run_status": RunStatus.NotStarted.encode(),
+            "run_status": RunStatus.NOT_STARTED.encode(),
             "request_time": self.get_current_time(),
             "request": request,
             "environment_path": request, # ?
