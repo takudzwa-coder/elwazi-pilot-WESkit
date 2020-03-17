@@ -5,6 +5,7 @@ import connexion
 import yaml
 from pymongo import MongoClient
 from ga4gh.wes.Database import Database
+from ga4gh.wes.Snakemake import Snakemake
 
 def create_app(config):
 
@@ -23,12 +24,16 @@ def create_app(config):
     app.app.config['TESTING'] = False
 
     ## Setup database connection
-    app.database = Database(MongoClient(), "WES")
+    app.app.database = Database(MongoClient(), "WES")
 
-    return(app)
+    ## Setup snakemake executer
+    app.app.snakemake = Snakemake()
+    
+    return app
 
-
+import sys
 def main():
+    print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
     args = parser.parse_args()
