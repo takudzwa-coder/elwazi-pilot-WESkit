@@ -9,8 +9,8 @@ from logging.config import dictConfig
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, service_info, log_config, logger, swagger, database_connection):
-    app = create_app(test_config, service_info, log_config, logger, swagger, database_connection)
+def test_app(test_config, service_info, service_info_validation, log_config, logger, swagger, database_connection):
+    app = create_app(test_config, service_info, service_info_validation, log_config, logger, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -44,6 +44,13 @@ def service_info(database_connection):
     with open("tests/service_info.yaml", "r") as ff:
         service_info = yaml.load(ff, Loader=yaml.FullLoader)
     yield service_info
+
+
+@pytest.fixture(scope="function")
+def service_info_validation():
+    with open("service_info_validation.yaml", "r") as ff:
+        service_info_validation = yaml.load(ff, Loader=yaml.FullLoader)
+    yield service_info_validation
 
 
 @pytest.fixture(scope="function")

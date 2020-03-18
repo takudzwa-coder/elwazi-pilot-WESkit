@@ -15,14 +15,14 @@ def test_get_supported_filesystem_protocols(service_info_executor):
 
 def test_get_workflow_engine_versions(service_info_executor):
     workflow_engine_versions = service_info_executor.get_workflow_engine_versions()
-    assert workflow_engine_versions == "snakemake 5.8.2"
+    assert workflow_engine_versions == {"snakemake": "5.8.2"}
 
 
 def test_get_default_workflow_engine_parameters(service_info_executor):
     default_workflow_engine_parameters = service_info_executor.get_default_workflow_engine_parameters()
-    assert default_workflow_engine_parameters[0]["name"]['description'] is None
-    assert default_workflow_engine_parameters[1]["type"]["description"] is None
-    assert default_workflow_engine_parameters[2]["default_value"]["description"] is None
+    assert default_workflow_engine_parameters[0]["name"] == "null"
+    assert default_workflow_engine_parameters[1]["parameter_type"] == "null"
+    assert default_workflow_engine_parameters[2]["default_value"] == "null"
 
 
 def test_get_contact_info_url(service_info_executor):

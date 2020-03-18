@@ -8,7 +8,7 @@ from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 
 
-def create_app(config, service_info, log_config, logger, swagger, database):
+def create_app(config, service_info, service_info_validation, log_config, logger, swagger, database):
 
     # Set app
     app = connexion.App(__name__)
@@ -32,6 +32,9 @@ def create_app(config, service_info, log_config, logger, swagger, database):
     
     # Setup service_info
     app.app.service_info = ServiceInfo(service_info, swagger, database)
+
+    # Setup service_info_validation
+    app.app.service_info_validation = service_info_validation
 
     # Setup log_config
     app.app.log_config = log_config
@@ -65,6 +68,12 @@ def main():
     with open(args_info.config, "r") as ff:
         service_info = yaml.load(ff, Loader=yaml.FullLoader)
 
+    parser_info_validation = argparse.ArgumentParser(description="ServiceInfo")
+    parser.add_argument("--config", type=str, required=True)
+    args_info_validation = parser_info_validation.parse_args()
+    with open(args_info_validation.config, "r") as ff:
+        service_info_validation = yaml.load(ff, Loader=yaml.FullLoader)
+
     parser_log = argparse.ArgumentParser(description="Logging")
     parser.add_argument("--config", type=str, required=True)
     args_log = parser_log.parse_args()
@@ -79,5 +88,5 @@ def main():
     with open(args_swagger.config, "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
 
-    app = create_app(config, service_info, log_config, logger, swagger, Database(MongoClient(), "WES"))
+    app = create_app(config, service_info, service_info_validation, log_config, logger, swagger, Database(MongoClient(), "WES"))
     app.run()
