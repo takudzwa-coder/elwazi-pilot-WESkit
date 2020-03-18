@@ -1,5 +1,6 @@
 from ga4gh.wes.utils import get_current_time
 from ga4gh.wes.RunStatus import RunStatus
+from flask import current_app
 
 
 class Database:
@@ -39,7 +40,8 @@ class Database:
     
     def create_new_run(self, run_id, request):
         if run_id is None:
-            raise ValueError("None can not be run_id!")
+            current_app.logger.error("None can not be run_id")
+            raise ValueError("None can not be run_id")
         run = {
             "run_id": run_id,
             "run_status": RunStatus.UNKNOWN.encode(),
@@ -56,6 +58,7 @@ class Database:
     def update_run(self, run):
         if run["run_id"] is None:
             raise ValueError("None can not be run_id!")
+        # ToDo: write Error in wesnake.log
         return self._db_runs().update_one({"run_id": run["run_id"]}, {"$set": run}).acknowledged
 
     def delete_run(self, run_id):

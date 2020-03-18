@@ -1,5 +1,5 @@
 from ga4gh.wes.RunStatus import RunStatus
-import ga4gh.wes.logging_configs as log
+from flask import current_app
 import os, subprocess, yaml, json
 
 
@@ -11,12 +11,21 @@ class Snakemake:
         database.update_run(run)
         return run
 
+<<<<<<< Updated upstream
     def execute(self, run, database, log_config):
         log.log_info(log_config, "RunWorkflow")
         
         # create run environment
         tmp_dir = "tmp/"
         log.log_info(log_config, "_create_environment")
+=======
+    def execute(self, run, database):
+        current_app.logger.info("RunWorkflow")
+        
+        # create run environment
+        tmp_dir = "tmp/"
+        current_app.logger.info("_create_environment")
+>>>>>>> Stashed changes
         run_dir = os.path.abspath(os.path.join(tmp_dir, run["run_id"]))
         os.makedirs(run_dir)
         with open(run_dir + "/config.yaml", "w") as ff:
@@ -26,7 +35,11 @@ class Snakemake:
         print("end")
 
         # execute run
+<<<<<<< Updated upstream
         log.log_info(log_config, "_execute_run")
+=======
+        current_app.logger.info("_execute_run")
+>>>>>>> Stashed changes
         tmp_dir = "tmp/" + run["run_id"]
         command = [
             "snakemake",
