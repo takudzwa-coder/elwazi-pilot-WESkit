@@ -1,0 +1,39 @@
+workflow_type_versions:
+    type: list
+    required: true
+
+supported_filesystem_protocols:
+    type: list
+    required: true
+
+workflow_engine_versions:
+    type: dict
+    required: true
+    schema:
+        snakemake:
+            type: string
+
+default_workflow_engine_parameters:
+    type: list
+    required: true
+    schema:
+        type: dict
+        schema:
+            name:
+                type: string
+            parameter_type:
+                type: string
+            default_value:
+                type: string
+
+auth_instructions_url:
+    type: string
+    required: true
+
+contact_info_url:
+    type: string
+    required: true
+
+tags:
+    type: dict
+    required: false

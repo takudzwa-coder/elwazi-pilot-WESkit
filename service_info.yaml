@@ -5,15 +5,12 @@ supported_filesystem_protocols:
   - s3
 
 workflow_engine_versions:
-    snakemake 5.8.2
+    snakemake: 5.8.2
 
 default_workflow_engine_parameters:
-  - name:
-        description: null
-  - type:
-        description: null
-  - default_value:
-        description: null
+  - name: "null"
+  - parameter_type: "null"
+  - default_value: "null"
 
 auth_instructions_url:
     #ToDo: Create a web page with instructions
@@ -23,4 +20,3 @@ contact_info_url:
 
 tags:
     {}
-        
