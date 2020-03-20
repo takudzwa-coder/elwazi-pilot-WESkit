@@ -2,7 +2,7 @@ import json, yaml
 from ga4gh.wes.utils import create_run_id
 
 
-def test_post_run(snakemake_executor, database_connection, log_config):
+def test_post_run(snakemake_executor, database_connection):
     with open("tests/wf1/config.yaml") as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
     
@@ -14,5 +14,5 @@ def test_post_run(snakemake_executor, database_connection, log_config):
     }
 
     run = database_connection.create_new_run(create_run_id(), request=data)
-    _, status_code = snakemake_executor.execute(run, database_connection, log_config)
+    _, status_code = snakemake_executor.execute(run, database_connection)
     assert status_code == 200
