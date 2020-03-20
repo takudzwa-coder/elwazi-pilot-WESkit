@@ -9,8 +9,8 @@ from logging.config import dictConfig
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, service_info, service_info_validation, log_config, logger, swagger, database_connection):
-    app = create_app(test_config, service_info, service_info_validation, log_config, logger, swagger, database_connection)
+def test_app(test_config, config_validation, service_info, service_info_validation, log_config, logger, swagger, database_connection):
+    app = create_app(test_config, config_validation, service_info, service_info_validation, log_config, logger, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -23,6 +23,13 @@ def test_config():
     with open("tests/test_config.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
+
+
+@pytest.fixture(scope="function")
+def config_validation():
+    with open("config_validation.yaml", "r") as ff:
+        config_validation = yaml.load(ff, Loader=yaml.FullLoader)
+    yield config_validation
 
 
 @pytest.fixture(scope="function")

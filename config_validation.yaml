@@ -1,0 +1,16 @@
+wes_server:
+    type: dict
+    schema:
+        host:
+            type: string
+        port:
+            type: integer
+        debug:
+            type: boolean
+#mongo_server:
+#    type: dict
+#    schema:
+#        host: string
+#        port: integer
+debug:
+    type: boolean
