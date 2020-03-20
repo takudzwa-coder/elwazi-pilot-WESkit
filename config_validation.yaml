@@ -4,10 +4,13 @@ wes_server:
     schema:
         host:
             type: string
+            required: true
         port:
             type: integer
+            required: true
         debug:
             type: boolean
+            required: false
 
 mongo_server:
     type: dict
@@ -15,8 +18,10 @@ mongo_server:
     schema:
         host:
             type: string
+            required: true
         port:
             type: integer
+            required: true
 
 debug:
     type: boolean

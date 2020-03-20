@@ -12,19 +12,24 @@ workflow_engine_versions:
     schema:
         snakemake:
             type: string
+            required: true
 
 default_workflow_engine_parameters:
     type: list
     required: true
     schema:
         type: dict
+        required: true
         schema:
             name:
                 type: string
+                required: true
             parameter_type:
                 type: string
+                required: true
             default_value:
                 type: string
+                required: true
 
 auth_instructions_url:
     type: string
