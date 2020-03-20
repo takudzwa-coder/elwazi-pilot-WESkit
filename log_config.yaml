@@ -14,12 +14,12 @@ handlers:
         class: logging.FileHandler
         level: INFO
         formatter: standard
-        filename: app.log
+        filename: wesnake.log
 root:
     handlers: [file]
     level: INFO
 loggers:
     other:
         level: INFO
-        handlers: [file]
+        handlers: [file, console]
         propagate: false

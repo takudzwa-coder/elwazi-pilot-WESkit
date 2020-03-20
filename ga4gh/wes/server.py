@@ -54,7 +54,7 @@ def GetServiceInfo(service_info, service_info_validation, *args, **kwargs):
     current_app.logger.info("GetServiceInfo")
     validator = service_info_validate.validate_service_info(service_info, service_info_validation)
     if validator is False:
-        current_app.logger.error("Schema is ")
+        current_app.logger.error("schema not valid")
         raise cerberus.schema.SchemaError
     response = {
         "workflow_type_versions": current_app.service_info.get_workflow_type_versions(),

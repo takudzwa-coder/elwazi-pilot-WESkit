@@ -9,7 +9,7 @@ from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 
 
-def create_app(config, config_validation, service_info, service_info_validation, log_config, logger, swagger, database):
+def create_app(config, config_validation, service_info, service_info_validation, log_config, root_logger, other_logger, swagger, database):
 
     # Set app
     app = connexion.App(__name__)
@@ -17,6 +17,7 @@ def create_app(config, config_validation, service_info, service_info_validation,
 
     validator = config_validate.validate_config(config, config_validation)
     if validator is False:
+        other_logger.error("schema not valid")
         raise cerberus.schema.SchemaError
 
     # Replace Connexion app settings
@@ -47,8 +48,12 @@ def create_app(config, config_validation, service_info, service_info_validation,
     # Setup log_config
     app.app.log_config = log_config
 
-    # Setup logger
-    app.app.logger = logging.getLogger()
+    # Setup root_logger
+    app.app.root_logger = logging.getLogger()
+
+    # Setup other_logger
+    logger_other = list(log_config["loggers"])
+    app.app.other_logger = logging.getLogger(logger_other[0])
 
     # Setup swagger
     app.app.swagger = swagger
@@ -94,7 +99,8 @@ def main():
     with open(args_log.config, "r") as ff:
         log_config = yaml.load(ff, Loader=yaml.FullLoader)
         dictConfig(log_config)
-        logger = logging.getLogger()
+        root_logger = logging.getLogger()
+        other_logger = logging.getLogger(log_config["loggers"]["other"])
 
     parser_swagger = argparse.ArgumentParser(description="Swagger")
     parser.add_argument("--config", type=str, required=True)
@@ -102,5 +108,5 @@ def main():
     with open(args_swagger.config, "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
 
-    app = create_app(config, config_validation, service_info, service_info_validation, log_config, logger, swagger, Database(MongoClient(), "WES"))
+    app = create_app(config, config_validation, service_info, service_info_validation, log_config, root_logger, other_logger, swagger, Database(MongoClient(), "WES"))
     app.run()

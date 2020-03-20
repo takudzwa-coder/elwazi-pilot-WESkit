@@ -1,5 +1,6 @@
 wes_server:
     type: dict
+    required: true
     schema:
         host:
             type: string
@@ -7,10 +8,16 @@ wes_server:
             type: integer
         debug:
             type: boolean
-#mongo_server:
-#    type: dict
-#    schema:
-#        host: string
-#        port: integer
+
+mongo_server:
+    type: dict
+    required: false
+    schema:
+        host:
+            type: string
+        port:
+            type: integer
+
 debug:
     type: boolean
+    required: true
