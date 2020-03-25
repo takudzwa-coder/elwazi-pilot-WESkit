@@ -21,7 +21,7 @@ class Snakemake:
         os.makedirs(run_dir)
         with open(run_dir + "/config.yaml", "w") as ff:
             yaml.dump(json.loads(run["request"]["workflow_params"]), ff)
-        run["execution_path"] = run_dir                                                                               # environment_path = workflow_url ?
+        run["execution_path"] = run_dir                                                                                 # execution_path = workflow_url ?
         database.update_run(run)
 
         # execute run
