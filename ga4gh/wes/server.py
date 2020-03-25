@@ -48,7 +48,7 @@ def GetRunStatus(run_id, *args, **kwargs):
 
 
 # get:/service-info
-def GetServiceInfo(service_info, service_info_validation, *args, **kwargs):
+def GetServiceInfo(*args, **kwargs):
     current_app.logger.info("GetServiceInfo")
     response = {
         "workflow_type_versions": current_app.service_info.get_workflow_type_versions(),

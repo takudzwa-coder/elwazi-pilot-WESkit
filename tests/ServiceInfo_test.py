@@ -1,6 +1,3 @@
-from flask import current_app
-
-
 def test_get_workflow_type_versions(service_info):
     workflow_type_versions = service_info.get_workflow_type_versions()
     assert workflow_type_versions == ["snakemake 5.8.2"]
