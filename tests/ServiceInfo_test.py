@@ -21,8 +21,8 @@ def test_get_workflow_engine_versions(service_info):
 def test_get_default_workflow_engine_parameters(service_info):
     default_workflow_engine_parameters = service_info.get_default_workflow_engine_parameters()
     assert default_workflow_engine_parameters[0]["name"] == "null"
-    assert default_workflow_engine_parameters[1]["parameter_type"] == "null"
-    assert default_workflow_engine_parameters[2]["default_value"] == "null"
+    assert default_workflow_engine_parameters[1]["parameter_type"] == "none"
+    assert default_workflow_engine_parameters[2]["default_value"] == "nothing"
 
 
 def test_get_contact_info_url(service_info):
