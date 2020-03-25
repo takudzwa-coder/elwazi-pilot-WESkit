@@ -9,8 +9,8 @@ from logging.config import dictConfig
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, config_validation, service_info, service_info_validation, log_config, root_logger, other_logger, swagger, database_connection):
-    app = create_app(test_config, config_validation, service_info, service_info_validation, log_config, root_logger, other_logger, swagger, database_connection)
+def test_app(test_config, static_service_info, log_config, root_logger, other_logger, swagger, database_connection):
+    app = create_app(test_config, static_service_info, log_config, root_logger, other_logger, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -23,13 +23,6 @@ def test_config():
     with open("tests/test_config.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
-
-
-@pytest.fixture(scope="function")
-def config_validation():
-    with open("config_validation.yaml", "r") as ff:
-        config_validation = yaml.load(ff, Loader=yaml.FullLoader)
-    yield config_validation
 
 
 @pytest.fixture(scope="function")
@@ -47,22 +40,15 @@ def snakemake_executor():
 
 
 @pytest.fixture(scope="function")
-def service_info(database_connection):
-    with open("tests/service_info.yaml", "r") as ff:
-        service_info = yaml.load(ff, Loader=yaml.FullLoader)
-    yield service_info
+def static_service_info(database_connection):
+    with open("service_info.yaml", "r") as ff:
+        static_service_info = yaml.load(ff, Loader=yaml.FullLoader)
+    yield static_service_info
 
 
 @pytest.fixture(scope="function")
-def service_info_validation():
-    with open("service_info_validation.yaml", "r") as ff:
-        service_info_validation = yaml.load(ff, Loader=yaml.FullLoader)
-    yield service_info_validation
-
-
-@pytest.fixture(scope="function")
-def service_info_executor(service_info, swagger, database_connection):
-    executor = ServiceInfo(service_info, swagger, database_connection)
+def service_info(static_service_info, swagger, database_connection):
+    executor = ServiceInfo(static_service_info, swagger, database_connection)
     yield executor
 
 
