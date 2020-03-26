@@ -7,3 +7,4 @@ build/
 wesnake.iml
 WESnake.egg-info
 dist
+settings.json
