@@ -1,6 +1,6 @@
-from bson.json_util import *
 from ga4gh.wes.utils import get_current_time
 from ga4gh.wes.RunStatus import RunStatus
+from flask import current_app
 
 
 class Database:
@@ -13,6 +13,9 @@ class Database:
     def _db_runs(self):
         return self.db["run"]
     
+    def aggregate_states(self, runs):
+        return dict(self._db_runs().aggregate(runs))
+
     def get_run(self, run_id, **kwargs):
         return self._db_runs().find_one(filter={"run_id": run_id}, **kwargs)
     
@@ -37,13 +40,14 @@ class Database:
     
     def create_new_run(self, run_id, request):
         if run_id is None:
-            raise ValueError("None can not be run_id!")
+            current_app.other_logger.error("None can not be run_id")
+            raise ValueError("None can not be run_id")
         run = {
             "run_id": run_id,
-            "run_status": RunStatus.NOT_STARTED.encode(),
+            "run_status": RunStatus.UNKNOWN.encode(),
             "request_time": self.get_current_time(),
-            "request": request,
-            "environment_path": request, # ?
+            "request": [],
+            "execution_path": request,
             "run_log": {},
             "task_logs": [],
             "outputs": {}
@@ -53,7 +57,8 @@ class Database:
 
     def update_run(self, run):
         if run["run_id"] is None:
-            raise ValueError("None can not be run_id!")
+            current_app.logger.other_error("None can not be run_id")
+            raise ValueError("None can not be run_id")
         return self._db_runs().update_one({"run_id": run["run_id"]}, {"$set": run}).acknowledged
 
     def delete_run(self, run_id):
