@@ -28,6 +28,9 @@ def CancelRun(run_id, *args, **kwargs):
                 "status_code": 0
                 }, 404
     else:
+        return {"msg": "Could not find run %s" % run_id,
+                "status_code": 0
+                }, 404
         # TODO perform steps to delete run: set status on canceled and stop running processes
         run = current_app.snakemake.cancel(run)
         current_app.info_logger.info("Run %s is canceled" % run_id)

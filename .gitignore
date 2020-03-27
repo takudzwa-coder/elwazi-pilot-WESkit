@@ -3,4 +3,8 @@ tmp/
 trash/
 __pycache__/
 .idea/
-*.log
+build/
+wesnake.iml
+WESnake.egg-info
+dist
+settings.json

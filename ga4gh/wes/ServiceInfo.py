@@ -2,8 +2,8 @@ from bson.son import SON
 
 
 class ServiceInfo:
-    def __init__(self, service_info,  swagger, database):
-        self._static_service_info = service_info
+    def __init__(self, static_service_info, swagger, database):
+        self._static_service_info = static_service_info
         self._db = database
         self._swagger = swagger
 

@@ -63,8 +63,8 @@ def snakemake_executor():
 @pytest.fixture(scope="function")
 def static_service_info(database_connection):
     with open("service_info.yaml", "r") as ff:
-        service_info = yaml.load(ff, Loader=yaml.FullLoader)
-    yield service_info
+        static_service_info = yaml.load(ff, Loader=yaml.FullLoader)
+    yield static_service_info
 
 
 @pytest.fixture(scope="function")
