@@ -12,7 +12,7 @@ default_workflow_engine_parameters:
   - parameter_type: "none"
   - default_value: "nothing"
 
-auth_instructions_url:
+auth_instructions_url: "null"
     #ToDo: Create a web page with instructions
 
 contact_info_url:

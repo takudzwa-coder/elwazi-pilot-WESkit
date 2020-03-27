@@ -3,3 +3,4 @@ tmp/
 trash/
 __pycache__/
 .idea/
+*.log

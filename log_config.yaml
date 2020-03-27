@@ -20,6 +20,6 @@ root:
     level: INFO
 loggers:
     other:
-        level: INFO
+        level: ERROR
         handlers: [file, console]
         propagate: false

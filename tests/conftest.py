@@ -9,8 +9,10 @@ from logging.config import dictConfig
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, config_validation, static_service_info, service_info_validation, log_config, root_logger, other_logger, swagger, database_connection):
-    app = create_app(test_config, config_validation, static_service_info, service_info_validation, log_config, root_logger, other_logger, swagger, database_connection)
+def test_app(test_config, validation, config_validation, service_info_validation, static_service_info, log_config,
+             info_logger, error_logger, swagger, database_connection):
+    app = create_app(test_config, validation, config_validation, service_info_validation, static_service_info,
+                     log_config, info_logger, error_logger, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -20,16 +22,28 @@ def test_app(test_config, config_validation, static_service_info, service_info_v
 
 @pytest.fixture(scope="function")
 def test_config():
-    with open("tests/test_config.yaml", "r") as ff:
+    with open("config.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
 
 
 @pytest.fixture(scope="function")
-def config_validation():
-    with open("config_validation.yaml", "r") as ff:
-        config_validation = yaml.load(ff, Loader=yaml.FullLoader)
+def validation():
+    with open("validation.yaml", "r") as ff:
+        validation = yaml.load(ff, Loader=yaml.FullLoader)
+    yield validation
+
+
+@pytest.fixture(scope="function")
+def config_validation(validation):
+    config_validation = validation["config_validation"]["schema"]
     yield config_validation
+
+
+@pytest.fixture(scope="function")
+def service_info_validation(validation):
+    service_info_validation = validation["service_info_validation"]["schema"]
+    yield service_info_validation
 
 
 @pytest.fixture(scope="function")
@@ -54,16 +68,8 @@ def static_service_info(database_connection):
 
 
 @pytest.fixture(scope="function")
-def service_info_validation():
-    with open("service_info_validation.yaml", "r") as ff:
-        service_info_validation = yaml.load(ff, Loader=yaml.FullLoader)
-    yield service_info_validation
-
-
-@pytest.fixture(scope="function")
 def service_info(static_service_info, swagger, database_connection):
-    executor = ServiceInfo(static_service_info, swagger, database_connection)
-    yield executor
+    yield ServiceInfo(static_service_info, swagger, database_connection)
 
 
 @pytest.fixture(scope="function")
@@ -74,14 +80,14 @@ def log_config():
 
 
 @pytest.fixture(scope="function")
-def root_logger(log_config):
+def info_logger(log_config):
     dictConfig(log_config)
     root_logger = logging.getLogger()
     yield root_logger
 
 
 @pytest.fixture(scope="function")
-def other_logger(log_config):
+def error_logger(log_config):
     dictConfig(log_config)
     logger_other = list(log_config["loggers"])
     other_logger = logging.getLogger(logger_other[0])
