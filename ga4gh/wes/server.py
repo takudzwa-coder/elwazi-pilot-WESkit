@@ -1,6 +1,3 @@
-import ga4gh.wes.validation as service_info_validate
-import cerberus
-from cerberus import Validator
 from ga4gh.wes.utils import create_run_id
 from flask import current_app
 
@@ -51,12 +48,8 @@ def GetRunStatus(run_id, *args, **kwargs):
 
 
 # get:/service-info
-def GetServiceInfo(static_service_info, service_info_validation, *args, **kwargs):
+def GetServiceInfo(*args, **kwargs):
     current_app.info_logger.info("GetServiceInfo")
-    validator = service_info_validate.validate_service_info({"service_info_validation": static_service_info}, service_info_validation)
-    if validator is False:
-        current_app.error_logger.error("schema not valid")
-        raise cerberus.schema.SchemaError
     response = {
         "workflow_type_versions": current_app.static_service_info.get_workflow_type_versions(),
         "supported_wes_versions": current_app.static_service_info.get_supported_wes_versions(),

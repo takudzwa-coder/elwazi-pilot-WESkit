@@ -1,6 +1,5 @@
 import json, yaml
 from ga4gh.wes.utils import create_run_id
-from ga4gh.wes.RunStatus import RunStatus
 
 
 def test_post_run(snakemake_executor, database_connection):

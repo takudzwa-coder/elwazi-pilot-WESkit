@@ -9,14 +9,11 @@ workflow_engine_versions:
 
 default_workflow_engine_parameters:
   - name: "null"
-  - parameter_type: "none"
-  - default_value: "nothing"
+    parameter_type: "none"
+    default_value: "nothing"
 
 auth_instructions_url: "null"
-    #ToDo: Create a web page with instructions
 
-contact_info_url:
-     your@email.de
+contact_info_url: your@email.de
 
-tags:
-    {}
+tags: {}
