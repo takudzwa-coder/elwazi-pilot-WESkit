@@ -12,11 +12,11 @@ class Snakemake:
         return run
 
     def execute(self, run, database):
-        current_app.info_logger.info("RunWorkflow")
+        current_app.logger.info("RunWorkflow")
         
         # create run environment
         tmp_dir = "tmp/"
-        current_app.info_logger.info("_create_environment")
+        current_app.logger.info("_create_environment")
         run_dir = os.path.abspath(os.path.join(tmp_dir, run["run_id"]))
         os.makedirs(run_dir)
         with open(run_dir + "/config.yaml", "w") as ff:
@@ -25,7 +25,7 @@ class Snakemake:
         database.update_run(run)
 
         # execute run
-        current_app.info_logger.info("_execute_run")
+        current_app.logger.info("_execute_run")
         tmp_dir = "tmp/" + run["run_id"]
         command = [
             "snakemake",
