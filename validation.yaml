@@ -48,15 +48,14 @@ config:
       supported_filesystem_protocols:
         type: list
         required: true
+        schema:
+          type: string
       workflow_engine_versions:
         type: dict
         required: true
         schema:
           Snakemake:
-            type: list
-            required: true
-            schema:
-              type: string
+            type: string
       default_workflow_engine_parameters:
         type: list
         required: true
@@ -67,7 +66,7 @@ config:
             name:
               type: string
               required: true
-            parameter_type:
+            type:
               type: string
               required: true
             default_value:
