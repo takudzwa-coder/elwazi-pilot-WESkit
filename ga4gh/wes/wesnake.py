@@ -32,17 +32,11 @@ def create_app(config, validation, static_service_info, log_config, logger, swag
     app.app.config['ENV'] = "development"
     app.app.config['TESTING'] = False
 
-    # Validate static service info YAML.
-    service_info_validation = validator.validate(static_service_info, validation["static_service_info"])
-    if service_info_validation is not True:
-        logger.error("Could not validate service_info.yaml: {}".format(validator.errors))
-        sys.exit(ErrorCodes.CONFIGURATION_ERROR)
-
     # Global objects and information.
     app.app.validation = validation
     app.app.database = database
     app.app.snakemake = Snakemake()
-    app.app.service_info = ServiceInfo(static_service_info, swagger, database)
+    app.app.service_info = ServiceInfo(config["static_service_info"], swagger, database)
     app.app.log_config = log_config
     app.app.logger = logger
     app.app.swagger = swagger
@@ -54,10 +48,9 @@ def main():
     print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--validation", type=str, required=True)
-    parser.add_argument("--service_info", type=str, required=True)
     parser.add_argument("--log_config", type=str, required=True)
     parser.add_argument("--swagger", type=str, required=True)
+    parser.add_argument("--validation", type=str, required=True)
     args = parser.parse_args()
 
     with open(args.config, "r") as yaml_file:
@@ -65,9 +58,6 @@ def main():
 
     with open(args.validation, "r") as yaml_file:
         validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
-
-    with open(args.service_info, "r") as yaml_file:
-        static_service_info = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
     with open(args.log_config, "r") as yaml_file:
         log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
@@ -77,6 +67,6 @@ def main():
     with open(args.swagger, "r") as yaml_file:
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
-    app = create_app(config, validation, static_service_info, log_config,
+    app = create_app(config, validation, log_config,
                      logger, swagger, Database(MongoClient(), "WES"))
     app.run()

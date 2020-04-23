@@ -50,11 +50,8 @@ def snakemake_executor():
 
 
 @pytest.fixture(scope="function")
-def static_service_info(database_connection):
-    # Use the test YAML.
-    with open("tests/service_info.yaml", "r") as ff:
-        static_service_info = yaml.load(ff, Loader=yaml.FullLoader)
-    yield static_service_info
+def static_service_info(test_config):
+    yield test_config["static_service_info"]
 
 
 @pytest.fixture(scope="function")

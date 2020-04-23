@@ -32,9 +32,14 @@ python setup.py install
 
 ## Configuration
 
-Please adapt the `config.yaml` file.
- 
-WESnake needs a MongoDB instance running. You can use the the version installed in the Conda environment. 
+There are three configuration files for general usage:
+
+  * `config.yaml`: Main configuration file. Usually you only need to change this file.
+  * `log_config.yaml`: Configuration of the logging system. 
+
+As a template you can use the configuration in the `tests/` directory.
+
+NOTE: You should not change the `validation.yaml` file, which is only used to validate the configuration yaml.
 
 ## Running
 

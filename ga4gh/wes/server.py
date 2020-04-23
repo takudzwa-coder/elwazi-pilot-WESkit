@@ -51,15 +51,15 @@ def GetRunStatus(run_id, *args, **kwargs):
 def GetServiceInfo(*args, **kwargs):
     current_app.logger.info("GetServiceInfo")
     response = {
-        "workflow_type_versions": current_app.static_service_info.get_workflow_type_versions(),
-        "supported_wes_versions": current_app.static_service_info.get_supported_wes_versions(),
-        "supported_filesystem_protocols": current_app.static_service_info.get_supported_filesystem_protocols,
-        "workflow_engine_versions": current_app.static_service_info.get_workflow_engine_versions(),
-        "default_workflow_engine_parameters": current_app.static_service_info.get_default_workflow_engine_parameters(),
-        "system_state_counts": current_app.static_service_info.get_system_state_counts(),
-        "auth_instructions_url": current_app.static_service_info.get_auth_instructions_url(),
-        "contact_info_url": current_app.static_service_info.get_contact_info_url(),
-        "tags": current_app.static_service_info.get_tags()
+        "workflow_type_versions": current_app.service_info.get_workflow_type_versions(),
+        "supported_wes_versions": current_app.service_info.get_supported_wes_versions(),
+        "supported_filesystem_protocols": current_app.service_info.get_supported_filesystem_protocols(),
+        "workflow_engine_versions": current_app.service_info.get_workflow_engine_versions(),
+        "default_workflow_engine_parameters": current_app.service_info.get_default_workflow_engine_parameters(),
+        "system_state_counts": current_app.service_info.get_system_state_counts(),
+        "auth_instructions_url": current_app.service_info.get_auth_instructions_url(),
+        "contact_info_url": current_app.service_info.get_contact_info_url(),
+        "tags": current_app.service_info.get_tags()
     }
     return response, 200
 

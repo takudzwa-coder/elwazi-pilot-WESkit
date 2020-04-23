@@ -1,5 +1,5 @@
 def test_get_workflow_type_versions(service_info):
-    assert service_info.get_workflow_type_versions() == ["snakemake 5.8.2"]
+    assert service_info.get_workflow_type_versions() == {"Snakemake": {"workflow_type_version": ["5"]}}
 
 
 def test_get_supported_wes_versions(service_info):
@@ -11,15 +11,15 @@ def test_get_supported_filesystem_protocols(service_info):
 
 
 def test_get_workflow_engine_versions(service_info):
-    assert service_info.get_workflow_engine_versions() == {"snakemake": "5.8.2"}
+    assert service_info.get_workflow_engine_versions() == {"Snakemake": ["5.8.2"]}
 
 
 def test_get_default_workflow_engine_parameters(service_info):
     default_workflow_engine_parameters = service_info.get_default_workflow_engine_parameters()
-    assert default_workflow_engine_parameters[0]["name"] == "null"
-    assert default_workflow_engine_parameters[0]["parameter_type"] == "none"
-    assert default_workflow_engine_parameters[0]["default_value"] == "nothing"
-
+    assert default_workflow_engine_parameters[0]["name"] == "parameterName1"
+    assert default_workflow_engine_parameters[0]["parameter_type"] == "parameterType1"
+    assert default_workflow_engine_parameters[0]["default_value"] == "defaultValue1"
+    assert len(default_workflow_engine_parameters) == 2
 
 def test_get_auth_instructions_url(service_info):
     assert service_info.get_auth_instructions_url() == "https://somewhere.org"
