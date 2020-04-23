@@ -51,7 +51,8 @@ def snakemake_executor():
 
 @pytest.fixture(scope="function")
 def static_service_info(database_connection):
-    with open("service_info.yaml", "r") as ff:
+    # Use the test YAML.
+    with open("tests/service_info.yaml", "r") as ff:
         static_service_info = yaml.load(ff, Loader=yaml.FullLoader)
     yield static_service_info
 
@@ -63,7 +64,7 @@ def service_info(static_service_info, swagger, database_connection):
 
 @pytest.fixture(scope="function")
 def log_config():
-    # There is a special logging config for test-associated logging.
+    # There is a special logger "tests" for test-associated logging.
     with open("log_config.yaml", "r") as ff:
         log_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield log_config

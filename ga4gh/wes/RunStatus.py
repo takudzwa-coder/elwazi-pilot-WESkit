@@ -4,7 +4,7 @@ import enum
 class RunStatus(enum.Enum):
     UNKNOWN = 0
     QUEUED = 1
-    INIZIALIZING = 2
+    INITIALIZING = 2
     RUNNING = 3
     PAUSED = 4
     COMPLETE = 5

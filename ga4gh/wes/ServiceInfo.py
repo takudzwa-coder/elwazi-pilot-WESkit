@@ -1,4 +1,5 @@
 from bson.son import SON
+from ga4gh.wes.RunStatus import RunStatus
 
 
 class ServiceInfo:
@@ -25,10 +26,14 @@ class ServiceInfo:
     def get_system_state_counts(self):
         aggregate = [
             {"$unwind": "$run_status"},
-            {"$group": {"_id": "$run_status", "num_states": {"$sum": 1}}},
-            {"$sort": SON([("_id", 1), ("num_states", -1)])}
+            {"$group": {"_id": "$run_status", "status_count": {"$sum": 1}}},
+            {"$sort": SON([("_id", 1), ("status_count", -1)])}
             ]
-        return self._db.aggregate_states(aggregate)
+        counts = self._db.aggregate_states(aggregate)
+        for status in RunStatus:
+            if status.name not in counts:
+                counts[status.name] = 0
+        return counts
 
     def get_auth_instructions_url(self):
         return self._static_service_info["auth_instructions_url"]

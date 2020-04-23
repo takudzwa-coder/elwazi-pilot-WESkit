@@ -3,20 +3,21 @@ workflow_type_versions:
 
 supported_filesystem_protocols:
   - s3
+  - posix
 
 workflow_engine_versions:
     snakemake: 5.8.2
 
 default_workflow_engine_parameters:
   - name: "null"
-  - parameter_type: "none"
-  - default_value: "nothing"
+    parameter_type: "none"
+    default_value: "nothing"
 
-auth_instructions_url: "null"
-    #ToDo: Create a web page with instructions
+auth_instructions_url: "https://somewhere.org"
 
 contact_info_url:
      your@email.de
 
 tags:
-    {}
+  tag1: value1
+  tag2: value2
