@@ -1,7 +1,8 @@
 name: wesnake
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
+  - bioconda-legacy
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -16,7 +17,7 @@ dependencies:
   - botocore=1.15.47=pyh9f0ad1d_0
   - brotlipy=0.7.0=py37h8f50634_1000
   - bzip2=1.0.8=h516909a_2
-  - ca-certificates=2019.11.27=0
+  - ca-certificates=2020.4.5.1=hecc5488_0
   - cachetools=3.1.1=py_0
   - cairo=1.16.0=hcf35c78_1003
   - certifi=2020.4.5.1=py37hc8dfbb8_0
@@ -107,7 +108,7 @@ dependencies:
   - numpy=1.18.1=py37h8960a57_1
   - openapi-spec-validator=0.2.8=py_0
   - openjpeg=2.3.1=h981e76c_3
-  - openssl=1.1.1d=h7b6447c_3
+  - openssl=1.1.1g=h516909a_0
   - packaging=20.1=py_0
   - pandas=1.0.3=py37h0da4684_1
   - pango=1.40.14=he7ab937_1005
@@ -154,6 +155,7 @@ dependencies:
   - smmap=3.0.2=pyh9f0ad1d_0
   - snakemake=5.8.2=0
   - snakemake-minimal=5.8.2=py_0
+  - sqlalchemy=1.3.16=py37h8f50634_0
   - sqlite=3.28.0=h8b20d00_0
   - swagger-ui-bundle=0.0.6=py_0
   - tk=8.6.8=hbc83047_0
@@ -191,5 +193,4 @@ dependencies:
     - docker==4.2.0
     - testcontainers==3.0.0
     - websocket-client==0.57.0
-prefix: /home/kensche/miniconda3/envs/wesnake
 
