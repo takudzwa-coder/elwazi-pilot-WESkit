@@ -10,7 +10,7 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
 
 
-def create_app(config, validation, static_service_info, log_config, logger, swagger, database):
+def create_app(config, validation, log_config, logger, swagger, database):
 
     app = connexion.App(__name__)
     app.add_api("20191217_workflow_execution_service.swagger.yaml")
@@ -43,13 +43,10 @@ def create_app(config, validation, static_service_info, log_config, logger, swag
     
     return app
 
-def create_database(config):
-    return Database(MongoClient(), "WES")
 
 def create_database(config):
     return Database(MongoClient(), "WES")
 
-import sys
 
 def main():
     print("test", file=sys.stderr)
