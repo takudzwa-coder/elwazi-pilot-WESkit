@@ -43,6 +43,8 @@ def create_app(config, validation, static_service_info, log_config, logger, swag
     
     return app
 
+def create_database(config):
+    return Database(MongoClient(), "WES")
 
 def main():
     print("test", file=sys.stderr)
@@ -68,5 +70,6 @@ def main():
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
     app = create_app(config, validation, log_config,
-                     logger, swagger, Database(MongoClient(), "WES"))
+                     logger, swagger, create_database(config))
+    
     app.run()
