@@ -1,4 +1,3 @@
-
 def test_get_list_runs(test_app, database_connection):
     response = test_app.get("/ga4gh/wes/v1/runs")
     assert response.status_code == 200
