@@ -1,19 +1,4 @@
-import pytest
-from ga4gh.wes.Database import Database
 from ga4gh.wes.RunStatus import RunStatus
-from testcontainers.mongodb import MongoDbContainer
-from pymongo import MongoClient
-
-@pytest.fixture(scope="function")
-def database_connection():
-    container = MongoDbContainer('bitnami/mongodb:4.2.3').\
-        with_kargs(stderr=True, stdout=True).\
-        with_env("MONGODB_EXTRA_FLAGS", "--bind_ip_all")
-    container.start()
-    database = Database(MongoClient(container.get_connection_url()), "WES_Test")
-    yield database
-    database._db_runs().drop()
-
 
 run_id = "test_store_and_retrieve_run_id"
     
@@ -21,7 +6,7 @@ run_id = "test_store_and_retrieve_run_id"
 def test_create_new_run(database_connection):
     print("test create_new_run")
     run = database_connection.create_new_run(run_id, [])
-    assert RunStatus.decode(run["run_status"]) == RunStatus.NotStarted
+    assert RunStatus.decode(run["run_status"]) == RunStatus.UNKNOWN
     assert run["run_id"] == run_id
 
 
@@ -40,18 +25,18 @@ def test_list_run_ids_and_states(database_connection):
     run_id_and_states = database_connection.list_run_ids_and_states()
     assert len(run_id_and_states) == 1
     assert run_id_and_states[0]["run_id"] == run_id
-    assert RunStatus.decode(run_id_and_states[0]["run_status"]) == RunStatus.NotStarted
+    assert RunStatus.decode(run_id_and_states[0]["run_status"]) == RunStatus.UNKNOWN
 
 
 def test_update_run(database_connection):
     print("test update_run")
     run = database_connection.create_new_run(run_id, [])
     new_run = run.copy()
-    new_run["run_status"] = RunStatus.Running.encode()
+    new_run["run_status"] = RunStatus.RUNNING.encode()
     database_connection.update_run(new_run)
     assert new_run["run_id"] == run_id
-    assert RunStatus.decode(new_run["run_status"]) == RunStatus.Running
-    assert RunStatus.decode(run["run_status"]) == RunStatus.NotStarted
+    assert RunStatus.decode(new_run["run_status"]) == RunStatus.RUNNING
+    assert RunStatus.decode(run["run_status"]) == RunStatus.UNKNOWN
 
 
 def test_delete_run(database_connection):

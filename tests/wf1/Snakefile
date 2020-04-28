@@ -11,6 +11,5 @@ rule step1:
         text=config["text"]
     shell:
         """
-        sleep 60
         echo {params.text} > {output.file}
         """
