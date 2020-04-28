@@ -6,7 +6,7 @@ from ga4gh.wes.wesnake import create_app
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from logging.config import dictConfig
-
+import yaml
 
 @pytest.fixture(scope="function")
 def test_app(test_config, validation, static_service_info, log_config,
