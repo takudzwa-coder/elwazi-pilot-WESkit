@@ -71,5 +71,5 @@ def main():
 
     app = create_app(config, validation, log_config,
                      logger, swagger, create_database(config))
-    
+
     app.run()
