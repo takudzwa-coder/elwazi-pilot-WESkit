@@ -9,8 +9,10 @@ from logging.config import dictConfig
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, static_service_info, log_config, root_logger, other_logger, swagger, database_connection):
-    app = create_app(test_config, static_service_info, log_config, root_logger, other_logger, swagger, database_connection)
+def test_app(test_config, validation, static_service_info, log_config,
+             logger, swagger, database_connection):
+    app = create_app(test_config, validation, static_service_info,
+                     log_config, logger, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -20,10 +22,18 @@ def test_app(test_config, static_service_info, log_config, root_logger, other_lo
 
 @pytest.fixture(scope="function")
 def test_config():
-    with open("tests/test_config.yaml", "r") as ff:
+    # This uses a dedicated test configuration YAML.
+    with open("tests/config.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
 
+
+@pytest.fixture(scope="function")
+def validation():
+    # This uses the global validation YAML because YAML file structures should be identical in test and production.
+    with open("validation.yaml", "r") as ff:
+        validation = yaml.load(ff, Loader=yaml.FullLoader)
+    yield validation
 
 @pytest.fixture(scope="function")
 def database_connection():
@@ -40,38 +50,27 @@ def snakemake_executor():
 
 
 @pytest.fixture(scope="function")
-def static_service_info(database_connection):
-    with open("service_info.yaml", "r") as ff:
-        static_service_info = yaml.load(ff, Loader=yaml.FullLoader)
-    yield static_service_info
+def static_service_info(test_config):
+    yield test_config["static_service_info"]
 
 
 @pytest.fixture(scope="function")
 def service_info(static_service_info, swagger, database_connection):
-    executor = ServiceInfo(static_service_info, swagger, database_connection)
-    yield executor
+    yield ServiceInfo(static_service_info, swagger, database_connection)
 
 
 @pytest.fixture(scope="function")
 def log_config():
+    # There is a special logger "tests" for test-associated logging.
     with open("log_config.yaml", "r") as ff:
         log_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield log_config
 
 
 @pytest.fixture(scope="function")
-def root_logger(log_config):
+def logger(log_config):
     dictConfig(log_config)
-    root_logger = logging.getLogger()
-    yield root_logger
-
-
-@pytest.fixture(scope="function")
-def other_logger(log_config):
-    dictConfig(log_config)
-    logger_other = list(log_config["loggers"])
-    other_logger = logging.getLogger(logger_other[0])
-    yield other_logger
+    yield logging.getLogger("test")
 
 
 @pytest.fixture(scope="function")

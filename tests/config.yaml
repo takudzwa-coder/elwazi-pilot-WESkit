@@ -19,15 +19,14 @@ static_service_info:
         - posix
     
     workflow_engine_versions:
-        Snakemake:
-            - "5.8.2"
+        Snakemake: "5.8.2"
     
     default_workflow_engine_parameters:
         - name: "parameterName1"
-          parameter_type: "parameterType1"
+          type: "parameterType1"
           default_value: "defaultValue1"
         - name: "parameterName2"
-          parameter_type: "parameterType2"
+          type: "parameterType2"
           default_value: "defaultValue2"
     
     auth_instructions_url: "https://somewhere.org"

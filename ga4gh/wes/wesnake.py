@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 
 import argparse, connexion, yaml, sys, logging
+from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
+from ga4gh.wes.ErrorCodes import ErrorCodes
 
 
-def create_app(config, static_service_info, log_config, root_logger, other_logger, swagger, database):
+def create_app(config, validation, static_service_info, log_config, logger, swagger, database):
 
-    # Set app
     app = connexion.App(__name__)
     app.add_api("20191217_workflow_execution_service.swagger.yaml")
+
+    # Validate configuration YAML.
+    validator = Validator()
+    config_validation = validator.validate(config, validation["config"])
+    if config_validation is not True:
+        logger.error("Could not validate config.yaml: {}".format(validator.errors))
+        sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
     # Replace Connexion app settings
     app.host = config["wes_server"]["host"]
@@ -24,26 +32,13 @@ def create_app(config, static_service_info, log_config, root_logger, other_logge
     app.app.config['ENV'] = "development"
     app.app.config['TESTING'] = False
 
-    # Setup database connection
+    # Global objects and information.
+    app.app.validation = validation
     app.app.database = database
-
-    # Setup snakemake executor
     app.app.snakemake = Snakemake()
-    
-    # Setup service_info
-    app.app.service_info = ServiceInfo(static_service_info, swagger, database)
-
-    # Setup log_config
+    app.app.service_info = ServiceInfo(config["static_service_info"], swagger, database)
     app.app.log_config = log_config
-
-    # Setup root_logger
-    app.app.root_logger = logging.getLogger()
-
-    # Setup other_logger
-    logger_other = list(log_config["loggers"])
-    app.app.other_logger = logging.getLogger(logger_other[0])
-
-    # Setup swagger
+    app.app.logger = logger
     app.app.swagger = swagger
     
     return app
@@ -53,36 +48,25 @@ def main():
     print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--log_config", type=str, required=True)
+    parser.add_argument("--swagger", type=str, required=True)
+    parser.add_argument("--validation", type=str, required=True)
     args = parser.parse_args()
-    with open(args.config, "r") as yamlfile:
-        config = yaml.load(yamlfile, Loader=yaml.FullLoader)
 
-    parser_test_config = argparse.ArgumentParser(description="WESnake_Test")
-    parser.add_argument("--config", type=str, required=True)
-    args_test_config = parser_test_config.parse_args()
-    with open(args_test_config.config, "r") as ff:
-        test_config = yaml.load(ff, Loader=yaml.FullLoader)
+    with open(args.config, "r") as yaml_file:
+        config = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
-    parser_info = argparse.ArgumentParser(description="ServiceInfo")
-    parser.add_argument("--config", type=str, required=True)
-    args_info = parser_info.parse_args()
-    with open(args_info.config, "r") as ff:
-        static_service_info = yaml.load(ff, Loader=yaml.FullLoader)
+    with open(args.validation, "r") as yaml_file:
+        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
-    parser_log = argparse.ArgumentParser(description="Logging")
-    parser.add_argument("--config", type=str, required=True)
-    args_log = parser_log.parse_args()
-    with open(args_log.config, "r") as ff:
-        log_config = yaml.load(ff, Loader=yaml.FullLoader)
+    with open(args.log_config, "r") as yaml_file:
+        log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
         dictConfig(log_config)
-        root_logger = logging.getLogger()
-        other_logger = logging.getLogger(log_config["loggers"]["other"])
+        logger = logging.getLogger("default")
 
-    parser_swagger = argparse.ArgumentParser(description="Swagger")
-    parser.add_argument("--config", type=str, required=True)
-    args_swagger = parser_swagger.parse_args()
-    with open(args_swagger.config, "r") as ff:
-        swagger = yaml.load(ff, Loader=yaml.FullLoader)
+    with open(args.swagger, "r") as yaml_file:
+        swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
-    app = create_app(config, static_service_info, log_config, root_logger, other_logger, swagger, Database(MongoClient(), "WES"))
+    app = create_app(config, validation, log_config,
+                     logger, swagger, Database(MongoClient(), "WES"))
     app.run()

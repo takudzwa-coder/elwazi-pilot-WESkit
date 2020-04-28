@@ -1,1 +1,10 @@
-text: "blabla blubb blubb"
+wes_server:
+  host: localhost
+  port: 9000
+  debug: false
+
+mongo_server:
+  host:
+  port:
+
+debug: true

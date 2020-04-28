@@ -4,7 +4,7 @@ from flask import current_app
 
 
 def create_run_id():
-    current_app.root_logger.info("create_run_id")
+    current_app.logger.info("create_run_id")
     run_id = str(uuid.uuid4())
     while current_app.database.get_run(run_id) == run_id:
         run_id = str(uuid.uuid4())

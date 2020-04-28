@@ -19,7 +19,11 @@ root:
     handlers: [file]
     level: INFO
 loggers:
-    other:
-        level: INFO
+    default:
+        level: ERROR
         handlers: [file, console]
+        propagate: false
+    test:
+        level: DEBUG
+        handlers: [console]
         propagate: false
