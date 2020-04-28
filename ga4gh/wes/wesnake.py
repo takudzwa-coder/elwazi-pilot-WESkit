@@ -43,6 +43,8 @@ def create_app(config, validation, static_service_info, log_config, logger, swag
     
     return app
 
+def create_database(config):
+    return Database(MongoClient(), "WES")
 
 def create_database(config):
     return Database(MongoClient(), "WES")
