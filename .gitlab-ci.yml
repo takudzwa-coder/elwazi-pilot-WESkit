@@ -28,7 +28,7 @@ test:
   image: continuumio/miniconda3:latest
   script:
     # - python -m pytest -v -s --log-cli-level=debug
-    - python -m pytest -v
+    - MONGODB_URI=docker python -m pytest -v
 
 run:
   image: continuumio/miniconda3:latest
