@@ -23,7 +23,6 @@ before_script:
   - conda config --show    # For debugging
   - conda env create -n wesnake -f environment.yaml
   - conda activate wesnake
-  - pip install testcontainers[mongo]
 
 test:
   image: continuumio/miniconda3:latest
