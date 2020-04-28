@@ -1,4 +1,4 @@
-import pytest
+import pytest, yaml, os, logging
 from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
@@ -6,7 +6,7 @@ from ga4gh.wes.wesnake import create_app
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from logging.config import dictConfig
-import yaml
+
 
 @pytest.fixture(scope="function")
 def test_app(test_config, validation, static_service_info, log_config,
@@ -35,11 +35,23 @@ def validation():
         validation = yaml.load(ff, Loader=yaml.FullLoader)
     yield validation
 
+
 @pytest.fixture(scope="function")
 def database_connection():
-    container = MongoDbContainer('mongo:4.2.3')
-    container.start()
-    database = Database(MongoClient(container.get_connection_url()), "WES_Test")
+    MONGODB_URI = "MONGODB_URI"
+    MONGODB_CONTAINER = "mongo:4.2.3"
+    WESNAKE_TEST_DB = "WESnake_Test"
+
+    if MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI].upper() == "DOCKER":
+        container = MongoDbContainer(MONGODB_CONTAINER)
+        container.start()
+        database = Database(MongoClient(container.get_connection_url()), WESNAKE_TEST_DB)
+    elif MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI] != "":
+        connection_url = os.environ[MONGODB_URI]
+        database = Database(MongoClient(connection_url), WESNAKE_TEST_DB)
+    else:
+        database = Database(MongoClient(), WESNAKE_TEST_DB)
+
     yield database
     database._db_runs().drop()
 
