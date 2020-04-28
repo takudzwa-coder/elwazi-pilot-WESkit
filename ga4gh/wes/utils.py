@@ -1,13 +1,15 @@
-from random import choice
+import uuid
 from datetime import datetime
+from flask import current_app
+
 
 def create_run_id():
-    print("_create_run_id")
-    # create run identifier
-    charset = "0123456789abcdefghijklmnopqrstuvwxyz"
-    length = 8
-    run_id = "".join(choice(charset) for __ in range(length))
+    current_app.logger.info("create_run_id")
+    run_id = str(uuid.uuid4())
+    while current_app.database.get_run(run_id) == run_id:
+        run_id = str(uuid.uuid4())
     return run_id
+
 
 def get_current_time():
     return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")

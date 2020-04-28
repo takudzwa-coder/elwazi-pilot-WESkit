@@ -6,7 +6,7 @@ run_id = "test_store_and_retrieve_run_id"
 def test_create_new_run(database_connection):
     print("test create_new_run")
     run = database_connection.create_new_run(run_id, [])
-    assert RunStatus.decode(run["run_status"]) == RunStatus.NOT_STARTED
+    assert RunStatus.decode(run["run_status"]) == RunStatus.UNKNOWN
     assert run["run_id"] == run_id
 
 
@@ -25,7 +25,7 @@ def test_list_run_ids_and_states(database_connection):
     run_id_and_states = database_connection.list_run_ids_and_states()
     assert len(run_id_and_states) == 1
     assert run_id_and_states[0]["run_id"] == run_id
-    assert RunStatus.decode(run_id_and_states[0]["run_status"]) == RunStatus.NOT_STARTED
+    assert RunStatus.decode(run_id_and_states[0]["run_status"]) == RunStatus.UNKNOWN
 
 
 def test_update_run(database_connection):
@@ -36,7 +36,7 @@ def test_update_run(database_connection):
     database_connection.update_run(new_run)
     assert new_run["run_id"] == run_id
     assert RunStatus.decode(new_run["run_status"]) == RunStatus.RUNNING
-    assert RunStatus.decode(run["run_status"]) == RunStatus.NOT_STARTED
+    assert RunStatus.decode(run["run_status"]) == RunStatus.UNKNOWN
 
 
 def test_delete_run(database_connection):
