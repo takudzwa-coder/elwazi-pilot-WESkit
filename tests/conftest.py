@@ -9,10 +9,9 @@ from logging.config import dictConfig
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, validation, static_service_info, log_config,
+def test_app(test_config, validation, log_config,
              logger, swagger, database_connection):
-    app = create_app(test_config, validation, static_service_info,
-                     log_config, logger, swagger, database_connection)
+    app = create_app(test_config, validation, log_config, logger, swagger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -63,13 +62,8 @@ def snakemake_executor():
 
 
 @pytest.fixture(scope="function")
-def static_service_info(test_config):
-    yield test_config["static_service_info"]
-
-
-@pytest.fixture(scope="function")
-def service_info(static_service_info, swagger, database_connection):
-    yield ServiceInfo(static_service_info, swagger, database_connection)
+def service_info(test_config, swagger, database_connection):
+    yield ServiceInfo(test_config["static_service_info"], swagger, database_connection)
 
 
 @pytest.fixture(scope="function")
