@@ -1,12 +1,14 @@
 ## Flask configuration values
 ## (see https://flask.palletsprojects.com/en/1.1.x/config/#builtin-configuration-values)
 
+# Enable this during running of tests
 DEBUG: true
 
 # development | production
 ENV: development
 
-TESTING: false
+# Enable this during running of tests.
+TESTING: true
 
 ## Remaining configuration values
 wes_server:
