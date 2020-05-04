@@ -17,20 +17,17 @@ def create_app(config, validation, log_config, logger, swagger, database):
 
     # Validate configuration YAML.
     validator = Validator()
-    config_validation = validator.validate(config, validation["config"])
+    config_validation = validator.validate(config, validation)
     if config_validation is not True:
         logger.error("Could not validate config.yaml: {}".format(validator.errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
+    # Use the conventional app.config attribute
+    app.config = config
+
     # Replace Connexion app settings
     app.host = config["wes_server"]["host"]
     app.port = config["wes_server"]["port"]
-    app.debug = config["debug"]
-
-    # Replace Flask app settings
-    app.app.config['DEBUG'] = app.debug
-    app.app.config['ENV'] = "development"
-    app.app.config['TESTING'] = False
 
     # Global objects and information.
     app.app.validation = validation

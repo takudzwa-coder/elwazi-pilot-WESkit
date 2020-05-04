@@ -1,3 +1,14 @@
+## Flask configuration values
+## (see https://flask.palletsprojects.com/en/1.1.x/config/#builtin-configuration-values)
+
+DEBUG: true
+
+# development | production
+ENV: development
+
+TESTING: false
+
+## Remaining configuration values
 wes_server:
     host: 127.0.0.1
     port: 4080
@@ -5,8 +16,6 @@ wes_server:
 mongo_server:
     host: 127.0.0.1
     port: 27017
-
-debug: true
 
 static_service_info:
     workflow_type_versions:
