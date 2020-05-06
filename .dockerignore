@@ -1,0 +1,9 @@
+.git
+.dockerignore
+Dockerfile
+.gitignore
+build
+.idea
+.pytest_cache
+.gitlab-ci.yaml
+
