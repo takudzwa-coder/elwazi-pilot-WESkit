@@ -10,10 +10,15 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
 
 
-def create_app(config, validation, log_config, logger, swagger, database):
+def create_app(config, validation, log_config, logger, database):
 
-    app = connexion.App(__name__)
-    app.add_api("20191217_workflow_execution_service.swagger.yaml")
+    swagger_file = "workflow_execution_service_1.0.0.yaml"
+    app = connexion.App(__name__, specification_dir="swagger/")
+    app.add_api(swagger_file)
+
+    swagger_path = app.specification_dir / swagger_file
+    with open(swagger_path, "r") as yaml_file:
+        swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
     # Validate configuration YAML.
     validator = Validator()
@@ -36,7 +41,6 @@ def create_app(config, validation, log_config, logger, swagger, database):
     app.app.service_info = ServiceInfo(config["static_service_info"], swagger, database)
     app.app.log_config = log_config
     app.app.logger = logger
-    app.app.swagger = swagger
     
     return app
 
@@ -49,9 +53,8 @@ def main():
     print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--log_config", type=str, required=True)
-    parser.add_argument("--swagger", type=str, required=True)
-    parser.add_argument("--validation", type=str, required=True)
+    parser.add_argument("--log_config", type=str, required=False, default="./log_config.yaml")
+    parser.add_argument("--validation", type=str, required=False, default="./validation.yaml")
     args = parser.parse_args()
 
     with open(args.config, "r") as yaml_file:
@@ -65,10 +68,7 @@ def main():
         dictConfig(log_config)
         logger = logging.getLogger("default")
 
-    with open(args.swagger, "r") as yaml_file:
-        swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
-
     app = create_app(config, validation, log_config,
-                     logger, swagger, create_database(config))
+                     logger, create_database(config))
 
     app.run()

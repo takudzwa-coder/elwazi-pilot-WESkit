@@ -10,8 +10,8 @@ from logging.config import dictConfig
 
 @pytest.fixture(scope="function")
 def test_app(test_config, validation, log_config,
-             logger, swagger, database_connection):
-    app = create_app(test_config, validation, log_config, logger, swagger, database_connection)
+             logger, database_connection):
+    app = create_app(test_config, validation, log_config, logger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -82,6 +82,6 @@ def logger(log_config):
 
 @pytest.fixture(scope="function")
 def swagger(database_connection):
-    with open("ga4gh/wes/20191217_workflow_execution_service.swagger.yaml", "r") as ff:
+    with open("ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml", "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
     yield swagger
