@@ -8,4 +8,6 @@ setup(name='WESnake',
             "console_scripts": [
                   "wesnake = ga4gh.wes.wesnake:main"
             ]
-      })
+      },
+      data_files=[("config", ["config/validation.yaml", "config/log-config.yaml"])]
+      )

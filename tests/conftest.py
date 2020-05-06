@@ -1,4 +1,4 @@
-import pytest, yaml, os, logging
+import pytest, yaml, os, logging, sys
 from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
@@ -30,7 +30,7 @@ def test_config():
 @pytest.fixture(scope="function")
 def validation():
     # This uses the global validation YAML because YAML file structures should be identical in test and production.
-    with open("validation.yaml", "r") as ff:
+    with open(os.path.join("config", "validation.yaml"), "r") as ff:
         validation = yaml.load(ff, Loader=yaml.FullLoader)
     yield validation
 
@@ -69,7 +69,7 @@ def service_info(test_config, swagger, database_connection):
 @pytest.fixture(scope="function")
 def log_config():
     # There is a special logger "tests" for test-associated logging.
-    with open("log_config.yaml", "r") as ff:
+    with open(os.path.join("config", "log-config.yaml")) as ff:
         log_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield log_config
 

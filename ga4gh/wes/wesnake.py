@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, connexion, yaml, sys, logging
+import argparse, connexion, yaml, sys, logging, os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
@@ -53,8 +53,10 @@ def main():
     print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--log_config", type=str, required=False, default="./log_config.yaml")
-    parser.add_argument("--validation", type=str, required=False, default="./validation.yaml")
+    parser.add_argument("--log_config", type=str, required=False,
+                        default=os.path.join(sys.prefix, "config", "log-config.yaml"))
+    parser.add_argument("--validation", type=str, required=False,
+                        default=os.path.join(sys.prefix, "config", "validation.yaml"))
     args = parser.parse_args()
 
     with open(args.config, "r") as yaml_file:
