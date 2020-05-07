@@ -1,6 +1,6 @@
 # WESnake
 
-FROM continuumio/miniconda3-alpine:4.8.2
+FROM continuumio/miniconda3:4.8.2
 
 SHELL ["/bin/bash", "-c"]
 ENV BASH_ENV ~/.bashrc
