@@ -23,6 +23,12 @@ cd wesnake
 python setup.py install
 ```
 
+## Building the Docker container
+
+```bash
+docker build --rm --build-arg http_proxy=$HTTP_PROXY --build-arg https_proxy=$HTTPS_PROXY -t wesnake:$version ./
+```
+
 ## Configuration
 
 There are three configuration files for general usage:
@@ -41,6 +47,14 @@ An executable called `wesnake` is installed. Run it with
 ```bash
 wesnake --config config.yaml
 ```
+
+If you want to run the container, you need to provide a `config.yaml`, e.g. just to try use the `tests/config.yaml` from the repository:
+
+```bash
+ docker run --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
+```
+
+TBD: Reduce the size of the container.
 
 ## Tests
 
