@@ -1,0 +1,87 @@
+version: '3.2'
+
+services:
+
+  network:
+    backend:
+    frontend:
+
+  volumes:
+    - result_database
+    - wesnake_database
+
+  wesnake:
+    hostname: wesnake
+    image: wesnake:0.0.1
+    build: .
+    restart: always
+    restart_policy:
+      condition: on-failure
+    depends_on:
+      - database
+      - result_broker
+      - message_queue
+    volumes:
+      # configurations, shared filesystems
+      - ./wesnake.yaml:/config.yaml
+      - ./shared:/nfs/
+    command: wesnake
+    netwoks:
+      - frontend
+      - backend
+    ports:
+      - "4080:4080"
+
+  database:
+    image: mongo:4.2.3
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example_database
+    volumes:
+      - wesnake_database:/var/lib/mongodb
+    networks:
+      - backend
+    ports:
+      - "27017:27017"
+
+  # https://hub.docker.com/_/rabbitmq
+  message_queue:
+    image: rabbitmq:3.7.26-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=root
+      - RABBITMQ_DEFAULT_PASS=example_message_queue
+    restart_policy:
+      condition: on-failure
+    networks:
+      - backend
+    ports:
+      - "5672:5672"
+
+  # https://hub.docker.com/_/redis?tab=description
+  result_broker:
+    image: redis:6.0.1-alpine
+    restart_policy:
+      condition: on-failure
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - result_database:/data
+    networks:
+      - backend
+    ports:
+      - "6379:6379"
+
+# Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
+#  worker:
+#    restart: always
+#    build: .
+#    volumes:
+#      - .:/app
+#    command: celery worker -B -l info -A app.tasks.celery
+#    links:
+#      - db
+#      - rabbit
+#      - web
+#    depends_on:
+#      - web
+#      -
