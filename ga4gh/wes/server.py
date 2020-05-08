@@ -28,7 +28,7 @@ def CancelRun(run_id, *args, **kwargs):
         return {"msg": "Could not find run %s" % run_id,
                 "status_code": 0
                 }, 404
-        # TODO perform steps to delete run: set status on canceled and stop running processes
+        # TODO steps to delete run: set status canceled, stop running processes
         run = current_app.snakemake.cancel(run)
         current_app.logger.info("Run %s is canceled" % run_id)
         return {"run_id": run.run_id}, 200
@@ -51,15 +51,24 @@ def GetRunStatus(run_id, *args, **kwargs):
 def GetServiceInfo(*args, **kwargs):
     current_app.logger.info("GetServiceInfo")
     response = {
-        "workflow_type_versions": current_app.service_info.get_workflow_type_versions(),
-        "supported_wes_versions": current_app.service_info.get_supported_wes_versions(),
-        "supported_filesystem_protocols": current_app.service_info.get_supported_filesystem_protocols(),
-        "workflow_engine_versions": current_app.service_info.get_workflow_engine_versions(),
-        "default_workflow_engine_parameters": current_app.service_info.get_default_workflow_engine_parameters(),
-        "system_state_counts": current_app.service_info.get_system_state_counts(),
-        "auth_instructions_url": current_app.service_info.get_auth_instructions_url(),
-        "contact_info_url": current_app.service_info.get_contact_info_url(),
-        "tags": current_app.service_info.get_tags()
+        "workflow_type_versions":
+            current_app.service_info.get_workflow_type_versions(),
+        "supported_wes_versions":
+            current_app.service_info.get_supported_wes_versions(),
+        "supported_filesystem_protocols":
+            current_app.service_info.get_supported_filesystem_protocols(),
+        "workflow_engine_versions":
+            current_app.service_info.get_workflow_engine_versions(),
+        "default_workflow_engine_parameters":
+            current_app.service_info.get_default_workflow_engine_parameters(),
+        "system_state_counts":
+            current_app.service_info.get_system_state_counts(),
+        "auth_instructions_url":
+            current_app.service_info.get_auth_instructions_url(),
+        "contact_info_url":
+            current_app.service_info.get_contact_info_url(),
+        "tags":
+            current_app.service_info.get_tags()
     }
     return response, 200
 
