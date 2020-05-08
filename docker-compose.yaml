@@ -3,6 +3,7 @@ version: '2.2'
 networks:    
   backend:
   frontend:
+  workers:
 
 # See https://docs.docker.com/registry/storage-drivers/
 volumes:
@@ -32,6 +33,7 @@ services:
     networks:
       - frontend
       - backend
+      - workers
     ports:
       - "4080:4080"
 

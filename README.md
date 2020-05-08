@@ -56,6 +56,16 @@ If you want to run the container, you need to provide a `config.yaml`, e.g. just
 
 TBD: Reduce the size of the container.
 
+
+Running the full application with all required services (except the Celery workers) can be done with Docker Compose. You can use the `.env.example` as template for your own `.env`. Put it into the top-level directory of the repository and run
+
+```bash
+docker-compose up
+```
+
+This should bring up the WESnake container together with MongoDB, Redis, and RabbitMQ. Currently, no workers are started, though (WiP).
+
+
 ## Tests
 
 To run the tests with a local MongoDB installation, create and activate the Conda environment as described before. Then start MongoDB 
