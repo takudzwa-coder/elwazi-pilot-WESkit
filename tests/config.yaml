@@ -16,8 +16,16 @@ wes_server:
     port: 4080
 
 mongo_server:
-    host: 127.0.0.1
+    host: database
     port: 27017
+
+result_broker:
+    host: result_broker
+    port: 6379
+
+message_queue:
+    host: message_queue
+    port: 5672
 
 static_service_info:
     workflow_type_versions:

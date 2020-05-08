@@ -1,9 +1,8 @@
 version: '2.2'
 
-networks:    
+networks:
   backend:
   frontend:
-  workers:
 
 # See https://docs.docker.com/registry/storage-drivers/
 volumes:
@@ -26,14 +25,13 @@ services:
       - database
       - result_broker
       - message_queue
+      - worker1
     volumes:
       - ${WESNAKE_CONFIG}:/config.yaml
       - shared:/shared
-    command: wesnake
     networks:
       - frontend
       - backend
-      - workers
     ports:
       - "4080:4080"
 
@@ -75,16 +73,11 @@ services:
       - 6379
 
 # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
-#  worker:
-#    restart: always
-#    build: .
-#    volumes:
-#      - .:/app
-#    command: celery worker -B -l info -A app.tasks.celery
-#    links:
-#      - db
-#      - rabbit
-#      - web
-#    depends_on:
-#      - web
-#      -
+  worker1:
+    command: celery worker -B -l info -A app.tasks.celery
+    restart: unless-stopped
+    build: .
+    volumes:
+      - shared:/shared
+    networks:
+      - backend
