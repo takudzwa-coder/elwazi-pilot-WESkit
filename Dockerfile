@@ -14,7 +14,7 @@ COPY ./ /wesnake
 
 RUN conda init bash
 
-RUN conda update --prefix /opt/conda conda
+# RUN conda update --prefix /opt/conda conda
 
 RUN cd /wesnake && \
     conda env create -n wesnake -f environment.yaml && \

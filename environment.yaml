@@ -2,17 +2,18 @@ name: wesnake
 channels:
   - conda-forge
   - bioconda
-  - bioconda-legacy
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
   - aioeasywebdav=2.4.0=py37_1000
   - aiohttp=3.6.2=py37h516909a_0
+  - amqp=2.5.2=py_0
   - appdirs=1.4.3=py_1
   - astroid=2.3.3=py37_1
   - async-timeout=3.0.1=py_1000
   - attrs=19.3.0=py_0
   - bcrypt=3.1.7=py37h8f50634_1
+  - billiard=3.6.3.0=py37h516909a_0
   - boto3=1.12.47=pyh9f0ad1d_0
   - botocore=1.15.47=pyh9f0ad1d_0
   - brotlipy=0.7.0=py37h8f50634_1000
@@ -20,6 +21,7 @@ dependencies:
   - ca-certificates=2020.4.5.1=hecc5488_0
   - cachetools=3.1.1=py_0
   - cairo=1.16.0=hcf35c78_1003
+  - celery=4.4.2=pyh8c360ce_0
   - certifi=2020.4.5.1=py37hc8dfbb8_0
   - cffi=1.14.0=py37hd463f26_0
   - chardet=3.0.4=py37hc8dfbb8_1006
@@ -71,6 +73,7 @@ dependencies:
   - jmespath=0.9.5=py_0
   - jpeg=9c=h14c3975_1001
   - jsonschema=3.2.0=py37hc8dfbb8_1
+  - kombu=4.6.8=py37hc8dfbb8_1
   - krb5=1.16.4=h173b8e3_0
   - lazy-object-proxy=1.4.3=py37h8f50634_2
   - libblas=3.8.0=14_openblas
@@ -161,6 +164,7 @@ dependencies:
   - tk=8.6.8=hbc83047_0
   - typed-ast=1.4.1=py37h516909a_0
   - urllib3=1.25.9=py_0
+  - vine=1.3.0=py_0
   - wcwidth=0.1.9=pyh9f0ad1d_0
   - werkzeug=1.0.1=pyh9f0ad1d_0
   - wheel=0.34.2=py_1

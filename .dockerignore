@@ -9,3 +9,5 @@ build
 .empty
 dist
 tmp
+mongo
+compose
