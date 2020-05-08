@@ -1,32 +1,35 @@
-version: '3.2'
+version: '2.2'
+
+networks:    
+  backend:
+  frontend:
+
+# See https://docs.docker.com/registry/storage-drivers/
+volumes:
+  # For NFS volumes see https://docs.docker.com/compose/compose-file/compose-file-v2/#driver_opts
+  shared:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${SHARED_FILESYSTEM_ROOT}
 
 services:
-
-  network:
-    backend:
-    frontend:
-
-  volumes:
-    - result_database
-    - wesnake_database
 
   wesnake:
     hostname: wesnake
     image: wesnake:0.0.1
     build: .
-    restart: always
-    restart_policy:
-      condition: on-failure
+    restart: unless-stopped
     depends_on:
       - database
       - result_broker
       - message_queue
     volumes:
-      # configurations, shared filesystems
-      - ./wesnake.yaml:/config.yaml
-      - ./shared:/nfs/
+      - ${WESNAKE_CONFIG}:/config.yaml
+      - shared:/shared
     command: wesnake
-    netwoks:
+    networks:
       - frontend
       - backend
     ports:
@@ -34,16 +37,16 @@ services:
 
   database:
     image: mongo:4.2.3
-    restart: always
+    restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example_database
     volumes:
-      - wesnake_database:/var/lib/mongodb
+      - ${MONGODB_VOLUME}:/var/lib/mongodb
     networks:
       - backend
     ports:
-      - "27017:27017"
+      - 27017
 
   # https://hub.docker.com/_/rabbitmq
   message_queue:
@@ -51,25 +54,23 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=root
       - RABBITMQ_DEFAULT_PASS=example_message_queue
-    restart_policy:
-      condition: on-failure
+    restart: unless-stopped
     networks:
       - backend
     ports:
-      - "5672:5672"
+      - 5672
 
   # https://hub.docker.com/_/redis?tab=description
   result_broker:
     image: redis:6.0.1-alpine
-    restart_policy:
-      condition: on-failure
+    restart: unless-stopped
     volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-      - result_database:/data
+      - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf
+      - ${REDIS_VOLUME}:/data
     networks:
       - backend
     ports:
-      - "6379:6379"
+      - 6379
 
 # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
 #  worker:
