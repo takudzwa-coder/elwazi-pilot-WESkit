@@ -196,5 +196,3 @@ dependencies:
     - docker==4.2.0
     - testcontainers==3.0.0
     - websocket-client==0.57.0
-prefix: /home/kensche/miniconda3/envs/wesnake
-
