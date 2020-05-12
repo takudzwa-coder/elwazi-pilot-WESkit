@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, connexion, yaml, sys, logging
+import argparse, connexion, yaml, sys, logging, os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
@@ -10,27 +10,29 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
 
 
-def create_app(config, validation, static_service_info, log_config, logger, swagger, database):
+def create_app(config, validation, log_config, logger, database):
 
-    app = connexion.App(__name__)
-    app.add_api("20191217_workflow_execution_service.swagger.yaml")
+    swagger_file = "workflow_execution_service_1.0.0.yaml"
+    app = connexion.App(__name__, specification_dir="swagger/")
+    app.add_api(swagger_file)
+
+    swagger_path = app.specification_dir / swagger_file
+    with open(swagger_path, "r") as yaml_file:
+        swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
     # Validate configuration YAML.
     validator = Validator()
-    config_validation = validator.validate(config, validation["config"])
+    config_validation = validator.validate(config, validation)
     if config_validation is not True:
         logger.error("Could not validate config.yaml: {}".format(validator.errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
+    # Use the conventional app.config attribute
+    app.config = config
+
     # Replace Connexion app settings
     app.host = config["wes_server"]["host"]
     app.port = config["wes_server"]["port"]
-    app.debug = config["debug"]
-
-    # Replace Flask app settings
-    app.app.config['DEBUG'] = app.debug
-    app.app.config['ENV'] = "development"
-    app.app.config['TESTING'] = False
 
     # Global objects and information.
     app.app.validation = validation
@@ -39,20 +41,22 @@ def create_app(config, validation, static_service_info, log_config, logger, swag
     app.app.service_info = ServiceInfo(config["static_service_info"], swagger, database)
     app.app.log_config = log_config
     app.app.logger = logger
-    app.app.swagger = swagger
     
     return app
 
+
 def create_database(config):
     return Database(MongoClient(), "WES")
+
 
 def main():
     print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--log_config", type=str, required=True)
-    parser.add_argument("--swagger", type=str, required=True)
-    parser.add_argument("--validation", type=str, required=True)
+    parser.add_argument("--log_config", type=str, required=False,
+                        default=os.path.join(sys.prefix, "config", "log-config.yaml"))
+    parser.add_argument("--validation", type=str, required=False,
+                        default=os.path.join(sys.prefix, "config", "validation.yaml"))
     args = parser.parse_args()
 
     with open(args.config, "r") as yaml_file:
@@ -66,10 +70,7 @@ def main():
         dictConfig(log_config)
         logger = logging.getLogger("default")
 
-    with open(args.swagger, "r") as yaml_file:
-        swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
-
     app = create_app(config, validation, log_config,
-                     logger, swagger, create_database(config))
+                     logger, create_database(config))
 
     app.run()

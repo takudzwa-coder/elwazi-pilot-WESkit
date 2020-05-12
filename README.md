@@ -2,26 +2,19 @@
 
 A GA4GH compliant Workflow-Execution-Service (WES) for Snakemake.
 
-## Tests
+## Conda environment
 
-To run the tests with a local MongoDB installation, create and activate the Conda environment as described before. Then start MongoDB 
+All requirements are specified in the Conda environment file `environment.yaml`. To install the environment you need a working Conda installation and issue in the repository root directory
 
 ```bash
-mongodb --dbpath=/your/path/to/db
+conda env create -n wesnake -f environment.yaml
 ``` 
 
-This will create an new empty database for you, if the path does not exit yet. MongoDB will also only listen on localhost on the default port 27017, which means access from outside to your database should not be possible. You are not protected from users logged in to the same machine though.
+After that you can activate the environment with
 
-In the repository root directory you can then run
 ```bash
-WESNAKE_TEST=mongodb://localhost:27017/ python -m pytest
-``` 
-
-to run all tests. When using an IDE you can need to set the MongoDB URI like in the example above.  
-
-### Testcontainers-based testing
-
-TBD
+conda activate wesnake
+```
 
 ## Installation from sources
 
@@ -49,3 +42,28 @@ An executable called `wesnake` is installed. Run it with
 wesnake --config config.yaml
 ```
 
+## Tests
+
+To run the tests with a local MongoDB installation, create and activate the Conda environment as described before. Then start MongoDB 
+
+```bash
+mongodb --dbpath=/your/path/to/db
+``` 
+
+This will create an new empty database for you, if the path does not exit yet. MongoDB will only listen on localhost on the default port 27017, which means that access from outside to your database is impossible. You are not protected from users logged in to the same machine, though.
+
+To run the tests from the command line you can now do
+
+```bash
+MONGODB_URI=mongodb://localhost:27017/ python -m pytest
+``` 
+
+When using an IDE you need to set the MongoDB URI like in the example above.  
+
+### Docker-based Testing
+
+Instead of using a stand-alone MongoDB server, you can retrieve one just for testing via docker:
+
+```bash
+MONGODB_URI=docker python -m pytest
+```

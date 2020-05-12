@@ -1,0 +1,39 @@
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+cache:
+  paths:
+    - /opt/cache/pip
+    - /opt/conda/pkgs
+    - /root/.conda/pkgs
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+before_script:
+  - python -V              # For debugging
+  - export PIP_CACHE_DIR="/opt/cache/pip"
+  - conda init bash
+  - source /root/.bashrc
+  - conda info             # For debugging
+  - conda config --show    # For debugging
+  - conda env create -n wesnake -f environment.yaml
+  - conda activate wesnake
+
+test:
+  image: continuumio/miniconda3:latest
+  script:
+    # - python -m pytest -v -s --log-cli-level=debug
+    - MONGODB_URI=docker python -m pytest -v
+
+run:
+  image: continuumio/miniconda3:latest
+  script:
+    - python setup.py bdist_wheel
+  artifacts:
+    paths:
+      - dist/*.whl

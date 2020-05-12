@@ -1,18 +1,17 @@
-import pytest
-import os, yaml, logging
+import pytest, yaml, os, logging, sys
 from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.wesnake import create_app
 from pymongo import MongoClient
+from testcontainers.mongodb import MongoDbContainer
 from logging.config import dictConfig
-import yaml
+
 
 @pytest.fixture(scope="function")
-def test_app(test_config, validation, static_service_info, log_config,
-             logger, swagger, database_connection):
-    app = create_app(test_config, validation, static_service_info,
-                     log_config, logger, swagger, database_connection)
+def test_app(test_config, validation, log_config,
+             logger, database_connection):
+    app = create_app(test_config, validation, log_config, logger, database_connection)
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -31,14 +30,27 @@ def test_config():
 @pytest.fixture(scope="function")
 def validation():
     # This uses the global validation YAML because YAML file structures should be identical in test and production.
-    with open("validation.yaml", "r") as ff:
+    with open(os.path.join("config", "validation.yaml"), "r") as ff:
         validation = yaml.load(ff, Loader=yaml.FullLoader)
     yield validation
 
+
 @pytest.fixture(scope="function")
 def database_connection():
-    connection_url = os.environ["WESNAKE_TEST"]
-    database = Database(MongoClient(connection_url), "WES_Test")
+    MONGODB_URI = "MONGODB_URI"
+    MONGODB_CONTAINER = "mongo:4.2.3"
+    WESNAKE_TEST_DB = "WESnake_Test"
+
+    if MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI].upper() == "DOCKER":
+        container = MongoDbContainer(MONGODB_CONTAINER)
+        container.start()
+        database = Database(MongoClient(container.get_connection_url()), WESNAKE_TEST_DB)
+    elif MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI] != "":
+        connection_url = os.environ[MONGODB_URI]
+        database = Database(MongoClient(connection_url), WESNAKE_TEST_DB)
+    else:
+        database = Database(MongoClient(), WESNAKE_TEST_DB)
+
     yield database
     database._db_runs().drop()
 
@@ -50,19 +62,14 @@ def snakemake_executor():
 
 
 @pytest.fixture(scope="function")
-def static_service_info(test_config):
-    yield test_config["static_service_info"]
-
-
-@pytest.fixture(scope="function")
-def service_info(static_service_info, swagger, database_connection):
-    yield ServiceInfo(static_service_info, swagger, database_connection)
+def service_info(test_config, swagger, database_connection):
+    yield ServiceInfo(test_config["static_service_info"], swagger, database_connection)
 
 
 @pytest.fixture(scope="function")
 def log_config():
     # There is a special logger "tests" for test-associated logging.
-    with open("log_config.yaml", "r") as ff:
+    with open(os.path.join("config", "log-config.yaml")) as ff:
         log_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield log_config
 
@@ -75,6 +82,6 @@ def logger(log_config):
 
 @pytest.fixture(scope="function")
 def swagger(database_connection):
-    with open("ga4gh/wes/20191217_workflow_execution_service.swagger.yaml", "r") as ff:
+    with open("ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml", "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
     yield swagger
