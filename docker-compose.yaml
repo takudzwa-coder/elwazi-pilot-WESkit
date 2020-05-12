@@ -72,9 +72,9 @@ services:
     ports:
       - 6379
 
-# Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
+  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   worker1:
-    command: celery worker -B -l info -A app.tasks.celery
+    command: celery worker --loglevel info --concurrency 1 --app app.tasks.celery
     restart: unless-stopped
     build: .
     volumes:
