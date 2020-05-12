@@ -1,7 +1,7 @@
 name: wesnake
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -18,7 +18,7 @@ dependencies:
   - botocore=1.15.47=pyh9f0ad1d_0
   - brotlipy=0.7.0=py37h8f50634_1000
   - bzip2=1.0.8=h516909a_2
-  - ca-certificates=2020.4.5.1=hecc5488_0
+  - ca-certificates=2020.1.1=0
   - cachetools=3.1.1=py_0
   - cairo=1.16.0=hcf35c78_1003
   - celery=4.4.2=pyh8c360ce_0
@@ -34,9 +34,11 @@ dependencies:
   - decorator=4.4.2=py_0
   - docutils=0.15.2=py37_0
   - dropbox=9.4.0=py_0
+  - entrypoints=0.3=py37_0
   - expat=2.2.9=he1b5a44_2
   - fftw=3.3.8=mpi_mpich_h3f9e1be_1010
   - filechunkio=1.8=py_2
+  - flake8=3.7.9=py37_0
   - flask=1.1.2=pyh9f0ad1d_0
   - fontconfig=2.13.1=h86ecdb6_1001
   - freetype=2.10.1=he06d7ca_0
@@ -111,7 +113,7 @@ dependencies:
   - numpy=1.18.1=py37h8960a57_1
   - openapi-spec-validator=0.2.8=py_0
   - openjpeg=2.3.1=h981e76c_3
-  - openssl=1.1.1g=h516909a_0
+  - openssl=1.1.1g=h7b6447c_0
   - packaging=20.1=py_0
   - pandas=1.0.3=py37h0da4684_1
   - pango=1.40.14=he7ab937_1005
@@ -130,7 +132,9 @@ dependencies:
   - py=1.8.1=py_0
   - pyasn1=0.4.8=py_0
   - pyasn1-modules=0.2.7=py_0
+  - pycodestyle=2.5.0=py37_0
   - pycparser=2.20=py_0
+  - pyflakes=2.1.1=py37_0
   - pygments=2.6.1=py_0
   - pygraphviz=1.5=py37h8f50634_1002
   - pylint=2.4.4=py37_0
@@ -197,4 +201,3 @@ dependencies:
     - docker==4.2.0
     - testcontainers==3.0.0
     - websocket-client==0.57.0
-

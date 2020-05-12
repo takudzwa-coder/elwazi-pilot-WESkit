@@ -48,13 +48,22 @@ An executable called `wesnake` is installed. Run it with
 wesnake --config config.yaml
 ```
 
-If you want to run the container, you need to provide a `config.yaml`, e.g. just to try use the `tests/config.yaml` from the repository:
+If you want to run the just the WESnake container you can do similar to this:
 
 ```bash
- docker run --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
+docker run --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
 ```
 
-TBD: Reduce the size of the container.
+Note that the container implements an entrypoint such that `wesnake` is started in the container with `--config /config.yaml`.
+
+## Running the full stack
+
+The simplest solution is to run WESnake and all services it depends on with Docker compose:
+
+```bash
+docker-compose up
+# config.yaml, redis.cfg, ..., volumes
+```
 
 
 Running the full application with all required services (except the Celery workers) can be done with Docker Compose. You can use the `.env.example` as template for your own `.env`. Put it into the top-level directory of the repository and run
@@ -82,9 +91,7 @@ To run the tests from the command line you can now do
 MONGODB_URI=mongodb://localhost:27017/ python -m pytest
 ``` 
 
-When using an IDE you need to set the MongoDB URI like in the example above.  
-
-### Docker-based Testing
+When using an IDE you need to set the MongoDB URI like in the example above. 
 
 Instead of using a stand-alone MongoDB server, you can retrieve one just for testing via docker:
 

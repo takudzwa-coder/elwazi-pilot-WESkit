@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 
-import argparse, connexion, yaml, sys, logging, os
+import argparse
+import connexion
+import yaml
+import sys
+import logging
+import os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
@@ -24,7 +29,8 @@ def create_app(config, validation, log_config, logger, database):
     validator = Validator()
     config_validation = validator.validate(config, validation)
     if config_validation is not True:
-        logger.error("Could not validate config.yaml: {}".format(validator.errors))
+        logger.error("Could not validate config.yaml: {}".
+                     format(validator.errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
     # Use the conventional app.config attribute
@@ -38,10 +44,11 @@ def create_app(config, validation, log_config, logger, database):
     app.app.validation = validation
     app.app.database = database
     app.app.snakemake = Snakemake()
-    app.app.service_info = ServiceInfo(config["static_service_info"], swagger, database)
+    app.app.service_info = ServiceInfo(config["static_service_info"],
+                                       swagger, database)
     app.app.log_config = log_config
     app.app.logger = logger
-    
+
     return app
 
 
@@ -54,9 +61,13 @@ def main():
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--log_config", type=str, required=False,
-                        default=os.path.join(sys.prefix, "config", "log-config.yaml"))
+                        default=os.path.join(sys.prefix,
+                                             "config",
+                                             "log-config.yaml"))
     parser.add_argument("--validation", type=str, required=False,
-                        default=os.path.join(sys.prefix, "config", "validation.yaml"))
+                        default=os.path.join(sys.prefix,
+                                             "config",
+                                             "validation.yaml"))
     args = parser.parse_args()
 
     with open(args.config, "r") as yaml_file:

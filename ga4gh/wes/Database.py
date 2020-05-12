@@ -12,32 +12,33 @@ class Database:
 
     def _db_runs(self):
         return self.db["run"]
-    
+
     def aggregate_states(self, runs):
         return dict(self._db_runs().aggregate(runs))
 
     def get_run(self, run_id, **kwargs):
         return self._db_runs().find_one(filter={"run_id": run_id}, **kwargs)
-    
+
     def get_workflow_params(self, run_id):
-        return self.get_run(run_id, projection={"_id": False,
-                                                "request"[0]["workflow_params": True]: False
-                                                }
-                            ).workflow_params
-    
+        return self.get_run(run_id,
+                            projection={
+                                "_id": False,
+                                "request"[0]["workflow_params": True]: False
+                            }).workflow_params
+
     def get_workflow_url(self, run_id):
         return self.get_run(run_id).workflow_url
 
     def get_current_time(self):
         return get_current_time()
-    
+
     def list_run_ids_and_states(self):
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,
                         "run_status": True
                         }))
-    
+
     def create_new_run(self, run_id, request):
         if run_id is None:
             current_app.error_logger.error("None can not be run_id")
@@ -59,7 +60,9 @@ class Database:
         if run["run_id"] is None:
             current_app.error_logger.error("None can not be run_id")
             raise ValueError("None can not be run_id")
-        return self._db_runs().update_one({"run_id": run["run_id"]}, {"$set": run}).acknowledged
+        return self._db_runs().update_one({"run_id": run["run_id"]},
+                                          {"$set": run}
+                                          ).acknowledged
 
     def delete_run(self, run_id):
         return self._db_runs().delete_one({"run_id": run_id}).acknowledged
