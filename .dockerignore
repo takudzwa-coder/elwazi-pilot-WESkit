@@ -11,3 +11,4 @@ dist
 tmp
 mongo
 compose
+scratch/

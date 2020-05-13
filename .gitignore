@@ -9,3 +9,4 @@ WESnake.egg-info
 dist
 settings.json
 *.log
+scratch/
