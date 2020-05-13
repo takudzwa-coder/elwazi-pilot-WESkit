@@ -7,7 +7,18 @@ ENV BASH_ENV ~/.bashrc
 
 WORKDIR /
 
-ENV HTTP_PROXY HTTPS_PROXY http_proxy https_proxy NO_PROXY no_proxy
+ARG HTTP_PROXY_SERVER="http://proxy.charite.de:8080" \
+    HTTPS_PROXY_SERVER="http://proxy.charite.de:8080" \
+    NO_PROXY_LIST="localhost,127.0.0.1"
+
+
+ENV HTTP_PROXY=$HTTP_PROXY_SERVER \
+    HTTPS_PROXY=$HTTPS_PROXY_SERVER \
+    http_proxy=$HTTP_PROXY_SERVER \
+    https_proxy=$HTTPS_PROXY_SERVER \
+    NO_PROXY=$NO_PROXY_LIST \
+    no_proxy=$NO_PROXY_LIST
+
 EXPOSE 4080
 
 COPY ./ /wesnake
@@ -16,7 +27,9 @@ RUN conda init bash
 
 # RUN conda update --prefix /opt/conda conda
 
-RUN cd /wesnake && \
+RUN conda config --set proxy_servers.http $HTTP_PROXY_SERVER && \
+    conda config --set proxy_servers.https $HTTPS_PROXY_SERVER && \
+    cd /wesnake && \
     conda env create -n wesnake -f environment.yaml && \
     source activate wesnake && \
     pip install ./ && \
