@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+    wesnake:
+        image: wesnake:0.0.1
+#        restart: unless-stopped
+#        depends_on:
+#          - database
+#          - redis
+#          - celery_worker
+        volumes:
+          - ${WESNAKE_CONFIG}:/config.yaml
+          - shared:/shared
+        networks:
+          - frontend
+          - backend
+        ports:
+          - "4080:4080"
+    
+    database:
+        image: mongo:4.2.3
+#        restart: unless-stopped
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: example_database
+        volumes:
+            - ${MONGODB_VOLUME}:/var/lib/mongodb
+        networks:
+            - backend
+        ports:
+            - "27017:27017"
+#    
+#    redis:
+#        image: redis:latest
+#        networks:
+#            - backend
+#        ports:
+#            - "6379:6379"
+#    
+#    celery_worker:
+#        depends_on:
+#            - redis
+#        image: wesnake:0.0.1
+#        networks:
+#            - backend
+#        volumes:
+#            - /home/twardzso/workspaces/flask-celery-example:/flask-celery-example
+#        command: bash /flask-celery-example/run_celery.sh
+
+networks:
+    backend:
+        driver: overlay
+    frontend:
+        driver: overlay
+
+volumes:
+    # For NFS volumes see https://docs.docker.com/compose/compose-file/compose-file-v2/#driver_opts
+    shared:
+        driver: local
+        driver_opts:
+            o: bind
+            type: none
+            device: ${SHARED_FILESYSTEM_ROOT}

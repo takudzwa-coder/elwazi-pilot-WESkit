@@ -1,0 +1,1 @@
+celery worker -A wesnake.celery --loglevel=info

@@ -1,15 +1,19 @@
 cerberus
 aioeasywebdav==2.4.0
 aiohttp==3.6.2
+amqp==2.5.2
 appdirs==1.4.3
 astroid==2.3.3
 async-timeout==3.0.1
 attrs==19.3.0
 bcrypt==3.1.7
+billiard==3.6.3.0
 blindspin==2.0.1
+blinker==1.4
 boto3==1.12.3
 botocore==1.15.3
 cachetools==3.1.1
+celery==4.4.1
 certifi==2019.11.28
 cffi==1.13.2
 chardet==3.0.4
@@ -46,6 +50,7 @@ itsdangerous==1.1.0
 Jinja2==2.11.1
 jmespath==0.9.4
 jsonschema==3.2.0
+kombu==4.6.8
 lazy-object-proxy==1.4.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
@@ -82,6 +87,7 @@ python-irodsclient==0.8.2
 pytz==2019.3
 PyYAML==5.3
 ratelimiter==1.2.0
+redis==3.4.1
 requests==2.23.0
 rsa==4.0
 s3transfer==0.3.3
@@ -94,6 +100,7 @@ testcontainers==2.5.0
 toml==0.10.0
 typed-ast==1.4.1
 urllib3==1.25.7
+vine==1.3.0
 wcwidth==0.1.8
 websocket-client==0.57.0
 Werkzeug==1.0.0
