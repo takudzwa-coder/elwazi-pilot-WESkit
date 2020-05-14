@@ -6,6 +6,8 @@ import yaml
 import sys
 import logging
 import os
+import time
+import random
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
@@ -13,6 +15,8 @@ from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
+from ga4gh.wes.celery_utils import init_celery
+from ga4gh.wes import celery
 
 
 def create_app(config, validation, log_config, logger, database):
@@ -52,8 +56,10 @@ def create_app(config, validation, log_config, logger, database):
     return app
 
 
+# TODO use config for db init
 def create_database(config):
-    return Database(MongoClient(), "WES")
+    return Database(MongoClient("database", 27017), "WES")
+
 
 
 def main():
@@ -84,4 +90,10 @@ def main():
     app = create_app(config, validation, log_config,
                      logger, create_database(config))
 
-    app.run()
+    with app.app.app_context():
+        from ga4gh.wes.routes import longtask, taskstatus
+    
+    init_celery(celery, app.app)
+
+
+    app.run(port="4080", host="0.0.0.0", debug=True)
