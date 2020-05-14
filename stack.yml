@@ -9,7 +9,7 @@ services:
 #          - redis
 #          - celery_worker
         volumes:
-          - /home/twardzso/workspaces/wesnake:/wesnake
+          - ${WESNAKE_DIR}:/wesnake
         networks:
             - backend
         ports:
@@ -43,10 +43,10 @@ services:
             - wesnake
         image: wesnake:0.0.1
         volumes:
-            - /home/twardzso/workspaces/wesnake:/wesnake
+            - ${WESNAKE_DIR}:/wesnake
         networks:
             - backend
-        command: bash -c "cd /wesnake; celery worker -A ga4gh.wes.celery_worker.celery"
+        command: bash -c "cd /wesnake; celery worker -A ga4gh.wes.celery_worker.celery -l info"
 
 networks:
     backend:
