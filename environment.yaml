@@ -154,6 +154,7 @@ dependencies:
   - pyyaml=5.3.1=py37h8f50634_0
   - ratelimiter=1.2.0=py37_1000
   - readline=7.0=hf8c457e_1001
+  - redis=5.0.3
   - requests=2.23.0=pyh8c360ce_2
   - rsa=4.0=py_0
   - s3transfer=0.3.3=py37hc8dfbb8_1
@@ -201,3 +202,4 @@ dependencies:
     - docker==4.2.0
     - testcontainers==3.0.0
     - websocket-client==0.57.0
+    - redis==3.5.1
