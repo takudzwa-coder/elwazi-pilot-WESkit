@@ -1,6 +1,4 @@
-from flask import Flask, url_for, jsonify, current_app as app
-import random
-import time
+from flask import url_for, jsonify, current_app as app
 from ga4gh.wes.tasks import long_task
 
 

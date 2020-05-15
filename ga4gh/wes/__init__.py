@@ -9,4 +9,5 @@ def make_celery(app_name=__name__):
         include=["ga4gh.wes.tasks"])
     return(celery)
 
+
 celery = make_celery()
