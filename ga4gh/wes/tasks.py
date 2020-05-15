@@ -4,7 +4,7 @@ import time
 
 
 @celery.task(bind=True)
-def long_task(self, msg):
+def long_task(self, msg=None):
     """Background task that runs a long function with progress reports."""
     verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
     adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
@@ -23,4 +23,9 @@ def long_task(self, msg):
             meta={'current': i, 'total': total, 'status': message}
         )
         time.sleep(1)
-    return {'current': 100, 'total': 100, 'status': 'Task completed!', 'result': 42}
+    return {
+        'current': 100,
+        'total': 100,
+        'status': 'Task completed!',
+        'result': 42
+    }
