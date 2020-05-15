@@ -58,13 +58,9 @@ Note that the container implements an entrypoint such that `wesnake` is started 
 
 ## Running the full stack
 
-The simplest solution is to run WESnake and all services it depends on with Docker compose:
+Currently, two variants are available for running all redependent tools: Docker Compose and Docker Stack
 
-```bash
-docker-compose up
-# config.yaml, redis.cfg, ..., volumes
-```
-
+### Docker Compose
 
 Running the full application with all required services (except the Celery workers) can be done with Docker Compose. You can use the `.env.example` as template for your own `.env`. Put it into the top-level directory of the repository and run
 
@@ -72,8 +68,16 @@ Running the full application with all required services (except the Celery worke
 docker-compose up
 ```
 
-This should bring up the WESnake container together with MongoDB, Redis, and RabbitMQ. Currently, no workers are started, though (WiP).
 
+### Docker Stack
+
+You can use the `docker-compose.yaml` also with `docker stack`. However the way the configuration variables are provided to docker stack is different. You may still want to use the `.env.example` as template. E.g. copy it into `.env`, modify it and run the following command.
+
+```bash
+ (source <(cat .env | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose.yaml wesnake)
+```
+
+This will export all settings from the `.env` file and thus provide them to `docker stack`. Before this works, you may have to do `docker swarm init` or similar, to connect to a swarm.
 
 ## Tests
 
