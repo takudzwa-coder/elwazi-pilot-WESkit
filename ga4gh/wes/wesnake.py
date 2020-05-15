@@ -63,7 +63,6 @@ def create_database(config):
 
 
 def main():
-    print("test", file=sys.stderr)
     parser = argparse.ArgumentParser(description="WESnake")
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--log_config", type=str, required=False,
