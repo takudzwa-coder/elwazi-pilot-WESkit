@@ -15,9 +15,6 @@ from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
-from ga4gh.wes.celery_utils import init_celery
-from ga4gh.wes import celery
-
 
 def create_app(config, validation, log_config, logger, database):
 
@@ -90,10 +87,8 @@ def main():
     app = create_app(config, validation, log_config,
                      logger, create_database(config))
 
+    # Import of two routes for celery testing; TODO: remove later
     with app.app.app_context():
         from ga4gh.wes.routes import longtask, taskstatus
-    
-    init_celery(celery, app.app)
-
 
     app.run(port="4080", host="0.0.0.0", debug=True)

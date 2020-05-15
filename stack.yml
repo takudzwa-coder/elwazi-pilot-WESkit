@@ -46,7 +46,7 @@ services:
             - ${WESNAKE_DIR}:/wesnake
         networks:
             - backend
-        command: bash -c "cd /wesnake; celery worker -A ga4gh.wes.celery_worker.celery -l info"
+        command: bash -c "cd /wesnake; celery worker -A ga4gh.wes.celery -l info"
 
 networks:
     backend:
