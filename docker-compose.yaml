@@ -52,8 +52,8 @@ services:
   message_queue:
     image: rabbitmq:3.7.26-alpine
     environment:
-      - RABBITMQ_DEFAULT_USER=root
-      - RABBITMQ_DEFAULT_PASS=example_message_queue
+      RABBITMQ_DEFAULT_USER: wesnake
+      RABBITMQ_DEFAULT_PASS: example_message_queue
     restart: unless-stopped
     networks:
       - backend
@@ -74,7 +74,14 @@ services:
 
   # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   worker1:
-    command: celery worker --loglevel info --concurrency 1 --app app.tasks.celery
+    depends_on:
+      - result_broker
+      - message_queue
+    environment:
+      RABBITMQ_USER: wesnake
+      RABBITMQ_PASS: example_message_queue
+    working_dir: /wesnake
+    command: ["conda activate wesnake; pwd; conda info; ls -l `pwd`; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker \\${RABBITMQ_USER}:\\${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery_worker.celery"]
     restart: unless-stopped
     build: .
     volumes:
