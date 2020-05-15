@@ -13,7 +13,7 @@ from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
-
+import ga4gh.wes.routes
 
 def create_app(config, validation, log_config, logger, database):
 
@@ -86,7 +86,6 @@ def main():
                      logger, create_database(config))
 
     # Import of two routes for celery testing; TODO: remove later
-    with app.app.app_context():
-        import ga4gh.wes.routes
+    app.app.register_blueprint(ga4gh.wes.routes.simple_page)
 
     app.run(port="4080", host="0.0.0.0", debug=True)
