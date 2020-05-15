@@ -15,6 +15,7 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
 import ga4gh.wes.routes
 
+
 def create_app(config, validation, log_config, logger, database):
 
     swagger_file = "workflow_execution_service_1.0.0.yaml"

@@ -1,4 +1,4 @@
-from flask import url_for, jsonify, current_app as app, Blueprint
+from flask import url_for, jsonify, Blueprint
 from ga4gh.wes.tasks import long_task
 
 
@@ -8,7 +8,9 @@ simple_page = Blueprint('simple_page', __name__)
 @simple_page.route('/start_task', methods=['GET', 'POST'])
 def longtask():
     task = long_task.apply_async()
-    return jsonify({'Location': url_for('simple_page.taskstatus', task_id=task.id)}), 202
+    return jsonify({
+        'Location': url_for('simple_page.taskstatus', task_id=task.id)
+        }), 202
 
 
 @simple_page.route('/status/<task_id>')
