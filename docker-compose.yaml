@@ -18,7 +18,7 @@ services:
 
   wesnake:
     hostname: wesnake
-    image: wesnake:0.0.1
+    image: ${WESNAKE_IMAGE}
     build: .
     restart: unless-stopped
     depends_on:
@@ -76,6 +76,7 @@ services:
 
   # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   worker1:
+    image: ${WESNAKE_IMAGE}
     depends_on:
       - result_broker
       - message_queue
