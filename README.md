@@ -74,7 +74,7 @@ docker-compose up
 You can use the `docker-compose.yaml` also with `docker stack`. However the way the configuration variables are provided to docker stack is different. You may still want to use the `.env.example` as template. E.g. copy it into `.env`, modify it and run the following command.
 
 ```bash
- (source <(cat .env | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose.yaml wesnake)
+(source <(cat .env | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose.yaml wesnake)
 ```
 
 This will export all settings from the `.env` file and thus provide them to `docker stack`. Before this works, you may have to do `docker swarm init` or similar, to connect to a swarm.

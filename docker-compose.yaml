@@ -92,3 +92,4 @@ services:
       - shared:/shared
     networks:
       - backend
+

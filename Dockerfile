@@ -7,7 +7,6 @@ ENV BASH_ENV ~/.bashrc
 
 WORKDIR /
 
-ENV HTTP_PROXY HTTPS_PROXY http_proxy https_proxy NO_PROXY no_proxy
 EXPOSE 4080
 
 COPY ./ /wesnake
@@ -21,6 +20,9 @@ RUN cd /wesnake && \
     source activate wesnake && \
     pip install ./ && \
     conda clean --all -f -y
+
+# This is to ensure a mounted file will be mounted as file in the container (otherwise it will be a directory).
+RUN touch /config.yaml
 
 
 
