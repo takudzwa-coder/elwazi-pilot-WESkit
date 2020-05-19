@@ -15,9 +15,10 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
 import ga4gh.wes.routes
 
-
-def create_app(config, validation, log_config, logger, database):
-
+def read_swagger():
+    '''Read the swagger file'''
+    # This is hardcoded, because if it is changed, probably also quite some
+    # code needs to be changed.
     swagger_file = "workflow_execution_service_1.0.0.yaml"
     app = connexion.App(__name__, specification_dir="swagger/")
     app.add_api(swagger_file)
@@ -25,6 +26,69 @@ def create_app(config, validation, log_config, logger, database):
     swagger_path = app.specification_dir / swagger_file
     with open(swagger_path, "r") as yaml_file:
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+    return swagger
+
+
+def create_database(config):
+    return Database(MongoClient(config["mongo_server"]["host"],
+                                config["mongo_server"]["port"]),
+                    "WES")
+
+
+# This function takes parameters to simplify unit testing. Otherwise
+# environment or configuration value processing is done in this
+# function.
+# Setup is located here to allow `flask run` to be used in the
+# container.
+def create_app(config = None,
+               validation = None,
+               log_config = None,
+               logger = None,
+               database = None):
+
+    # Use the environment variables as default values.
+    default_log_config = os.getenv("WESNAKE_CONFIG",
+                                   os.path.join(sys.prefix, "config",
+                                                "log-config.yaml"))
+
+    default_validation_config = os.getenv("WESNAKE_VALIDATION_CONFIG",
+                                          os.path.join(sys.prefix, "config",
+                                                       "validation.yaml"))
+
+    parser = argparse.ArgumentParser(description="WESnake")
+
+    if config is None:
+        if "WESNAKE_CONFIG" in os.environ:
+            parser.add_argument("--config", type=str, required=False,
+                                default=os.environ.get("WESNAKE_CONFIG"))
+        else:
+            # When there is no environment variable, then a value is required.
+            parser.add_argument("--config", type=str, required=True)
+
+        # These remain optional as command-line parameters.
+        parser.add_argument("--log_config", type=str, required=False,
+                            default=default_log_config)
+        parser.add_argument("--validation", type=str, required=False,
+                            default=default_validation_config)
+
+        args = parser.parse_args()
+
+        with open(args.config, "r") as yaml_file:
+            config = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+        with open(args.validation, "r") as yaml_file:
+            validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+        with open(args.log_config, "r") as yaml_file:
+            log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
+            dictConfig(log_config)
+            logger = logging.getLogger("default")
+
+        if database is None:
+            database = create_database(config)
+
+    swagger = read_swagger()
 
     # Validate configuration YAML.
     validator = Validator()
@@ -53,39 +117,13 @@ def create_app(config, validation, log_config, logger, database):
     return app
 
 
-# TODO use config for db init
-def create_database(config):
-    return Database(MongoClient("database", 27017), "WES")
-
-
 def main():
-    parser = argparse.ArgumentParser(description="WESnake")
-    parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--log_config", type=str, required=False,
-                        default=os.path.join(sys.prefix,
-                                             "config",
-                                             "log-config.yaml"))
-    parser.add_argument("--validation", type=str, required=False,
-                        default=os.path.join(sys.prefix,
-                                             "config",
-                                             "validation.yaml"))
-    args = parser.parse_args()
 
-    with open(args.config, "r") as yaml_file:
-        config = yaml.load(yaml_file, Loader=yaml.FullLoader)
-
-    with open(args.validation, "r") as yaml_file:
-        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
-
-    with open(args.log_config, "r") as yaml_file:
-        log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
-        dictConfig(log_config)
-        logger = logging.getLogger("default")
-
-    app = create_app(config, validation, log_config,
-                     logger, create_database(config))
+    app = create_app()
 
     # Import of two routes for celery testing; TODO: remove later
     app.app.register_blueprint(ga4gh.wes.routes.simple_page)
 
-    app.run(port="4080", host="0.0.0.0", debug=True)
+    app.run(port=app.config["wes_server"]["port"],
+            host=app.config["wes_server"]["host"],
+            debug=app.debug)

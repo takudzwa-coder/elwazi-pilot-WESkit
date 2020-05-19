@@ -1,0 +1,102 @@
+version: '3'
+
+networks:
+  backend:
+  frontend:
+
+# See https://docs.docker.com/registry/storage-drivers/
+volumes:
+  # For NFS volumes see https://docs.docker.com/compose/compose-file/compose-file-v2/#driver_opts
+  shared:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${SHARED_FILESYSTEM_ROOT}
+  devel:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${WESNAKE_DEVEL_ROOT}
+
+services:
+
+  wesnake:
+    hostname: wesnake
+    image: ${WESNAKE_IMAGE}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - database
+      - result_broker
+      - message_queue
+      - worker1
+    volumes:
+      - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
+      - ${WESNAKE_CONFIG}:/config.yaml
+      - shared:/shared
+    networks:
+      - frontend
+      - backend
+    entrypoint: ["bash", "-i", "-c"]
+    command: ["cd /wesnake-devel && conda activate wesnake && python ga4gh/wes/wesnake.py --config /config.yaml"]
+    ports:
+      - "4080:4080"
+
+  database:
+    image: mongo:4.2.3
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: wesnake
+      MONGO_INITDB_ROOT_PASSWORD: example_database
+    volumes:
+      - ${MONGODB_VOLUME}:/var/lib/mongodb
+    networks:
+      - backend
+    ports:
+      - 27017
+
+  # https://hub.docker.com/_/rabbitmq
+  message_queue:
+    image: rabbitmq:3.7.26-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: wesnake
+      RABBITMQ_DEFAULT_PASS: example_message_queue
+    restart: unless-stopped
+    networks:
+      - backend
+    ports:
+      - 5672
+
+  # https://hub.docker.com/_/redis?tab=description
+  result_broker:
+    image: redis:6.0.1-alpine
+    restart: unless-stopped
+    volumes:
+      - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf
+      - ${REDIS_VOLUME}:/data
+    networks:
+      - backend
+    ports:
+      - 6379
+
+  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
+  worker1:
+    image: ${WESNAKE_IMAGE}
+    depends_on:
+      - result_broker
+      - message_queue
+    environment:
+      RABBITMQ_USER: wesnake
+      RABBITMQ_PASS: example_message_queue
+    working_dir: /wesnake
+    entrypoint: ["bash", "-i", "-c"]
+    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery_worker.celery"]
+    restart: unless-stopped
+    build: .
+    volumes:
+      - shared:/shared
+    networks:
+      - backend
+
