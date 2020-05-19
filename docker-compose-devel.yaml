@@ -13,12 +13,6 @@ volumes:
       o: bind
       type: none
       device: ${SHARED_FILESYSTEM_ROOT}
-  devel:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${WESNAKE_DEVEL_ROOT}
 
 services:
 
@@ -27,6 +21,10 @@ services:
     image: ${WESNAKE_IMAGE}
     build: .
     restart: unless-stopped
+    environment:
+      WESNAKE_CONFIG: compose/config.yaml
+      WESNAKE_LOG_CONFIG:
+      WESNAKE_VALIDATION_CONFIG:
     depends_on:
       - database
       - result_broker
