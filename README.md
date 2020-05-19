@@ -8,7 +8,7 @@ All requirements are specified in the Conda environment file `environment.yaml`.
 
 ```bash
 conda env create -n wesnake -f environment.yaml
-``` 
+```
 
 After that you can activate the environment with
 
@@ -20,7 +20,7 @@ conda activate wesnake
 
 ```bash
 cd wesnake
-python setup.py install
+pip install ./
 ```
 
 ## Building the Docker container
@@ -42,19 +42,31 @@ NOTE: You should not change the `validation.yaml` file, which is only used to va
 
 ## Running
 
-An executable called `wesnake` is installed. Run it with
+If you followed the installation instructions an executable called `wesnake` is installed. The configurations are provided to the executable by environment variables or command-line options
+
+```bash
+export WESNAKE_CONFIG=/path/to/config.yaml
+export WESNAKE_LOG_CONFIG=/path/to/log-config.yaml
+
+# For development only.
+export WESNAKE_VALIDATION_CONFIG=/path/to/validation.yaml
+
+wesnake
+```
+
+or
 
 ```bash
 wesnake --config config.yaml
 ```
 
+Note that that if you provide the main configuration via `WESNAKE_CONFIG` you may still override it via the `--config` parameter, but the parameter is not required anymore. In all cases the environment variables are overriden by the command-line arguments.
+
 If you want to run the just the WESnake container you can do similar to this:
 
 ```bash
-docker run --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
+docker run --env WESNAKE_CONFIG=/config --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
 ```
-
-Note that the container implements an entrypoint such that `wesnake` is started in the container with `--config /config.yaml`.
 
 ## Running the full stack
 
@@ -67,7 +79,6 @@ Running the full application with all required services (except the Celery worke
 ```bash
 docker-compose up
 ```
-
 
 ### Docker Stack
 
@@ -85,7 +96,7 @@ To run the tests with a local MongoDB installation, create and activate the Cond
 
 ```bash
 mongodb --dbpath=/your/path/to/db
-``` 
+```
 
 This will create an new empty database for you, if the path does not exit yet. MongoDB will only listen on localhost on the default port 27017, which means that access from outside to your database is impossible. You are not protected from users logged in to the same machine, though.
 
