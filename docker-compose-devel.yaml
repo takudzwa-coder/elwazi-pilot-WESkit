@@ -22,7 +22,7 @@ volumes:
 
 services:
 
-  wesnake:
+  rest:
     hostname: wesnake
     image: ${WESNAKE_IMAGE}
     build: .
@@ -39,8 +39,9 @@ services:
     networks:
       - frontend
       - backend
+    working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    command: ["cd /wesnake-devel && conda activate wesnake && python ga4gh/wes/wesnake.py --config /config.yaml"]
+    command: ["conda activate wesnake && python ga4gh/wes/wesnake.py --config /config.yaml"]
     ports:
       - "4080:4080"
 
@@ -90,7 +91,7 @@ services:
     environment:
       RABBITMQ_USER: wesnake
       RABBITMQ_PASS: example_message_queue
-    working_dir: /wesnake
+    working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery_worker.celery"]
     restart: unless-stopped

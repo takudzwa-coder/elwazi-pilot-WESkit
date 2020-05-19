@@ -39,16 +39,26 @@ def create_database(config):
 # This function takes parameters to simplify unit testing. Otherwise
 # environment or configuration value processing is done in this
 # function.
-# Setup is located here to allow `flask run` to be used in the
-# container.
+#
+# All configuration-reading is located here to allow using `flask run`  with
+# the primari aim to simplify development in the conctainer
 def create_app(config = None,
                validation = None,
                log_config = None,
                logger = None,
                database = None):
+    '''
+    If config is given, then it is expected that all paramters are provided.
+    If config is not given, then all values are loaded from files are
+    created from the configurations specified in there. If a command-line
+    parameter is provided, then all values are expected to be provided via
+    command line parameters but defaults are still taken from the environment.
+    Otherwise configuraton file paths are taken from WESNAKE_CONFIG, and if
+    provided WESNAKE_LOG_CONFIG and WESNAKE_VALIDATION_CONFIG.
+    '''
 
     # Use the environment variables as default values.
-    default_log_config = os.getenv("WESNAKE_CONFIG",
+    default_log_config = os.getenv("WESNAKE_LOG_CONFIG",
                                    os.path.join(sys.prefix, "config",
                                                 "log-config.yaml"))
 
@@ -56,23 +66,33 @@ def create_app(config = None,
                                           os.path.join(sys.prefix, "config",
                                                        "validation.yaml"))
 
-    parser = argparse.ArgumentParser(description="WESnake")
-
     if config is None:
-        if "WESNAKE_CONFIG" in os.environ:
-            parser.add_argument("--config", type=str, required=False,
-                                default=os.environ.get("WESNAKE_CONFIG"))
+        if "--config" in sys.argv:
+            # Command-line options: Take all values from there, defaulting to
+            # ones from the environment or the static defaults.
+            parser = argparse.ArgumentParser(description="WESnake")
+
+            if "WESNAKE_CONFIG" in os.environ:
+                parser.add_argument("--config", type=str, required=False,
+                                    default=os.environ.get("WESNAKE_CONFIG"))
+            else:
+                # When there is no environment variable, then a value is required.
+                parser.add_argument("--config", type=str, required=True)
+
+            # These remain optional as command-line parameters.
+            parser.add_argument("--log_config", type=str, required=False,
+                                default=default_log_config)
+            parser.add_argument("--validation", type=str, required=False,
+                                default=default_validation_config)
+
+            args = parser.parse_args()
         else:
-            # When there is no environment variable, then a value is required.
-            parser.add_argument("--config", type=str, required=True)
-
-        # These remain optional as command-line parameters.
-        parser.add_argument("--log_config", type=str, required=False,
-                            default=default_log_config)
-        parser.add_argument("--validation", type=str, required=False,
-                            default=default_validation_config)
-
-        args = parser.parse_args()
+            # No command-line options: Take all values from the environment.
+            args = {
+                config: os.environ.get("WESNAKE_CONFIG"),
+                log_config: default_log_config,
+                validation: default_validation_config
+            }
 
         with open(args.config, "r") as yaml_file:
             config = yaml.load(yaml_file, Loader=yaml.FullLoader)

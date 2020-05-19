@@ -16,7 +16,7 @@ volumes:
 
 services:
 
-  wesnake:
+  rest:
     hostname: wesnake
     image: ${WESNAKE_IMAGE}
     build: .
