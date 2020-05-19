@@ -41,7 +41,9 @@ services:
       - backend
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake && python ga4gh/wes/wesnake.py --config /config.yaml"]
+    # `FLASK_APP="ga4gh/wes/wesnake:create_app()" flask run` fails because
+    # this is a connexion app.
+    command: ["conda activate wesnake && pip install ./ && wesnake"]
     ports:
       - "4080:4080"
 
