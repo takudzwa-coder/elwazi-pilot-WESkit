@@ -90,6 +90,21 @@ You can use the `docker-compose.yaml` also with `docker stack`. However the way 
 
 This will export all settings from the `.env` file and thus provide them to `docker stack`. Before this works, you may have to do `docker swarm init` or similar, to connect to a swarm.
 
+#### Developer Notes
+
+There are also template `.env.develop` and `docker-compose-devel.yaml` files. Given built container they may run with
+
+```
+cd wesnake
+mkdir -p compose/volumes/shared compose/volumes/redis compose/volumes/mongo
+cp tests/config.yaml compose/
+$EDITOR compose/config.yaml
+(source <(cat .env.develop | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose-devel.yaml wesnake)
+```
+
+Note that the `.env.develop` file configures the stack such that WESnake container mounts the current directy and starts the WESnake REST server from within that directory (`/wesnake-devel`). This means, that any change outside the container will be reflected in the container. To apply then you still need to manually restart the `wesnake_rest` container.
+
+
 ## Tests
 
 To run the tests with a local MongoDB installation, create and activate the Conda environment as described before. Then start MongoDB 
