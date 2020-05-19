@@ -67,7 +67,7 @@ services:
     image: redis:6.0.1-alpine
     restart: unless-stopped
     volumes:
-      - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf
+      # - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf
       - ${REDIS_VOLUME}:/data
     networks:
       - backend
