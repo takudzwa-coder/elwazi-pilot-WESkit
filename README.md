@@ -65,7 +65,7 @@ Note that that if you provide the main configuration via `WESNAKE_CONFIG` you ma
 If you want to run the just the WESnake container you can do similar to this:
 
 ```bash
-docker run --env WESNAKE_CONFIG=/config --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
+docker run --env WESNAKE_CONFIG=/config --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --user $UID:wesnake --rm wesnake:$version
 ```
 
 ## Running the full stack
@@ -96,14 +96,16 @@ There are also template `.env.develop` and `docker-compose-devel.yaml` files. Gi
 
 ```
 cd wesnake
-mkdir -p compose/volumes/shared compose/volumes/redis compose/volumes/mongo
+mkdir -p compose/volumes/shared
 cp tests/config.yaml compose/
+wget -o compose/redis.conf https://raw.githubusercontent.com/antirez/redis/6.0/redis.conf
 $EDITOR compose/config.yaml
 (source <(cat .env.develop | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose-devel.yaml wesnake)
 ```
 
-Note that the `.env.develop` file configures the stack such that WESnake container mounts the current directy and starts the WESnake REST server from within that directory (`/wesnake-devel`). This means, that any change outside the container will be reflected in the container. To apply then you still need to manually restart the `wesnake_rest` container.
+Note that the `.env.develop` file configures the stack such that WESnake container mounts the current directory and starts the WESnake REST server from within that directory (`/wesnake-devel`). This means, that any change outside the container will be reflected in the container. To apply the changes you still need to manually restart the `wesnake_rest` container.
 
+The `.env.develop` file sets `WESNAKE_UID` to the current user, while `WESNAKE_GID` is set to "wesnake", which is the group under which Conda and WESnake are installed in the container. Thus it is possible to use the same user ID inside the container and on the host. Files created in the wesnake container are then created with permissions such that the developer may be access them. The support containers (MongoDB, Redis) use their default permissions and their data is stored in docker-managed volumes.
 
 ## Tests
 

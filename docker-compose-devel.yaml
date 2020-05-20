@@ -13,6 +13,9 @@ volumes:
       o: bind
       type: none
       device: ${SHARED_FILESYSTEM_ROOT}
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
 
 services:
 
@@ -22,7 +25,8 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      WESNAKE_CONFIG: compose/config.yaml
+      HOME: /home/wesnake
+      WESNAKE_CONFIG: /home/wesnake/config.yaml
       WESNAKE_LOG_CONFIG:
       WESNAKE_VALIDATION_CONFIG:
     depends_on:
@@ -32,11 +36,12 @@ services:
       - worker1
     volumes:
       - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
-      - ${WESNAKE_CONFIG}:/config.yaml:ro
+      - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
       - shared:/shared
     networks:
       - frontend
       - backend
+    user: "${WESNAKE_UID}:${WESNAKE_GID}"
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
     # `FLASK_APP="ga4gh/wes/wesnake:create_app()" flask run` fails because
@@ -52,7 +57,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: wesnake
       MONGO_INITDB_ROOT_PASSWORD: example_database
     volumes:
-      - ${MONGODB_VOLUME}:/var/lib/mongodb
+      - mongo_data:/var/lib/mongodb
     networks:
       - backend
     ports:
@@ -61,10 +66,12 @@ services:
   # https://hub.docker.com/_/rabbitmq
   message_queue:
     image: rabbitmq:3.7.26-alpine
+    restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: wesnake
       RABBITMQ_DEFAULT_PASS: example_message_queue
-    restart: unless-stopped
+    volumes:
+      - rabbitmq_data:/var/lib/rabbbitmq
     networks:
       - backend
     ports:
@@ -75,8 +82,8 @@ services:
     image: redis:6.0.1-alpine
     restart: unless-stopped
     volumes:
-      #- ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
-      - ${REDIS_VOLUME}:/data
+      - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
     networks:
       - backend
     ports:
@@ -89,11 +96,13 @@ services:
       - result_broker
       - message_queue
     environment:
+      HOME: /home/wesnake
       RABBITMQ_USER: wesnake
       RABBITMQ_PASS: example_message_queue
+    user: "${WESNAKE_UID}:${WESNAKE_GID}"
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery"]
+    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app ga4gh.wes.celery"]
     restart: unless-stopped
     build: .
     volumes:
