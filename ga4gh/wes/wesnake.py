@@ -15,6 +15,7 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
 import ga4gh.wes.routes
 
+
 def create_connexion_app():
     '''Read the swagger file.'''
     # This is hardcoded, because if it is changed, probably also quite some
@@ -76,11 +77,11 @@ def parse_cli(default_config, default_log_config, default_validation_config):
 #
 # Because connexion does not return a flask app.
 #
-def create_app(config = None,
-               validation = None,
-               log_config = None,
-               logger = None,
-               database = None):
+def create_app(config=None,
+               validation=None,
+               log_config=None,
+               logger=None,
+               database=None):
     '''
     If config is given, then it is expected that all paramters are provided.
     If config is not given, then all values are loaded from files are
@@ -93,14 +94,20 @@ def create_app(config = None,
 
     if config is None:
         # Use the environment variables as default values.
-        default_config = os.getenv("WESNAKE_CONFIG", None)  # No static default here!
-        default_log_config = os.getenv("WESNAKE_LOG_CONFIG",
-                                       os.path.join(sys.prefix, "config",
-                                                    "log-config.yaml"))
 
-        default_validation_config = os.getenv("WESNAKE_VALIDATION_CONFIG",
-                                              os.path.join(sys.prefix, "config",
-                                                           "validation.yaml"))
+        # No static default here!
+        default_config = os.getenv("WESNAKE_CONFIG", None)
+
+        default_log_config = os.getenv(
+            "WESNAKE_LOG_CONFIG",
+            os.path.join(sys.prefix, "config",
+                         "log-config.yaml"))
+
+        default_validation_config = os.getenv(
+            "WESNAKE_VALIDATION_CONFIG",
+            os.path.join(sys.prefix, "config",
+                         "validation.yaml"))
+
         if "--config" in sys.argv:
             args = parse_cli(default_config,
                              default_log_config,
@@ -125,7 +132,8 @@ def create_app(config = None,
 
         with open(args["validation"], "r") as yaml_file:
             validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
-            logger.debug("Read validation specification from " + args["validation"])
+            logger.debug("Read validation specification from " +
+                         args["validation"])
 
         if database is None:
             database = create_database(config)
