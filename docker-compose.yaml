@@ -85,7 +85,7 @@ services:
       RABBITMQ_PASS: example_message_queue
     working_dir: /wesnake
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery_worker.celery"]
+    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery"]
     restart: unless-stopped
     build: .
     volumes:

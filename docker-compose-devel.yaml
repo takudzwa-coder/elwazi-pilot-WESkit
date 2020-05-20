@@ -32,7 +32,7 @@ services:
       - worker1
     volumes:
       - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
-      - ${WESNAKE_CONFIG}:/config.yaml
+      - ${WESNAKE_CONFIG}:/config.yaml:ro
       - shared:/shared
     networks:
       - frontend
@@ -75,7 +75,7 @@ services:
     image: redis:6.0.1-alpine
     restart: unless-stopped
     volumes:
-      #- ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf
+      #- ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
       - ${REDIS_VOLUME}:/data
     networks:
       - backend
@@ -93,7 +93,7 @@ services:
       RABBITMQ_PASS: example_message_queue
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery_worker.celery"]
+    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --result_backend result_broker --broker ${RABBITMQ_USER}:${RABBITMQ_PASS}@message_queue --app ga4gh.wes.celery"]
     restart: unless-stopped
     build: .
     volumes:
