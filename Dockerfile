@@ -2,10 +2,6 @@
 
 FROM continuumio/miniconda3:4.8.2
 
-ARG WESNAKE_CONFIG
-ARG WESNAKE_LOG_CONFIG
-ARG WESNAKE_VALIDATION_CONFIG
-
 SHELL ["/bin/bash", "-c"]
 ENV BASH_ENV ~/.bashrc
 

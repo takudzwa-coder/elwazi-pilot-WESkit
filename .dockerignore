@@ -17,4 +17,5 @@ stack.yaml
 *.iml
 *.log
 WESnake.egg-info
+__pycache__
 
