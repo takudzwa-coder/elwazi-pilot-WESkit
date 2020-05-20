@@ -5,9 +5,9 @@ from ga4gh.wes.tasks import long_task
 simple_page = Blueprint('simple_page', __name__)
 
 
-@simple_page.route('/start_task', methods=['GET', 'POST'])
-def longtask():
-    task = long_task.apply_async()
+@simple_page.route('/start_task/<message>', methods=['GET', 'POST'])
+def longtask(message):
+    task = long_task.apply_async(args=[message])
     return jsonify({
         'Location': url_for('simple_page.taskstatus', task_id=task.id)
         }), 202

@@ -4,7 +4,7 @@ import time
 
 
 @celery.task(bind=True)
-def long_task(self, msg=None):
+def long_task(self, msg="Test"):
     """Background task that runs a long function with progress reports."""
     verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
     adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
@@ -13,7 +13,8 @@ def long_task(self, msg=None):
     total = random.randint(10, 50)
     for i in range(total):
         if not message or random.random() < 0.25:
-            message = '{0} {1} {2}...'.format(
+            message = '{0}: {1} {2} {3}...'.format(
+                msg,
                 random.choice(verb),
                 random.choice(adjective),
                 random.choice(noun)
