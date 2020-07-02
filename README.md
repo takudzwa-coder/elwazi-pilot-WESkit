@@ -8,7 +8,7 @@ All requirements are specified in the Conda environment file `environment.yaml`.
 
 ```bash
 conda env create -n wesnake -f environment.yaml
-``` 
+```
 
 After that you can activate the environment with
 
@@ -20,7 +20,7 @@ conda activate wesnake
 
 ```bash
 cd wesnake
-python setup.py install
+pip install ./
 ```
 
 ## Building the Docker container
@@ -42,29 +42,37 @@ NOTE: You should not change the `validation.yaml` file, which is only used to va
 
 ## Running
 
-An executable called `wesnake` is installed. Run it with
+If you followed the installation instructions an executable called `wesnake` is installed. The configurations are provided to the executable by environment variables or command-line options
+
+```bash
+export WESNAKE_CONFIG=/path/to/config.yaml
+export WESNAKE_LOG_CONFIG=/path/to/log-config.yaml
+
+# For development only.
+export WESNAKE_VALIDATION_CONFIG=/path/to/validation.yaml
+
+wesnake
+```
+
+or
 
 ```bash
 wesnake --config config.yaml
 ```
 
+Note that that if you provide the main configuration via `WESNAKE_CONFIG` you may still override it via the `--config` parameter, but the parameter is not required anymore. In all cases the environment variables are overriden by the command-line arguments.
+
 If you want to run the just the WESnake container you can do similar to this:
 
 ```bash
-docker run --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --rm wesnake:$version
+docker run --env WESNAKE_CONFIG=/config --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --user $UID:wesnake --rm wesnake:$version
 ```
-
-Note that the container implements an entrypoint such that `wesnake` is started in the container with `--config /config.yaml`.
 
 ## Running the full stack
 
-The simplest solution is to run WESnake and all services it depends on with Docker compose:
+Currently, two variants are available for running all redependent tools: Docker Compose and Docker Stack
 
-```bash
-docker-compose up
-# config.yaml, redis.cfg, ..., volumes
-```
-
+### Docker Compose
 
 Running the full application with all required services (except the Celery workers) can be done with Docker Compose. You can use the `.env.example` as template for your own `.env`. Put it into the top-level directory of the repository and run
 
@@ -72,8 +80,32 @@ Running the full application with all required services (except the Celery worke
 docker-compose up
 ```
 
-This should bring up the WESnake container together with MongoDB, Redis, and RabbitMQ. Currently, no workers are started, though (WiP).
+### Docker Stack
 
+You can use the `docker-compose.yaml` also with `docker stack`. However the way the configuration variables are provided to docker stack is different. You may still want to use the `.env.example` as template. E.g. copy it into `.env`, modify it and run the following command.
+
+```bash
+(source <(cat .env | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose.yaml wesnake)
+```
+
+This will export all settings from the `.env` file and thus provide them to `docker stack`. Before this works, you may have to do `docker swarm init` or similar, to connect to a swarm.
+
+#### Developer Notes
+
+There are also template `.env.develop` and `docker-compose-devel.yaml` files. Given built container they may run with
+
+```
+cd wesnake
+mkdir -p compose/volumes/shared
+cp tests/config.yaml compose/
+wget -o compose/redis.conf https://raw.githubusercontent.com/antirez/redis/6.0/redis.conf
+$EDITOR compose/config.yaml
+(source <(cat .env.develop | perl -ne 'print "export $_";'); docker stack deploy -c docker-compose-devel.yaml wesnake)
+```
+
+Note that the `.env.develop` file configures the stack such that WESnake container mounts the current directory and starts the WESnake REST server from within that directory (`/wesnake-devel`). This means, that any change outside the container will be reflected in the container. To apply the changes you still need to manually restart the `wesnake_rest` container.
+
+The `.env.develop` file sets `WESNAKE_UID` to the current user, while `WESNAKE_GID` is set to "wesnake", which is the group under which Conda and WESnake are installed in the container. Thus it is possible to use the same user ID inside the container and on the host. Files created in the wesnake container are then created with permissions such that the developer may be access them. The support containers (MongoDB, Redis) use their default permissions and their data is stored in docker-managed volumes.
 
 ## Tests
 
@@ -81,7 +113,7 @@ To run the tests with a local MongoDB installation, create and activate the Cond
 
 ```bash
 mongodb --dbpath=/your/path/to/db
-``` 
+```
 
 This will create an new empty database for you, if the path does not exit yet. MongoDB will only listen on localhost on the default port 27017, which means that access from outside to your database is impossible. You are not protected from users logged in to the same machine, though.
 

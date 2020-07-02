@@ -12,3 +12,10 @@ tmp
 mongo
 compose
 scratch/
+docker-compose.yaml
+stack.yaml
+*.iml
+*.log
+WESnake.egg-info
+__pycache__
+
