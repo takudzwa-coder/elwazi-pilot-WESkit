@@ -2,20 +2,9 @@ version: '3'
 
 networks:
   backend:
+    driver: overlay
   frontend:
-
-# See https://docs.docker.com/registry/storage-drivers/
-volumes:
-  # For NFS volumes see https://docs.docker.com/compose/compose-file/compose-file-v2/#driver_opts
-  shared:
-    driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ${SHARED_FILESYSTEM_ROOT}
-  mongo_data:
-  redis_data:
-  rabbitmq_data:
+    driver: overlay
 
 services:
 
@@ -37,45 +26,36 @@ services:
     volumes:
       - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
       - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
-      - shared:/shared
+      - ${SHARED_FILESYSTEM_ROOT}:/shared
     networks:
-      - frontend
       - backend
     user: "${WESNAKE_UID}:${WESNAKE_GID}"
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    # `FLASK_APP="ga4gh/wes/wesnake:create_app()" flask run` fails because
-    # this is a connexion app.
     command: ["conda activate wesnake && pip install ./ && wesnake"]
     ports:
-      - "4080:4080"
+      - 4080:4080
 
   database:
     image: mongo:4.2.3
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: wesnake
-      MONGO_INITDB_ROOT_PASSWORD: example_database
     volumes:
-      - mongo_data:/var/lib/mongodb
+      - ${SHARED_FILESYSTEM_ROOT}:/var/lib/mongodb
     networks:
       - backend
     ports:
-      - 27017
+      - 27017:27017
 
   # https://hub.docker.com/_/rabbitmq
   message_queue:
     image: rabbitmq:3.7.26-alpine
     restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: wesnake
-      RABBITMQ_DEFAULT_PASS: example_message_queue
     volumes:
-      - rabbitmq_data:/var/lib/rabbbitmq
+      - ${SHARED_FILESYSTEM_ROOT}:/var/lib/rabbbitmq
     networks:
       - backend
     ports:
-      - 5672
+      - 5672:5672
 
   # https://hub.docker.com/_/redis?tab=description
   result_broker:
@@ -83,11 +63,11 @@ services:
     restart: unless-stopped
     volumes:
       - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
-      - redis_data:/data
+      - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend
     ports:
-      - 6379
+      - 6379:6379
 
   # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   worker1:
@@ -106,7 +86,8 @@ services:
     restart: unless-stopped
     build: .
     volumes:
-      - shared:/shared
+      - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
+      - ${SHARED_FILESYSTEM_ROOT}:/shared
     networks:
       - backend
 
