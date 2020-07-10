@@ -5,6 +5,7 @@ from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.wesnake import create_app
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
+from testcontainers.redis import RedisContainer
 from logging.config import dictConfig
 
 
@@ -54,6 +55,25 @@ def database_connection():
     yield database
     database._db_runs().drop()
 
+@pytest.fixture(scope='function')
+def redis_container():
+    print("redis_container")
+    redis_container = RedisContainer("redis:6.0.1-alpine")
+    redis_container.start()
+    return redis_container
+
+@pytest.fixture(scope='function')
+def celery_config(redis_container):
+    print("celery_config")
+    #time.sleep(10)
+    #client = container.get_client()
+    tmp = {
+        'broker_url': "redis://" + redis_container.get_container_host_ip() + ":" + redis_container.get_exposed_port(6379),
+        'result_backend': "redis://" + redis_container.get_container_host_ip() + ":" + redis_container.get_exposed_port(6379)
+    }
+    #time.sleep(10)
+    print(tmp)
+    return tmp
 
 @pytest.fixture(scope="function")
 def snakemake_executor():
