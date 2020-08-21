@@ -1,7 +1,6 @@
 from celery import shared_task
 import random
 import time
-from snakemake import snakemake
 import subprocess
 
 
