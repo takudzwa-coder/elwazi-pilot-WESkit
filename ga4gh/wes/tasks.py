@@ -1,13 +1,14 @@
-#from ga4gh.wes import celery
 from celery import shared_task
 import random
 import time
 from snakemake import snakemake
 import subprocess
 
+
 @shared_task
 def mul(x, y):
     return x * y
+
 
 @shared_task(bind=True)
 def long_task(self, msg="Test"):
@@ -38,23 +39,18 @@ def long_task(self, msg="Test"):
     }
 
 
+# TODO: use snakemake api instead of subprocess
 @shared_task(bind=True)
 def run_snakemake(self, snakefile, workdir):
 
-    # TODO: use Snakemake API instead of subprocess call
-    #job = snakemake(
-    #    snakefile=snakefile,
-    #    workdir=workdir
-    #)
-    
     command = [
         "snakemake",
         "--snakefile", snakefile,
         "--directory", workdir,
         "all"]
-    
+
     with open(workdir + "/stdout.txt", "w") as fout:
         with open(workdir + "/stderr.txt", "w") as ferr:
             subprocess.call(command, stdout=fout, stderr=ferr)
-    
+
     return True
