@@ -1,3 +1,4 @@
+import json, yaml, time
 
 def test_get_list_runs(test_app):
     response = test_app.get("/ga4gh/wes/v1/runs")
@@ -38,3 +39,16 @@ def test_get_service_info(test_app):
         'workflow_type_versions': {'Snakemake': {"workflow_type_version": ['5']}}
     }
 
+def test_run_workflow(test_app, celery_app, celery_worker):
+    with open("tests/wf1/config.yaml") as file:
+        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
+
+    data = {
+        "workflow_params": workflow_params,
+        "workflow_type": "Snakemake",
+        "workflow_type_version": "5.8.2",
+        "workflow_url": "tests/wf1/Snakefile"
+    }
+
+    response = test_app.post("/ga4gh/wes/v1/runs", data=data)
+    assert response.status_code == 200
