@@ -1,9 +1,15 @@
-import json, yaml, pytest
+import json, yaml, pytest, time
 from ga4gh.wes.utils import create_run_id
+from snakemake import snakemake
+from ga4gh.wes.tasks import run_snakemake
 
 
-@pytest.mark.skip(reason="architectural decision pending")
-def test_post_run(snakemake_executor, database_connection):
+#@pytest.mark.skip(reason="architectural decision pending")
+
+
+def test_snakemake_execute(snakemake_executor, database_connection, celery_app, celery_worker):
+    test_run_id = "test_workflow_runid"
+    
     with open("tests/wf1/config.yaml") as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
     
@@ -14,6 +20,12 @@ def test_post_run(snakemake_executor, database_connection):
         "workflow_url": "tests/wf1/Snakefile"
     }
 
-    run = database_connection.create_new_run(create_run_id(), request=data)
-    _, status_code = snakemake_executor.execute(run, database_connection)
-    assert status_code == 200
+    run = database_connection.create_new_run(test_run_id, request=data)
+    run = snakemake_executor.execute(run, database_connection)
+    running=True
+    while running:
+        time.sleep(1)
+        run_state = snakemake_executor.get_state(run)
+        if (run_state=="SUCCESS"): running=False
+        print(run_state)
+    assert True
