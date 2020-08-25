@@ -55,14 +55,14 @@ def database_connection():
     yield database
     database._db_runs().drop()
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def redis_container():
     print("redis_container")
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
     return redis_container
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def celery_config(redis_container):
     print("celery_config")
     #time.sleep(10)
@@ -75,7 +75,11 @@ def celery_config(redis_container):
     print(tmp)
     return tmp
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
+def celery_worker_pool():
+    return 'prefork'
+
+@pytest.fixture(scope="session")
 def snakemake_executor():
     executor = Snakemake()
     yield executor
