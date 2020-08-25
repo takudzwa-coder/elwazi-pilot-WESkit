@@ -13,7 +13,6 @@ from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
-import ga4gh.wes.routes
 
 
 def create_connexion_app():
@@ -171,9 +170,6 @@ def main():
     print("Starting WESnake ...", file=sys.stderr)
 
     app = create_app()
-
-    # Import of two routes for celery testing; TODO: remove later
-    app.app.register_blueprint(ga4gh.wes.routes.simple_page)
 
     app.run(port=app.config["wes_server"]["port"],
             host=app.config["wes_server"]["host"],
