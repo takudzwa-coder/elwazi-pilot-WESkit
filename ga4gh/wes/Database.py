@@ -47,8 +47,8 @@ class Database:
             "run_id": run_id,
             "run_status": RunStatus.UNKNOWN.encode(),
             "request_time": self.get_current_time(),
-            "request": [],
-            "execution_path": request,
+            "request": request,
+            "execution_path": [],
             "run_log": {},
             "task_logs": [],
             "outputs": {}
