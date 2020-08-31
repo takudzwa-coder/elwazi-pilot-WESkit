@@ -46,18 +46,6 @@ services:
     ports:
       - 27017:27017
 
-#  # https://hub.docker.com/_/rabbitmq
-#  message_queue:
-#    image: rabbitmq:3.7.26-alpine
-#    restart: unless-stopped
-#    volumes:
-#      - ${SHARED_FILESYSTEM_ROOT}:/var/lib/rabbbitmq
-#    networks:
-#      - backend
-#    ports:
-#      - 5672:5672
-
-  # https://hub.docker.com/_/redis?tab=description
   result_broker:
     image: redis:6.0.1-alpine
     restart: unless-stopped
@@ -77,8 +65,8 @@ services:
       - message_queue
     environment:
       HOME: /home/wesnake
-      RABBITMQ_USER: wesnake
-      RABBITMQ_PASS: example_message_queue
+      RESULT_BACKEND: redis://result_broker:6379
+      BROKER_URL: redis://result_broker:6379
     user: "${WESNAKE_UID}:${WESNAKE_GID}"
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
