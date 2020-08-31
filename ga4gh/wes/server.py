@@ -44,7 +44,7 @@ def GetRunStatus(run_id, *args, **kwargs):
                 "status_code": 0
                 }, 404
     else:
-        return {k: query_result[k] for k in ["run_id", "run_status"]}, 200
+        return current_app.snakemake.get_state(query_result)
 
 
 # get:/service-info
@@ -84,5 +84,7 @@ def ListRuns(*args, **kwargs):
 def RunWorkflow(*args, **kwargs):
     current_app.logger.info("RunWorkflow")
     run = current_app.database.create_new_run(create_run_id(), request=kwargs)
-    run = current_app.snakemake.execute(run, current_app.database)
+    current_app.logger.info("Execute Workflow")
+    run = current_app.snakemake.execute(
+        run, current_app.database, current_app.logger)
     return {k: run[k] for k in ["run_id"]}, 200

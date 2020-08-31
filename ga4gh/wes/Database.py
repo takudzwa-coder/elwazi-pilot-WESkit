@@ -51,7 +51,8 @@ class Database:
             "execution_path": [],
             "run_log": {},
             "task_logs": [],
-            "outputs": {}
+            "outputs": {},
+            "celery_task_id": None,
         }
         self._db_runs().insert_one(run)
         return run
