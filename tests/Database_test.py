@@ -1,7 +1,7 @@
 from ga4gh.wes.RunStatus import RunStatus
 
 run_id = "test_store_and_retrieve_run_id"
-    
+
 
 def test_create_new_run(database_connection):
     print("test create_new_run")
@@ -25,7 +25,8 @@ def test_list_run_ids_and_states(database_connection):
     run_id_and_states = database_connection.list_run_ids_and_states()
     assert len(run_id_and_states) == 1
     assert run_id_and_states[0]["run_id"] == run_id
-    assert RunStatus.decode(run_id_and_states[0]["run_status"]) == RunStatus.UNKNOWN
+    assert RunStatus.decode(run_id_and_states[0]["run_status"]) == \
+        RunStatus.UNKNOWN
 
 
 def test_update_run(database_connection):
