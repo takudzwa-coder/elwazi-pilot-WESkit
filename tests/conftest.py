@@ -52,7 +52,8 @@ def test_config():
 
 @pytest.fixture(scope="function")
 def validation():
-    # This uses the global validation YAML because YAML file structures should be identical in test and production.
+    # This uses the global validation YAML because YAML
+    # file structures should be identical in test and production.
     with open(os.path.join("config", "validation.yaml"), "r") as ff:
         validation = yaml.load(ff, Loader=yaml.FullLoader)
     yield validation

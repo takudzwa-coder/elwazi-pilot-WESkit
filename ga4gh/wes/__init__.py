@@ -1,5 +1,4 @@
 from celery import Celery
-import sys
 
 
 def make_celery(app_name=__name__):
@@ -10,5 +9,5 @@ def make_celery(app_name=__name__):
         include=["ga4gh.wes.tasks"])
     return(celery)
 
-print("start celery client", file=sys.stderr)
+
 celery = make_celery()
