@@ -1,4 +1,7 @@
-import json, yaml, time
+import json
+import time
+import yaml
+
 
 def test_get_list_runs(test_app):
     response = test_app.get("/ga4gh/wes/v1/runs")
@@ -36,10 +39,13 @@ def test_get_service_info(test_app):
         },
         'tags': {'tag1': 'value1', 'tag2': 'value2'},
         'workflow_engine_versions': {'Snakemake': '5.8.2'},
-        'workflow_type_versions': {'Snakemake': {"workflow_type_version": ['5']}}
+        'workflow_type_versions': {
+            'Snakemake': {"workflow_type_version": ['5']}
+        }
     }
 
-def test_run_workflow(test_app, celery_app, celery_worker):
+
+def test_run_workflow(test_app, celery_worker):
     with open("tests/wf1/config.yaml") as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
@@ -51,4 +57,13 @@ def test_run_workflow(test_app, celery_app, celery_worker):
     }
 
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
+    run_id = response.json["run_id"]
+    running = True
+    while running:
+        time.sleep(1)
+        status = test_app.get(
+            "/ga4gh/wes/v1/runs/{}/status".format(run_id)
+        )
+        if (status.json == "SUCCESS"):
+            running = False
     assert response.status_code == 200

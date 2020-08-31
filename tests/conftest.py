@@ -1,4 +1,7 @@
-import pytest, yaml, os, logging, sys
+import logging
+import os
+import pytest
+import yaml
 from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
@@ -7,12 +10,31 @@ from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 from logging.config import dictConfig
+from ga4gh.wes import celery as celery_app
 
 
 @pytest.fixture(scope="function")
 def test_app(test_config, validation, log_config,
-             logger, database_connection):
-    app = create_app(test_config, validation, log_config, logger, database_connection)
+             logger, database_connection, redis_container):
+
+    test_config["message_queue"]["host"] = (redis_container.
+                                            get_container_host_ip())
+    test_config["message_queue"]["port"] = int(redis_container.
+                                               get_exposed_port(6379))
+    test_config["result_broker"]["host"] = (redis_container.
+                                            get_container_host_ip())
+    test_config["result_broker"]["port"] = int(redis_container.
+                                               get_exposed_port(6379))
+
+    app = create_app(
+        test_config,
+        validation,
+        log_config,
+        logger,
+        database_connection,
+        celery_app
+    )
+
     app.app.testing = True
     with app.app.test_client() as testing_client:
         ctx = app.app.app_context()
@@ -42,10 +64,14 @@ def database_connection():
     MONGODB_CONTAINER = "mongo:4.2.3"
     WESNAKE_TEST_DB = "WESnake_Test"
 
-    if MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI].upper() == "DOCKER":
+    if (MONGODB_URI in os.environ.keys()) and \
+       (os.environ[MONGODB_URI].upper() == "DOCKER"):
         container = MongoDbContainer(MONGODB_CONTAINER)
         container.start()
-        database = Database(MongoClient(container.get_connection_url()), WESNAKE_TEST_DB)
+        database = Database(
+            MongoClient(container.get_connection_url()),
+            WESNAKE_TEST_DB
+        )
     elif MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI] != "":
         connection_url = os.environ[MONGODB_URI]
         database = Database(MongoClient(connection_url), WESNAKE_TEST_DB)
@@ -55,29 +81,34 @@ def database_connection():
     yield database
     database._db_runs().drop()
 
-@pytest.fixture(scope="function")
+
+@pytest.fixture(scope="session")
 def redis_container():
     print("redis_container")
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
     return redis_container
 
-@pytest.fixture(scope="function")
+
+@pytest.fixture(scope="session")
 def celery_config(redis_container):
     print("celery_config")
-    #time.sleep(10)
-    #client = container.get_client()
-    tmp = {
-        'broker_url': "redis://" + redis_container.get_container_host_ip() + ":" + redis_container.get_exposed_port(6379),
-        'result_backend': "redis://" + redis_container.get_container_host_ip() + ":" + redis_container.get_exposed_port(6379)
+    return {
+        "broker_url": "redis://{}:{}".format(
+            redis_container.get_container_host_ip(),
+            redis_container.get_exposed_port(6379)
+        ),
+        "result_backend": "redis://{}:{}".format(
+            redis_container.get_container_host_ip(),
+            redis_container.get_exposed_port(6379)
+        )
     }
-    #time.sleep(10)
-    print(tmp)
-    return tmp
+
 
 @pytest.fixture(scope="session")
 def celery_worker_pool():
     return 'prefork'
+
 
 @pytest.fixture(scope="session")
 def snakemake_executor():
@@ -87,7 +118,11 @@ def snakemake_executor():
 
 @pytest.fixture(scope="function")
 def service_info(test_config, swagger, database_connection):
-    yield ServiceInfo(test_config["static_service_info"], swagger, database_connection)
+    yield ServiceInfo(
+        test_config["static_service_info"],
+        swagger,
+        database_connection
+    )
 
 
 @pytest.fixture(scope="function")
@@ -106,6 +141,7 @@ def logger(log_config):
 
 @pytest.fixture(scope="function")
 def swagger(database_connection):
-    with open("ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml", "r") as ff:
+    with open("ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml",
+              "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
     yield swagger
