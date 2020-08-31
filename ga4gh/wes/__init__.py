@@ -1,13 +1,14 @@
 from celery import Celery
+import sys
 
 
 def make_celery(app_name=__name__):
     celery = Celery(
-        app="celery_app",
-        broker="redis://result_broker:6379",
-        backend="redis://result_broker:6379",
-        include=["ga4gh.wes.tasks"])
+        app=app_name,
+        broker="redis://localhost:6379",
+        backend="redis://localhost:6379")
     return(celery)
 
 
+print("start celery client", file=sys.stderr)
 celery = make_celery()

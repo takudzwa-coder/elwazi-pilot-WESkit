@@ -1,1 +1,1 @@
-celery worker -A wesnake.celery --loglevel=info
+celery worker -A ga4gh.wes.celery_worker.celery --loglevel=info
