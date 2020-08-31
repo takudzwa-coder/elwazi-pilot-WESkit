@@ -1,22 +1,37 @@
 from ga4gh.wes.RunStatus import RunStatus
 from ga4gh.wes.tasks import run_snakemake
+from celery.task.control import revoke
 import json
 import os
 import sys
 import yaml
 
 
+celery_to_wes_state = {
+    "PENDING": "QUEUED",
+    "STARTED": "RUNNING",
+    "SUCCESS": "COMPLETE",
+    "FAILURE": "EXECUTOR_ERROR",
+    "RETRY": "QUEUED",
+    "REVOKED": "CANCELED"
+}
+
+
+
 class Snakemake:
 
     def cancel(self, run, database):
         # ToDo: Cancel a running Snakemake task
+        revoke(run["_celery_task_id"], terminate=True)
         run["run_status"] = RunStatus.CANCELED.encode()
         database.update_run(run)
         return run
 
-    def get_state(self, run):
+    def get_state(self, run, database):
         running_task = run_snakemake.AsyncResult(run["_celery_task_id"])
-        return running_task.state
+        run["run_status"] = celery_to_wes_state[running_task.state]
+        database.update_run(run)
+        return run["run_status"]
 
     def execute(self, run, database, logger):
         print("Snakemake:execute", file=sys.stderr)
