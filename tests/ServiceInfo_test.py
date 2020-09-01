@@ -20,10 +20,10 @@ def test_get_workflow_engine_versions(service_info):
 
 def test_get_default_workflow_engine_parameters(service_info):
     default = service_info.get_default_workflow_engine_parameters()
-    assert default[0]["name"] == "parameterName1"
-    assert default[0]["type"] == "parameterType1"
-    assert default[0]["default_value"] == "defaultValue1"
-    assert len(default) == 2
+    assert default[0]["name"] == "cores"
+    assert default[0]["type"] == "int"
+    assert default[0]["default_value"] == "1"
+    assert len(default) == 1
 
 
 def test_get_auth_instructions_url(service_info):

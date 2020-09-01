@@ -15,13 +15,9 @@ def test_get_service_info(test_app):
         'auth_instructions_url': 'https://somewhere.org',
         'contact_info_url': 'your@email.de',
         'default_workflow_engine_parameters': [{
-            'default_value': 'defaultValue1',
-            'name': 'parameterName1',
-            'type': 'parameterType1'
-        }, {
-            'default_value': 'defaultValue2',
-            'name': 'parameterName2',
-            'type': 'parameterType2'
+            'default_value': '1',
+            'name': 'cores',
+            'type': 'int'
         }],
         'supported_filesystem_protocols': ['s3', 'posix'],
         'supported_wes_versions': ['1.0.0'],

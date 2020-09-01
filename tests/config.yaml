@@ -41,12 +41,9 @@ static_service_info:
         Snakemake: "5.8.2"
     
     default_workflow_engine_parameters:
-        - name: "parameterName1"
-          type: "parameterType1"
-          default_value: "defaultValue1"
-        - name: "parameterName2"
-          type: "parameterType2"
-          default_value: "defaultValue2"
+        - name: "cores"
+          type: "int"
+          default_value: "1"
     
     auth_instructions_url: "https://somewhere.org"
     
