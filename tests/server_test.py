@@ -45,17 +45,23 @@ def test_get_service_info(test_app):
     }
 
 
-def test_run_workflow(test_app, celery_worker):
-    with open("tests/wf1/config.yaml") as file:
+def get_workflow_data(snakefile, config):
+    with open(config) as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
     data = {
         "workflow_params": workflow_params,
         "workflow_type": "Snakemake",
         "workflow_type_version": "5.8.2",
-        "workflow_url": "tests/wf1/Snakefile"
+        "workflow_url": snakefile
     }
+    return data
 
+
+def test_run_workflow(test_app, celery_worker):
+    data = get_workflow_data(
+        snakefile="tests/wf1/Snakefile",
+        config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     run_id = response.json["run_id"]
     running = True
@@ -64,6 +70,19 @@ def test_run_workflow(test_app, celery_worker):
         status = test_app.get(
             "/ga4gh/wes/v1/runs/{}/status".format(run_id)
         )
-        if (status.json == "SUCCESS"):
+        if (status.json == "COMPLETE"):
             running = False
     assert response.status_code == 200
+
+
+def test_cancel_workflow(test_app, celery_worker):
+    data = get_workflow_data(
+        snakefile="tests/wf2/Snakefile",
+        config="tests/wf2/config.yaml")
+    response = test_app.post("/ga4gh/wes/v1/runs", data=data)
+    run_id = response.json["run_id"]
+    cancel_run = test_app.post("/ga4gh/wes/v1/runs/{}/cancel".format(run_id))
+    assert cancel_run.status_code == 200
+    status = test_app.get("/ga4gh/wes/v1/runs/{}/status".format(run_id))
+    print(status.json)
+    assert status.json == "CANCELED"
