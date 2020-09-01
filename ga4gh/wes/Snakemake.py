@@ -4,6 +4,7 @@ from celery.task.control import revoke
 import json
 import os
 import sys
+import time
 import yaml
 
 
@@ -13,24 +14,29 @@ celery_to_wes_state = {
     "SUCCESS": "COMPLETE",
     "FAILURE": "EXECUTOR_ERROR",
     "RETRY": "QUEUED",
-    "REVOKED": "CANCELED"
-}
+    "REVOKED": "CANCELED"}
 
-
+running_states = [
+    "UNKNOWN",
+    "QUEUED",
+    "INITIALIZING",
+    "RUNNING",
+    "PAUSED"]
 
 class Snakemake:
 
     def cancel(self, run, database):
-        # ToDo: Cancel a running Snakemake task
-        revoke(run["_celery_task_id"], terminate=True)
+        revoke(run["_celery_task_id"], terminate=True, signal='SIGKILL')
         run["run_status"] = RunStatus.CANCELED.encode()
         database.update_run(run)
         return run
 
     def get_state(self, run, database):
-        running_task = run_snakemake.AsyncResult(run["_celery_task_id"])
-        run["run_status"] = celery_to_wes_state[running_task.state]
-        database.update_run(run)
+        # check if task is running and update state
+        if run["run_status"] in running_states:
+            running_task = run_snakemake.AsyncResult(run["_celery_task_id"])
+            run["run_status"] = celery_to_wes_state[running_task.state]
+            database.update_run(run)
         return run["run_status"]
 
     def execute(self, run, database, logger):
