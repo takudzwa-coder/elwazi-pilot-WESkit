@@ -27,7 +27,7 @@ def CancelRun(run_id, *args, **kwargs):
     else:
         run = current_app.snakemake.cancel(run, current_app.database)
         current_app.logger.info("Run %s is canceled" % run_id)
-        return {"run_id": run.run_id}, 200
+        return {k: run[k] for k in ["run_id"]}, 200
 
 
 # get:/runs/{run_id}/status
@@ -40,7 +40,7 @@ def GetRunStatus(run_id, *args, **kwargs):
                 "status_code": 0
                 }, 404
     else:
-        return current_app.snakemake.get_state(query_result, current_app.database)
+        return current_app.snakemake.get_state(query_result, current_app.database), 200
 
 
 # get:/service-info
