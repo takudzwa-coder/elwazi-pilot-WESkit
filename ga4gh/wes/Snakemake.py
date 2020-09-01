@@ -4,7 +4,6 @@ from celery.task.control import revoke
 import json
 import os
 import sys
-import time
 import yaml
 
 
@@ -16,12 +15,14 @@ celery_to_wes_state = {
     "RETRY": "QUEUED",
     "REVOKED": "CANCELED"}
 
+
 running_states = [
     "UNKNOWN",
     "QUEUED",
     "INITIALIZING",
     "RUNNING",
     "PAUSED"]
+
 
 class Snakemake:
 

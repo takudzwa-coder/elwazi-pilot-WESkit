@@ -40,7 +40,8 @@ def GetRunStatus(run_id, *args, **kwargs):
                 "status_code": 0
                 }, 404
     else:
-        return current_app.snakemake.get_state(query_result, current_app.database), 200
+        return current_app.snakemake.get_state(
+            query_result, current_app.database), 200
 
 
 # get:/service-info
