@@ -163,7 +163,7 @@ def create_app(config=None,
     # Global objects and information.
     app.app.validation = validation
     app.app.database = database
-    app.app.snakemake = Snakemake()
+    app.app.snakemake = Snakemake(config)
     app.app.service_info = ServiceInfo(config["static_service_info"],
                                        swagger, database)
     app.app.log_config = log_config

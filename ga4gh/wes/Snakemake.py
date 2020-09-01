@@ -24,7 +24,23 @@ running_states = [
     "PAUSED"]
 
 
+def mycast(value, type):
+    if type == "int":
+        return int(value)
+    if type == "str":
+        return str(value)
+    if type == "float":
+        return float(value)
+
+
 class Snakemake:
+    def __init__(self, config):
+        self.kwargs = {}
+        for parameter in (config["static_service_info"]
+                                ["default_workflow_engine_parameters"]):
+            self.kwargs[parameter["name"]] = mycast(
+                value=parameter["default_value"],
+                type=parameter["type"])
 
     def cancel(self, run, database):
         revoke(run["_celery_task_id"], terminate=True, signal='SIGKILL')
@@ -69,7 +85,9 @@ class Snakemake:
         )
         database.update_run(run)
         logger.info("_send_run_to_celery")
-        task = run_snakemake.apply_async(args=[], kwargs=run_kwargs)
+        task = run_snakemake.apply_async(
+            args=[],
+            kwargs={**run_kwargs, **self.kwargs})
         run["_celery_task_id"] = task.id
         database.update_run(run)
         return run
