@@ -1,5 +1,5 @@
 from ga4gh.wes import celery
-from ga4gh.wes.tasks import run_snakemake # noqa: F401; pylint: disable=unused-variable
+from ga4gh.wes.tasks import run_snakemake # noqa: F401
 import os
 
 
