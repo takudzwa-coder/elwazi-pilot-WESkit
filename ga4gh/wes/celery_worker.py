@@ -1,5 +1,5 @@
 from ga4gh.wes import celery
-from ga4gh.wes.tasks import run_snakemake # noqa: F401
+from ga4gh.wes.tasks import run_snakemake  # noqa: F401
 import os
 
 
