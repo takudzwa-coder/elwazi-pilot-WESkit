@@ -1,4 +1,5 @@
 from ga4gh.wes import celery
+from ga4gh.wes.tasks import run_snakemake
 import os
 
 
