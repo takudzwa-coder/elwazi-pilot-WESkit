@@ -3,36 +3,38 @@ import os
 import pytest
 import yaml
 from ga4gh.wes.Database import Database
-from ga4gh.wes.Snakemake import Snakemake
+#from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
-from ga4gh.wes.wesnake import create_app
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 from logging.config import dictConfig
-from ga4gh.wes import celery as celery_app
+#from ga4gh.wes import celery as celery_app
+
+def get_redis_url(redis_container):
+    url = "redis://{}:{}".format(
+        redis_container.get_container_host_ip(),
+        redis_container.get_exposed_port(6379)
+    )
+    return url
 
 
 @pytest.fixture(scope="function")
 def test_app(test_config, validation, log_config,
              logger, database_connection, redis_container):
+    
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
 
-    test_config["message_queue"]["host"] = (redis_container.
-                                            get_container_host_ip())
-    test_config["message_queue"]["port"] = int(redis_container.
-                                               get_exposed_port(6379))
-    test_config["result_broker"]["host"] = (redis_container.
-                                            get_container_host_ip())
-    test_config["result_broker"]["port"] = int(redis_container.
-                                               get_exposed_port(6379))
+    # import here because env vars need to be set before
+    from ga4gh.wes.wesnake import create_app
 
     app = create_app(
         test_config,
         validation,
         log_config,
         logger,
-        database_connection,
-        celery_app
+        database_connection
     )
 
     app.app.testing = True
@@ -95,14 +97,8 @@ def redis_container():
 def celery_config(redis_container):
     print("celery_config")
     return {
-        "broker_url": "redis://{}:{}".format(
-            redis_container.get_container_host_ip(),
-            redis_container.get_exposed_port(6379)
-        ),
-        "result_backend": "redis://{}:{}".format(
-            redis_container.get_container_host_ip(),
-            redis_container.get_exposed_port(6379)
-        )
+        "broker_url": get_redis_url(redis_container),
+        "result_backend": get_redis_url(redis_container)
     }
 
 
@@ -111,10 +107,10 @@ def celery_worker_pool():
     return 'prefork'
 
 
-@pytest.fixture(scope="session")
-def snakemake_executor():
-    executor = Snakemake()
-    yield executor
+#@pytest.fixture(scope="session")
+#def snakemake_executor():
+#    executor = Snakemake()
+#    yield executor
 
 
 @pytest.fixture(scope="function")
