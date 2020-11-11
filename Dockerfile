@@ -4,6 +4,9 @@ FROM continuumio/miniconda3:4.8.2
 
 EXPOSE 4080
 
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+
 COPY ./ /wesnake
 
 # Make all wesnake and conda data owned and readable by all, to allow running the service with
@@ -27,6 +30,8 @@ RUN conda init bash
 # RUN conda update --prefix /opt/conda conda
 
 RUN cd /wesnake && \
+    conda config --set proxy_servers.http $HTTP_PROXY && \
+    conda config --set proxy_servers.https $HTTPS_PROXY && \
     conda env create -n wesnake -f environment.yaml && \
     source activate wesnake && \
     pip install ./ && \

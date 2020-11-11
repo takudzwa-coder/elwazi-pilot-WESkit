@@ -13,8 +13,6 @@ from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
-from ga4gh.wes.celery_utils import init_celery
-from ga4gh.wes import celery
 
 
 def create_connexion_app():
@@ -82,8 +80,7 @@ def create_app(config=None,
                validation=None,
                log_config=None,
                logger=None,
-               database=None,
-               celery=None):
+               database=None):
     '''
     If config is given, then it is expected that all paramters are provided.
     If config is not given, then all values are loaded from files are
@@ -157,8 +154,6 @@ def create_app(config=None,
     app.host = config["wes_server"]["host"]
     app.port = config["wes_server"]["port"]
 
-    # Initialize celery
-    init_celery(celery, app)
 
     # Global objects and information.
     app.app.validation = validation
@@ -175,7 +170,7 @@ def create_app(config=None,
 def main():
     print("Starting WESnake ...", file=sys.stderr)
 
-    app = create_app(celery=celery)
+    app = create_app()
 
     app.run(port=app.config["wes_server"]["port"],
             host=app.config["wes_server"]["host"],

@@ -1,8 +1,8 @@
-from ga4gh.wes import celery
+from ga4gh.wes.celery import celery_app
 from snakemake import snakemake
 
 
-@celery.task(bind=True)
+@celery_app.task(bind=True)
 def run_snakemake(self, snakefile, workdir, configfiles, **kwargs):
     snakemake(
         snakefile=snakefile,
