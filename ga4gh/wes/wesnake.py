@@ -154,7 +154,6 @@ def create_app(config=None,
     app.host = config["wes_server"]["host"]
     app.port = config["wes_server"]["port"]
 
-
     # Global objects and information.
     app.app.validation = validation
     app.app.database = database
