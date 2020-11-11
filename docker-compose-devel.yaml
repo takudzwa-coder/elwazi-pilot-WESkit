@@ -18,6 +18,8 @@ services:
       WESNAKE_CONFIG: /home/wesnake/config.yaml
       WESNAKE_LOG_CONFIG:
       WESNAKE_VALIDATION_CONFIG:
+      RESULT_BACKEND: redis://result_broker:6379
+      BROKER_URL: redis://result_broker:6379
     depends_on:
       - database
       - result_broker
