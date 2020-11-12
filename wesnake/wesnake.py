@@ -141,10 +141,8 @@ def create_app(config=None,
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
     swagger = read_swagger()
-    app = Flask(__name__)
 
-    # Use the conventional app.config attribute
-    app.my_config = config
+    app = Flask(__name__)
 
     # Global objects and information.
     app.validation = validation
