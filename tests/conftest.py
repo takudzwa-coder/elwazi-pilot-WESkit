@@ -2,14 +2,12 @@ import logging
 import os
 import pytest
 import yaml
-from ga4gh.wes.Database import Database
-#from ga4gh.wes.Snakemake import Snakemake
-from ga4gh.wes.ServiceInfo import ServiceInfo
+from wesnake.classes.Database import Database
+from wesnake.classes.ServiceInfo import ServiceInfo
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 from logging.config import dictConfig
-#from ga4gh.wes import celery as celery_app
 
 def get_redis_url(redis_container):
     url = "redis://{}:{}".format(
@@ -27,7 +25,7 @@ def test_app(test_config, validation, log_config,
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
 
     # import here because env vars need to be set before
-    from ga4gh.wes.wesnake import create_app
+    from wesnake.wesnake import create_app
 
     app = create_app(
         test_config,
@@ -138,7 +136,7 @@ def logger(log_config):
 
 @pytest.fixture(scope="function")
 def swagger(database_connection):
-    with open("ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml",
+    with open("wesnake/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
     yield swagger

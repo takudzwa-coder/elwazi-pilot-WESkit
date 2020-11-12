@@ -1,5 +1,5 @@
 from bson.son import SON
-from ga4gh.wes.RunStatus import RunStatus
+from wesnake.classes.RunStatus import RunStatus
 
 
 class ServiceInfo:

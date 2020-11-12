@@ -1,4 +1,4 @@
-from ga4gh.wes.celery import celery_app
+from wesnake.celery import celery_app
 from snakemake import snakemake
 
 

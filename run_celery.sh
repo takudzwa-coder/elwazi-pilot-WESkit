@@ -1,1 +1,0 @@
-celery worker -A ga4gh.wes.celery_worker.celery --loglevel=info

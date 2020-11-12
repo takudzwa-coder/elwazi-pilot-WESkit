@@ -1,4 +1,4 @@
-from ga4gh.wes.RunStatus import RunStatus
+from wesnake.classes.RunStatus import RunStatus
 
 run_id = "test_store_and_retrieve_run_id"
 

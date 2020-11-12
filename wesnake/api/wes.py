@@ -1,4 +1,4 @@
-from ga4gh.wes.utils import create_run_id
+from wesnake.utils import create_run_id
 from flask import current_app, jsonify, request
 from flask import Blueprint
 

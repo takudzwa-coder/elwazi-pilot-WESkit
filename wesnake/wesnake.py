@@ -8,10 +8,10 @@ import os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
-from ga4gh.wes.Database import Database
-from ga4gh.wes.Snakemake import Snakemake
-from ga4gh.wes.ServiceInfo import ServiceInfo
-from ga4gh.wes.ErrorCodes import ErrorCodes
+from wesnake.classes.Database import Database
+from wesnake.classes.Snakemake import Snakemake
+from wesnake.classes.ServiceInfo import ServiceInfo
+from wesnake.classes.ErrorCodes import ErrorCodes
 from flask import Flask
 
 
@@ -19,7 +19,7 @@ def read_swagger():
     '''Read the swagger file.'''
     # This is hardcoded, because if it is changed, probably also quite some
     # code needs to be changed.
-    swagger_file = "ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml"
+    swagger_file = "wesnake/api/workflow_execution_service_1.0.0.yaml"
     with open(swagger_file, "r") as yaml_file:
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
@@ -155,7 +155,7 @@ def create_app(config=None,
     app.log_config = log_config
     app.logger = logger
 
-    from ga4gh.wes.api import bp as wes_bp
+    from wesnake.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
     return app

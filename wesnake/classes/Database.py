@@ -1,5 +1,5 @@
-from ga4gh.wes.utils import get_current_time
-from ga4gh.wes.RunStatus import RunStatus
+from wesnake.utils import get_current_time
+from wesnake.classes.RunStatus import RunStatus
 from flask import current_app
 
 
