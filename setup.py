@@ -9,5 +9,5 @@ setup(name='WESnake',
                   "wesnake = wesnake.wesnake:main"
             ]
       },
-      data_files=[("config", ["config/validation.yaml", "config/log-config.yaml"])]
+      data_files=[("config", ["wesnake/config/validation.yaml", "wesnake/config/log-config.yaml"])]
       )
