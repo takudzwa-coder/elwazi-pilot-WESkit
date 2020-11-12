@@ -37,9 +37,9 @@ def test_app(test_config, validation, log_config,
         database_connection
     )
 
-    app.app.testing = True
-    with app.app.test_client() as testing_client:
-        ctx = app.app.app_context()
+    app.testing = True
+    with app.test_client() as testing_client:
+        ctx = app.app_context()
         ctx.push()
         yield testing_client
 

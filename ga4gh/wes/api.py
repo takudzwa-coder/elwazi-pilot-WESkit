@@ -1,9 +1,13 @@
 from ga4gh.wes.utils import create_run_id
-from flask import current_app
+from flask import current_app, jsonify, request
+from flask import Blueprint
 
 
-# get:/runs/{run_id}
-def GetRunLog(run_id, *args, **kwargs):
+bp = Blueprint("wes", __name__)
+
+
+@bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
+def GetRunLog(run_id):
     current_app.logger.info("GetRun")
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
@@ -15,8 +19,8 @@ def GetRunLog(run_id, *args, **kwargs):
         return query_result, 200
 
 
-# post:/runs/{run_id}/cancel
-def CancelRun(run_id, *args, **kwargs):
+@bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
+def CancelRun(run_id):
     current_app.logger.info("CancelRun")
     run = current_app.database.get_run(run_id)
     if run is None:
@@ -30,21 +34,20 @@ def CancelRun(run_id, *args, **kwargs):
         return {k: run[k] for k in ["run_id"]}, 200
 
 
-# get:/runs/{run_id}/status
-def GetRunStatus(run_id, *args, **kwargs):
+@bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
+def GetRunStatus(run_id):
     current_app.logger.info("GetRunStatus")
     query_result = current_app.database.get_run(run_id)
     if query_result is None:
         current_app.error_logger.error("Could not find %s" % run_id)
-        return {"msg": "Could not find %s" % run_id,
-                "status_code": 0
-                }, 404
+        return jsonify({"msg": "Could not find %s" % run_id,
+                        "status_code": 0}), 404
     else:
-        return current_app.snakemake.get_state(
-            query_result, current_app.database), 200
+        return jsonify(current_app.snakemake.get_state(
+            query_result, current_app.database)), 200
 
 
-# get:/service-info
+@bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
 def GetServiceInfo(*args, **kwargs):
     current_app.logger.info("GetServiceInfo")
     response = {
@@ -67,21 +70,22 @@ def GetServiceInfo(*args, **kwargs):
         "tags":
             current_app.service_info.get_tags()
     }
-    return response, 200
+    return jsonify(response), 200
 
 
-# get:/runs
+@bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
 def ListRuns(*args, **kwargs):
     current_app.logger.info("ListRuns")
     response = current_app.database.list_run_ids_and_states()
-    return response, 200
+    return jsonify(response), 200
 
 
-# post:/runs
-def RunWorkflow(*args, **kwargs):
+@bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
+def RunWorkflow():
+    data = request.form
     current_app.logger.info("RunWorkflow")
-    run = current_app.database.create_new_run(create_run_id(), request=kwargs)
+    run = current_app.database.create_new_run(create_run_id(), request=data)
     current_app.logger.info("Execute Workflow")
     run = current_app.snakemake.execute(
         run, current_app.database, current_app.logger)
-    return {k: run[k] for k in ["run_id"]}, 200
+    return jsonify({k: run[k] for k in ["run_id"]}), 200

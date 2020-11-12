@@ -20,6 +20,7 @@ services:
       WESNAKE_VALIDATION_CONFIG:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
+      FLASK_APP: ga4gh.wes
     depends_on:
       - database
       - result_broker
@@ -36,7 +37,7 @@ services:
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate wesnake && pip install ./ && wesnake"]
     ports:
-      - 4080:4080
+      - 5000:5000
 
   database:
     image: mongo:4.2.3

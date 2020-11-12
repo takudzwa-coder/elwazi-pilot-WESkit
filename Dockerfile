@@ -2,7 +2,7 @@
 
 FROM continuumio/miniconda3:4.8.2
 
-EXPOSE 4080
+EXPOSE 5000
 
 ARG HTTP_PROXY
 ARG HTTPS_PROXY

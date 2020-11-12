@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import connexion
 import yaml
 import sys
 import logging
@@ -13,27 +12,23 @@ from ga4gh.wes.Database import Database
 from ga4gh.wes.Snakemake import Snakemake
 from ga4gh.wes.ServiceInfo import ServiceInfo
 from ga4gh.wes.ErrorCodes import ErrorCodes
+from flask import Flask
 
 
-def create_connexion_app():
+def read_swagger():
     '''Read the swagger file.'''
     # This is hardcoded, because if it is changed, probably also quite some
     # code needs to be changed.
-    swagger_file = "workflow_execution_service_1.0.0.yaml"
-    app = connexion.App(__name__, specification_dir="swagger/")
-    app.add_api(swagger_file)
-
-    swagger_path = app.specification_dir / swagger_file
-    with open(swagger_path, "r") as yaml_file:
+    swagger_file = "ga4gh/wes/swagger/workflow_execution_service_1.0.0.yaml"
+    with open(swagger_file, "r") as yaml_file:
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
-    return app, swagger
+    return swagger
 
 
 def create_database(config):
     return Database(MongoClient(config["mongo_server"]["host"],
-                                config["mongo_server"]["port"]),
-                    "WES")
+                                config["mongo_server"]["port"]), "WES")
 
 
 def parse_cli(default_config, default_log_config, default_validation_config):
@@ -145,32 +140,27 @@ def create_app(config=None,
                      format(validator.errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
-    app, swagger = create_connexion_app()
+    swagger = read_swagger()
+    app = Flask(__name__)
 
     # Use the conventional app.config attribute
-    app.config = config
-
-    # Replace Connexion app settings
-    app.host = config["wes_server"]["host"]
-    app.port = config["wes_server"]["port"]
+    app.my_config = config
 
     # Global objects and information.
-    app.app.validation = validation
-    app.app.database = database
-    app.app.snakemake = Snakemake(config)
-    app.app.service_info = ServiceInfo(config["static_service_info"],
-                                       swagger, database)
-    app.app.log_config = log_config
-    app.app.logger = logger
+    app.validation = validation
+    app.database = database
+    app.snakemake = Snakemake(config)
+    app.service_info = ServiceInfo(config["static_service_info"],
+                                   swagger, database)
+    app.log_config = log_config
+    app.logger = logger
+
+    from ga4gh.wes.api import bp as wes_bp
+    app.register_blueprint(wes_bp)
 
     return app
 
 
-def main():
-    print("Starting WESnake ...", file=sys.stderr)
-
+def main():  # if __name__ == '__main__':
     app = create_app()
-
-    app.run(port=app.config["wes_server"]["port"],
-            host=app.config["wes_server"]["host"],
-            debug=app.debug)
+    app.run(host="0.0.0.0", port=5000)
