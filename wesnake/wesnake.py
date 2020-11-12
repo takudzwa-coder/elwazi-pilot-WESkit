@@ -94,12 +94,12 @@ def create_app(config=None,
 
         default_log_config = os.getenv(
             "WESNAKE_LOG_CONFIG",
-            os.path.join(sys.prefix, "config",
+            os.path.join(sys.prefix, "wesnake/config",
                          "log-config.yaml"))
 
         default_validation_config = os.getenv(
             "WESNAKE_VALIDATION_CONFIG",
-            os.path.join(sys.prefix, "config",
+            os.path.join(sys.prefix, "wesnake/config",
                          "validation.yaml"))
 
         if "--config" in sys.argv:
