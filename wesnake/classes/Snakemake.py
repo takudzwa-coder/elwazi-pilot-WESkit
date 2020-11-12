@@ -1,5 +1,5 @@
 from wesnake.classes.RunStatus import RunStatus
-from wesnake.tasks import run_snakemake
+from wesnake.tasks.snakemake import run_snakemake
 from celery.task.control import revoke
 import json
 import os
