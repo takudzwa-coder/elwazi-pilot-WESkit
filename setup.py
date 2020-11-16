@@ -6,8 +6,8 @@ setup(name='WESnake',
       version='0.0.1',
       entry_points={
             "console_scripts": [
-                  "wesnake = wesnake.wesnake:main"
+            "wesnake = wesnake.__main__:main"
             ]
       },
-      data_files=[("config", ["wesnake/config/validation.yaml", "wesnake/config/log-config.yaml"])]
-      )
+    include_package_data=True
+)
