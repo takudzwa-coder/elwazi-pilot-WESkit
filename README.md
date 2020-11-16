@@ -62,7 +62,7 @@ wesnake --config config.yaml
 
 Note that that if you provide the main configuration via `WESNAKE_CONFIG` you may still override it via the `--config` parameter, but the parameter is not required anymore. In all cases the environment variables are overriden by the command-line arguments.
 
-If you want to run the just the WESnake container you can do similar to this:
+If you want to run the WESnake container you can do similar to this:
 
 ```bash
 docker run --env WESNAKE_CONFIG=/config --mount type=bind,source=$PWD/tests/config.yaml,target=/config.yaml --user $UID:wesnake --rm wesnake:$version
@@ -70,7 +70,7 @@ docker run --env WESNAKE_CONFIG=/config --mount type=bind,source=$PWD/tests/conf
 
 ## Running the full stack
 
-Currently, two variants are available for running all redependent tools: Docker Compose and Docker Stack
+Currently, two variants are available for running all dependent tools: Docker Compose and Docker Stack
 
 ### Docker Compose
 
