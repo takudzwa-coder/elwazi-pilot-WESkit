@@ -25,7 +25,7 @@ def test_app(test_config, validation, log_config,
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
 
     # import here because env vars need to be set before
-    from wesnake.wesnake import create_app
+    from wesnake import create_app
 
     app = create_app(
         test_config,
