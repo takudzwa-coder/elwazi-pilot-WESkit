@@ -57,12 +57,11 @@ class Snakemake:
         return run["run_status"]
 
     def execute(self, run, database, logger):
-        print("Snakemake:execute", file=sys.stderr)
         logger.info("RunWorkflow")
 
         # create run environment
-        tmp_dir = "tmp/"
         logger.info("_create_environment")
+        tmp_dir = "tmp/"
         run_dir = os.path.abspath(os.path.join(tmp_dir, run["run_id"]))
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
