@@ -1,4 +1,4 @@
-from wesnake.celery import celery_app
+from wesnake.tasks.celery import celery_app
 from wesnake.tasks.snakemake import run_snakemake  # noqa: F401
 import os
 
