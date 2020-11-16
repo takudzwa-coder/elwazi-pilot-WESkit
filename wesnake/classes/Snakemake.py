@@ -3,7 +3,6 @@ from wesnake.tasks.snakemake import run_snakemake
 from celery.task.control import revoke
 import json
 import os
-import sys
 import yaml
 
 
