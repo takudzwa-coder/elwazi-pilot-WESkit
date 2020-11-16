@@ -3,37 +3,26 @@ version: '3'
 networks:
   backend:
     driver: overlay
-  frontend:
-    driver: overlay
 
 services:
 
   rest:
     hostname: wesnake
     image: ${WESNAKE_IMAGE}
-    build: .
-    restart: unless-stopped
     environment:
-      HOME: /home/wesnake
       WESNAKE_CONFIG: /home/wesnake/config.yaml
       WESNAKE_LOG_CONFIG:
       WESNAKE_VALIDATION_CONFIG:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
       FLASK_APP: wesnake
-    depends_on:
-      - database
-      - result_broker
-      - message_queue
-      - worker1
     volumes:
-      - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
+      - ${WESNAKE_ROOT}:/wesnake
       - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/shared
     networks:
       - backend
-    user: "${WESNAKE_UID}:${WESNAKE_GID}"
-    working_dir: /wesnake-devel
+    working_dir: /wesnake
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate wesnake && pip install ./ && flask run --host=0.0.0.0 --port=5000"]
     ports:
@@ -41,7 +30,6 @@ services:
 
   database:
     image: mongo:4.2.3
-    restart: unless-stopped
     volumes:
       - ${SHARED_FILESYSTEM_ROOT}:/var/lib/mongodb
     networks:
@@ -51,7 +39,6 @@ services:
 
   result_broker:
     image: redis:6.0.1-alpine
-    restart: unless-stopped
     volumes:
       - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
@@ -63,21 +50,14 @@ services:
   # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   worker1:
     image: ${WESNAKE_IMAGE}
-    depends_on:
-      - result_broker
-      - message_queue
     environment:
-      HOME: /home/wesnake
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
-    user: "${WESNAKE_UID}:${WESNAKE_GID}"
-    working_dir: /wesnake-devel
+    working_dir: /wesnake
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.tasks.celery_worker.celery_app"]
-    restart: unless-stopped
-    build: .
     volumes:
-      - ${WESNAKE_DEVEL_ROOT}:/wesnake-devel
+      - ${WESNAKE_ROOT}:/wesnake
       - ${SHARED_FILESYSTEM_ROOT}:/shared
     networks:
       - backend
