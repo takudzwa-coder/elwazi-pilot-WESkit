@@ -20,7 +20,7 @@ services:
       WESNAKE_VALIDATION_CONFIG:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
-      FLASK_APP: ga4gh.wes
+      FLASK_APP: wesnake
     depends_on:
       - database
       - result_broker
@@ -35,7 +35,7 @@ services:
     user: "${WESNAKE_UID}:${WESNAKE_GID}"
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake && pip install ./ && wesnake"]
+    command: ["conda activate wesnake && pip install ./ && flask run --host=0.0.0.0 --port=5000"]
     ports:
       - 5000:5000
 
@@ -73,7 +73,7 @@ services:
     user: "${WESNAKE_UID}:${WESNAKE_GID}"
     working_dir: /wesnake-devel
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.celery_worker.celery_app"]
+    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.tasks.celery_worker.celery_app"]
     restart: unless-stopped
     build: .
     volumes:
