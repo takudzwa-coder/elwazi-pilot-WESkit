@@ -48,7 +48,7 @@ export WESNAKE_CONFIG=/PATH/TO/WESNAKE_CONFIG/config.yaml
 export WESNAKE_IMAGE=wesnake:0.0.1
 export WESNAKE_ROOT=/PATH/TO/WESNAKE/
 
-docker stack deploy --compose-file=docker-stack.yaml wesnake
+docker stack deploy --compose-file=docker_stack.yaml wesnake
 ```
 
 ## Development
