@@ -2,13 +2,64 @@
 
 A GA4GH compliant Workflow-Execution-Service (WES) for Snakemake.
 
-## Conda environment
+## Running WESnake via Docker Stack
 
-All requirements are specified in the Conda environment file `environment.yaml`. To install the environment you need a working Conda installation and issue in the repository root directory
+Currently, we recommend running WESnake via Docker stack. 
+Other deployment forms e.g. via Kubernetes might be supported at a later stage.
+If you want to run WESnake within a different environment, you might want to follow these steps and adapt them to your own requirements.
+
+### Building the Docker container
+
+First, you need to build a WESnake docker image.
+
+```bash
+docker build -t wesnake:0.0.1 \
+  --build-arg http_proxy=$HTTP_PROXY \
+  --build-arg https_proxy=$HTTPS_PROXY \
+  --build-arg HTTP_PROXY=$HTTP_PROXY \
+  --build-arg HTTPS_PROXY=$HTTPS_PROXY \
+  ./
+```
+
+### Configuration
+
+To run the WESnake Docker stack, you need to set several environmental variables and configure the configuration files.
+There are two configuration files for general usage:
+
+  * `config.yaml`: Main configuration file. Usually you only need to change this file.
+  * `log_config.yaml`: Configuration of the logging system.
+
+Set the following environmental variables:
+
+  * `REDIS_CONFIG`: Path to redis configuration file.
+  * `SHARED_FILESYSTEM_ROOT`: Path to file system directory for application data such as database files, redis files and Snakemake execution data.
+  * `WESNAKE_CONFIG`: Path to WESnake config.yaml
+  * `WESNAKE_IMAGE`: Docker iamge tag (wesnake:0.0.1)
+  * `WESNAKE_ROOT`: Path to WESnake repository
+  
+### Run Docker stack
+
+Start WESnake using `docker stack` with `docker-stack.yaml`:
+
+```bash
+export REDIS_CONFIG=/PATH/TO/REDIS_CONFIG/redis.conf
+export SHARED_FILESYSTEM_ROOT=/PATH/TO/DIR/
+export WESNAKE_CONFIG=/PATH/TO/WESNAKE_CONFIG/config.yaml
+export WESNAKE_IMAGE=wesnake:0.0.1
+export WESNAKE_ROOT=/PATH/TO/WESNAKE/
+
+docker stack deploy --compose-file=docker_stack.yaml wesnake
+```
+
+## Development
+
+For development of new features, it is recommended to install the wesnake Conda environment locally and develop and run tests.
+All requirements are specified in the Conda environment file `environment.yaml`.
+To install the environment you need a working Conda installation and issue in the repository root directory
 
 ```bash
 conda env create -n wesnake -f environment.yaml
-``` 
+```
 
 After that you can activate the environment with
 
@@ -16,53 +67,7 @@ After that you can activate the environment with
 conda activate wesnake
 ```
 
-## Installation from sources
-
-```bash
-cd wesnake
-python setup.py install
-```
-
-## Configuration
-
-There are three configuration files for general usage:
-
-  * `config.yaml`: Main configuration file. Usually you only need to change this file.
-  * `log_config.yaml`: Configuration of the logging system. 
-
-As a template you can use the configuration in the `tests/` directory.
-
-NOTE: You should not change the `validation.yaml` file, which is only used to validate the configuration yaml.
-
-## Running
-
-An executable called `wesnake` is installed. Run it with
-
-```bash
-wesnake --config config.yaml
-```
-
-## Tests
-
-To run the tests with a local MongoDB installation, create and activate the Conda environment as described before. Then start MongoDB 
-
-```bash
-mongodb --dbpath=/your/path/to/db
-``` 
-
-This will create an new empty database for you, if the path does not exit yet. MongoDB will only listen on localhost on the default port 27017, which means that access from outside to your database is impossible. You are not protected from users logged in to the same machine, though.
-
-To run the tests from the command line you can now do
-
-```bash
-MONGODB_URI=mongodb://localhost:27017/ python -m pytest
-``` 
-
-When using an IDE you need to set the MongoDB URI like in the example above.  
-
-### Docker-based Testing
-
-Instead of using a stand-alone MongoDB server, you can retrieve one just for testing via docker:
+Perform a test:
 
 ```bash
 MONGODB_URI=docker python -m pytest

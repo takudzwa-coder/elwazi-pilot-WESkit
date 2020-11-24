@@ -1,0 +1,64 @@
+version: '3'
+
+networks:
+  backend:
+    driver: overlay
+
+services:
+
+  rest:
+    hostname: wesnake
+    image: ${WESNAKE_IMAGE}
+    environment:
+      WESNAKE_CONFIG: /home/wesnake/config.yaml
+      WESNAKE_LOG_CONFIG:
+      WESNAKE_VALIDATION_CONFIG:
+      RESULT_BACKEND: redis://result_broker:6379
+      BROKER_URL: redis://result_broker:6379
+      FLASK_APP: wesnake
+    volumes:
+      - ${WESNAKE_ROOT}:/wesnake
+      - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
+      - ${SHARED_FILESYSTEM_ROOT}:/shared
+    networks:
+      - backend
+    working_dir: /wesnake
+    entrypoint: ["bash", "-i", "-c"]
+    command: ["conda activate wesnake && pip install ./ && flask run --host=0.0.0.0 --port=5000"]
+    ports:
+      - 5000:5000
+
+  database:
+    image: mongo:4.2.3
+    volumes:
+      - ${SHARED_FILESYSTEM_ROOT}:/var/lib/mongodb
+    networks:
+      - backend
+    ports:
+      - 27017:27017
+
+  result_broker:
+    image: redis:6.0.1-alpine
+    volumes:
+      - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
+      - ${SHARED_FILESYSTEM_ROOT}:/data
+    networks:
+      - backend
+    ports:
+      - 6379:6379
+
+  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
+  worker1:
+    image: ${WESNAKE_IMAGE}
+    environment:
+      RESULT_BACKEND: redis://result_broker:6379
+      BROKER_URL: redis://result_broker:6379
+    working_dir: /wesnake
+    entrypoint: ["bash", "-i", "-c"]
+    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.tasks.celery_worker.celery_app"]
+    volumes:
+      - ${WESNAKE_ROOT}:/wesnake
+      - ${SHARED_FILESYSTEM_ROOT}:/shared
+    networks:
+      - backend
+

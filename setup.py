@@ -6,8 +6,8 @@ setup(name='WESnake',
       version='0.0.1',
       entry_points={
             "console_scripts": [
-                  "wesnake = ga4gh.wes.wesnake:main"
+            "wesnake = wesnake.__main__:main"
             ]
       },
-      data_files=[("config", ["config/validation.yaml", "config/log-config.yaml"])]
-      )
+    include_package_data=True
+)

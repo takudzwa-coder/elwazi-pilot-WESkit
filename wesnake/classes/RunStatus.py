@@ -15,6 +15,6 @@ class RunStatus(enum.Enum):
 
     def encode(self):
         return self.name
-    
+
     def decode(name):
         return RunStatus[name]
