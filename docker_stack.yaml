@@ -13,6 +13,7 @@ services:
       WESNAKE_CONFIG: /home/wesnake/config.yaml
       WESNAKE_LOG_CONFIG:
       WESNAKE_VALIDATION_CONFIG:
+      WESNAKE_DATABASE_URL: mongodb://database:27017
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
       FLASK_APP: wesnake
