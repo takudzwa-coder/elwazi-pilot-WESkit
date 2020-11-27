@@ -74,7 +74,8 @@ def create_app():
     app.validation = validation
     app.database = create_database()
 
-    app.snakemake = Snakemake(config)
+    app.snakemake = Snakemake(config=config,
+                              datadir=os.getenv("WESNAKE_DATA", "/tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)
     app.log_config = log_config

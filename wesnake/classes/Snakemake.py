@@ -33,13 +33,14 @@ def mycast(value, type):
 
 
 class Snakemake:
-    def __init__(self, config):
+    def __init__(self, config, datadir):
         self.kwargs = {}
         for parameter in (config["static_service_info"]
                                 ["default_workflow_engine_parameters"]):
             self.kwargs[parameter["name"]] = mycast(
                 value=parameter["default_value"],
                 type=parameter["type"])
+        self.datadir = datadir
 
     def cancel(self, run, database):
         revoke(run["_celery_task_id"], terminate=True, signal='SIGKILL')
@@ -60,8 +61,7 @@ class Snakemake:
 
         # create run environment
         logger.info("_create_environment")
-        tmp_dir = "tmp/"
-        run_dir = os.path.abspath(os.path.join(tmp_dir, run["run_id"]))
+        run_dir = os.path.abspath(os.path.join(self.datadir, run["run_id"]))
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
         with open(run_dir + "/config.yaml", "w") as ff:
