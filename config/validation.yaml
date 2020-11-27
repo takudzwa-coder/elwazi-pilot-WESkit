@@ -7,58 +7,6 @@ ENV:
     - development
 DEBUG:
   type: boolean
-wes_server:
-  type: dict
-  required: true
-  schema:
-    host:
-      type: string
-      required: true
-    port:
-      type: integer
-      required: true
-    debug:
-      type: boolean
-      required: false
-
-mongo_server:
-  type: dict
-  required: false
-  schema:
-    host:
-      type: string
-      empty: true
-      required: true
-    port:
-      type: integer
-      empty: true
-      required: true
-
-result_broker:
-  type: dict
-  required: false
-  schema:
-    host:
-      type: string
-      empty: true
-      required: true
-    port:
-      type: integer
-      empty: true
-      required: true
-
-message_queue:
-  type: dict
-  required: false
-  schema:
-    host:
-      type: string
-      empty: true
-      required: true
-    port:
-      type: integer
-      empty: true
-      required: true
 
 static_service_info:
   type: dict
