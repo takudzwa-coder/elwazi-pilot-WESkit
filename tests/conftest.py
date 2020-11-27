@@ -18,22 +18,16 @@ def get_redis_url(redis_container):
 
 
 @pytest.fixture(scope="function")
-def test_app(test_config, validation, log_config,
-             logger, database_connection, redis_container):
-    
+def test_app(database_container, redis_container):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
 
     # import here because env vars need to be set before
     from wesnake import create_app
 
-    app = create_app(
-        test_config,
-        validation,
-        log_config,
-        logger,
-        database_connection
-    )
+    os.environ["WESNAKE_CONFIG"] = "tests/config.yaml"
+
+    app = create_app()
 
     app.testing = True
     with app.test_client() as testing_client:
@@ -60,24 +54,21 @@ def validation():
 
 
 @pytest.fixture(scope="function")
-def database_connection():
-    MONGODB_URI = "MONGODB_URI"
-    MONGODB_CONTAINER = "mongo:4.2.3"
-    WESNAKE_TEST_DB = "WESnake_Test"
+def database_container():
 
-    if (MONGODB_URI in os.environ.keys()) and \
-       (os.environ[MONGODB_URI].upper() == "DOCKER"):
-        container = MongoDbContainer(MONGODB_CONTAINER)
-        container.start()
-        database = Database(
-            MongoClient(container.get_connection_url()),
-            WESNAKE_TEST_DB
-        )
-    elif MONGODB_URI in os.environ.keys() and os.environ[MONGODB_URI] != "":
-        connection_url = os.environ[MONGODB_URI]
-        database = Database(MongoClient(connection_url), WESNAKE_TEST_DB)
-    else:
-        database = Database(MongoClient(), WESNAKE_TEST_DB)
+    MONGODB_CONTAINER = "mongo:4.2.3"
+
+    db_container = MongoDbContainer(MONGODB_CONTAINER)
+    db_container.start()
+    os.environ["WESNAKE_DATABASE_URL"] = db_container.get_connection_url()
+
+    yield db_container
+
+@pytest.fixture(scope="function")
+def database_connection(database_container):
+    from wesnake import create_database
+
+    database = create_database()
 
     yield database
     database._db_runs().drop()
