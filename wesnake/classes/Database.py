@@ -1,6 +1,5 @@
 from wesnake.utils import get_current_time
 from wesnake.classes.RunStatus import RunStatus
-from flask import current_app
 
 
 class Database:
@@ -41,7 +40,6 @@ class Database:
 
     def create_new_run(self, run_id, request):
         if run_id is None:
-            current_app.error_logger.error("None can not be run_id")
             raise ValueError("None can not be run_id")
         run = {
             "run_id": run_id,
@@ -59,7 +57,6 @@ class Database:
 
     def update_run(self, run):
         if run["run_id"] is None:
-            current_app.error_logger.error("None can not be run_id")
             raise ValueError("None can not be run_id")
         return self._db_runs().update_one({"run_id": run["run_id"]},
                                           {"$set": run}
