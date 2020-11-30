@@ -1,4 +1,3 @@
-from wesnake.utils import create_run_id
 from flask import current_app, jsonify, request
 from flask import Blueprint
 
@@ -84,8 +83,7 @@ def ListRuns(*args, **kwargs):
 def RunWorkflow():
     data = request.form
     current_app.logger.info("RunWorkflow")
-    run = current_app.database.create_new_run(create_run_id(), request=data)
+    run = current_app.database.create_new_run(request=data)
     current_app.logger.info("Execute Workflow")
-    run = current_app.snakemake.execute(
-        run, current_app.database, current_app.logger)
+    run = current_app.snakemake.execute(run, current_app.database)
     return jsonify({k: run[k] for k in ["run_id"]}), 200
