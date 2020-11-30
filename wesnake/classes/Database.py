@@ -1,5 +1,6 @@
 from wesnake.classes.RunStatus import RunStatus
 from datetime import datetime
+import uuid
 
 
 def get_current_time():
@@ -40,12 +41,16 @@ class Database:
                         "run_id": True,
                         "run_status": True
                         }))
-
-    def create_new_run(self, run_id, request):
-        if run_id is None:
-            raise ValueError("None can not be run_id")
+    
+    def _create_run_id(self):
+        run_id = str(uuid.uuid4())
+        while self.get_run(run_id) == run_id:
+            run_id = str(uuid.uuid4())
+        return run_id
+    
+    def create_new_run(self, request):
         run = {
-            "run_id": run_id,
+            "run_id": self._create_run_id(),
             "run_status": RunStatus.UNKNOWN.encode(),
             "request_time": self.get_current_time(),
             "request": request,
