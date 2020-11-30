@@ -102,3 +102,12 @@ def swagger(database_connection):
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
     yield swagger
+
+
+@pytest.fixture(scope="function")
+def snakemake(database_connection, redis_container, test_config):
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    from wesnake.classes.Snakemake import Snakemake
+    snakemake = Snakemake(config=test_config, datadir="tmp/")
+    yield snakemake
