@@ -6,6 +6,7 @@ import uuid
 def get_current_time():
     return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
+
 class Database:
     """ This is a database."""
 
@@ -41,13 +42,13 @@ class Database:
                         "run_id": True,
                         "run_status": True
                         }))
-    
+
     def _create_run_id(self):
         run_id = str(uuid.uuid4())
         while self.get_run(run_id) == run_id:
             run_id = str(uuid.uuid4())
         return run_id
-    
+
     def create_new_run(self, request):
         run = {
             "run_id": self._create_run_id(),
