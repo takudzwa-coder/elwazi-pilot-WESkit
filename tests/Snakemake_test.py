@@ -1,17 +1,8 @@
 import json, yaml, sys, time
 
-with open("tests/wf1/config.yaml") as file:
-  wf1_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
-wf1_data = {
-  "workflow_params": wf1_params,
-  "workflow_type": "Snakemake",
-  "workflow_type_version": "5.8.2",
-  "workflow_url": "tests/wf1/Snakefile"
-}
-
-def test_execute(database_connection, snakemake, celery_worker):
-    run = database_connection.create_new_run(request=wf1_data)
+def test_execute_snakemake_workflow(database_connection, snakemake, celery_worker, snakemake_wf1_data):
+    run = database_connection.create_new_run(request=snakemake_wf1_data)
     snakemake.execute(run, database_connection)
     running = True
     while running:
@@ -20,3 +11,9 @@ def test_execute(database_connection, snakemake, celery_worker):
         print(status, file=sys.stderr)
         if (status == "COMPLETE"):
             running = False
+
+def test_cancel_snakemake_workflow(database_connection, snakemake, celery_worker, snakemake_wf2_data):
+    run = database_connection.create_new_run(request=snakemake_wf2_data)
+    snakemake.execute(run, database_connection)
+    snakemake.cancel(run, database_connection)
+    assert snakemake.get_state(run, database_connection) == "CANCELED"
