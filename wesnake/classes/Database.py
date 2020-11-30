@@ -1,6 +1,9 @@
-from wesnake.utils import get_current_time
 from wesnake.classes.RunStatus import RunStatus
+from datetime import datetime
 
+
+def get_current_time():
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 class Database:
     """ This is a database."""
