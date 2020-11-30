@@ -56,11 +56,8 @@ class Snakemake:
             database.update_run(run)
         return run["run_status"]
 
-    def execute(self, run, database, logger):
-        logger.info("RunWorkflow")
+    def execute(self, run, database):
 
-        # create run environment
-        logger.info("_create_environment")
         run_dir = os.path.abspath(os.path.join(self.datadir, run["run_id"]))
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
@@ -70,7 +67,6 @@ class Snakemake:
         database.update_run(run)
 
         # execute run
-        logger.info("_execute_run")
         run_kwargs = {
             "snakefile": run["request"]["workflow_url"],
             "workdir": run_dir,
@@ -82,7 +78,6 @@ class Snakemake:
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
         database.update_run(run)
-        logger.info("_send_run_to_celery")
         task = run_snakemake.apply_async(
             args=[],
             kwargs={**run_kwargs, **self.kwargs})
