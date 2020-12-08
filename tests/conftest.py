@@ -19,7 +19,7 @@ def get_redis_url(redis_container):
     return url
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def test_app(database_container, redis_container):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
@@ -38,7 +38,7 @@ def test_app(database_container, redis_container):
         yield testing_client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.
     with open("tests/config.yaml", "r") as ff:
@@ -46,7 +46,7 @@ def test_config():
     yield test_config
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def database_container():
 
     MONGODB_CONTAINER = "mongo:4.2.3"
@@ -57,7 +57,7 @@ def database_container():
 
     yield db_container
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def database_connection(database_container):
     from wesnake import create_database
 
@@ -88,7 +88,7 @@ def celery_worker_pool():
     return 'prefork'
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def service_info(test_config, swagger, database_connection):
     yield ServiceInfo(
         test_config["static_service_info"],
@@ -97,7 +97,7 @@ def service_info(test_config, swagger, database_connection):
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def swagger(database_connection):
     with open("wesnake/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
@@ -105,7 +105,7 @@ def swagger(database_connection):
     yield swagger
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def snakemake(database_connection, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
