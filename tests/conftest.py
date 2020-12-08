@@ -112,32 +112,3 @@ def snakemake(database_connection, redis_container, test_config):
     from wesnake.classes.Snakemake import Snakemake
     snakemake = Snakemake(config=test_config, datadir="tmp/")
     yield snakemake
-
-import json, yaml, sys, time
-
-def get_workflow_data(snakefile, config):
-    with open(config) as file:
-        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
-
-    data = {
-        "workflow_params": workflow_params,
-        "workflow_type": "Snakemake",
-        "workflow_type_version": "5.8.2",
-        "workflow_url": snakefile
-    }
-    return data
-
-@pytest.fixture(scope="function")
-def snakemake_wf1_data():
-    data = get_workflow_data(
-        snakefile="tests/wf1/Snakefile",
-        config="tests/wf1/config.yaml")
-    yield data
-
-
-@pytest.fixture(scope="function")
-def snakemake_wf2_data():
-    data = get_workflow_data(
-        snakefile="tests/wf2/Snakefile",
-        config="tests/wf2/config.yaml")
-    yield data
