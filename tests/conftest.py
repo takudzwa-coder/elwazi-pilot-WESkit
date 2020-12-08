@@ -74,7 +74,7 @@ def redis_container():
     return redis_container
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def celery_config(redis_container):
     print("celery_config")
     return {
@@ -83,7 +83,7 @@ def celery_config(redis_container):
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def celery_worker_pool():
     return 'prefork'
 
