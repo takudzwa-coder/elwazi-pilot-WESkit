@@ -1,6 +1,7 @@
 import json
 import time
 import yaml
+import os
 
 
 def test_get_list_runs(test_app):
@@ -40,9 +41,24 @@ def test_get_service_info(test_app):
         }
     }
 
+def get_workflow_data(snakefile, config):
+    with open(config) as file:
+        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
-def test_run_workflow(test_app, snakemake_wf1_data, celery_worker):
-    response = test_app.post("/ga4gh/wes/v1/runs", data=snakemake_wf1_data)
+    data = {
+        "workflow_params": workflow_params,
+        "workflow_type": "Snakemake",
+        "workflow_type_version": "5.8.2",
+        "workflow_url": snakefile
+    }
+    return data
+
+def test_run_workflow(test_app, celery_worker):
+    snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+    data = get_workflow_data(
+        snakefile=snakefile,
+        config="tests/wf1/config.yaml")
+    response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     run_id = response.json["run_id"]
     running = True
     while running:
@@ -53,6 +69,5 @@ def test_run_workflow(test_app, snakemake_wf1_data, celery_worker):
         if (status.json == "COMPLETE"):
             running = False
     assert response.status_code == 200
-
 
 
