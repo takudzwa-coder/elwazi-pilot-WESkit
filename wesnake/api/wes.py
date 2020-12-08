@@ -42,8 +42,7 @@ def GetRunStatus(run_id):
         return jsonify({"msg": "Could not find %s" % run_id,
                         "status_code": 0}), 404
     else:
-        return jsonify(current_app.snakemake.get_state(
-            query_result, current_app.database)), 200
+        return jsonify(current_app.snakemake.get_state(query_result)), 200
 
 
 @bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
@@ -84,6 +83,13 @@ def RunWorkflow():
     data = request.form
     current_app.logger.info("RunWorkflow")
     run = current_app.database.create_new_run(request=data)
+
+    current_app.logger.info("Prepare execution")
+    run = current_app.snakemake.prepare_execution(run, files=request.files)
+    current_app.database.update_run(run)
+
     current_app.logger.info("Execute Workflow")
-    run = current_app.snakemake.execute(run, current_app.database)
+    run = current_app.snakemake.execute(run)
+    current_app.database.update_run(run)
+
     return jsonify({k: run[k] for k in ["run_id"]}), 200
