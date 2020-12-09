@@ -70,5 +70,5 @@ conda activate wesnake
 Perform a test:
 
 ```bash
-MONGODB_URI=docker python -m pytest
+python -m pytest
 ```
