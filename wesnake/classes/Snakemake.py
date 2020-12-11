@@ -62,7 +62,7 @@ class Snakemake:
         return run["run_status"]
 
     # checks if workflow has absolute url (on server) or is attached in files
-    def _check_workflow_files(self, run, files):
+    def _valid_workflow_file_defined (self, run, files):
         if os.path.isabs(run["request"]["workflow_url"]):
             if os.path.isfile(run["request"]["workflow_url"]):
                 return True
@@ -90,7 +90,7 @@ class Snakemake:
         run["execution_path"] = run_dir
 
         # check absolute workflow file exists and upload in case
-        if self._check_workflow_files(run, files):
+        if self._valid_workflow_file_defined(run, files):
             if "workflow_attachment" in files:
                 workflow_attachments = files.getlist("workflow_attachment")
                 for attachment in workflow_attachments:
