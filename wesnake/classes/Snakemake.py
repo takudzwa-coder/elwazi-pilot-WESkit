@@ -26,7 +26,7 @@ running_states = [
 
 EXECUTOR_WF_NOT_FOUND = """
 WESnake executor error: the workflow file was not found. Please provide either
-a url with a workflow file on the server or attach a workflow
+a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
 
