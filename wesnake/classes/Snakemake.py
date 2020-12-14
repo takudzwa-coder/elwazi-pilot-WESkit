@@ -79,7 +79,7 @@ class Snakemake:
                 attachment.save(os.path.join(run["execution_path"], filename))
         return attachment_filenames
 
-    def _create_run_stderr(self, run, filename, message):
+    def _create_run_executions_logfile(self, run, filename, message):
         file_path = os.path.join(run["execution_path"], filename)
         with open(file_path, "w") as f:
             f.write("WESnake executor error: {}".format(message))
@@ -103,9 +103,9 @@ class Snakemake:
         if not (self._run_has_url_of_valid_absolute_file(run) or
                 run["request"]["workflow_url"] in attachment_filenames):
             run["run_status"] = RunStatus.SYSTEM_ERROR.encode()
-            run["run_log"]["stderr"] = self._create_run_stderr(
+            run["outputs"]["execution"] = self._create_run_executions_logfile(
                 run=run,
-                filename="wesnake_run_stderr.txt",
+                filename="wesnake_run_error.txt",
                 message=EXECUTOR_WF_NOT_FOUND)
 
         return run

@@ -28,11 +28,11 @@ def test_prepare_execution(snakemake):
     run = snakemake.prepare_execution(run, files=[])
     assert run["run_status"] == RunStatus.INITIALIZING.encode()
 
-    # 2.) workflow does not exist on server -> error message to stderr file
+    # 2.) workflow does not exist on server -> error message outputs execution
     run = get_pseudo_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Filesnake"))
     run = snakemake.prepare_execution(run, files=[])
     assert run["run_status"] == RunStatus.SYSTEM_ERROR.encode()
-    assert os.path.isfile(run["run_log"]["stderr"])
+    assert os.path.isfile(run["outputs"]["execution"])
 
     # 3.) copy attached workflow to workdir
     wf_url = "wf_1.smk"
@@ -44,11 +44,11 @@ def test_prepare_execution(snakemake):
     assert run["run_status"] == RunStatus.INITIALIZING.encode()
     assert os.path.isfile(os.path.join(run["execution_path"], wf_url))
 
-    # 4.) workflow is not attached -> error message to stderr file
+    # 4.) workflow is not attached -> error message outputs execution
     run = get_pseudo_run(workflow_url="tests/wf1/Snakefile")
     run = snakemake.prepare_execution(run, files=[])
     assert run["run_status"] == RunStatus.SYSTEM_ERROR.encode()
-    assert os.path.isfile(run["run_log"]["stderr"])
+    assert os.path.isfile(run["outputs"]["execution"])
 
 def test_execute_snakemake_workflow(snakemake, celery_worker):
     run = get_pseudo_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
