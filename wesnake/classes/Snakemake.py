@@ -61,16 +61,23 @@ class Snakemake:
             run["run_status"] = celery_to_wes_state[running_task.state]
         return run["run_status"]
 
-    # checks if workflow has absolute url (on server) or is attached in files
-    def _valid_workflow_file_defined(self, run, files):
+    def _run_has_url_of_valid_absolute_file(self, run):
         if os.path.isabs(run["request"]["workflow_url"]):
             if os.path.isfile(run["request"]["workflow_url"]):
                 return True
-        elif "workflow_attachment" in files:
-            workflow_attachments = files.getlist("workflow_attachment")
-            filenames = [x.filename for x in workflow_attachments]
-            return run["request"]["workflow_url"] in filenames
         return False
+
+    # check files, uploads and returns list of valid filesnames
+    def _process_workflow_attachment(self, run, files):
+        attachment_filenames = []
+        if "workflow_attachment" in files:
+            workflow_attachment_files = files.getlist("workflow_attachment")
+            for attachment in workflow_attachment_files:
+                filename = secure_filename(attachment.filename)
+                # TODO could implement checks here
+                attachment_filenames.append(filename)
+                attachment.save(os.path.join(run["execution_path"], filename))
+        return attachment_filenames
 
     def _create_run_stderr(self, run, filename, message):
         file_path = os.path.join(run["execution_path"], filename)
@@ -89,14 +96,12 @@ class Snakemake:
             yaml.dump(json.loads(run["request"]["workflow_params"]), ff)
         run["execution_path"] = run_dir
 
-        # check absolute workflow file exists and upload in case
-        if self._valid_workflow_file_defined(run, files):
-            if "workflow_attachment" in files:
-                workflow_attachments = files.getlist("workflow_attachment")
-                for attachment in workflow_attachments:
-                    attachment.save(os.path.join(
-                        run_dir, secure_filename(attachment.filename)))
-        else:
+        # process workflow attachment files
+        attachment_filenames = self._process_workflow_attachment(run, files)
+
+        # check for valid workflow_url
+        if not (self._run_has_url_of_valid_absolute_file(run) or
+                run["request"]["workflow_url"] in attachment_filenames):
             run["run_status"] = RunStatus.SYSTEM_ERROR.encode()
             run["run_log"]["stderr"] = self._create_run_stderr(
                 run=run,
