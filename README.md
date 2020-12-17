@@ -13,12 +13,12 @@ If you want to run WESnake within a different environment, you might want to fol
 First, you need to build a WESnake docker image.
 
 ```bash
-docker build -t wesnake:0.0.1 \
-  --build-arg http_proxy=$HTTP_PROXY \
-  --build-arg https_proxy=$HTTPS_PROXY \
+docker build -t wesnake:0.0.2 \
   --build-arg HTTP_PROXY=$HTTP_PROXY \
   --build-arg HTTPS_PROXY=$HTTPS_PROXY \
   ./
+
+docker build -t wesnake:0.0.2 ./
 ```
 
 ### Configuration
