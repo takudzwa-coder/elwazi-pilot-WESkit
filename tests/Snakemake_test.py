@@ -54,11 +54,8 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     run = snakemake.prepare_execution(run, files=[])
     run = snakemake.execute(run)
-    running = True
-    while running:
+    while snakemake.get_state(run) != "COMPLETE":
         time.sleep(1)
-        if (snakemake.get_state(run) == "COMPLETE"):
-            running = False
     assert run["run_status"] == RunStatus.COMPLETE.encode()
 
 def test_cancel_snakemake_workflow(snakemake, celery_worker):
