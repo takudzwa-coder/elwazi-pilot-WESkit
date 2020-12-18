@@ -86,6 +86,7 @@ class Snakemake:
         return file_path
 
     def prepare_execution(self, run, files=[]):
+        """Creates workdir, validates files, and stores files in workdir"""
         run["run_status"] = RunStatus.INITIALIZING.encode()
 
         # prepare run directory
