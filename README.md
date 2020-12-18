@@ -13,12 +13,12 @@ If you want to run WESnake within a different environment, you might want to fol
 First, you need to build a WESnake docker image. If you need to set a proxy server you can set assign HTTP_PROXY and HTTPS_PROXY as arguments.
 
 ```bash
-docker build -t wesnake:0.0.2 \
+docker build -t wesnake:0.0.1 \
   --build-arg HTTP_PROXY=$HTTP_PROXY \
   --build-arg HTTPS_PROXY=$HTTPS_PROXY \
   ./
 
-docker build -t wesnake:0.0.2 ./
+docker build -t wesnake:0.0.1 ./
 ```
 
 ### Configuration
@@ -34,7 +34,7 @@ Set the following environmental variables:
   * `REDIS_CONFIG`: Path to redis configuration file.
   * `SHARED_FILESYSTEM_ROOT`: Path to file system directory for application data such as database files, redis files and Snakemake execution data.
   * `WESNAKE_CONFIG`: Path to WESnake config.yaml
-  * `WESNAKE_IMAGE`: Docker iamge tag (wesnake:0.0.2)
+  * `WESNAKE_IMAGE`: Docker iamge tag (wesnake:0.0.1)
   * `WESNAKE_ROOT`: Path to WESnake repository
   
 ### Run Docker stack
@@ -45,7 +45,7 @@ Start WESnake using `docker stack` with `docker-stack.yaml`:
 export REDIS_CONFIG=/PATH/TO/REDIS_CONFIG/redis.conf
 export SHARED_FILESYSTEM_ROOT=/PATH/TO/DIR/
 export WESNAKE_CONFIG=/PATH/TO/WESNAKE_CONFIG/config.yaml
-export WESNAKE_IMAGE=wesnake:0.0.2
+export WESNAKE_IMAGE=wesnake:0.0.1
 export WESNAKE_ROOT=/PATH/TO/WESNAKE/
 
 docker stack deploy --compose-file=docker_stack.yaml wesnake
