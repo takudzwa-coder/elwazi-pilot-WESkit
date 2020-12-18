@@ -18,23 +18,7 @@ dependencies:
   - redis=5.0.3
   - snakemake=5.30.2
   - vine=1.3.0
-  - clickclick=1.2.2
-  - connexion=2.5.0
-  - entrypoints=0.3
-  - gevent=1.4.0
-  - inflection=0.3.1
-  - krb5=1.16.4
-  - libssh2=1.8.2
-  - mongodb=4.0.3
-  - mpi=1.0
-  - mpich=3.3.2
-  - openapi-spec-validator=0.2.8
-  - pathlib2=2.3.5
-  - swagger-ui-bundle=0.0.6
   - pip:
-     - blindspin==2.0.1
-     - colorama==0.4.3
-     - crayons==0.3.0
-     - testcontainers==3.2.0
+     - testcontainers==3.0.0
      - redis==3.5.1
 
