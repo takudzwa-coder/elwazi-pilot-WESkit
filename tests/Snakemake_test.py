@@ -57,8 +57,7 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
     running = True
     while running:
         time.sleep(1)
-        status = snakemake.get_state(run)
-        if (status == "COMPLETE"):
+        if (snakemake.get_state(run) == "COMPLETE"):
             running = False
     assert run["run_status"] == RunStatus.COMPLETE.encode()
 
