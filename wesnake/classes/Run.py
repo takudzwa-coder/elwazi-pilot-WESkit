@@ -1,5 +1,6 @@
 from wesnake.classes.RunStatus import RunStatus
 
+
 class Run:
     """ This is a Run."""
 
@@ -9,27 +10,27 @@ class Run:
         self.__run_status = data["run_status"]
         self.__request_time = data["request_time"]
         self.__request = data["request"]
-        
+
         if "execution_path" in data.keys():
             self.__execution_path = data["execution_path"]
         else:
             self.__execution_path = []
-        
+
         if "run_log" in data.keys():
             self.__run_log = data["run_log"]
         else:
             self.__run_log = {}
-        
+
         if "task_logs" in data.keys():
             self.__task_logs = data["task_logs"]
         else:
             self.__task_logs = []
-        
+
         if "outputs" in data.keys():
             self.__outputs = data["outputs"]
         else:
             self.__outputs = {}
-        
+
         if "celery_task_id" in data.keys():
             self.__celery_task_id = data["celery_task_id"]
         else:
@@ -94,8 +95,8 @@ class Run:
     def run_status(self, run_status: str):
         self.__run_status = RunStatus[run_status].name
 
-    def run_status_check(self, status:str) -> bool:
-        return RunStatus[self.run_status]  == RunStatus[status]
+    def run_status_check(self, status: str) -> bool:
+        return RunStatus[self.run_status] == RunStatus[status]
 
     @property
     def outputs(self):
@@ -112,4 +113,3 @@ class Run:
     @start_time.setter
     def start_time(self, start_time: str):
         self.__start_time = start_time
-        

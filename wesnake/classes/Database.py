@@ -13,8 +13,8 @@ class Database:
     def _db_runs(self):
         return self.db["run"]
 
-    def aggregate_runs(self, pipeline ):
-        return dict(self._db_runs().aggregate(pipeline ))
+    def aggregate_runs(self, pipeline):
+        return dict(self._db_runs().aggregate(pipeline))
 
     def get_run(self, run_id: str, **kwargs) -> Run:
         run_data = self._db_runs().find_one(
