@@ -27,12 +27,12 @@ class ServiceInfo:
         return self._static_service_info["default_workflow_engine_parameters"]
 
     def get_system_state_counts(self):
-        aggregate = [
+        pipeline = [
             {"$unwind": "$run_status"},
             {"$group": {"_id": "$run_status", "status_count": {"$sum": 1}}},
             {"$sort": SON([("_id", 1), ("status_count", -1)])}
             ]
-        counts = self._db.aggregate_states(aggregate)
+        counts = self._db.aggregate_runs(pipeline)
         for status in RunStatus:
             if status.name not in counts:
                 counts[status.name] = 0
