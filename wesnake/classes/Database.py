@@ -53,7 +53,7 @@ class Database:
         if run is None:
             raise ValueError("Run is None")
         return self._db_runs() \
-            .update_one({"run_id": run.get_data()["run_id"]},
+            .update_one({"run_id": run.run_id},
                         {"$set": run.get_data()}
                         ).acknowledged
 
@@ -61,5 +61,5 @@ class Database:
         if run is None:
             raise ValueError("Run is None")
         return self._db_runs() \
-            .delete_one({"run_id": run.get_data()["run_id"]}) \
+            .delete_one({"run_id": run.run_id}) \
             .acknowledged
