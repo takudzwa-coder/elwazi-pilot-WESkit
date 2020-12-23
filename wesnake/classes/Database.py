@@ -40,12 +40,10 @@ class Database:
         return run_id
 
     def create_new_run(self, request):
-        run = Run({
-            "run_id": self._create_run_id(),
-            "run_status": "UNKNOWN",
-            "request_time": self.get_current_time(),
-            "request": request
-        })
+        run = Run(data={"run_id": self._create_run_id(),
+                        "run_status": "UNKNOWN",
+                        "request_time": self.get_current_time(),
+                        "request": request})
         self._db_runs().insert_one(run.get_data())
         return run
 
