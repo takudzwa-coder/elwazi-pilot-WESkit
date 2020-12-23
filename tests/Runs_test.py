@@ -26,6 +26,3 @@ def test_create_and_load_run(database_container):
         print(load_run, file=sys.stderr)
         print(type(load_run), file=sys.stderr)
         print(load_run.get_status(), file=sys.stderr)
-
-    #database = Database(, "WES")
-    #database_container["run"].

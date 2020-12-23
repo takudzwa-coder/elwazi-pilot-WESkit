@@ -1,5 +1,5 @@
-from wesnake.classes.RunStatus import RunStatus
 import uuid
+from wesnake.classes.Run import Run
 from wesnake.utils import get_current_time
 
 
@@ -13,21 +13,15 @@ class Database:
     def _db_runs(self):
         return self.db["run"]
 
-    def aggregate_states(self, runs):
-        return dict(self._db_runs().aggregate(runs))
+    def aggregate_runs(self, pipeline ):
+        return dict(self._db_runs().aggregate(pipeline ))
 
-    def get_run(self, run_id, **kwargs):
-        return self._db_runs().find_one(filter={"run_id": run_id}, **kwargs)
-
-    def get_workflow_params(self, run_id):
-        return self.get_run(run_id,
-                            projection={
-                                "_id": False,
-                                "request"[0]["workflow_params": True]: False
-                            }).workflow_params
-
-    def get_workflow_url(self, run_id):
-        return self.get_run(run_id).workflow_url
+    def get_run(self, run_id: str, **kwargs) -> Run:
+        run_data = self._db_runs().find_one(
+            filter={"run_id": run_id}, **kwargs)
+        if run_data is not None:
+            return Run(run_data)
+        return None
 
     def get_current_time(self):
         return get_current_time()
@@ -41,31 +35,31 @@ class Database:
 
     def _create_run_id(self):
         run_id = str(uuid.uuid4())
-        while self.get_run(run_id) == run_id:
+        while not self.get_run(run_id) is None:
             run_id = str(uuid.uuid4())
         return run_id
 
     def create_new_run(self, request):
-        run = {
+        run = Run({
             "run_id": self._create_run_id(),
-            "run_status": RunStatus.UNKNOWN.encode(),
+            "run_status": "UNKNOWN",
             "request_time": self.get_current_time(),
-            "request": request,
-            "execution_path": [],
-            "run_log": {},
-            "task_logs": [],
-            "outputs": {},
-            "celery_task_id": None,
-        }
-        self._db_runs().insert_one(run)
+            "request": request
+        })
+        self._db_runs().insert_one(run.get_data())
         return run
 
-    def update_run(self, run):
-        if run["run_id"] is None:
-            raise ValueError("None can not be run_id")
-        return self._db_runs().update_one({"run_id": run["run_id"]},
-                                          {"$set": run}
-                                          ).acknowledged
+    def update_run(self, run: Run) -> bool:
+        if run is None:
+            raise ValueError("Run is None")
+        return self._db_runs() \
+            .update_one({"run_id": run.get_data()["run_id"]},
+                        {"$set": run.get_data()}
+                        ).acknowledged
 
-    def delete_run(self, run_id):
-        return self._db_runs().delete_one({"run_id": run_id}).acknowledged
+    def delete_run(self, run: Run) -> bool:
+        if run is None:
+            raise ValueError("Run is None")
+        return self._db_runs() \
+            .delete_one({"run_id": run.get_data()["run_id"]}) \
+            .acknowledged
