@@ -92,4 +92,4 @@ def RunWorkflow():
     run = current_app.snakemake.execute(run)
     current_app.database.update_run(run)
 
-    return jsonify({k: run[k] for k in ["run_id"]}), 200
+    return jsonify({"run_id": run.run_id}), 200
