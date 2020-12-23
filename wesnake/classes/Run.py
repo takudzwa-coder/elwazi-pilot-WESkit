@@ -35,46 +35,81 @@ class Run:
         else:
             self.__celery_task_id = None
 
+        if "start_time" in data.keys():
+            self.__start_time = data["start_time"]
+        else:
+            self.__start_time = None
+
     def get_data(self) -> dict:
         return {
+            "celery_task_id": self.__celery_task_id,
+            "execution_path": self.__execution_path,
+            "request": self.__request,
+            "request_time": self.__request_time,
             "run_id": self.__run_id,
             "run_status": self.__run_status,
-            "request_time": self.__request_time,
-            "request": self.__request,
-            "execution_path": self.__execution_path,
             "run_log": self.__run_log,
-            "task_logs": self.__task_logs,
             "outputs": self.__outputs,
-            "celery_task_id": self.__celery_task_id,
+            "start_time": self.__start_time,
+            "task_logs": self.__task_logs
         }
 
     @property
-    def run_id(self):
-        return self.__run_id
+    def celery_task_id(self):
+        return self.__celery_task_id
+
+    @celery_task_id.setter
+    def celery_task_id(self, celery_task_id):
+        self.__celery_task_id = celery_task_id
+
+    @property
+    def execution_path(self):
+        return self.__execution_path
+
+    @execution_path.setter
+    def execution_path(self, execution_path):
+        self.__execution_path = execution_path
 
     @property
     def request(self):
         return self.__request
 
     @property
-    def execution_path(self):
-        return self.__execution_path
-    
-    @execution_path.setter
-    def execution_path(self, execution_path):
-        self.__execution_path = execution_path
+    def run_id(self):
+        return self.__run_id
 
-    #@run_id.setter
-    #def run_status(self, run_id):
-    #    self.run_id = run_id
+    @property
+    def run_log(self):
+        return self.__run_log
+
+    @run_log.setter
+    def run_log(self, run_log: str):
+        self.__run_log = run_log
 
     @property
     def run_status(self):
         return RunStatus[self.__run_status].name
-    
+
     @run_status.setter
-    def run_status(self, run_status):
+    def run_status(self, run_status: str):
         self.__run_status = RunStatus[run_status].name
 
-    def check_status(self, status:str) -> bool:
+    def run_status_check(self, status:str) -> bool:
         return RunStatus[self.run_status]  == RunStatus[status]
+
+    @property
+    def outputs(self):
+        return self.__outputs
+
+    @outputs.setter
+    def outputs(self, outputs: dict):
+        self.__outputs = outputs
+
+    @property
+    def start_time(self):
+        return self.__outputs
+
+    @start_time.setter
+    def start_time(self, start_time: str):
+        self.__start_time = start_time
+        
