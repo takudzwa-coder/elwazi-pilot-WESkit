@@ -1,5 +1,4 @@
 from wesnake.classes.RunStatus import RunStatus
-from typing import Generic
 
 class Run:
     """ This is a Run."""
