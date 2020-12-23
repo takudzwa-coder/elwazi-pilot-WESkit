@@ -15,7 +15,7 @@ mock_run_data = {
 def test_create_and_load_run(database_container):
     print(database_container.get_connection_url(), file=sys.stderr)
     new_run = Run(mock_run_data)
-    new_run.set_status("RUNNING")
+    new_run.run_status = "RUNNING"
     print(new_run, file=sys.stderr)
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
@@ -25,4 +25,4 @@ def test_create_and_load_run(database_container):
         load_run = Run(x)
         print(load_run, file=sys.stderr)
         print(type(load_run), file=sys.stderr)
-        print(load_run.get_status(), file=sys.stderr)
+        print(load_run.run_status, file=sys.stderr)
