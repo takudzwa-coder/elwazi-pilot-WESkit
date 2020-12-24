@@ -61,6 +61,11 @@ class Snakemake:
             run.run_status = celery_to_wes_state[running_task.state]
         return run.run_status
 
+    def update_outputs(self, run: Run) -> str:
+        running_task = run_snakemake.AsyncResult(run.celery_task_id)
+        run.outputs["Snakemake"] = running_task.get()
+        return run
+
     def _run_has_url_of_valid_absolute_file(self, run):
         if os.path.isabs(run.request["workflow_url"]):
             if os.path.isfile(run.request["workflow_url"]):
