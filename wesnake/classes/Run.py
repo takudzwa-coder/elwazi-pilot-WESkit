@@ -5,10 +5,13 @@ class Run:
     """ This is a Run."""
 
     def __init__(self, data: dict) -> None:
-        # un
-        self.__run_id = data["run_id"]
-        self.__request_time = data["request_time"]
-        self.__request = data["request"]
+
+        try:
+            self.__run_id = data["run_id"]
+            self.__request_time = data["request_time"]
+            self.__request = data["request"]
+        except KeyError:
+            raise
 
         if "celery_task_id" in data.keys():
             self.celery_task_id = data["celery_task_id"]
