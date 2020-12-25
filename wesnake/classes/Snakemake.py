@@ -54,12 +54,12 @@ class Snakemake:
         run.run_status = "CANCELED"
         return run
 
-    def get_state(self, run: Run) -> str:
+    def update_state(self, run: Run) -> str:
         # check if task is running and update state
         if run.run_status in running_states:
             running_task = run_snakemake.AsyncResult(run.celery_task_id)
             run.run_status = celery_to_wes_state[running_task.state]
-        return run.run_status
+        return run
 
     def update_outputs(self, run: Run) -> str:
         running_task = run_snakemake.AsyncResult(run.celery_task_id)

@@ -57,8 +57,8 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
     running = True
     while running:
         time.sleep(1)
-        status = snakemake.get_state(run)
-        if (status == "COMPLETE"):
+        run = snakemake.update_state(run)
+        if (run.run_status_check("COMPLETE")):
             snakemake.update_outputs(run).outputs
             assert "hello_world.txt" in run.outputs["Snakemake"]
             running = False

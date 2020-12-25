@@ -36,13 +36,15 @@ def CancelRun(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
 def GetRunStatus(run_id):
     current_app.logger.info("GetRunStatus")
-    query_result = current_app.database.get_run(run_id)
-    if query_result is None:
+    run = current_app.database.get_run(run_id)
+    run = current_app.snakemake.update_state(run)
+    current_app.database.update_run(run)
+    if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
         return jsonify({"msg": "Could not find %s" % run_id,
                         "status_code": 0}), 404
     else:
-        return jsonify(current_app.snakemake.get_state(query_result)), 200
+        return jsonify(run.run_status), 200
 
 
 @bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
