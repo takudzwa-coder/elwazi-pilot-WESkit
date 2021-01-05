@@ -8,14 +8,14 @@ bp = Blueprint("wes", __name__)
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
 def GetRunLog(run_id):
     current_app.logger.info("GetRun")
-    query_result = current_app.database.get_run(run_id)
-    if query_result is None:
+    run = current_app.database.get_run(run_id)
+    if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
         return {"msg": "Could not find %s" % run_id,
                 "status_code": 0
                 }, 404
     else:
-        return query_result, 200
+        return run.get_data(), 200
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
