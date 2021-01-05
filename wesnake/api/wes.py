@@ -41,8 +41,8 @@ def GetRunStatus(run_id):
     current_app.logger.info("GetRunStatus")
     run = current_app.database.get_run(run_id)
     run = current_app.snakemake.update_state(run)
-     run = current_app.snakemake.update_outputs(run)
-   current_app.database.update_run(run)
+    run = current_app.snakemake.update_outputs(run)
+    current_app.database.update_run(run)
     if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
         return jsonify({"msg": "Could not find %s" % run_id,
