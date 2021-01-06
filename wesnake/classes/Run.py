@@ -72,7 +72,6 @@ class Run:
             "outputs": self.outputs
         }
 
-
     @property
     def celery_task_id(self):
         return self.__celery_task_id
