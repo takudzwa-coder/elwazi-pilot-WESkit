@@ -56,7 +56,7 @@ class Snakemake:
     def update_state(self, run: Run) -> str:
         # check if task is running and update state
         if run.run_status in running_states:
-            if not run.celery_task_id is None:
+            if run.celery_task_id is not None:
                 running_task = run_snakemake.AsyncResult(run.celery_task_id)
                 run.run_status = celery_to_wes_state[running_task.state]
             else:
@@ -64,8 +64,8 @@ class Snakemake:
         return run
 
     def update_outputs(self, run: Run) -> str:
-        if not run.run_status in running_states:
-            if not run.celery_task_id is None:
+        if run.run_status not in running_states:
+            if run.celery_task_id is not None:
                 running_task = run_snakemake.AsyncResult(run.celery_task_id)
                 run.outputs["Snakemake"] = running_task.get()
         return run
