@@ -29,23 +29,13 @@ a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
 
-def mycast(value, type):
-    if type == "int":
-        return int(value)
-    if type == "str":
-        return str(value)
-    if type == "float":
-        return float(value)
-
-
 class Snakemake:
     def __init__(self, config: dict, datadir: str) -> None:
         self.kwargs = {}
         for parameter in (config["static_service_info"]
                                 ["default_workflow_engine_parameters"]):
-            self.kwargs[parameter["name"]] = mycast(
-                value=parameter["default_value"],
-                type=parameter["type"])
+            self.kwargs[parameter["name"]] = eval(parameter["type"])(
+                parameter["default_value"])
         self.datadir = datadir
 
     def cancel(self, run: Run) -> Run:
