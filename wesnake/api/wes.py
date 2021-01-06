@@ -18,7 +18,7 @@ def GetRunLog(run_id):
                 "status_code": 0
                 }, 404
     else:
-        return run.get_data(), 200
+        return run.get_run_log(), 200
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])

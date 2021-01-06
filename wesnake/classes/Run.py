@@ -62,6 +62,17 @@ class Run:
             "task_logs": self.task_logs
         }
 
+    def get_run_log(self) -> dict:
+        return {
+            "run_id": self.__run_id,
+            "request": self.__request,
+            "state": self.run_status,
+            "run_log": self.run_log,
+            "task_logs": self.task_logs,
+            "outputs": self.outputs
+        }
+
+
     @property
     def celery_task_id(self):
         return self.__celery_task_id
