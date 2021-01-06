@@ -26,6 +26,17 @@ class Database:
     def get_current_time(self):
         return get_current_time()
 
+    def update_runs(self, snakemake):
+        entries = list(self._db_runs().find(
+            projection={"_id": False,
+                        "run_id": True,
+                        }))
+        for entry in entries:
+            run = self.get_run(entry["run_id"])
+            run = snakemake.update_state(run)
+            run = snakemake.update_outputs(run)
+            self.update_run(run)
+
     def list_run_ids_and_states(self):
         return list(self._db_runs().find(
             projection={"_id": False,

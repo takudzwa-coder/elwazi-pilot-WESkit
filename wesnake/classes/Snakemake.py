@@ -18,7 +18,6 @@ celery_to_wes_state = {
 
 
 running_states = [
-    "UNKNOWN",
     "QUEUED",
     "INITIALIZING",
     "RUNNING",
@@ -57,13 +56,18 @@ class Snakemake:
     def update_state(self, run: Run) -> str:
         # check if task is running and update state
         if run.run_status in running_states:
-            running_task = run_snakemake.AsyncResult(run.celery_task_id)
-            run.run_status = celery_to_wes_state[running_task.state]
+            if not run.celery_task_id is None:
+                running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                run.run_status = celery_to_wes_state[running_task.state]
+            else:
+                run.run_status = "UNKNOWN"
         return run
 
     def update_outputs(self, run: Run) -> str:
-        running_task = run_snakemake.AsyncResult(run.celery_task_id)
-        run.outputs["Snakemake"] = running_task.get()
+        if not run.run_status in running_states:
+            if not run.celery_task_id is None:
+                running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                run.outputs["Snakemake"] = running_task.get()
         return run
 
     def _run_has_url_of_valid_absolute_file(self, run):

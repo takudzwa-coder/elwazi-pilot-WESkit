@@ -80,6 +80,7 @@ def GetServiceInfo(*args, **kwargs):
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
 def ListRuns(*args, **kwargs):
     current_app.logger.info("ListRuns")
+    current_app.database.update_runs(current_app.snakemake)
     response = current_app.database.list_run_ids_and_states()
     return jsonify(response), 200
 

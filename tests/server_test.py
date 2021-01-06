@@ -3,16 +3,6 @@ import time
 import yaml
 import os
 
-
-def test_get_list_runs(test_app):
-    response = test_app.get("/ga4gh/wes/v1/runs")
-    assert response.status_code == 200
-
-
-def test_get_service_info(test_app):
-    response = test_app.get("/ga4gh/wes/v1/service-info")
-    assert response.status_code == 200
-
 def get_workflow_data(snakefile, config):
     with open(config) as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
@@ -24,6 +14,10 @@ def get_workflow_data(snakefile, config):
         "workflow_url": snakefile
     }
     return data
+
+def test_get_service_info(test_app):
+    response = test_app.get("/ga4gh/wes/v1/service-info")
+    assert response.status_code == 200
 
 def test_run_workflow(test_app, celery_worker):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
@@ -42,4 +36,7 @@ def test_run_workflow(test_app, celery_worker):
             running = False
     assert response.status_code == 200
 
-
+def test_get_runs(test_app, celery_worker):
+    response = test_app.get("/ga4gh/wes/v1/runs")
+    #print
+    assert response.status_code == 200
