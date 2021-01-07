@@ -1,6 +1,8 @@
 import uuid
 from wesnake.classes.Run import Run
 from wesnake.utils import get_current_time
+from bson.son import SON
+from wesnake.classes.RunStatus import RunStatus
 
 
 class Database:
@@ -40,6 +42,23 @@ class Database:
                         "run_id": True,
                         "run_status": True
                         }))
+
+    def count_states(self):
+        pipeline = [
+            {"$unwind": "$run_status"},
+            {"$group": {"_id": "$run_status", "count": {"$sum": 1}}},
+            {"$sort": SON([("count", -1), ("_id", -1)])}
+            ]
+        counts_data = list(self._db_runs().aggregate(pipeline))
+        print(counts_data)
+        counts = {}
+        for counts_datum in counts_data:
+            counts[counts_datum["_id"]] = counts_datum["count"]
+        print(counts)
+        for status in RunStatus:
+            if status.name not in counts.keys():
+                counts[status.name] = 0
+        return counts
 
     def _create_run_id(self):
         run_id = str(uuid.uuid4())

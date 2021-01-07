@@ -67,7 +67,7 @@ def GetServiceInfo(*args, **kwargs):
         "default_workflow_engine_parameters":
             current_app.service_info.get_default_workflow_engine_parameters(),
         "system_state_counts":
-            current_app.service_info.get_system_state_counts(),
+            current_app.database.state_counts(),
         "auth_instructions_url":
             current_app.service_info.get_auth_instructions_url(),
         "contact_info_url":
