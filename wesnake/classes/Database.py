@@ -23,19 +23,16 @@ class Database:
             return Run(run_data)
         return None
 
+    def get_runs(self, query) -> Run:
+        runs = []
+        runs_data = self._db_runs().find(query)
+        if runs_data is not None:
+            for run_data in runs_data:
+                runs.append(Run(run_data))
+        return runs
+
     def get_current_time(self):
         return get_current_time()
-
-    def update_runs(self, snakemake):
-        entries = list(self._db_runs().find(
-            projection={"_id": False,
-                        "run_id": True,
-                        }))
-        for entry in entries:
-            run = self.get_run(entry["run_id"])
-            run = snakemake.update_state(run)
-            run = snakemake.update_outputs(run)
-            self.update_run(run)
 
     def list_run_ids_and_states(self):
         return list(self._db_runs().find(
@@ -50,13 +47,12 @@ class Database:
             run_id = str(uuid.uuid4())
         return run_id
 
-    def create_new_run(self, request):
-        run = Run(data={"run_id": self._create_run_id(),
-                        "run_status": "UNKNOWN",
-                        "request_time": self.get_current_time(),
-                        "request": request})
-        self._db_runs().insert_one(run.get_data())
-        return run
+    def insert_run(self, run: Run) -> bool:
+        if self.get_run(run.run_id) is None:
+            self._db_runs().insert_one(run.get_data())
+            return True
+        else:
+            return False
 
     def update_run(self, run: Run) -> bool:
         if run is None:

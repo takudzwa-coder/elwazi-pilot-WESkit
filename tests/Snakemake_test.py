@@ -64,10 +64,23 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
             running = False
     assert run.run_status_check("COMPLETE")
 
-
 def test_cancel_snakemake_workflow(snakemake, celery_worker):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"))
     run = snakemake.prepare_execution(run, files=[])
     run = snakemake.execute(run)
     snakemake.cancel(run)
     assert run.run_status_check("CANCELED")
+
+def test_update_all_runs(snakemake, celery_worker, database_connection):
+    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
+    database_connection.insert_run(run)
+    run = snakemake.prepare_execution(run, files=[])
+    run = snakemake.execute(run)
+    database_connection.update_run(run)
+    while not run.run_status_check("COMPLETE"):
+        time.sleep(1)
+        run = snakemake.update_state(run)
+    assert run.run_status_check("COMPLETE")
+    snakemake.update_runs(database_connection, query={})
+    db_run = database_connection.get_run(run_id=run.run_id)
+    assert db_run.run_status_check("COMPLETE")

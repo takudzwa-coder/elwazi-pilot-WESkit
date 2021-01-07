@@ -60,6 +60,23 @@ class Snakemake:
                 run.outputs["Snakemake"] = running_task.get()
         return run
 
+    def update_runs(self, database, query) -> None:
+        runs = database.get_runs(query)
+        for run in runs:
+            run = self.update_state(run)
+            run = self.update_outputs(run)
+            database.update_run(run)
+
+    def create_and_insert_run(self, request, database) -> Run:
+        run = Run(data={"run_id": database._create_run_id(),
+                        "run_status": "UNKNOWN",
+                        "request_time": database.get_current_time(),
+                        "request": request})
+        if database.insert_run(run):
+            return run
+        else:
+            return None
+
     def _run_has_url_of_valid_absolute_file(self, run):
         if os.path.isabs(run.request["workflow_url"]):
             if os.path.isfile(run.request["workflow_url"]):
