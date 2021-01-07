@@ -52,6 +52,9 @@ def GetRunStatus(run_id):
 @bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
 def GetServiceInfo(*args, **kwargs):
     current_app.logger.info("GetServiceInfo")
+    current_app.snakemake.update_runs(
+        database=current_app.database,
+        query={})
     response = {
         "workflow_type_versions":
             current_app.service_info.get_workflow_type_versions(),
