@@ -50,11 +50,9 @@ class Database:
             {"$sort": SON([("count", -1), ("_id", -1)])}
             ]
         counts_data = list(self._db_runs().aggregate(pipeline))
-        print(counts_data)
         counts = {}
         for counts_datum in counts_data:
             counts[counts_datum["_id"]] = counts_datum["count"]
-        print(counts)
         for status in RunStatus:
             if status.name not in counts.keys():
                 counts[status.name] = 0

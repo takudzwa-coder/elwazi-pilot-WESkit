@@ -29,6 +29,11 @@ def test_get_runs(database_connection):
     for run in runs:
         assert isinstance(run, Run)
 
+def test_count_states(database_connection):
+    counts = database_connection.count_states()
+    for status in RunStatus:
+        assert status.name in counts.keys()
+
 def test_delete_run(database_connection):
     print("test delete_run")
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
@@ -36,3 +41,4 @@ def test_delete_run(database_connection):
     assert database_connection.delete_run(run)
     find_run = database_connection.get_run(run.run_id)
     assert find_run is None
+
