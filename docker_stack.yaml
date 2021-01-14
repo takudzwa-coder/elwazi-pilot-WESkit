@@ -14,13 +14,13 @@ services:
       WESNAKE_LOG_CONFIG:
       WESNAKE_VALIDATION_CONFIG:
       WESNAKE_DATABASE_URL: mongodb://database:27017
+      WESNAKE_DATA: /wesnake_data
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
       FLASK_APP: wesnake
     volumes:
-      - ${WESNAKE_ROOT}:/wesnake
+      - ${WESNAKE_DATA}:/wesnake_data
       - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
-      - ${SHARED_FILESYSTEM_ROOT}:/shared
     networks:
       - backend
     working_dir: /wesnake
@@ -58,8 +58,7 @@ services:
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.tasks.celery_worker.celery_app"]
     volumes:
-      - ${WESNAKE_ROOT}:/wesnake
-      - ${SHARED_FILESYSTEM_ROOT}:/shared
+      - ${WESNAKE_DATA}:/wesnake_data
     networks:
       - backend
 

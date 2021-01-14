@@ -38,16 +38,16 @@ def test_get_tags(service_info):
     assert service_info.get_tags() == {"tag1": "value1", "tag2": "value2"}
 
 
-def test_get_system_state_counts(service_info):
-    assert service_info.get_system_state_counts() == {
-        "UNKNOWN": 0,
-        "QUEUED": 0,
-        "INITIALIZING": 0,
-        "RUNNING": 0,
-        "PAUSED": 0,
-        "COMPLETE": 0,
-        "EXECUTOR_ERROR": 0,
-        "SYSTEM_ERROR": 0,
-        "CANCELED": 0,
-        "CANCELING": 0
-    }
+def test_get_system_state_keys(service_info):
+    state_keys = set(["UNKNOWN",
+                        "QUEUED",
+                        "INITIALIZING",
+                        "RUNNING",
+                        "PAUSED",
+                        "COMPLETE",
+                        "EXECUTOR_ERROR",
+                        "SYSTEM_ERROR",
+                        "CANCELED",
+                        "CANCELING"])
+    assert set(service_info.get_system_state_counts().keys()).issuperset(state_keys)
+
