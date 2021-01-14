@@ -38,13 +38,13 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     run = snakemake.prepare_execution(run, files=[])
     run = snakemake.execute(run)
-    while snakemake.get_state(run) != "COMPLETE":
-        time.sleep(1)
+    while not run.run_status_check("COMPLETE"):
         run = snakemake.update_state(run)
         if (run.run_status_check("COMPLETE")):
             snakemake.update_outputs(run).outputs
             assert "hello_world.txt" in run.outputs["Snakemake"]
-            running = False
+        else:
+            time.sleep(1)
     assert run.run_status_check("COMPLETE")
 
 def test_cancel_snakemake_workflow(snakemake, celery_worker):
