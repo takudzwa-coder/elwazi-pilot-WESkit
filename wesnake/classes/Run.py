@@ -6,47 +6,17 @@ class Run:
 
     def __init__(self, data: dict) -> None:
 
-        try:
-            self.__run_id = data["run_id"]
-            self.__request_time = data["request_time"]
-            self.__request = data["request"]
-        except KeyError:
-            raise
+        self.__run_id = data["run_id"]
+        self.__request_time = data["request_time"]
+        self.__request = data["request"]
 
-        if "celery_task_id" in data.keys():
-            self.celery_task_id = data["celery_task_id"]
-        else:
-            self.celery_task_id = None
-
-        if "execution_path" in data.keys():
-            self.execution_path = data["execution_path"]
-        else:
-            self.execution_path = []
-
-        if "outputs" in data.keys():
-            self.outputs = data["outputs"]
-        else:
-            self.outputs = {}
-
-        if "run_log" in data.keys():
-            self.run_log = data["run_log"]
-        else:
-            self.run_log = {}
-
-        if "run_status" in data.keys():
-            self.run_status = data["run_status"]
-        else:
-            self.run_status = "UNKNOWN"
-
-        if "start_time" in data.keys():
-            self.start_time = data["start_time"]
-        else:
-            self.start_time = None
-
-        if "task_logs" in data.keys():
-            self.task_logs = data["task_logs"]
-        else:
-            self.task_logs = []
+        self.celery_task_id = data.get("celery_task_id", None)
+        self.execution_path = data.get("execution_path", [])
+        self.outputs = data.get("outputs", {})
+        self.run_log = data.get("run_log", {})
+        self.run_status = data.get("run_status", "UNKNOWN")
+        self.start_time = data.get("start_time", None)
+        self.task_logs = data.get("task_logs", [])
 
     def get_data(self) -> dict:
         return {
