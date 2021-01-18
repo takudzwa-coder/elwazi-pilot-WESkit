@@ -13,22 +13,18 @@ mock_run_data = {
 }
 
 def test_create_and_load_run(database_container):
-    print(database_container.get_connection_url(), file=sys.stderr)
     new_run = Run(mock_run_data)
     new_run.run_status = "RUNNING"
-    print(new_run, file=sys.stderr)
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
     collection = db["test_runs"]
     collection.insert_one(new_run.get_data())
-    for x in collection.find():
+    data = collection.find()
+    for x in data:
         load_run = Run(x)
-        print(load_run, file=sys.stderr)
-        print(type(load_run), file=sys.stderr)
-        print(load_run.run_status, file=sys.stderr)
-
+        if load_run.run_id == new_run.run_id:
+            assert load_run.get_data() == new_run.get_data()
 
 def test_create_run_fails(database_container):
-    print(database_container.get_connection_url(), file=sys.stderr)
     with pytest.raises(Exception):
         Run({})
