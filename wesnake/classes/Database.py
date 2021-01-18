@@ -80,8 +80,6 @@ class Database:
                         ).acknowledged
 
     def delete_run(self, run: Run) -> bool:
-        if run is None:
-            raise ValueError("Run is None")
         return self._db_runs() \
             .delete_one({"run_id": run.run_id}) \
             .acknowledged
