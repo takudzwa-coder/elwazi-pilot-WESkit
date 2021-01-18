@@ -40,11 +40,9 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
     run = snakemake.execute(run)
     while not run.run_status_check("COMPLETE"):
         run = snakemake.update_state(run)
-        if (run.run_status_check("COMPLETE")):
-            snakemake.update_outputs(run).outputs
-            assert "hello_world.txt" in run.outputs["Snakemake"]
-        else:
-            time.sleep(1)
+        time.sleep(1)
+    snakemake.update_outputs(run).outputs
+    assert "hello_world.txt" in run.outputs["Snakemake"]
     assert run.run_status_check("COMPLETE")
 
 def test_cancel_snakemake_workflow(snakemake, celery_worker):
