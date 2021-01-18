@@ -7,7 +7,7 @@ def test_insert_and_load_run(database_connection):
     run1 = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     assert database_connection.insert_run(run1)
     run2 = database_connection.get_run(run1.run_id)
-    assert run1.get_data() == run2.get_data()
+    assert run1 == run2
     run_id_and_states = database_connection.list_run_ids_and_states()
     assert len(run_id_and_states) == 1
 

@@ -4,6 +4,9 @@ from wesnake.classes.RunStatus import RunStatus
 class Run:
     """ This is a Run."""
 
+    def __eq__(self, other):
+        return self.get_data() == other.get_data()
+
     def __init__(self, data: dict) -> None:
 
         self.__run_id = data["run_id"]
