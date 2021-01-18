@@ -4,7 +4,6 @@ from wesnake.classes.RunStatus import RunStatus
 from test_utils import get_mock_run
 
 def test_insert_and_load_run(database_connection):
-    print("test create_new_run")
     run1 = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     assert database_connection.insert_run(run1)
     run2 = database_connection.get_run(run1.run_id)
@@ -13,7 +12,6 @@ def test_insert_and_load_run(database_connection):
     assert len(run_id_and_states) == 1
 
 def test_update_run(database_connection):
-    print("test update_run")
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     assert database_connection.insert_run(run)
     new_run = copy.copy(run)
@@ -23,7 +21,6 @@ def test_update_run(database_connection):
     assert run.run_status_check("UNKNOWN")
 
 def test_get_runs(database_connection):
-    print("test update_run")
     runs = database_connection.get_runs(query={})
     assert len(runs) > 0
     for run in runs:
@@ -35,7 +32,6 @@ def test_count_states(database_connection):
         assert status.name in counts.keys()
 
 def test_delete_run(database_connection):
-    print("test delete_run")
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     assert database_connection.insert_run(run)
     assert database_connection.delete_run(run)
