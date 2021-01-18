@@ -60,7 +60,6 @@ def test_update_all_runs(snakemake, celery_worker, database_connection):
     while not run.run_status_check("COMPLETE"):
         time.sleep(1)
         run = snakemake.update_state(run)
-    assert run.run_status_check("COMPLETE")
     snakemake.update_runs(database_connection, query={})
     db_run = database_connection.get_run(run_id=run.run_id)
     assert db_run.run_status_check("COMPLETE")
