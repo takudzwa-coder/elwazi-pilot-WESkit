@@ -43,7 +43,6 @@ def test_execute_snakemake_workflow(snakemake, celery_worker):
         time.sleep(1)
     snakemake.update_outputs(run).outputs
     assert "hello_world.txt" in run.outputs["Snakemake"]
-    assert run.run_status_check("COMPLETE")
 
 def test_cancel_snakemake_workflow(snakemake, celery_worker):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"))
