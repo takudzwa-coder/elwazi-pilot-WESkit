@@ -3,6 +3,7 @@ from wesnake.tasks.snakemake import run_snakemake
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
 from wesnake.utils import get_current_time
+from typing import Optional
 import json
 import os
 import yaml
@@ -43,7 +44,7 @@ class Snakemake:
         run.run_status = "CANCELED"
         return run
 
-    def update_state(self, run: Run) -> str:
+    def update_state(self, run: Run) -> Run:
         # check if task is running and update state
         if run.run_status in running_states:
             if run.celery_task_id is not None:
@@ -53,7 +54,7 @@ class Snakemake:
                 run.run_status = "UNKNOWN"
         return run
 
-    def update_outputs(self, run: Run) -> str:
+    def update_outputs(self, run: Run) -> Run:
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
                 running_task = run_snakemake.AsyncResult(run.celery_task_id)
@@ -67,7 +68,7 @@ class Snakemake:
             run = self.update_outputs(run)
             database.update_run(run)
 
-    def create_and_insert_run(self, request, database) -> Run:
+    def create_and_insert_run(self, request, database) -> Optional[Run]:
         run = Run(data={"run_id": database._create_run_id(),
                         "run_status": "UNKNOWN",
                         "request_time": database.get_current_time(),
