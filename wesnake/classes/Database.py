@@ -67,14 +67,13 @@ class Database:
 
     def insert_run(self, run: Run) -> bool:
         if self.get_run(run.run_id) is None:
-            self._db_runs().insert_one(run.get_data())
-            return True
+            return self._db_runs() \
+                .insert_one(run.get_data()) \
+                .acknowledged
         else:
             return False
 
     def update_run(self, run: Run) -> bool:
-        if run is None:
-            raise ValueError("Run is None")
         return self._db_runs() \
             .update_one({"run_id": run.run_id},
                         {"$set": run.get_data()}
