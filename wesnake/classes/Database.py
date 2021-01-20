@@ -3,6 +3,7 @@ from wesnake.classes.Run import Run
 from wesnake.utils import get_current_time
 from bson.son import SON
 from wesnake.classes.RunStatus import RunStatus
+from typing import List, Optional
 
 
 class Database:
@@ -18,14 +19,14 @@ class Database:
     def aggregate_runs(self, pipeline):
         return dict(self._db_runs().aggregate(pipeline))
 
-    def get_run(self, run_id: str, **kwargs) -> Run:
+    def get_run(self, run_id: str, **kwargs) -> Optional[Run]:
         run_data = self._db_runs().find_one(
             filter={"run_id": run_id}, **kwargs)
         if run_data is not None:
             return Run(run_data)
         return None
 
-    def get_runs(self, query) -> Run:
+    def get_runs(self, query) -> List[Run]:
         runs = []
         runs_data = self._db_runs().find(query)
         if runs_data is not None:
