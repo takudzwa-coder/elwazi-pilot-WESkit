@@ -78,6 +78,11 @@ class Snakemake:
         else:
             return None
 
+    def get_run(self, run_id, database, update) -> Run:
+        if update:
+            self.update_runs(database, query={"run_id": run_id})
+        return database.get_run(run_id)
+
     def _run_has_url_of_valid_absolute_file(self, run):
         if os.path.isabs(run.request["workflow_url"]):
             if os.path.isfile(run.request["workflow_url"]):

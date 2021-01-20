@@ -8,9 +8,8 @@ bp = Blueprint("wes", __name__)
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
 def GetRunLog(run_id):
     current_app.logger.info("GetRun")
-    current_app.snakemake.update_runs(
-        current_app.database, query={"run_id": run_id})
-    run = current_app.database.get_run(run_id)
+    run = current_app.snakemake.get_run(
+        run_id=run_id, database=current_app.database, update=True)
     if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
         return {"msg": "Could not find %s" % run_id,
@@ -38,9 +37,8 @@ def CancelRun(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
 def GetRunStatus(run_id):
     current_app.logger.info("GetRunStatus")
-    current_app.snakemake.update_runs(
-        current_app.database, query={"run_id": run_id})
-    run = current_app.database.get_run(run_id)
+    run = current_app.snakemake.get_run(
+        run_id=run_id, database=current_app.database, update=True)
     if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
         return jsonify({"msg": "Could not find %s" % run_id,
