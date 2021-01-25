@@ -21,6 +21,7 @@ services:
     volumes:
       - ${WESNAKE_DATA}:/wesnake_data
       - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
+      - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend
     working_dir: /wesnake
@@ -59,6 +60,7 @@ services:
     command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.tasks.celery_worker.celery_app"]
     volumes:
       - ${WESNAKE_DATA}:/wesnake_data
+      - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend
 

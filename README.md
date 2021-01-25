@@ -10,15 +10,15 @@ If you want to run WESnake within a different environment, you might want to fol
 
 ### Building the Docker container
 
-First, you need to build a WESnake docker image.
+First, you need to build a WESnake docker image. If you need to set a proxy server you can set assign HTTP_PROXY and HTTPS_PROXY as arguments.
 
 ```bash
 docker build -t wesnake:0.0.1 \
-  --build-arg http_proxy=$HTTP_PROXY \
-  --build-arg https_proxy=$HTTPS_PROXY \
   --build-arg HTTP_PROXY=$HTTP_PROXY \
   --build-arg HTTPS_PROXY=$HTTPS_PROXY \
   ./
+
+docker build -t wesnake:0.0.1 ./
 ```
 
 ### Configuration

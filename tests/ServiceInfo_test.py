@@ -36,18 +36,3 @@ def test_get_contact_info_url(service_info):
 
 def test_get_tags(service_info):
     assert service_info.get_tags() == {"tag1": "value1", "tag2": "value2"}
-
-
-def test_get_system_state_keys(service_info):
-    state_keys = set(["UNKNOWN",
-                        "QUEUED",
-                        "INITIALIZING",
-                        "RUNNING",
-                        "PAUSED",
-                        "COMPLETE",
-                        "EXECUTOR_ERROR",
-                        "SYSTEM_ERROR",
-                        "CANCELED",
-                        "CANCELING"])
-    assert set(service_info.get_system_state_counts().keys()).issuperset(state_keys)
-

@@ -68,7 +68,6 @@ def database_connection(database_container):
 
 @pytest.fixture(scope="session")
 def redis_container():
-    print("redis_container")
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
     return redis_container
@@ -76,7 +75,6 @@ def redis_container():
 
 @pytest.fixture(scope="session")
 def celery_config(redis_container):
-    print("celery_config")
     return {
         "broker_url": get_redis_url(redis_container),
         "result_backend": get_redis_url(redis_container)

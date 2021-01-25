@@ -28,8 +28,8 @@ test:
   image: continuumio/miniconda3:latest
   script:
     - flake8 wesnake/
-    # - python -m pytest -v -s --log-cli-level=debug
-    - MONGODB_URI=docker python -m pytest -v
+    #- python -m pytest -v -s --log-cli-level=debug
+    - python -m pytest -v
 
 run:
   image: continuumio/miniconda3:latest
