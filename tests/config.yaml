@@ -27,6 +27,7 @@ static_service_info:
         - name: "cores"
           type: "int"
           default_value: "1"
+          workflow_engine: "snakemake"
     
     auth_instructions_url: "https://somewhere.org"
     
