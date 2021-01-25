@@ -5,7 +5,7 @@ __pycache__/
 .idea/
 build/
 weskit.iml
-WESnake.egg-info
+WESkit.egg-info
 dist
 settings.json
 *.log
