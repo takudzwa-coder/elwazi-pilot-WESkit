@@ -27,7 +27,7 @@ def test_app(database_container, redis_container):
     # import here because env vars need to be set before
     from weskit import create_app
 
-    os.environ["WESKI_CONFIG"] = "tests/config.yaml"
+    os.environ["WESKIT_CONFIG"] = "tests/config.yaml"
 
     app = create_app()
 
@@ -53,7 +53,7 @@ def database_container():
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
     db_container.start()
-    os.environ["WESKI_DATABASE_URL"] = db_container.get_connection_url()
+    os.environ["WESKIT_DATABASE_URL"] = db_container.get_connection_url()
 
     yield db_container
 

@@ -33,9 +33,9 @@ Set the following environmental variables:
 
   * `REDIS_CONFIG`: Path to redis configuration file.
   * `SHARED_FILESYSTEM_ROOT`: Path to file system directory for application data such as database files, redis files and Snakemake execution data.
-  * `WESKI_CONFIG`: Path to WESnake config.yaml
-  * `WESKI_IMAGE`: Docker iamge tag (weskit:0.0.1)
-  * `WESKI_ROOT`: Path to WESnake repository
+  * `WESKIT_CONFIG`: Path to WESnake config.yaml
+  * `WESKIT_IMAGE`: Docker iamge tag (weskit:0.0.1)
+  * `WESKIT_ROOT`: Path to WESnake repository
   
 ### Run Docker stack
 
@@ -44,9 +44,9 @@ Start WESnake using `docker stack` with `docker-stack.yaml`:
 ```bash
 export REDIS_CONFIG=/PATH/TO/REDIS_CONFIG/redis.conf
 export SHARED_FILESYSTEM_ROOT=/PATH/TO/DIR/
-export WESKI_CONFIG=/PATH/TO/WESKI_CONFIG/config.yaml
-export WESKI_IMAGE=weskit:0.0.1
-export WESKI_ROOT=/PATH/TO/WESKI/
+export WESKIT_CONFIG=/PATH/TO/WESKIT_CONFIG/config.yaml
+export WESKIT_IMAGE=weskit:0.0.1
+export WESKIT_ROOT=/PATH/TO/WESKIT/
 
 docker stack deploy --compose-file=docker_stack.yaml weskit
 ```

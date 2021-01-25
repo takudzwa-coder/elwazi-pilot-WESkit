@@ -8,19 +8,19 @@ services:
 
   rest:
     hostname: weskit
-    image: ${WESKI_IMAGE}
+    image: ${WESKIT_IMAGE}
     environment:
-      WESKI_CONFIG: /home/weskit/config.yaml
-      WESKI_LOG_CONFIG:
-      WESKI_VALIDATION_CONFIG:
-      WESKI_DATABASE_URL: mongodb://database:27017
-      WESKI_DATA: /weskit_data
+      WESKIT_CONFIG: /home/weskit/config.yaml
+      WESKIT_LOG_CONFIG:
+      WESKIT_VALIDATION_CONFIG:
+      WESKIT_DATABASE_URL: mongodb://database:27017
+      WESKIT_DATA: /weskit_data
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
       FLASK_APP: weskit
     volumes:
-      - ${WESKI_DATA}:/weskit_data
-      - ${WESKI_CONFIG}:/home/weskit/config.yaml:ro
+      - ${WESKIT_DATA}:/weskit_data
+      - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend
@@ -51,7 +51,7 @@ services:
 
   # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   worker1:
-    image: ${WESKI_IMAGE}
+    image: ${WESKIT_IMAGE}
     environment:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
@@ -59,7 +59,7 @@ services:
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate weskit; celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
     volumes:
-      - ${WESKI_DATA}:/weskit_data
+      - ${WESKIT_DATA}:/weskit_data
       - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend
