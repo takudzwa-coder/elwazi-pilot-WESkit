@@ -1,4 +1,4 @@
-name: wesnake
+name: weskit
 channels:
   - bioconda
   - conda-forge

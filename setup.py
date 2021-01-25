@@ -6,7 +6,7 @@ setup(name='WESnake',
       version='0.0.1',
       entry_points={
             "console_scripts": [
-            "wesnake = wesnake.__main__:main"
+            "weskit = weskit.__main__:main"
             ]
       },
     include_package_data=True

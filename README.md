@@ -13,12 +13,12 @@ If you want to run WESnake within a different environment, you might want to fol
 First, you need to build a WESnake docker image. If you need to set a proxy server you can set assign HTTP_PROXY and HTTPS_PROXY as arguments.
 
 ```bash
-docker build -t wesnake:0.0.1 \
+docker build -t weskit:0.0.1 \
   --build-arg HTTP_PROXY=$HTTP_PROXY \
   --build-arg HTTPS_PROXY=$HTTPS_PROXY \
   ./
 
-docker build -t wesnake:0.0.1 ./
+docker build -t weskit:0.0.1 ./
 ```
 
 ### Configuration
@@ -34,7 +34,7 @@ Set the following environmental variables:
   * `REDIS_CONFIG`: Path to redis configuration file.
   * `SHARED_FILESYSTEM_ROOT`: Path to file system directory for application data such as database files, redis files and Snakemake execution data.
   * `WESNAKE_CONFIG`: Path to WESnake config.yaml
-  * `WESNAKE_IMAGE`: Docker iamge tag (wesnake:0.0.1)
+  * `WESNAKE_IMAGE`: Docker iamge tag (weskit:0.0.1)
   * `WESNAKE_ROOT`: Path to WESnake repository
   
 ### Run Docker stack
@@ -45,26 +45,26 @@ Start WESnake using `docker stack` with `docker-stack.yaml`:
 export REDIS_CONFIG=/PATH/TO/REDIS_CONFIG/redis.conf
 export SHARED_FILESYSTEM_ROOT=/PATH/TO/DIR/
 export WESNAKE_CONFIG=/PATH/TO/WESNAKE_CONFIG/config.yaml
-export WESNAKE_IMAGE=wesnake:0.0.1
+export WESNAKE_IMAGE=weskit:0.0.1
 export WESNAKE_ROOT=/PATH/TO/WESNAKE/
 
-docker stack deploy --compose-file=docker_stack.yaml wesnake
+docker stack deploy --compose-file=docker_stack.yaml weskit
 ```
 
 ## Development
 
-For development of new features, it is recommended to install the wesnake Conda environment locally and develop and run tests.
+For development of new features, it is recommended to install the weskit Conda environment locally and develop and run tests.
 All requirements are specified in the Conda environment file `environment.yaml`.
 To install the environment you need a working Conda installation and issue in the repository root directory
 
 ```bash
-conda env create -n wesnake -f environment.yaml
+conda env create -n weskit -f environment.yaml
 ```
 
 After that you can activate the environment with
 
 ```bash
-conda activate wesnake
+conda activate weskit
 ```
 
 Perform a test:

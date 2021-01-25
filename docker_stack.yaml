@@ -7,26 +7,26 @@ networks:
 services:
 
   rest:
-    hostname: wesnake
+    hostname: weskit
     image: ${WESNAKE_IMAGE}
     environment:
-      WESNAKE_CONFIG: /home/wesnake/config.yaml
+      WESNAKE_CONFIG: /home/weskit/config.yaml
       WESNAKE_LOG_CONFIG:
       WESNAKE_VALIDATION_CONFIG:
       WESNAKE_DATABASE_URL: mongodb://database:27017
-      WESNAKE_DATA: /wesnake_data
+      WESNAKE_DATA: /weskit_data
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
-      FLASK_APP: wesnake
+      FLASK_APP: weskit
     volumes:
-      - ${WESNAKE_DATA}:/wesnake_data
-      - ${WESNAKE_CONFIG}:/home/wesnake/config.yaml:ro
+      - ${WESNAKE_DATA}:/weskit_data
+      - ${WESNAKE_CONFIG}:/home/weskit/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend
-    working_dir: /wesnake
+    working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake && pip install ./ && flask run --host=0.0.0.0 --port=5000"]
+    command: ["conda activate weskit && pip install ./ && flask run --host=0.0.0.0 --port=5000"]
     ports:
       - 5000:5000
 
@@ -55,11 +55,11 @@ services:
     environment:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
-    working_dir: /wesnake
+    working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate wesnake; celery worker --loglevel DEBUG --concurrency 1 --app wesnake.tasks.celery_worker.celery_app"]
+    command: ["conda activate weskit; celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
     volumes:
-      - ${WESNAKE_DATA}:/wesnake_data
+      - ${WESNAKE_DATA}:/weskit_data
       - ${SHARED_FILESYSTEM_ROOT}:/data
     networks:
       - backend

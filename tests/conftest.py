@@ -2,13 +2,13 @@ import logging
 import os
 import pytest
 import yaml
-from wesnake.classes.Database import Database
-from wesnake.classes.ServiceInfo import ServiceInfo
+from weskit.classes.Database import Database
+from weskit.classes.ServiceInfo import ServiceInfo
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 from logging.config import dictConfig
-from wesnake.classes.RunStatus import RunStatus
+from weskit.classes.RunStatus import RunStatus
 
 
 def get_redis_url(redis_container):
@@ -25,7 +25,7 @@ def test_app(database_container, redis_container):
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
 
     # import here because env vars need to be set before
-    from wesnake import create_app
+    from weskit import create_app
 
     os.environ["WESNAKE_CONFIG"] = "tests/config.yaml"
 
@@ -59,7 +59,7 @@ def database_container():
 
 @pytest.fixture(scope="session")
 def database_connection(database_container):
-    from wesnake import create_database
+    from weskit import create_database
 
     database = create_database()
 
@@ -97,7 +97,7 @@ def service_info(test_config, swagger, database_connection):
 
 @pytest.fixture(scope="session")
 def swagger(database_connection):
-    with open("wesnake/api/workflow_execution_service_1.0.0.yaml",
+    with open("weskit/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
     yield swagger
@@ -107,6 +107,6 @@ def swagger(database_connection):
 def snakemake(database_connection, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    from wesnake.classes.Snakemake import Snakemake
+    from weskit.classes.Snakemake import Snakemake
     snakemake = Snakemake(config=test_config, datadir="tmp/")
     yield snakemake

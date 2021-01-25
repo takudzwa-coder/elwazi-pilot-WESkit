@@ -1,5 +1,5 @@
 import json, yaml, sys, time, uuid, os
-from wesnake.classes.Run import Run
+from weskit.classes.Run import Run
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
 from test_utils import get_mock_run

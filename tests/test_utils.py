@@ -1,5 +1,5 @@
 import uuid
-from wesnake.classes.Run import Run
+from weskit.classes.Run import Run
 
 def get_mock_run(workflow_url):
     run = Run({

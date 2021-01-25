@@ -1,8 +1,8 @@
 import uuid
-from wesnake.classes.Run import Run
-from wesnake.utils import get_current_time
+from weskit.classes.Run import Run
+from weskit.utils import get_current_time
 from bson.son import SON
-from wesnake.classes.RunStatus import RunStatus
+from weskit.classes.RunStatus import RunStatus
 from typing import List, Optional
 
 

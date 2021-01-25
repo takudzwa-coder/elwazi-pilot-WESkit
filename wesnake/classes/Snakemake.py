@@ -1,8 +1,8 @@
-from wesnake.classes.Run import Run
-from wesnake.tasks.snakemake import run_snakemake
+from weskit.classes.Run import Run
+from weskit.tasks.snakemake import run_snakemake
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
-from wesnake.utils import get_current_time
+from weskit.utils import get_current_time
 from typing import Optional
 import json
 import os
@@ -127,7 +127,7 @@ class Snakemake:
             run.run_status = "SYSTEM_ERROR"
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
-                filename="wesnake_run_error.txt",
+                filename="weskit_run_error.txt",
                 message=EXECUTOR_WF_NOT_FOUND)
 
         return run

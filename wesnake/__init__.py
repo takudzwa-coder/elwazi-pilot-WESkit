@@ -14,7 +14,7 @@ def read_swagger():
     '''Read the swagger file.'''
     # This is hardcoded, because if it is changed, probably also quite some
     # code needs to be changed.
-    swagger_file = "wesnake/api/workflow_execution_service_1.0.0.yaml"
+    swagger_file = "weskit/api/workflow_execution_service_1.0.0.yaml"
     with open(swagger_file, "r") as yaml_file:
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
@@ -22,7 +22,7 @@ def read_swagger():
 
 
 def create_database():
-    from wesnake.classes.Database import Database
+    from weskit.classes.Database import Database
 
     DATABASE_URL = os.getenv("WESNAKE_DATABASE_URL")
     return Database(MongoClient(DATABASE_URL), "WES")
@@ -30,9 +30,9 @@ def create_database():
 
 def create_app():
 
-    from wesnake.classes.Snakemake import Snakemake
-    from wesnake.classes.ServiceInfo import ServiceInfo
-    from wesnake.classes.ErrorCodes import ErrorCodes
+    from weskit.classes.Snakemake import Snakemake
+    from weskit.classes.ServiceInfo import ServiceInfo
+    from weskit.classes.ErrorCodes import ErrorCodes
 
     default_config = os.getenv("WESNAKE_CONFIG", None)
     default_log_config = os.getenv(
@@ -81,7 +81,7 @@ def create_app():
     app.log_config = log_config
     app.logger = logger
 
-    from wesnake.api.wes import bp as wes_bp
+    from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
     return app
