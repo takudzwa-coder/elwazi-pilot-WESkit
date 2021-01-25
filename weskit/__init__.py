@@ -24,7 +24,7 @@ def read_swagger():
 def create_database():
     from weskit.classes.Database import Database
 
-    DATABASE_URL = os.getenv("WESNAKE_DATABASE_URL")
+    DATABASE_URL = os.getenv("WESKIT_DATABASE_URL")
     return Database(MongoClient(DATABASE_URL), "WES")
 
 
@@ -34,13 +34,13 @@ def create_app():
     from weskit.classes.ServiceInfo import ServiceInfo
     from weskit.classes.ErrorCodes import ErrorCodes
 
-    default_config = os.getenv("WESNAKE_CONFIG", None)
+    default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
-        "WESNAKE_LOG_CONFIG",
+        "WESKIT_LOG_CONFIG",
         os.path.join("config", "log-config.yaml"))
 
     default_validation_config = os.getenv(
-        "WESNAKE_VALIDATION_CONFIG",
+        "WESKIT_VALIDATION_CONFIG",
         os.path.join("config", "validation.yaml"))
 
     with open(default_log_config, "r") as yaml_file:
@@ -75,7 +75,7 @@ def create_app():
     app.database = create_database()
 
     app.snakemake = Snakemake(config=config,
-                              datadir=os.getenv("WESNAKE_DATA", "./tmp"))
+                              datadir=os.getenv("WESKIT_DATA", "./tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)
     app.log_config = log_config
