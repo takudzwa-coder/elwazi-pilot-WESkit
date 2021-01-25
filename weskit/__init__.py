@@ -75,7 +75,7 @@ def create_app():
     app.database = create_database()
 
     app.manager = Manager(config=config,
-                              datadir=os.getenv("WESKIT_DATA", "./tmp"))
+                          datadir=os.getenv("WESKIT_DATA", "./tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)
     app.log_config = log_config
