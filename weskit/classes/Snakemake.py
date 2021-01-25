@@ -25,7 +25,7 @@ running_states = [
     "PAUSED"]
 
 EXECUTOR_WF_NOT_FOUND = """
-WESnake executor error: the workflow file was not found. Please provide either
+WESkit executor error: the workflow file was not found. Please provide either
 a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
@@ -104,7 +104,7 @@ class Snakemake:
     def _create_run_executions_logfile(self, run, filename, message):
         file_path = os.path.join(run.execution_path, filename)
         with open(file_path, "w") as f:
-            f.write("WESnake executor error: {}".format(message))
+            f.write("WESkit executor error: {}".format(message))
         return file_path
 
     def prepare_execution(self, run, files=[]):

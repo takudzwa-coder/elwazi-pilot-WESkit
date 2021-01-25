@@ -1,16 +1,16 @@
-# WESnake
+# WESkit
 
 A GA4GH compliant Workflow-Execution-Service (WES) for Snakemake.
 
-## Running WESnake via Docker Stack
+## Running WESkit via Docker Stack
 
-Currently, we recommend running WESnake via Docker stack. 
+Currently, we recommend running WESkit via Docker stack. 
 Other deployment forms e.g. via Kubernetes might be supported at a later stage.
-If you want to run WESnake within a different environment, you might want to follow these steps and adapt them to your own requirements.
+If you want to run WESkit within a different environment, you might want to follow these steps and adapt them to your own requirements.
 
 ### Building the Docker container
 
-First, you need to build a WESnake docker image. If you need to set a proxy server you can set assign HTTP_PROXY and HTTPS_PROXY as arguments.
+First, you need to build a WESkit docker image. If you need to set a proxy server you can set assign HTTP_PROXY and HTTPS_PROXY as arguments.
 
 ```bash
 docker build -t weskit:0.0.1 \
@@ -23,7 +23,7 @@ docker build -t weskit:0.0.1 ./
 
 ### Configuration
 
-To run the WESnake Docker stack, you need to set several environmental variables and configure the configuration files.
+To run the WESkit Docker stack, you need to set several environmental variables and configure the configuration files.
 There are two configuration files for general usage:
 
   * `config.yaml`: Main configuration file. Usually you only need to change this file.
@@ -33,13 +33,13 @@ Set the following environmental variables:
 
   * `REDIS_CONFIG`: Path to redis configuration file.
   * `SHARED_FILESYSTEM_ROOT`: Path to file system directory for application data such as database files, redis files and Snakemake execution data.
-  * `WESKIT_CONFIG`: Path to WESnake config.yaml
+  * `WESKIT_CONFIG`: Path to WESkit config.yaml
   * `WESKIT_IMAGE`: Docker iamge tag (weskit:0.0.1)
-  * `WESKIT_ROOT`: Path to WESnake repository
+  * `WESKIT_ROOT`: Path to WESkit repository
   
 ### Run Docker stack
 
-Start WESnake using `docker stack` with `docker-stack.yaml`:
+Start WESkit using `docker stack` with `docker-stack.yaml`:
 
 ```bash
 export REDIS_CONFIG=/PATH/TO/REDIS_CONFIG/redis.conf

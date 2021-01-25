@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-setup(name='WESnake',
+setup(name='WESkit',
       packages=find_packages(),
       version='0.0.1',
       entry_points={
