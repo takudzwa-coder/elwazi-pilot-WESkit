@@ -30,7 +30,7 @@ a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
 
-class Snakemake:
+class Manager:
     def __init__(self, config: dict, datadir: str) -> None:
         self.kwargs = {}
         for parameter in (config["static_service_info"]
