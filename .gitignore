@@ -1,11 +1,11 @@
-.wesnake.code-workspace
+.weskit.code-workspace
 tmp/
 trash/
 __pycache__/
 .idea/
 build/
-wesnake.iml
-WESnake.egg-info
+weskit.iml
+WESkit.egg-info
 dist
 settings.json
 *.log

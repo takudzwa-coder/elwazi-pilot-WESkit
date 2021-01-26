@@ -1,4 +1,4 @@
-from wesnake import create_app
+from weskit import create_app
 
 
 def main():

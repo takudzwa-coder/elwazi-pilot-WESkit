@@ -1,4 +1,4 @@
-from wesnake.classes.RunStatus import RunStatus
+from weskit.classes.RunStatus import RunStatus
 
 
 class Run:

@@ -16,6 +16,6 @@ docker-compose.yaml
 stack.yaml
 *.iml
 *.log
-WESnake.egg-info
+WESkit.egg-info
 __pycache__
 

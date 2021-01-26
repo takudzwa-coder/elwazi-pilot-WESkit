@@ -1,4 +1,4 @@
-from wesnake.tasks.celery import celery_app
+from weskit.tasks.celery import celery_app
 from snakemake import snakemake
 
 

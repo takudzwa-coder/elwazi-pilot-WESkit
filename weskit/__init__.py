@@ -14,7 +14,7 @@ def read_swagger():
     '''Read the swagger file.'''
     # This is hardcoded, because if it is changed, probably also quite some
     # code needs to be changed.
-    swagger_file = "wesnake/api/workflow_execution_service_1.0.0.yaml"
+    swagger_file = "weskit/api/workflow_execution_service_1.0.0.yaml"
     with open(swagger_file, "r") as yaml_file:
         swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
@@ -22,25 +22,25 @@ def read_swagger():
 
 
 def create_database():
-    from wesnake.classes.Database import Database
+    from weskit.classes.Database import Database
 
-    DATABASE_URL = os.getenv("WESNAKE_DATABASE_URL")
+    DATABASE_URL = os.getenv("WESKIT_DATABASE_URL")
     return Database(MongoClient(DATABASE_URL), "WES")
 
 
 def create_app():
 
-    from wesnake.classes.Snakemake import Snakemake
-    from wesnake.classes.ServiceInfo import ServiceInfo
-    from wesnake.classes.ErrorCodes import ErrorCodes
+    from weskit.classes.Snakemake import Snakemake
+    from weskit.classes.ServiceInfo import ServiceInfo
+    from weskit.classes.ErrorCodes import ErrorCodes
 
-    default_config = os.getenv("WESNAKE_CONFIG", None)
+    default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
-        "WESNAKE_LOG_CONFIG",
+        "WESKIT_LOG_CONFIG",
         os.path.join("config", "log-config.yaml"))
 
     default_validation_config = os.getenv(
-        "WESNAKE_VALIDATION_CONFIG",
+        "WESKIT_VALIDATION_CONFIG",
         os.path.join("config", "validation.yaml"))
 
     with open(default_log_config, "r") as yaml_file:
@@ -75,13 +75,13 @@ def create_app():
     app.database = create_database()
 
     app.snakemake = Snakemake(config=config,
-                              datadir=os.getenv("WESNAKE_DATA", "./tmp"))
+                              datadir=os.getenv("WESKIT_DATA", "./tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)
     app.log_config = log_config
     app.logger = logger
 
-    from wesnake.api.wes import bp as wes_bp
+    from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
     return app

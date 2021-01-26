@@ -21,13 +21,13 @@ before_script:
   - source /root/.bashrc
   - conda info             # For debugging
   - conda config --show    # For debugging
-  - conda env create -n wesnake -f environment.yaml
-  - conda activate wesnake
+  - conda env create -n weskit -f environment.yaml
+  - conda activate weskit
 
 test:
   image: continuumio/miniconda3:latest
   script:
-    - flake8 wesnake/
+    - flake8 weskit/
     #- python -m pytest -v -s --log-cli-level=debug
     - python -m pytest -v
 

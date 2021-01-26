@@ -1,6 +1,6 @@
 import sys, uuid, pytest
 from pymongo import MongoClient
-from wesnake.classes.Run import Run
+from weskit.classes.Run import Run
 
 mock_run_data = {
     "run_id": str(uuid.uuid4()),

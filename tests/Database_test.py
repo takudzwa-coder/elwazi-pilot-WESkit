@@ -1,6 +1,6 @@
 import copy, uuid, os
-from wesnake.classes.Run import Run
-from wesnake.classes.RunStatus import RunStatus
+from weskit.classes.Run import Run
+from weskit.classes.RunStatus import RunStatus
 from test_utils import get_mock_run
 
 def test_insert_and_load_run(database_connection):
