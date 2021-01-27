@@ -104,9 +104,9 @@ def swagger(database_connection):
 
 
 @pytest.fixture(scope="session")
-def snakemake(database_connection, redis_container, test_config):
+def manager(database_connection, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    from weskit.classes.Snakemake import Snakemake
-    snakemake = Snakemake(config=test_config, datadir="tmp/")
-    yield snakemake
+    from weskit.classes.Manager import Manager
+    manager = Manager(config=test_config, datadir="tmp/")
+    yield manager

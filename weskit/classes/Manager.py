@@ -30,13 +30,14 @@ a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
 
-class Snakemake:
+class Manager:
     def __init__(self, config: dict, datadir: str) -> None:
-        self.kwargs = {}
+        self.snakemake_kwargs = {}
         for parameter in (config["static_service_info"]
                                 ["default_workflow_engine_parameters"]):
-            self.kwargs[parameter["name"]] = eval(parameter["type"])(
-                parameter["default_value"])
+            if parameter["workflow_engine"] == "snakemake":
+                self.snakemake_kwargs[parameter["name"]] = eval(
+                    parameter["type"])(parameter["default_value"])
         self.datadir = datadir
 
     def cancel(self, run: Run) -> Run:
@@ -155,6 +156,6 @@ class Snakemake:
         )
         task = run_snakemake.apply_async(
             args=[],
-            kwargs={**run_kwargs, **self.kwargs})
+            kwargs={**run_kwargs, **self.snakemake_kwargs})
         run.celery_task_id = task.id
         return run

@@ -8,7 +8,7 @@ bp = Blueprint("wes", __name__)
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
 def GetRunLog(run_id):
     current_app.logger.info("GetRun")
-    run = current_app.snakemake.get_run(
+    run = current_app.manager.get_run(
         run_id=run_id, database=current_app.database, update=True)
     if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
@@ -29,7 +29,7 @@ def CancelRun(run_id):
                 "status_code": 0
                 }, 404
     else:
-        run = current_app.snakemake.cancel(run, current_app.database)
+        run = current_app.manager.cancel(run, current_app.database)
         current_app.logger.info("Run %s is canceled" % run_id)
         return {k: run[k] for k in ["run_id"]}, 200
 
@@ -37,7 +37,7 @@ def CancelRun(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
 def GetRunStatus(run_id):
     current_app.logger.info("GetRunStatus")
-    run = current_app.snakemake.get_run(
+    run = current_app.manager.get_run(
         run_id=run_id, database=current_app.database, update=True)
     if run is None:
         current_app.error_logger.error("Could not find %s" % run_id)
@@ -50,7 +50,7 @@ def GetRunStatus(run_id):
 @bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
 def GetServiceInfo(*args, **kwargs):
     current_app.logger.info("GetServiceInfo")
-    current_app.snakemake.update_runs(
+    current_app.manager.update_runs(
         database=current_app.database,
         query={})
     response = {
@@ -79,7 +79,7 @@ def GetServiceInfo(*args, **kwargs):
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
 def ListRuns(*args, **kwargs):
     current_app.logger.info("ListRuns")
-    current_app.snakemake.update_runs(current_app.database, query={})
+    current_app.manager.update_runs(current_app.database, query={})
     response = current_app.database.list_run_ids_and_states()
     return jsonify(response), 200
 
@@ -89,16 +89,16 @@ def RunWorkflow():
     data = request.form
     current_app.logger.info("RunWorkflow")
 
-    run = current_app.snakemake.create_and_insert_run(
+    run = current_app.manager.create_and_insert_run(
         request=data,
         database=current_app.database)
 
     current_app.logger.info("Prepare execution")
-    run = current_app.snakemake.prepare_execution(run, files=request.files)
+    run = current_app.manager.prepare_execution(run, files=request.files)
     current_app.database.update_run(run)
 
     current_app.logger.info("Execute Workflow")
-    run = current_app.snakemake.execute(run)
+    run = current_app.manager.execute(run)
     current_app.database.update_run(run)
 
     return jsonify({"run_id": run.run_id}), 200

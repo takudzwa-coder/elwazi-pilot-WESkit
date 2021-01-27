@@ -30,7 +30,7 @@ def create_database():
 
 def create_app():
 
-    from weskit.classes.Snakemake import Snakemake
+    from weskit.classes.Manager import Manager
     from weskit.classes.ServiceInfo import ServiceInfo
     from weskit.classes.ErrorCodes import ErrorCodes
 
@@ -74,8 +74,8 @@ def create_app():
     app.validation = validation
     app.database = create_database()
 
-    app.snakemake = Snakemake(config=config,
-                              datadir=os.getenv("WESKIT_DATA", "./tmp"))
+    app.manager = Manager(config=config,
+                          datadir=os.getenv("WESKIT_DATA", "./tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)
     app.log_config = log_config
