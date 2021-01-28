@@ -3,7 +3,7 @@ import time
 import yaml
 import os
 
-def get_workflow_data(snakefile, config):
+def get_workflow_data(workflowfile, config):
     with open(config) as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
@@ -11,7 +11,7 @@ def get_workflow_data(snakefile, config):
         "workflow_params": workflow_params,
         "workflow_type": "Snakemake",
         "workflow_type_version": "5.8.2",
-        "workflow_url": snakefile
+        "workflow_url": workflowfile
     }
     return data
 
@@ -22,7 +22,7 @@ def test_get_service_info(test_app):
 def test_run_workflow(test_app, celery_worker):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
-        snakefile=snakefile,
+        workflowfile=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     run_id = response.json["run_id"]

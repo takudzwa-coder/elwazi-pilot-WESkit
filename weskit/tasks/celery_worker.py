@@ -1,5 +1,5 @@
 from weskit.tasks.celery import celery_app
-from weskit.tasks.snakemake import run_snakemake  # noqa: F401
+from weskit.tasks.workflow import run_workflow  # noqa: F401
 import os
 
 

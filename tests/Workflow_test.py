@@ -1,9 +1,15 @@
-import json, yaml, sys, time, uuid, os
+import json, yaml, sys, time, uuid, os, shutil, subprocess
 from weskit.classes.Run import Run
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
 from test_utils import get_mock_run
 
+def teardown_module(module):
+    path = os.path.join(os.getcwd(), "tests/wf3/")
+    shutil.rmtree(path + "work")
+    shutil.rmtree(path + ".nextflow")
+    os.remove(path + "hello_world.txt")
+    os.remove(path + ".nextflow.log")
 
 def test_prepare_execution(manager):
     
@@ -35,6 +41,8 @@ def test_prepare_execution(manager):
     assert os.path.isfile(run.outputs["execution"])
 
 def test_execute_workflow(manager, celery_worker):
+
+    # 1.) snakemake workflow
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"))
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
@@ -43,6 +51,16 @@ def test_execute_workflow(manager, celery_worker):
         time.sleep(1)
     manager.update_outputs(run).outputs
     assert "hello_world.txt" in run.outputs["Snakemake"]
+
+    # 2.) nextflow workflow
+    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf3/helloworld.nf"))
+    run = manager.prepare_execution(run, files=[])
+    manager.execute(run)
+    while not run.run_status_check("COMPLETE"):
+        run = manager.update_state(run)
+        time.sleep(1)
+    # TODO: Need to add a check to vertify that nextflow ran correctly
+    assert True
 
 def test_cancel_workflow(manager, celery_worker):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"))
