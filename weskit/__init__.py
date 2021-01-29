@@ -118,6 +118,9 @@ def create_app():
     from weskit.login import LoginBlueprint as login_bp
     app.register_blueprint(login_bp.login)
     
+    ############################################
+    ## Initialize local Config file           ##
+    ############################################
     
     
     import weskit.login
