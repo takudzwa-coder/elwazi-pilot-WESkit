@@ -9,6 +9,10 @@ from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask
 
+from flask_jwt_extended import JWTManager
+import weskit.login
+
+
 
 def read_swagger():
     '''Read the swagger file.'''
@@ -69,7 +73,7 @@ def create_app():
     swagger = read_swagger()
 
     app = Flask(__name__)
-
+   
     # Global objects and information.
     app.validation = validation
     app.database = create_database()
@@ -80,8 +84,78 @@ def create_app():
                                    swagger, app.database)
     app.log_config = log_config
     app.logger = logger
-
+    
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
+    
+    ######################################
+    ##            Init Login            ##
+    ######################################
+    
+    # Configure application to store JWTs in cookies
+    app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 
+    # Only allow JWT cookies to be sent over https. In production, this
+    # should likely be True
+    app.config['JWT_COOKIE_SECURE'] = False
+    
+    # Set the cookie paths, so that you are only sending your access token
+    # cookie to the access endpoints, and only sending your refresh token
+    # to the refresh endpoint. Technically this is optional, but it is in
+    # your best interest to not send additional cookies in the request if
+    # they aren't needed.
+    app.config['JWT_ACCESS_COOKIE_PATH'] = '/api/'
+    app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
+    
+    # Enable csrf double submit protection. See this for a thorough
+    # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+    
+    # Set the secret key to sign the JWTs with
+    app.config['JWT_SECRET_KEY'] = 'super-secret'  # Change this!
+    
+    jwt = JWTManager(app)
+
+    from weskit.login import LoginBlueprint as login_bp
+    app.register_blueprint(login_bp.login)
+
+    ####################################################################
+    ##              Overwrite JWT default fuctions                    ##
+    ####################################################################
+    ## vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv ##
+    
+    
+    # Create a function that will be called whenever create_access_token
+    # is used. It will take whatever object is passed into the
+    # create_access_token method, and lets us define what custom claims
+    # should be added to the access token.
+    
+    @jwt.user_claims_loader
+    def add_claims_to_access_token(user):
+        if len(user.roles):
+            return {'roles': user.roles}
+        return(None)
+    
+    
+    # Create a function that will be called whenever create_access_token
+    # is used. It will take whatever object is passed into the
+    # create_access_token method, and lets us define what the identity
+    # of the access token should be.
+    @jwt.user_identity_loader
+    def user_identity_lookup(user):
+        return {'username':user.username,'authType':user.authType}
+    
+    
+    
+    
+    # This function is called whenever a protected endpoint is accessed,
+    # and must return an object based on the tokens identity.
+    # This is called after the token is verified, so you can use
+    # get_jwt_claims() in here if desired. Note that this needs to
+    # return None if the user could not be loaded for any reason,
+    # such as not being found in the underlying data store
+    @jwt.user_loader_callback_loader
+    def user_loader_callback(identity):
+        return(login.authObjDict.get('local').get(identity['username']))
+    
     return app

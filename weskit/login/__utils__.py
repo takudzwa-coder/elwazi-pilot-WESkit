@@ -1,0 +1,105 @@
+from flask import Flask, jsonify, request,redirect,render_template
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+    jwt_refresh_token_required, create_refresh_token,
+    get_jwt_identity, set_access_cookies,
+    set_refresh_cookies, unset_jwt_cookies, get_jwt_claims,current_user
+)
+
+from .AuthObj import *
+
+
+
+        
+### This Function selects the backend which should be used to authenticate user ###
+### Further backends can be added to AuthObj.py and login
+def authenticateUser(username,password,method='local'):
+    m=authObjDict.get(method,None)
+    if m:
+        return(m.authenticate(username,password))
+    else:
+        return(None)
+        
+
+
+
+
+
+def setCookies(username,redictURL=None):
+    # Create the tokens we will be sending back to the user
+    access_token = create_access_token(identity=username)
+    refresh_token = create_refresh_token(identity=username)
+
+    # Set the JWTs and the CSRF double submit protection cookies
+    # in this response
+    
+    resp = jsonify({'login': True})
+    if redictURL:
+        resp= redirect(redictURL, code=302)
+    set_access_cookies(resp, access_token)
+    set_refresh_cookies(resp, refresh_token)
+    if redictURL:
+        return resp
+    return resp, 200
+
+
+
+# By default, the CRSF cookies will be called csrf_access_token and
+# csrf_refresh_token, and in protected endpoints we will look for the
+# CSRF token in the 'X-CSRF-TOKEN' header. You can modify all of these
+# with various app.config options. Check the options page for details.
+
+
+# With JWT_COOKIE_CSRF_PROTECT set to True, set_access_cookies() and
+# set_refresh_cookies() will now also set the non-httponly CSRF cookies
+# as well
+
+def login(request):
+    # Auth via Script
+    if request.is_json:
+        username = request.json.get('username', None)
+        password = request.json.get('password', None)
+        authres= authenticateUser(username,password)
+        if not authres:
+            return jsonify({'login': False}), 401
+        return(setCookies(authres))
+
+
+
+    # Manual Auth via HTML forms
+    elif len(request.form):
+        username=request.form.get('username', None)
+        password = request.form.get('password', None)
+        authres=authenticateUser(username, password)
+        if not authres:
+            return render_template('loginForm.html',hideHint="wrongHint"), 401
+        return(setCookies(authres,"/api/user_status"))
+
+
+    return jsonify({'login2': False}), 401
+    
+    
+# Because the JWTs are stored in an httponly cookie now, we cannot
+# log the user out by simply deleting the cookie in the frontend.
+# We need the backend to send us a response to delete the cookies
+# in order to logout. unset_jwt_cookies is a helper function to
+# do just that.
+def logout():
+    resp = jsonify({'logout': True})
+    unset_jwt_cookies(resp)
+    return resp, 200
+    
+    
+    
+    
+def refresh():
+    # Create the new access token
+    current_user2 = current_user
+    access_token = create_access_token(identity=current_user2)
+
+    # Set the access JWT and CSRF double submit protection cookies
+    # in this response
+    resp = jsonify({'refresh': True})
+    set_access_cookies(resp, access_token)
+    return resp, 200
+
