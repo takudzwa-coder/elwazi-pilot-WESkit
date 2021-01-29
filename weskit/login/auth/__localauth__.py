@@ -6,6 +6,7 @@ from weskit.login import User
 
 
 class Local:
+
     def __init__(self,yamlfile="users.yaml",authtype='local'):
         self.credentialsFile=yamlfile
         self.lastupdate=0

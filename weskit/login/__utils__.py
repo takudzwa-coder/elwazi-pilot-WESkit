@@ -23,12 +23,14 @@ def authenticateUser(username,password,method='local'):
 
 
 
+# In case of a successful login this function sets the login cookies.
+# It redirects the user to a start page for a given redictURL or,
+# it returns 200 {'login':true}
 
-
-def setCookies(username,redictURL=None):
+def setCookies(user,redictURL=None):
     # Create the tokens we will be sending back to the user
-    access_token = create_access_token(identity=username)
-    refresh_token = create_refresh_token(identity=username)
+    access_token = create_access_token(identity=user)
+    refresh_token = create_refresh_token(identity=user)
 
     # Set the JWTs and the CSRF double submit protection cookies
     # in this response
@@ -56,6 +58,8 @@ def setCookies(username,redictURL=None):
 
 def login(request):
     # Auth via Script
+    # returns 401 and {login:false}
+    # or 200 and {login:true}
     if request.is_json:
         username = request.json.get('username', None)
         password = request.json.get('password', None)
@@ -67,6 +71,8 @@ def login(request):
 
 
     # Manual Auth via HTML forms
+    # returns 401 and the login page again
+    # or 302 and a welcome page in case of success
     elif len(request.form):
         username=request.form.get('username', None)
         password = request.form.get('password', None)

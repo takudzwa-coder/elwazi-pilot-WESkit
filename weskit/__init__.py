@@ -108,7 +108,6 @@ def create_app():
     app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
 
 
-
     ############################################
     ## Load config from config file           ##
     ############################################
