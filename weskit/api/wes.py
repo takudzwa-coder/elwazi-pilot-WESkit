@@ -1,10 +1,7 @@
 from flask import current_app, jsonify, request
 from flask import Blueprint
 from flask_jwt_extended import (
-    jwt_required,
-    get_jwt_identity,
-    get_jwt_claims,
-    current_user
+    jwt_required
 )
 
 

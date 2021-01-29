@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, request,redirect,render_template
+from flask import  jsonify, redirect, render_template
 from flask_jwt_extended import (
-    JWTManager, jwt_required, create_access_token,
-    jwt_refresh_token_required, create_refresh_token,
-    get_jwt_identity, set_access_cookies,
-    set_refresh_cookies, unset_jwt_cookies, get_jwt_claims,current_user
+    create_access_token,
+    create_refresh_token,
+    set_access_cookies,
+    set_refresh_cookies, unset_jwt_cookies, current_user
 )
 
 

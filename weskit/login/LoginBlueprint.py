@@ -1,10 +1,8 @@
-from flask import Flask, jsonify, request, render_template, Blueprint
+from flask import jsonify, request, render_template, Blueprint
 from flask_jwt_extended import (
-    JWTManager,
     jwt_required,
     jwt_refresh_token_required,
     get_jwt_identity,
-    get_jwt_claims,
     current_user
 )
 
