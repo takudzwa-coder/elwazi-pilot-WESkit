@@ -1,15 +1,13 @@
 from flask import current_app, jsonify, request
 from flask import Blueprint
-from flask_jwt_extended import (
-    jwt_required
-)
+from weskit import login as auth
 
 
 bp = Blueprint("wes", __name__)
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
-@jwt_required
+@auth.login_required
 def GetRunLog(run_id):
     current_app.logger.info("GetRun")
     run = current_app.snakemake.get_run(
@@ -24,7 +22,7 @@ def GetRunLog(run_id):
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
-@jwt_required
+@auth.login_required
 def CancelRun(run_id):
     current_app.logger.info("CancelRun")
     run = current_app.database.get_run(run_id)
@@ -40,7 +38,7 @@ def CancelRun(run_id):
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
-@jwt_required
+@auth.login_required
 def GetRunStatus(run_id):
     current_app.logger.info("GetRunStatus")
     run = current_app.snakemake.get_run(
@@ -83,7 +81,7 @@ def GetServiceInfo(*args, **kwargs):
 
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
-@jwt_required
+@auth.login_required
 def ListRuns(*args, **kwargs):
     current_app.logger.info("ListRuns")
     current_app.snakemake.update_runs(current_app.database, query={})
@@ -92,7 +90,7 @@ def ListRuns(*args, **kwargs):
 
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
-@jwt_required
+@auth.login_required
 def RunWorkflow():
     data = request.form
     current_app.logger.info("RunWorkflow")

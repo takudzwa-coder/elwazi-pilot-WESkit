@@ -7,28 +7,46 @@ from weskit.login.Users import User
 
 class Local:
 
-    def __init__(self, yamlfile="users.yaml", authtype='local'):
+    def __init__(self, yamlfile="users.yaml", authtype='local', logger=None):
         self.credentialsFile = yamlfile
         self.lastupdate = 0
         self.dict = dict()
         self.dictUpdateLock = False
         self.authtype = authtype
+
+        # Setup default Logging
+        self.logException = print
+        self.logInfo = print
+        self.logWarning = print
+
+        # Specify custom Logger
+        if logger:
+            self.logException = logger.exception
+            self.logInfo = logger.info
+            self.logWarning = logger.warning
+
+        # Load usercofig from file
         self.updateCredentials()
 
     def updateCredentials(self):
+        # Avoid Thread colisons
+        if self.dictUpdateLock:
+            while self.dictUpdateLock:
+                time.sleep(0.1)
+
+        # Check if data in memory is up to date
         if os.path.getmtime(self.credentialsFile) > self.lastupdate:
-            print("*****************\nUpdate Local Users")
+            self.logInfo("********Update Local Users*********")
             self.lastupdate = os.path.getmtime(self.credentialsFile)
-            if self.dictUpdateLock:
-                while self.dictUpdateLock:
-                    time.sleep(0.1)
+
+            # Protect class to be change by other thread
             self.dictUpdateLock = True
 
             with open(self.credentialsFile, 'r') as stream:
                 try:
-                    print("Start Updating Local DB")
                     ystream = yaml.safe_load(stream)
 
+                    # Copy only valid entries
                     self.dict = {
                         key: User(key, value, self.authtype)
                         for key, value in ystream.items() if
@@ -39,19 +57,25 @@ class Local:
                             'salt'}.intersection(value)) == 3
                         }
 
+                    # Verify that File on disc has no corruped entries
                     if(len(self.dict)) != len(ystream):
-                        print(
-                                ("Warning: Skiped %d Entrys from DBfile: "
+                        self.logWarning(
+                                ("Skiped %d Entrys from DBfile: "
                                     "Invalid Format!") % (
                                     len(ystream) - len(self.dict))
                         )
+                    self.logInfo(
+                        "Loaded %d users to backend %s !" %
+                        (len(self.dict), self.authtype)
+                    )
+
                 except yaml.YAMLError as exc:
-                    print(exc)
+                    self.logException(exc)
             self.dictUpdateLock = False
-            print("End Updating LocalDB\n*****************")
+            self.logInfo("********End Updating LocalDB*********")
 
+    # Credentials return UserObject or None
     def authenticate(self, username, password):
-
         self.updateCredentials()
         if username not in self.dict:
             return(None)
@@ -63,6 +87,7 @@ class Local:
         else:
             return (None)
 
+    # Get UserObject from AuthClass default return None
     def get(self, username, default=None):
         self.updateCredentials()
         return (self.dict.get(username, default))

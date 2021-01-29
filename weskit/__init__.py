@@ -90,41 +90,65 @@ def create_app():
     #              Init Login            #
     ######################################
 
-    ############################################
-    #  config that would require code changes  #
-    ############################################
+    # Enable Login by Default
+    app.config["JWT_ENABLED"] = True
 
-    # Configure application to store JWTs in cookies
-    app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+    # check if JWT auth is enabled in config
+    if "jwt_config" in config:
+        logger.info("User Authentication: ENABLED")
 
-    # Set the cookie paths, so that you are only sending your access token
-    # cookie to the access endpoints, and only sending your refresh token
-    # to the refresh endpoint. Technically this is optional, but it is in
-    # your best interest to not send additional cookies in the request if
-    # they aren't needed.
-    app.config['JWT_ACCESS_COOKIE_PATH'] = '/ga4gh/wes/'
-    app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
+        ############################################
+        #  config that would require code changes  #
+        ############################################
 
-    ############################################
-    # Load config from config file            #
-    ############################################
-    for key, value in config["jwt_config"].items():
-        app.config[key] = value
+        # Configure application to store JWTs in cookies
+        app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 
-    jwt = JWTManager(app)
+        # Set the cookie paths, so that you are only sending your access token
+        # cookie to the access endpoints, and only sending your refresh token
+        # to the refresh endpoint. Technically this is optional, but it is in
+        # your best interest to not send additional cookies in the request if
+        # they aren't needed.
+        app.config['JWT_ACCESS_COOKIE_PATH'] = '/ga4gh/wes/'
+        app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
 
-    from weskit.login import LoginBlueprint as login_bp
-    app.register_blueprint(login_bp.login)
+        ############################################
+        # Load config from config file            #
+        ############################################
+        for key, value in config["jwt_config"].items():
+            app.config[key] = value
 
-    ############################################
-    #  Initialize local Config file            #
-    ############################################
+        jwt = JWTManager(app)
 
-    import weskit.login as login
-    if config["localAuth"]["enabled"]:
-        from weskit.login.auth import Local as localAuth
-        loginfile = config["localAuth"]["yamlPath"]
-        login.authObjDict['local'] = localAuth(loginfile, 'local')
+        from weskit.login import LoginBlueprint as login_bp
+        app.register_blueprint(login_bp.login)
+
+        ############################################
+        #  Initialize local Config file            #
+        ############################################
+
+        import weskit.login as login
+        if config["localAuth"]["enabled"]:
+            logger.info("Initialize Local Auth")
+            from weskit.login.auth import Local as localAuth
+            logger.info(
+                "Using UserManagementFile %s!" %
+                (config["localAuth"]["yamlPath"])
+            )
+
+            loginfile = config["localAuth"]["yamlPath"]
+            login.authObjDict['local'] = localAuth(
+                loginfile,
+                'local',
+                logger=app.logger
+            )
+
+    else:
+        app.config["JWT_ENABLED"] = False
+        logger.info(
+            "User Authentication: DISABLED - "
+            "'jwt_config' not present in WESKIT config!"
+        )
 
     ####################################################################
     #               Overwrite JWT default fuctions                     #

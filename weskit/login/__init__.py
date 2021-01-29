@@ -1,10 +1,12 @@
-from flask import jsonify, redirect, render_template
+from flask import jsonify, redirect, render_template, current_app
 from flask_jwt_extended import (
+    jwt_required,
     create_access_token,
     create_refresh_token,
     set_access_cookies,
     set_refresh_cookies, unset_jwt_cookies, current_user
 )
+from functools import wraps
 
 authObjDict = dict()
 
@@ -99,3 +101,19 @@ def refresh():
     resp = jsonify({'refresh': True})
     set_access_cookies(resp, access_token)
     return resp, 200
+
+
+# Switch for activating/deactivating Login
+# Here is a custom decorator that verifies the JWT is present in
+# the request, if 'JWT_SECRET_KEY' is specified
+def login_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        print(current_app.config.get('JWT_SECRET_KEY', None))
+        if current_app.config.get("JWT_ENABLED", True):
+            checkJWT = jwt_required(fn)
+            return checkJWT(*args, **kwargs)
+        # in case of deactivated JWT ignore JWT validation
+        return fn(*args, **kwargs)
+
+    return wrapper

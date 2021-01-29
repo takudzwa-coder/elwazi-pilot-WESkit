@@ -1,6 +1,5 @@
 from flask import jsonify, request, render_template, Blueprint
 from flask_jwt_extended import (
-    jwt_required,
     jwt_refresh_token_required,
     # get_jwt_identity,
     current_user
@@ -66,7 +65,7 @@ def logout():
 ###############################################################
 
 @login.route('/ga4gh/wes/user_status', methods=['GET'])
-@jwt_required
+@auth.login_required
 def protected():
     # username = get_jwt_identity()
     return jsonify({

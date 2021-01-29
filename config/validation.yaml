@@ -66,7 +66,7 @@ static_service_info:
         
 jwt_config:
   type: dict
-  required: true
+  required: false
   schema:
     JWT_COOKIE_SECURE:
       type: boolean
