@@ -1,5 +1,6 @@
 from weskit.classes.Run import Run
 from weskit.tasks.workflow import run_workflow
+from weskit.classes.WorkflowType import WorkflowType
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_time
@@ -59,7 +60,7 @@ class Manager:
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
                 running_task = run_workflow.AsyncResult(run.celery_task_id)
-                run.outputs["Snakemake"] = running_task.get()
+                run.outputs["Workflow"] = running_task.get()
         return run
 
     def update_runs(self, database, query) -> None:
@@ -144,9 +145,15 @@ class Manager:
             workflow_url = os.path.join(
                 run.execution_path,
                 secure_filename(run.request["workflow_url"]))
+        # set workflow_type
+        if WorkflowType.has_value(run.request["workflow_type"]):
+            workflow_type = WorkflowType(run.request["workflow_type"]).name
+        else:
+            workflow_type = WorkflowType.ERROR
         # execute run
         run_kwargs = {
-            "workflowfile": workflow_url,
+            "workflow_url": workflow_url,
+            "workflow_type": workflow_type,
             "workdir": run.execution_path,
             "configfiles": [os.path.join(run.execution_path, "config.yaml")]
         }

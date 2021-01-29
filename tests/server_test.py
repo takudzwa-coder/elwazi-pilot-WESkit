@@ -9,7 +9,7 @@ def get_workflow_data(workflowfile, config):
 
     data = {
         "workflow_params": workflow_params,
-        "workflow_type": "Snakemake",
+        "workflow_type": "snakemake",
         "workflow_type_version": "5.8.2",
         "workflow_url": workflowfile
     }
@@ -19,7 +19,7 @@ def test_get_service_info(test_app):
     response = test_app.get("/ga4gh/wes/v1/service-info")
     assert response.status_code == 200
 
-def test_run_workflow(test_app, celery_worker):
+def test_run_snakemake(test_app, celery_worker):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
         workflowfile=snakefile,
@@ -38,5 +38,4 @@ def test_run_workflow(test_app, celery_worker):
 
 def test_get_runs(test_app, celery_worker):
     response = test_app.get("/ga4gh/wes/v1/runs")
-    #print
     assert response.status_code == 200
