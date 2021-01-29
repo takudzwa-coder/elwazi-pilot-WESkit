@@ -10,7 +10,6 @@ from logging.config import dictConfig
 from flask import Flask
 
 from flask_jwt_extended import JWTManager
-import weskit.login
 
 
 
@@ -118,6 +117,14 @@ def create_app():
 
     from weskit.login import LoginBlueprint as login_bp
     app.register_blueprint(login_bp.login)
+    
+    
+    
+    import weskit.login
+    if config["localAuth"]["enabled"]:
+        from weskit.login.auth import Local as localAuth
+        loginfile=config["localAuth"]["yamlPath"]
+        login.authObjDict['local']= localAuth(loginfile,'local')
 
     ####################################################################
     ##              Overwrite JWT default fuctions                    ##

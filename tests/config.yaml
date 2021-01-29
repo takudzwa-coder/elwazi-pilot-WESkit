@@ -48,3 +48,9 @@ jwt_config:
     
     # Set the secret key to sign the JWTs with
     JWT_SECRET_KEY: 'super-secret'  # Change this!
+    
+    
+
+localAuth:
+  enabled: true
+  yamlPath: users.yaml

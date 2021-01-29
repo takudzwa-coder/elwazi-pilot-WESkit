@@ -6,13 +6,12 @@ from flask_jwt_extended import (
     set_refresh_cookies, unset_jwt_cookies, get_jwt_claims,current_user
 )
 
-from .AuthObj import *
 
 
+authObjDict=dict()
 
         
 ### This Function selects the backend which should be used to authenticate user ###
-### Further backends can be added to AuthObj.py and login
 def authenticateUser(username,password,method='local'):
     m=authObjDict.get(method,None)
     if m:

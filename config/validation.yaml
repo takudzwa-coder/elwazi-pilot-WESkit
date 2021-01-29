@@ -78,3 +78,14 @@ jwt_config:
       type: string
       required: true
 
+
+localAuth:
+  type: dict
+  required: true
+  schema:
+    enabled:
+      required: true
+      type: boolean
+    yamlPath:
+      required: true
+      type: string
