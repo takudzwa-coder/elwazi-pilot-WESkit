@@ -92,13 +92,13 @@ def create_app():
     ##            Init Login            ##
     ######################################
     
+    ############################################
+    ## config that would require code changes ##
+    ############################################
+    
     # Configure application to store JWTs in cookies
     app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 
-    # Only allow JWT cookies to be sent over https. In production, this
-    # should likely be True
-    app.config['JWT_COOKIE_SECURE'] = False
-    
     # Set the cookie paths, so that you are only sending your access token
     # cookie to the access endpoints, and only sending your refresh token
     # to the refresh endpoint. Technically this is optional, but it is in
@@ -106,13 +106,14 @@ def create_app():
     # they aren't needed.
     app.config['JWT_ACCESS_COOKIE_PATH'] = '/ga4gh/wes/'
     app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
-    
-    # Enable csrf double submit protection. See this for a thorough
-    # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
-    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
-    
-    # Set the secret key to sign the JWTs with
-    app.config['JWT_SECRET_KEY'] = 'super-secret'  # Change this!
+
+
+
+    ############################################
+    ## Load config from config file           ##
+    ############################################
+    for key,value in config["jwt_config"].items():
+        app.config[key]=value
     
     jwt = JWTManager(app)
 
@@ -121,6 +122,7 @@ def create_app():
 
     ####################################################################
     ##              Overwrite JWT default fuctions                    ##
+    ## This allows the login to deal with objects instead of strings  ##
     ####################################################################
     ## vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv ##
     
@@ -146,8 +148,6 @@ def create_app():
         return {'username':user.username,'authType':user.authType}
     
     
-    
-    
     # This function is called whenever a protected endpoint is accessed,
     # and must return an object based on the tokens identity.
     # This is called after the token is verified, so you can use
@@ -157,5 +157,12 @@ def create_app():
     @jwt.user_loader_callback_loader
     def user_loader_callback(identity):
         return(login.authObjDict.get('local').get(identity['username']))
+    
+    ####################################################################
+    ##              END overwrite  JWT default fuctions               ##
+    ## This allows the login to deal with objects instead of strings  ##
+    ####################################################################
+    
+    
     
     return app

@@ -63,4 +63,18 @@ static_service_info:
       required: false
       valuesrules:
         type: string
+        
+jwt_config:
+  type: dict
+  required: true
+  schema:
+    JWT_COOKIE_SECURE:
+      type: boolean
+      required: true
+    JWT_COOKIE_CSRF_PROTECT:
+      type: boolean
+      required: true
+    JWT_SECRET_KEY:
+      type: string
+      required: true
 
