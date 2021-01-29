@@ -64,7 +64,7 @@ def login(request):
         password = request.json.get('password', None)
         authres= authenticateUser(username,password)
         if not authres:
-            return jsonify({'login': False}), 401
+            return jsonify({'login': False}), 403
         return(setCookies(authres))
 
 
@@ -77,11 +77,11 @@ def login(request):
         password = request.form.get('password', None)
         authres=authenticateUser(username, password)
         if not authres:
-            return render_template('loginForm.html',hideHint="wrongHint"), 401
+            return render_template('loginForm.html',hideHint="wrongHint"), 403
         return(setCookies(authres,"/ga4gh/wes/user_status"))
 
 
-    return jsonify({'login2': False}), 401
+    return jsonify({'login': False}), 403
     
     
 # Because the JWTs are stored in an httponly cookie now, we cannot
