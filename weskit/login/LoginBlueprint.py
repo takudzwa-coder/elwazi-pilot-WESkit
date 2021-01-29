@@ -6,7 +6,7 @@ from flask_jwt_extended import (
     current_user
 )
 
-from weskit.login import __utils__ as auth
+from weskit import login as auth
 
 login = Blueprint('login', __name__, template_folder='templates')
 

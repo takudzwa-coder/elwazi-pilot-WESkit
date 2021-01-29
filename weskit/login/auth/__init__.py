@@ -2,7 +2,7 @@ import hashlib
 import time
 import os
 import yaml
-from weskit.login import User
+from weskit.login.Users import User
 
 
 class Local:
@@ -41,8 +41,10 @@ class Local:
 
                     if(len(self.dict)) != len(ystream):
                         print(
-                            "Warning: Skiped %d Entrys from DBfile: Invalid Format!" % (len(ystream) - len(self.dict))
-                            )
+                                ("Warning: Skiped %d Entrys from DBfile: "
+                                    "Invalid Format!") % (
+                                    len(ystream) - len(self.dict))
+                        )
                 except yaml.YAMLError as exc:
                     print(exc)
             self.dictUpdateLock = False
