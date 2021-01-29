@@ -68,7 +68,7 @@ def logout():
 ###############################################################
 
 
-@login.route('/api/user_status', methods=['GET'])
+@login.route('/ga4gh/wes/user_status', methods=['GET'])
 @jwt_required
 def protected():
     username = get_jwt_identity()

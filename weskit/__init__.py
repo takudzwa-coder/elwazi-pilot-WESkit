@@ -104,7 +104,7 @@ def create_app():
     # to the refresh endpoint. Technically this is optional, but it is in
     # your best interest to not send additional cookies in the request if
     # they aren't needed.
-    app.config['JWT_ACCESS_COOKIE_PATH'] = '/api/'
+    app.config['JWT_ACCESS_COOKIE_PATH'] = '/ga4gh/wes/'
     app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
     
     # Enable csrf double submit protection. See this for a thorough

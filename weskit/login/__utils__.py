@@ -73,7 +73,7 @@ def login(request):
         authres=authenticateUser(username, password)
         if not authres:
             return render_template('loginForm.html',hideHint="wrongHint"), 401
-        return(setCookies(authres,"/api/user_status"))
+        return(setCookies(authres,"/ga4gh/wes/user_status"))
 
 
     return jsonify({'login2': False}), 401
