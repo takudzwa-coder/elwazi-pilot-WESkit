@@ -2,42 +2,48 @@ from flask import jsonify, request, render_template, Blueprint
 from flask_jwt_extended import (
     jwt_required,
     jwt_refresh_token_required,
-    get_jwt_identity,
+    # get_jwt_identity,
     current_user
 )
 
 from weskit.login import __utils__ as auth
 
-login = Blueprint('login', __name__,template_folder='templates')
+login = Blueprint('login', __name__, template_folder='templates')
 
 
 ###########################################################
-##              Login / Logout / Tokenrenew..............##
+#               Login / Logout / Tokenrenew               #
 ###########################################################
 
 ##########################################
-## Authenticate User (POST JSON or FORM ##
+#  Authenticate User (POST JSON or FORM  #
 ##########################################
-
 
 @login.route('/login', methods=['POST'])
 def authenticateUser():
     return(auth.login(request))
-    
+
 
 ##########################################
-## Show Login Web Page                  ##
+#  Show Login Web Page                   #
 ##########################################
 @login.route('/login', methods=['GET'])
 def authenticateUserHTML():
-    return(render_template('loginForm.html',hideHint="hidden"))
+    return(
+        render_template(
+            'loginForm.html',
+            hideHint="hidden"
+            )
+        )
+
 
 @login.route('/', methods=['GET'])
 def authenticateUserHTMLtop():
-    return(render_template('loginForm.html',hideHint="hidden"))
+    return(render_template('loginForm.html', hideHint="hidden"))
+
 
 #########################################
-## Submit POST to get new access Token ##
+#  Submit POST to get new access Token  #
 #########################################
 
 @login.route('/refresh', methods=['POST'])
@@ -47,29 +53,24 @@ def refresh():
 
 
 ########################################
-## Logout via GET or POST             ##
+#  Logout via GET or POST              #
 ########################################
 
-
-@login.route('/logout', methods=['GET','POST'])
+@login.route('/logout', methods=['GET', 'POST'])
 def logout():
     return (auth.logout())
 
 
-
-
-
-
-
 ###############################################################
-##              Get description of user                      ##
+#               Get description of user                       #
 ###############################################################
-
 
 @login.route('/ga4gh/wes/user_status', methods=['GET'])
 @jwt_required
 def protected():
-    username = get_jwt_identity()
-    return jsonify({'currentUser': '{}'.format(current_user.username),'UserRoles': '{}'.format(current_user.roles),'Current authmethod':'{}'.format(current_user.authType)}), 200
-
-
+    # username = get_jwt_identity()
+    return jsonify({
+        'currentUser': '{}'.format(current_user.username),
+        'UserRoles': '{}'.format(current_user.roles),
+        'Current authmethod': '{}'.format(current_user.authType)
+        }), 200
