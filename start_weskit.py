@@ -1,0 +1,3 @@
+from waitress import serve
+import weskit
+serve(weskit.create_app(), host='0.0.0.0', port=8080)

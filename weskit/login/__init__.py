@@ -1,4 +1,6 @@
-from flask import jsonify, redirect, render_template, current_app
+from flask import (
+    jsonify, redirect, render_template, current_app, request
+)
 from flask_jwt_extended import (
     jwt_required,
     create_access_token,
@@ -6,16 +8,17 @@ from flask_jwt_extended import (
     set_access_cookies,
     set_refresh_cookies, unset_jwt_cookies, current_user
 )
+from typing import Union, Any, Callable
 from functools import wraps
+from weskit.login.Users import User
 
-authObjDict = dict()
 
 # This Function selects the backend which should
 # be used to authenticate user
 
 
-def authenticateUser(username, password, method='local'):
-    m = authObjDict.get(method, None)
+def authenticateUser(username: str, password: str, method: str = 'local') -> Union[User, None]:  # noqa: E501
+    m = current_app.authObject.get(method, None)
     if m:
         return(m.authenticate(username, password))
     else:
@@ -26,7 +29,7 @@ def authenticateUser(username, password, method='local'):
 # It redirects the user to a start page for a given redictURL or,
 # it returns 200 {'login':true}
 
-def setCookies(user, redictURL=None):
+def setCookies(user: str, redictURL: Union[str, None] = None) -> tuple:
     # Create the tokens we will be sending back to the user
     access_token = create_access_token(identity=user)
     refresh_token = create_refresh_token(identity=user)
@@ -54,14 +57,14 @@ def setCookies(user, redictURL=None):
 # set_refresh_cookies() will now also set the non-httponly CSRF cookies
 # as well
 
-def login(request):
+def login(request: request) -> tuple:
     # Auth via Script
     # returns 401 and {login:false}
     # or 200 and {login:true}
     if request.is_json:
         username = request.json.get('username', None)
         password = request.json.get('password', None)
-        authres = authenticateUser(username, password)
+        authres = current_app.authObject.authenticate(username, password)
         if not authres:
             return jsonify({'login': False}), 403
         return(setCookies(authres))
@@ -72,7 +75,7 @@ def login(request):
     elif len(request.form):
         username = request.form.get('username', None)
         password = request.form.get('password', None)
-        authres = authenticateUser(username, password)
+        authres = current_app.authObject.authenticate(username, password)
         if not authres:
             return render_template('loginForm.html', hideHint="wrongHint"), 403
         return(setCookies(authres, "/ga4gh/wes/user_status"))
@@ -85,13 +88,13 @@ def login(request):
 # We need the backend to send us a response to delete the cookies
 # in order to logout. unset_jwt_cookies is a helper function to
 # do just that.
-def logout():
+def logout() -> tuple:
     resp = jsonify({'logout': True})
     unset_jwt_cookies(resp)
     return resp, 200
 
 
-def refresh():
+def refresh() -> tuple:
     # Create the new access token
     current_user2 = current_user
     access_token = create_access_token(identity=current_user2)
@@ -106,7 +109,7 @@ def refresh():
 # Switch for activating/deactivating Login
 # Here is a custom decorator that verifies the JWT is present in
 # the request, if 'JWT_SECRET_KEY' is specified
-def login_required(fn):
+def login_required(fn: Callable[..., Any]) -> Union[Callable[..., Any], tuple]:  # noqa: E501
     @wraps(fn)
     def wrapper(*args, **kwargs):
         print(current_app.config.get('JWT_SECRET_KEY', None))

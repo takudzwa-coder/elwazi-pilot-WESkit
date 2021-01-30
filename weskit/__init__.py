@@ -7,7 +7,7 @@ import os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
-from flask import Flask
+from flask import Flask, current_app
 
 from flask_jwt_extended import JWTManager
 
@@ -127,21 +127,20 @@ def create_app():
         #  Initialize local Config file            #
         ############################################
 
-        import weskit.login as login
         if config["localAuth"]["enabled"]:
             logger.info("Initialize Local Auth")
-            from weskit.login.auth import Local as localAuth
+            from weskit.login.auth.Local import Local as localAuth
             logger.info(
                 "Using UserManagementFile %s!" %
                 (config["localAuth"]["yamlPath"])
             )
 
             loginfile = config["localAuth"]["yamlPath"]
-            login.authObjDict['local'] = localAuth(
+
+            app.authObject = localAuth(
                 loginfile,
                 'local',
-                logger=app.logger
-            )
+                logger=app.logger)
 
     else:
         app.config["JWT_ENABLED"] = False
@@ -184,7 +183,7 @@ def create_app():
 
     @jwt.user_loader_callback_loader
     def user_loader_callback(identity):
-        return(login.authObjDict.get('local').get(identity['username']))
+        return(current_app.authObject.get(identity['username']))
 
     ####################################################################
     #               END overwrite  JWT default fuctions                #
