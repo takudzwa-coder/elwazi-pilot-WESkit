@@ -56,9 +56,11 @@ class Manager:
         if run.run_status in running_states:
             if run.celery_task_id is not None:
                 if workflow_type == WorkflowType.SNAKEMAKE.name:
-                    running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                    running_task = \
+                        run_snakemake.AsyncResult(run.celery_task_id)
                 elif workflow_type == WorkflowType.NEXTFLOW.name:
-                    running_task = run_nextflow.AsyncResult(run.celery_task_id)
+                    running_task = \
+                        run_nextflow.AsyncResult(run.celery_task_id)
                 else:
                     raise Exception("Workflow type is not known.")
                 run.run_status = celery_to_wes_state[running_task.state]
@@ -75,9 +77,11 @@ class Manager:
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
                 if workflow_type == WorkflowType.SNAKEMAKE.name:
-                    running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                    running_task = \
+                        run_snakemake.AsyncResult(run.celery_task_id)
                 elif workflow_type == WorkflowType.NEXTFLOW.name:
-                    running_task = run_nextflow.AsyncResult(run.celery_task_id)
+                    running_task = \
+                        run_nextflow.AsyncResult(run.celery_task_id)
                 else:
                     raise Exception("Workflow type is not known.")
                 run.outputs["Workflow"] = running_task.get()
@@ -181,11 +185,13 @@ class Manager:
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
         if workflow_type == WorkflowType.SNAKEMAKE.name:
-            task = run_snakemake.apply_async(args=[],
-                                             kwargs={**run_kwargs, **self.snakemake_kwargs})
+            task = run_snakemake.apply_async(
+                args=[],
+                kwargs={**run_kwargs, **self.snakemake_kwargs})
         elif workflow_type == WorkflowType.NEXTFLOW.name:
-            task = run_nextflow.apply_async(args=[],
-                                            kwargs={**run_kwargs, **self.snakemake_kwargs})
+            task = run_nextflow.apply_async(
+                args=[],
+                kwargs={**run_kwargs, **self.snakemake_kwargs})
         else:
             raise Exception("Workflow type is not known.")
         run.celery_task_id = task.id
