@@ -1,5 +1,5 @@
 from weskit.classes.Run import Run
-from weskit.tasks.workflow import run_workflow
+from weskit.tasks.workflow import run_snakemake, run_nextflow
 from weskit.classes.WorkflowType import WorkflowType
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
@@ -47,19 +47,39 @@ class Manager:
         return run
 
     def update_state(self, run: Run) -> Run:
+        # get workflow_type
+        if WorkflowType.has_value(run.request["workflow_type"]):
+            workflow_type = WorkflowType(run.request["workflow_type"]).name
+        else:
+            workflow_type = WorkflowType.ERROR
         # check if task is running and update state
         if run.run_status in running_states:
             if run.celery_task_id is not None:
-                running_task = run_workflow.AsyncResult(run.celery_task_id)
+                if workflow_type == WorkflowType.SNAKEMAKE.name:
+                    running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                elif workflow_type == WorkflowType.NEXTFLOW.name:
+                    running_task = run_nextflow.AsyncResult(run.celery_task_id)
+                else:
+                    raise Exception("Workflow type is not known.")
                 run.run_status = celery_to_wes_state[running_task.state]
             else:
                 run.run_status = "UNKNOWN"
         return run
 
     def update_outputs(self, run: Run) -> Run:
+        # get workflow_type
+        if WorkflowType.has_value(run.request["workflow_type"]):
+            workflow_type = WorkflowType(run.request["workflow_type"]).name
+        else:
+            workflow_type = WorkflowType.ERROR
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
-                running_task = run_workflow.AsyncResult(run.celery_task_id)
+                if workflow_type == WorkflowType.SNAKEMAKE.name:
+                    running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                elif workflow_type == WorkflowType.NEXTFLOW.name:
+                    running_task = run_nextflow.AsyncResult(run.celery_task_id)
+                else:
+                    raise Exception("Workflow type is not known.")
                 run.outputs["Workflow"] = running_task.get()
         return run
 
@@ -153,7 +173,6 @@ class Manager:
         # execute run
         run_kwargs = {
             "workflow_url": workflow_url,
-            "workflow_type": workflow_type,
             "workdir": run.execution_path,
             "configfiles": [os.path.join(run.execution_path, "config.yaml")]
         }
@@ -161,8 +180,13 @@ class Manager:
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        task = run_workflow.apply_async(
-            args=[],
-            kwargs={**run_kwargs, **self.snakemake_kwargs})
+        if workflow_type == WorkflowType.SNAKEMAKE.name:
+            task = run_snakemake.apply_async(args=[],
+                                             kwargs={**run_kwargs, **self.snakemake_kwargs})
+        elif workflow_type == WorkflowType.NEXTFLOW.name:
+            task = run_nextflow.apply_async(args=[],
+                                            kwargs={**run_kwargs, **self.snakemake_kwargs})
+        else:
+            raise Exception("Workflow type is not known.")
         run.celery_task_id = task.id
         return run
