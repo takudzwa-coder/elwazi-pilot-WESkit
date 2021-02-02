@@ -52,6 +52,9 @@ static_service_info:
           default_value:
             type: string
             required: true
+          workflow_engine:
+            type: string
+            required: true
     auth_instructions_url:
       type: string
       required: true
