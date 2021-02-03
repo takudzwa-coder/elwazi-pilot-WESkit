@@ -1,4 +1,6 @@
 process sayHello {
+    publishDir './'
+
 	output:
 	file 'hello_world.txt' into output_ch
 
@@ -8,4 +10,3 @@ process sayHello {
 	"""
 }
 
-output_ch.subscribe { it.copyTo("./")  }
