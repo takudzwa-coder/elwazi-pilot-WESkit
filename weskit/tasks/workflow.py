@@ -46,7 +46,9 @@ def run_nextflow(self,
                     "run", "-name", job_id,
                     pathlib.PurePath(workflow_url).name],
                    cwd=str(pathlib.PurePath(workflow_url).parent))
-    if os.path.exists(os.path.join(pathlib.PurePath(workflow_url).parent, ".nextflow")):
-        shutil.rmtree(os.path.join(pathlib.PurePath(workflow_url).parent, ".nextflow"))
+    if os.path.exists(os.path.join(pathlib.PurePath(workflow_url).parent,
+                                   ".nextflow")):
+        shutil.rmtree(os.path.join(pathlib.PurePath(workflow_url).parent,
+                                   ".nextflow"))
 
     return outputs
