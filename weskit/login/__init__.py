@@ -10,7 +10,6 @@ from flask_jwt_extended import (
 )
 from typing import Union, Any, Callable
 from functools import wraps
-from weskit.login.Users import User
 
 
 # In case of a successful login this function sets the login cookies.
