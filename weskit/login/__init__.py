@@ -13,23 +13,6 @@ from functools import wraps
 from weskit.login.Users import User
 
 
-# This Function selects the backend which should
-# be used to authenticate user
-
-
-def authenticateUser(
-        username: str,
-        password: str,
-        method: str = 'local'
-) -> Union[User, None]:
-
-    m = current_app.authObject.get(method, None)
-    if m:
-        return(m.authenticate(username, password))
-    else:
-        return(None)
-
-
 # In case of a successful login this function sets the login cookies.
 # It redirects the user to a start page for a given redictURL or,
 # it returns 200 {'login':true}
