@@ -17,7 +17,12 @@ from weskit.login.Users import User
 # be used to authenticate user
 
 
-def authenticateUser(username: str, password: str, method: str = 'local') -> Union[User, None]:  # noqa: E501
+def authenticateUser(
+        username: str,
+        password: str,
+        method: str = 'local'
+) -> Union[User, None]:
+
     m = current_app.authObject.get(method, None)
     if m:
         return(m.authenticate(username, password))
@@ -109,7 +114,10 @@ def refresh() -> tuple:
 # Switch for activating/deactivating Login
 # Here is a custom decorator that verifies the JWT is present in
 # the request, if 'JWT_SECRET_KEY' is specified
-def login_required(fn: Callable[..., Any]) -> Union[Callable[..., Any], tuple]:  # noqa: E501
+def login_required(
+        fn: Callable[..., Any]
+) -> Union[Callable[..., Any], tuple]:
+
     @wraps(fn)
     def wrapper(*args, **kwargs):
         print(current_app.config.get('JWT_SECRET_KEY', None))

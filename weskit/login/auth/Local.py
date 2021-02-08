@@ -8,7 +8,13 @@ from typing import Union
 
 class Local:
 
-    def __init__(self, yamlfile: str = "users.yaml", authtype: str = 'local', logger=None) -> None:  # noqa: E501
+    def __init__(
+        self,
+        yamlfile: str = "users.yaml",
+        authtype: str = 'local',
+        logger=None
+    ) -> None:
+
         self.credentialsFile = yamlfile
         self.lastupdate = 0
         self.dict = dict()
