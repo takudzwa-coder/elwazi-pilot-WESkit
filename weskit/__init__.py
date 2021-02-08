@@ -7,7 +7,9 @@ import os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
-from flask import Flask
+from flask import Flask, current_app
+
+from flask_jwt_extended import JWTManager
 
 
 def read_swagger():
@@ -83,5 +85,109 @@ def create_app():
 
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
+
+    ######################################
+    #              Init Login            #
+    ######################################
+
+    # Enable Login by Default
+    app.config["JWT_ENABLED"] = True
+
+    # check if JWT auth is enabled in config
+    if "jwt_config" in config:
+        logger.info("User Authentication: ENABLED")
+
+        ############################################
+        #  config that would require code changes  #
+        ############################################
+
+        # Configure application to store JWTs in cookies
+        app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+
+        # Set the cookie paths, so that you are only sending your access token
+        # cookie to the access endpoints, and only sending your refresh token
+        # to the refresh endpoint. Technically this is optional, but it is in
+        # your best interest to not send additional cookies in the request if
+        # they aren't needed.
+        app.config['JWT_ACCESS_COOKIE_PATH'] = '/ga4gh/wes/'
+        app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
+
+        ############################################
+        # Load config from config file            #
+        ############################################
+        for key, value in config["jwt_config"].items():
+            app.config[key] = value
+
+        jwt = JWTManager(app)
+
+        from weskit.login import LoginBlueprint as login_bp
+        app.register_blueprint(login_bp.login)
+
+        ############################################
+        #  Initialize local Config file            #
+        ############################################
+
+        if config["localAuth"]["enabled"]:
+            logger.info("Initialize Local Auth")
+            from weskit.login.auth.Local import Local as localAuth
+            logger.info(
+                "Using UserManagementFile %s!" %
+                (config["localAuth"]["yamlPath"])
+            )
+
+            loginfile = config["localAuth"]["yamlPath"]
+
+            app.authObject = localAuth(
+                loginfile,
+                'local',
+                logger=app.logger)
+
+    else:
+        app.config["JWT_ENABLED"] = False
+        logger.info(
+            "User Authentication: DISABLED - "
+            "'jwt_config' not present in WESKIT config!"
+        )
+
+    ####################################################################
+    #               Overwrite JWT default fuctions                     #
+    #  This allows the login to deal with objects instead of strings   #
+    ####################################################################
+    #  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv  #
+
+    # Create a function that will be called whenever create_access_token
+    # is used. It will take whatever object is passed into the
+    # create_access_token method, and lets us define what custom claims
+    # should be added to the access token.
+
+    @jwt.user_claims_loader
+    def add_claims_to_access_token(user):
+        if len(user.roles):
+            return {'roles': user.roles}
+        return(None)
+
+    # Create a function that will be called whenever create_access_token
+    # is used. It will take whatever object is passed into the
+    # create_access_token method, and lets us define what the identity
+    # of the access token should be.
+    @jwt.user_identity_loader
+    def user_identity_lookup(user):
+        return {'username': user.username, 'authType': user.authType}
+
+    # This function is called whenever a protected endpoint is accessed,
+    # and must return an object based on the tokens identity.
+    # This is called after the token is verified, so you can use
+    # get_jwt_claims() in here if desired. Note that this needs to
+    # return None if the user could not be loaded for any reason,
+    # such as not being found in the underlying data store
+
+    @jwt.user_loader_callback_loader
+    def user_loader_callback(identity):
+        return(current_app.authObject.get(identity['username']))
+
+    ####################################################################
+    #               END overwrite  JWT default fuctions                #
+    #  This allows the login to deal with objects instead of strings   #
+    ####################################################################
 
     return app
