@@ -23,7 +23,7 @@ def test_get_service_info(test_app):
 def test_LoginRestriction(test_app):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
-        snakefile=snakefile,
+        workflowfile=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     assert response.status_code == 401
@@ -62,7 +62,7 @@ def test_logout(test_app):
 def test_Logout_Successfull(test_app):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
-        snakefile=snakefile,
+        workflowfile=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     assert response.status_code == 401
