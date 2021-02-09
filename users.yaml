@@ -1,0 +1,11 @@
+test:
+  password: 1fa8a6c55d5a474ebd9382779b3b769b5c985679fad831357e290c19d0ad4e12
+  roles: 
+    - Admin
+    - default
+  salt: 56babfc7-fc0f-490e-9501-5582369d7b7d
+test2:
+  password: 9660630c25af3d5e6faec61d24379fb8b38fc3cc6c7f8547809f60a045c3d49e
+  roles: 
+    - default
+  salt: 8fe36f4c-8817-4de5-8eee-d1f4616d8666
