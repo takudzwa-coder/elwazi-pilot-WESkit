@@ -25,6 +25,7 @@ services:
       - ${WESKIT_DATA}:/weskit_data
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
+      - ./users.yaml:/weskit/users.yaml:ro
     networks:
       - backend
     working_dir: /weskit
