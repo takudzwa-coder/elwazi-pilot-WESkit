@@ -80,6 +80,13 @@ export WESKIT_ROOT=/PATH/TO/WESKIT/
 
 docker stack deploy --compose-file=docker_stack.yaml weskit
 ```
+### Login / Usermanagement
+
+WESkit has an integrated Usermanagement. Hints for the configuration and how to add users can be found [here](./weskit/login/README.md).
+
+The per default the Login/ Usermanagement is activated. The default users is `test` and has the password `test`.
+Try to login at [https://localhost:5000/login](https://localhost:5000/login)
+
 
 ## Development
 
