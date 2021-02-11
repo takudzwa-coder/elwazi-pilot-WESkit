@@ -178,6 +178,7 @@ class Manager:
         run_kwargs = {
             "workflow_url": workflow_url,
             "workdir": run.execution_path,
+            "publish_dir": run.request["publish_dir"],
             "configfiles": [os.path.join(run.execution_path, "config.yaml")]
         }
         run.start_time = get_current_time()

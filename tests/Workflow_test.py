@@ -4,6 +4,9 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
 from test_utils import get_mock_run
 
+
+
+
 def test_prepare_execution(manager):
     
     # 1.) use workflow on server
@@ -53,7 +56,8 @@ def test_execute_snakemake(manager, celery_worker):
 def test_execute_nextflow(manager, celery_worker):
 
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf3/helloworld.nf"),
-                       workflow_type="nextflow")
+                       workflow_type="nextflow",
+                       publish_dir=os.path.join(os.getcwd(), "tests/wf3"))
     run = manager.prepare_execution(run, files=[])
     manager.execute(run)
     while not run.run_status_check("COMPLETE"):
