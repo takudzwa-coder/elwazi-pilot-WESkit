@@ -1,10 +1,10 @@
-# WESkit Login System
+# **WESkit Login System**
 
-## WESkit Login Endpoints
+# WESkit Login Endpoints
 
-The WESkit Login System provides 4 endpoints. Login Examples via script can be found here: 
+The WESkit Login System provides 4 endpoints. Login Examples via script can be found here: [WESkit/API_demo/API_demo_Requests.py](../../API_demo/API_demo_Requests.py)
 
-### /login for Machienes
+## /login for Machienes
 Send a post request to `/login` with a json dict containing:
 ```json
 {"username":"test",
@@ -19,28 +19,28 @@ If the login was unsuccessfull status `403` is returned and the json string `{"l
 
 If you get `302` you using a form instead of json for submitting the credentials!
 
-### /login for Humans
+## /login for Humans
 Visit / or / login with your browser and provide there your credentials.
 
 If the login is correct the JWT cookies will be set and you will be redirected to `/ga4gh/wes/user_status`.
 Otherwise the the page reloads.
 
-### /logout
+## /logout
 Throw a GET or POST request to this endpoint and your cookies will be deleted on the client and server.
 
-### /refresh
+## /refresh
 
 Throw a POST request to this endpoint and your will recieve a new JWT access cookie. Be aware that this dependent on the `JWT_COOKIE_CSRF_PROTECT` defined in the WESkit config file!
 
-### /ga4gh/wes/user_status
+## /ga4gh/wes/user_status
 At GET request this endpoind shows the name of the user and its roles.
 
-## Configuration
+# Configuration
 The WESkit Login System is configured by two files:
 * WESkit `config.yaml` file
 * `users.yaml`
 
-### config.yaml
+## config.yaml
 The WESkit login part of the WESkit config should look similar to:
 ```yaml
 # If this block is missing WESkit will act without login
@@ -66,42 +66,46 @@ localAuth:
   enabled: true    # currently always true!
   yamlPath: 'users.yaml'  # Path to users.yaml should not be changed if `docker stack` is used!
 ```
-#### jwt_config
+### jwt_config Block
 A missing jwt_config block will be interpreted as "open WESkit". No login is required. In the most cases you want to set this block!
 
-#### JWT_COOKIE_SECURE
-Session Cookies will be only distributed via SSL secured connections. If you don't use an reverse proxy this should be true
+**JWT_COOKIE_SECURE**
 
-#### JWT_COOKIE_CSRF_PROTECT
-While this option is false it is possible to get a new access by calling `{host}/refresh` token while the old one is valid. In the most cases this is an unwanted behavior. Set it to true
+Session Cookies will be only distributed via SSL secured connections. If you do not use a reverse proxy this should be `true`!
 
-#### JWT_SECRET_KEY
+**JWT_COOKIE_CSRF_PROTECT**
 
-**Important: ** this option musst be replaced by a very long random string!!  If this string could be guessed or gets lost attackers can authenticate as arbitary user! 
+While this option is false it is possible to get a new access by calling `{host}/refresh` token while the old one is valid. In the most cases this is an unwanted behavior. Set it to `true`!
 
-#### localAuth
+**JWT_SECRET_KEY**
+
+**Important:** this option musst be replaced by a very long random string!!  If this string could be guessed or gets lost attackers can authenticate as arbitary user! 
+
+**localAuth**
 This block should be untouched. Its a feature for further login methods. If WESkit runs outside an container you can change the path of the user user.yaml
 
-### users.yaml
+## users.yaml
 The `users.yaml` file contains a dictionary of each username(key) and a mandatory list of user attributs:
 * roles (list of one or more roles of currently `['Admin','default']`)
 * salt (long random string)
 * password (hashed string of `sha256(password+salt)`)
 
 Invalid Entrys were skipted at while loading the users.yaml by WESkit.
-Changes of the `users.yaml` were tracked by the WESkit login system. Therefore, changes are immediatly loaded into WESkit.
+Changes of the `users.yaml` were tracked by the WESkit login system. Therefore, changes are immediatly loaded into WESkit. This file is read-only mounted into the docker stack. Changes on the host takes immediatly effect on the container.
 
-**Important: ** Remove the test user in an productive environment!
+**Important:** Remove the test user in an productive environment!
+
+ 
 
 
-## Edit the users.yaml
-There is a compfort tool `LocalUserManagement.py` to edit the users.yaml file. It is able to:
+# `LocalUserManagement.py`
+There is a comfort tool `LocalUserManagement.py` to edit the users.yaml file. It is able to:
 * add users
 * remove users
 * list all users
 * changeRoles of a user
 
-### Example:
+## Example:
 
 ```bash
 python LocalUserManagement.py add users.yaml
