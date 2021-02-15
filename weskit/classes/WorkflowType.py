@@ -2,7 +2,6 @@ import enum
 
 
 class WorkflowType(enum.Enum):
-    ERROR = "error"
     SNAKEMAKE = "snakemake"
     NEXTFLOW = "nextflow"
 

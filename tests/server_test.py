@@ -39,6 +39,7 @@ def test_run_snakemake(test_app, celery_worker):
         workflowfile=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
+    assert response.status_code == 200
     run_id = response.json["run_id"]
     running = True
     while running:
@@ -48,7 +49,6 @@ def test_run_snakemake(test_app, celery_worker):
         )
         if (status.json == "COMPLETE"):
             running = False
-    assert response.status_code == 200
 
 def test_get_runs(test_app, celery_worker):
     response = test_app.get("/ga4gh/wes/v1/runs")

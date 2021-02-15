@@ -58,7 +58,7 @@ def database_container():
     yield db_container
 
 @pytest.fixture(scope="session")
-def database_connection(database_container):
+def database(database_container):
     from weskit import create_database
 
     database = create_database()
@@ -86,17 +86,21 @@ def celery_worker_pool():
     return 'prefork'
 
 
+@pytest.fixture(scope='session')
+def celery_enable_logging():
+    return True
+
+
 @pytest.fixture(scope="session")
-def service_info(test_config, swagger, database_connection):
+def service_info(test_config, swagger, database):
     yield ServiceInfo(
         test_config["static_service_info"],
         swagger,
-        database_connection
+        database
     )
 
-
 @pytest.fixture(scope="session")
-def swagger(database_connection):
+def swagger(database):
     with open("weskit/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
@@ -104,7 +108,7 @@ def swagger(database_connection):
 
 
 @pytest.fixture(scope="session")
-def manager(database_connection, redis_container, test_config):
+def manager(database, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     from weskit.classes.Manager import Manager

@@ -1,6 +1,7 @@
 import enum
+from typing import TypeVar
 
-
+T = TypeVar('T', bound='RunStatus')
 class RunStatus(enum.Enum):
     UNKNOWN = 0
     QUEUED = 1
@@ -13,8 +14,8 @@ class RunStatus(enum.Enum):
     CANCELED = 8
     CANCELING = 9
 
-    def encode(self):
+    def __repr__(self) -> str:
         return self.name
 
-    def decode(name):
+    def fromString(name: str) -> T:
         return RunStatus[name]

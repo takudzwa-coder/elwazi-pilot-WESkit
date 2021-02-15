@@ -1,6 +1,5 @@
 from weskit.classes.RunStatus import RunStatus
 
-
 class Run:
     """ This is a Run."""
 
@@ -17,7 +16,7 @@ class Run:
         self.execution_path = data.get("execution_path", [])
         self.outputs = data.get("outputs", {})
         self.run_log = data.get("run_log", {})
-        self.run_status = data.get("run_status", "UNKNOWN")
+        self.run_status = RunStatus.fromString(data.get("run_status", "UNKNOWN"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])
 
@@ -29,7 +28,7 @@ class Run:
             "request_time": self.__request_time,
             "run_id": self.__run_id,
             "run_log": self.run_log,
-            "run_status": self.run_status,
+            "run_status": self.run_status.name,
             "outputs": self.outputs,
             "start_time": self.start_time,
             "task_logs": self.task_logs
@@ -39,7 +38,7 @@ class Run:
         return {
             "run_id": self.__run_id,
             "request": self.__request,
-            "state": self.run_status,
+            "state": self.run_status.name,
             "run_log": self.run_log,
             "task_logs": self.task_logs,
             "outputs": self.outputs
@@ -78,15 +77,12 @@ class Run:
         self.__run_log = run_log
 
     @property
-    def run_status(self):
-        return RunStatus[self.__run_status].name
+    def run_status(self) -> RunStatus:
+        return self.__run_status
 
     @run_status.setter
-    def run_status(self, run_status: str):
-        self.__run_status = RunStatus[run_status].name
-
-    def run_status_check(self, status: str) -> bool:
-        return RunStatus[self.run_status] == RunStatus[status]
+    def run_status(self, run_status: RunStatus):
+        self.__run_status = run_status
 
     @property
     def outputs(self):
