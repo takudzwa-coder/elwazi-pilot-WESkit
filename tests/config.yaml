@@ -11,23 +11,36 @@ ENV: development
 TESTING: true
 
 static_service_info:
+    # The workflow_type_versions need to be among the workflow_engine_versions
+    # keys.
     workflow_type_versions:
-        Snakemake:
+        snakemake:
             workflow_type_version:
-                - "5"
+              - "5"
+        nextflow:
+            workflow_type_version:
+              - "20"
     
     supported_filesystem_protocols:
         - s3
         - posix
     
     workflow_engine_versions:
-        Snakemake: "5.8.2"
-    
+        snakemake: "5.8.2"
+        nextflow: "20.10.0"
+
+    # The workflow_engine values need to among the workflow_engine_versions
+    # keys.
     default_workflow_engine_parameters:
-        - name: "cores"
+        - workflow_engine: "snakemake"
+          name: "cores"
           type: "int"
           default_value: "1"
-          workflow_engine: "snakemake"
+        - workflow_engine: "nextflow"
+          name: "cores"
+          type: "int"
+          default_value: "1"
+
     
     auth_instructions_url: "https://somewhere.org"
     

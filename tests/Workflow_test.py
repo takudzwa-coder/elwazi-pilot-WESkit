@@ -1,6 +1,5 @@
-import json, yaml, sys, time, uuid, os, shutil, subprocess, glob
+import time, os
 from weskit.classes.Database import Database
-from weskit.classes.Run import Run
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
 from test_utils import get_mock_run
@@ -42,7 +41,6 @@ def test_snakemake_prepare_execution(manager):
 
 
 def test_execute_snakemake(database: Database, manager, celery_worker):
-    from weskit.classes.Manager import Manager
     test_failed_status = [
        RunStatus.UNKNOWN,
        RunStatus.EXECUTOR_ERROR,
@@ -51,71 +49,59 @@ def test_execute_snakemake(database: Database, manager, celery_worker):
        RunStatus.CANCELING
        ]
     timeout_seconds = 120
-    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"),
+    run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
+                                                 "tests/wf1/Snakefile"),
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
     start_time = time.time()
-    while True:
+    success = False
+    while not success:
         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
         status = run.run_status
-        if status == RunStatus.COMPLETE:
-            assert "hello_world.txt" in run.outputs["Workflow"]
-            break  # = success
-        else:
+        if status != RunStatus.COMPLETE:
             assert not status in test_failed_status
+            print("Waiting ...")
+            time.sleep(1)
             run = manager.update_run(run)
             database.update_run(run)
+            continue
+        assert "hello_world.txt" in run.outputs["Workflow"]
+        success = True
+
+
+def test_execute_nextflow(database: Database, manager, celery_worker):
+    test_failed_status = [
+       RunStatus.UNKNOWN,
+       RunStatus.EXECUTOR_ERROR,
+       RunStatus.SYSTEM_ERROR,
+       RunStatus.CANCELED,
+       RunStatus.CANCELING
+       ]
+    timeout_seconds = 120
+    run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
+                                                 "tests/wf3/helloworld.nf"),
+                       workflow_type="nextflow")
+    run = manager.prepare_execution(run, files=[])
+    manager.execute(run)
+    start_time = time.time()
+    success = False
+    while not success:
+        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
+        status = run.run_status
+        if status != RunStatus.COMPLETE:
+            assert not status in test_failed_status
             time.sleep(1)
+            run = manager.update_run(run)
+            database.update_run(run)
+        assert os.path.isfile(os.path.join(os.getcwd(), "tests/wf3/hello_world.txt"))
+        success = True
 
 
-# def test_execute_nextflow(database: Database, manager, celery_worker):
-#     from weskit.classes.Manager import Manager
-#     test_failed_status = [
-#        RunStatus.UNKNOWN,
-#        RunStatus.EXECUTOR_ERROR,
-#        RunStatus.SYSTEM_ERROR,
-#        RunStatus.CANCELED,
-#        RunStatus.CANCELING
-#        ]
-#     timeout_seconds = 120
-#     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf3/helloworld.nf"),
-#                        workflow_type="nextflow")
-#     run = manager.prepare_execution(run, files=[])
-#     manager.execute(run)
-#     start_time = time.time()
-#     while True:
-#         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
-#         status = run.run_status
-#         if status == RunStatus.COMPLETE:
-#             assert os.path.isfile(os.path.join(os.getcwd(), "tests/wf3/hello_world.txt"))
-#             break  # = success
-#         else:
-#             assert not status in test_failed_status
-#             run = manager.update_run(run)
-#             database.update_run(run)
-#             time.sleep(1)
-
-
-def test_cancel_workflow(manager, celery_worker):
+def test_cancel_workflow(manager, celery_worker, redis_container):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"),
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
     manager.cancel(run)
     assert run.run_status == RunStatus.CANCELED
-
-
-def test_update_all_runs(manager, celery_worker, database):
-    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"),
-                       workflow_type="snakemake")
-    database.insert_run(run)
-    run = manager.prepare_execution(run, files=[])
-    run = manager.execute(run)
-    database.update_run(run)
-    while not run.run_status == RunStatus.COMPLETE:
-        time.sleep(1)
-        run = manager.update_state(run)
-    manager.update_runs(database, query={})
-    db_run = database.get_run(run_id=run.run_id)
-    assert db_run.run_status == RunStatus.COMPLETE

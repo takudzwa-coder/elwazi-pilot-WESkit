@@ -20,7 +20,6 @@ celery_to_wes_state = {
     "REVOKED": RunStatus.CANCELED
 }
 
-
 running_states = [
     RunStatus.QUEUED,
     RunStatus.INITIALIZING,
@@ -35,13 +34,19 @@ via workflow_attachments."""
 
 
 class Manager:
+
     def __init__(self, config: dict, datadir: str) -> None:
-        self.snakemake_kwargs = {}
+        self.workflow_kwargs = {}
         for parameter in (config["static_service_info"]
                                 ["default_workflow_engine_parameters"]):
-            if parameter["workflow_engine"] == "snakemake":
-                self.snakemake_kwargs[parameter["name"]] = eval(
+            workflow_engine = parameter["workflow_engine"].lower()
+            if workflow_engine == "snakemake":
+                self.workflow_kwargs[parameter["name"]] = eval(
                     parameter["type"])(parameter["default_value"])
+            elif workflow_engine == "nextflow":
+                self.workflow_kwargs[parameter["name"]] = eval(
+                    parameter["type"])(parameter["default_value"])
+
         self.datadir = datadir
 
     def cancel(self, run: Run) -> Run:
@@ -54,7 +59,7 @@ class Manager:
         if WorkflowType.has_value(run.request["workflow_type"]):
             workflow_type = WorkflowType(run.request["workflow_type"]).name
         else:
-            workflow_type = WorkflowType.ERROR
+            raise Exception("Workflow type is not known.")
         # check if task is running and update state
         if run.run_status in running_states:
             if run.celery_task_id is not None:
@@ -194,11 +199,11 @@ class Manager:
         if workflow_type == WorkflowType.SNAKEMAKE:
             task = run_snakemake.apply_async(
                 args=[],
-                kwargs={**run_kwargs, **self.snakemake_kwargs})
+                kwargs={**run_kwargs, **self.workflow_kwargs})
         elif workflow_type == WorkflowType.NEXTFLOW:
             task = run_nextflow.apply_async(
                 args=[],
-                kwargs={**run_kwargs, **self.snakemake_kwargs})
+                kwargs={**run_kwargs, **self.workflow_kwargs})
         else:
             raise Exception("Workflow type is not known.")
         run.celery_task_id = task.id
