@@ -1,5 +1,6 @@
 from weskit.classes.RunStatus import RunStatus
 
+
 class Run:
     """ This is a Run."""
 
@@ -16,7 +17,8 @@ class Run:
         self.execution_path = data.get("execution_path", [])
         self.outputs = data.get("outputs", {})
         self.run_log = data.get("run_log", {})
-        self.run_status = RunStatus.fromString(data.get("run_status", "UNKNOWN"))
+        self.run_status = RunStatus.\
+            from_string(data.get("run_status", "UNKNOWN"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])
 

@@ -1,7 +1,10 @@
 import enum
 from typing import TypeVar
 
+
 T = TypeVar('T', bound='RunStatus')
+
+
 class RunStatus(enum.Enum):
     UNKNOWN = 0
     QUEUED = 1
@@ -17,5 +20,6 @@ class RunStatus(enum.Enum):
     def __repr__(self) -> str:
         return self.name
 
-    def fromString(name: str) -> T:
+    @staticmethod
+    def from_string(name: str) -> T:
         return RunStatus[name]

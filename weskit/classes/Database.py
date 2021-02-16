@@ -1,6 +1,5 @@
 import uuid
 from weskit.classes.Run import Run
-from weskit.utils import get_current_timestamp
 from bson.son import SON
 from weskit.classes.RunStatus import RunStatus
 from typing import List, Optional
