@@ -1,6 +1,6 @@
 import uuid
 from weskit.classes.Run import Run
-from weskit.utils import get_current_time
+from weskit.utils import get_current_timestamp
 from bson.son import SON
 from weskit.classes.RunStatus import RunStatus
 from typing import List, Optional
@@ -33,9 +33,6 @@ class Database:
             for run_data in runs_data:
                 runs.append(Run(run_data))
         return runs
-
-    def get_current_time(self):
-        return get_current_time()
 
     def list_run_ids_and_states(self):
         return list(self._db_runs().find(
