@@ -1,8 +1,6 @@
 import pathlib
 import subprocess
 import os
-import uuid
-import shutil
 from weskit.tasks.celery import celery_app
 from snakemake import snakemake
 
@@ -11,7 +9,6 @@ from snakemake import snakemake
 def run_snakemake(self,
                   workflow_url: os.path,
                   workdir: os.path,
-                  publish_dir: os.path,
                   configfiles: list,
                   **kwargs):
 
@@ -30,17 +27,11 @@ def run_snakemake(self,
 def run_nextflow(self,
                  workflow_url: os.path,
                  workdir: os.path,
-                 publish_dir: os.path,
                  configfiles: list,
                  **kwargs):
 
     outputs = []
-
-    if not str(publish_dir):
-        publish_dir = os.path.join(workdir, "output")
-
-    subprocess.run(["nextflow", "run", workflow_url,
-                    "--outputDir=" + publish_dir],
+    subprocess.run(["nextflow", "run", workflow_url],
                    cwd=str(pathlib.PurePath(workdir)))
 
     return outputs

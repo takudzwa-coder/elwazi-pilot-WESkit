@@ -72,31 +72,33 @@ def test_execute_snakemake(database: Database, manager, celery_worker):
             time.sleep(1)
 
 
-def test_execute_nextflow(database: Database, manager, celery_worker):
-    test_failed_status = [
-       RunStatus.UNKNOWN,
-       RunStatus.EXECUTOR_ERROR,
-       RunStatus.SYSTEM_ERROR,
-       RunStatus.CANCELED,
-       RunStatus.CANCELING
-       ]
-    timeout_seconds = 120
-    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf3/helloworld.nf"),
-                       workflow_type="nextflow")
-    run = manager.prepare_execution(run, files=[])
-    manager.execute(run)
-    start_time = time.time()
-    while True:
-        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
-        status = run.run_status
-        if status == RunStatus.COMPLETE:
-            assert os.path.isfile(os.path.join(os.getcwd(), "tests/wf3/hello_world.txt"))
-            break  # = success
-        else:
-            assert not status in test_failed_status
-            run = manager.update_run(run)
-            database.update_run(run)
-            time.sleep(1)
+# def test_execute_nextflow(database: Database, manager, celery_worker):
+#     from weskit.classes.Manager import Manager
+#     test_failed_status = [
+#        RunStatus.UNKNOWN,
+#        RunStatus.EXECUTOR_ERROR,
+#        RunStatus.SYSTEM_ERROR,
+#        RunStatus.CANCELED,
+#        RunStatus.CANCELING
+#        ]
+#     timeout_seconds = 120
+#     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf3/helloworld.nf"),
+#                        workflow_type="nextflow")
+#     run = manager.prepare_execution(run, files=[])
+#     manager.execute(run)
+#     start_time = time.time()
+#     while True:
+#         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
+#         status = run.run_status
+#         if status == RunStatus.COMPLETE:
+#             assert os.path.isfile(os.path.join(os.getcwd(), "tests/wf3/hello_world.txt"))
+#             break  # = success
+#         else:
+#             assert not status in test_failed_status
+#             run = manager.update_run(run)
+#             database.update_run(run)
+#             time.sleep(1)
+
 
 def test_cancel_workflow(manager, celery_worker):
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"),
