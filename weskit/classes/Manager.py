@@ -196,15 +196,8 @@ class Manager:
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        if workflow_type == WorkflowType.SNAKEMAKE:
-            task = run_snakemake.apply_async(
-                args=[],
-                kwargs={**run_kwargs, **self.workflow_kwargs})
-        elif workflow_type == WorkflowType.NEXTFLOW:
-            task = run_nextflow.apply_async(
-                args=[],
-                kwargs={**run_kwargs, **self.workflow_kwargs})
-        else:
-            raise Exception("Workflow type is not known.")
+        task = run_snakemake.apply_async(
+            args=[],
+            kwargs={**run_kwargs, **self.workflow_kwargs})
         run.celery_task_id = task.id
         return run
