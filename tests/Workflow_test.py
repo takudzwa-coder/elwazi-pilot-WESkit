@@ -66,6 +66,8 @@ def test_execute_snakemake(database: Database, manager, celery_worker):
             run = manager.update_run(run)
             database.update_run(run)
             continue
+        assert os.path.isfile(
+            os.path.join(run.execution_path, "hello_world.txt"))
         assert "hello_world.txt" in run.outputs["Workflow"]
         success = True
 
@@ -94,12 +96,15 @@ def test_execute_nextflow(database: Database, manager, celery_worker):
             time.sleep(1)
             run = manager.update_run(run)
             database.update_run(run)
-        assert os.path.isfile(os.path.join(os.getcwd(), "tests/wf3/hello_world.txt"))
+        assert os.path.isfile(
+            os.path.join(run.execution_path, "hello_world.txt"))
+        assert "hello_world.txt" in run.outputs["Workflow"]
         success = True
 
 
 def test_cancel_workflow(manager, celery_worker, redis_container):
-    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"),
+    run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
+                                                 "tests/wf2/Snakefile"),
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)

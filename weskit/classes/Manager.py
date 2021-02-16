@@ -147,7 +147,9 @@ class Manager:
         run.run_status = RunStatus.INITIALIZING
 
         # prepare run directory
-        run_dir = os.path.abspath(os.path.join(self.datadir, run.run_id))
+        run_dir = os.path.abspath(os.path.join(self.datadir,
+                                               run.run_id[0:4],
+                                               run.run_id))
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
         with open(run_dir + "/config.yaml", "w") as ff:
@@ -196,8 +198,15 @@ class Manager:
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        task = run_snakemake.apply_async(
-            args=[],
-            kwargs={**run_kwargs, **self.workflow_kwargs})
+        if workflow_type == WorkflowType.SNAKEMAKE:
+            task = run_snakemake.apply_async(
+                args=[],
+                kwargs={**run_kwargs, **self.workflow_kwargs})
+        elif workflow_type == WorkflowType.NEXTFLOW:
+            task = run_nextflow.apply_async(
+                args=[],
+                kwargs={**run_kwargs, **self.workflow_kwargs})
+        else:
+            raise Exception("Workflow type is not known.")
         run.celery_task_id = task.id
         return run
