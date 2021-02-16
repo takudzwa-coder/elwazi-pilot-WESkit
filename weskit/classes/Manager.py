@@ -2,7 +2,7 @@ from weskit.classes.Run import Run
 from weskit.tasks.snakemake import run_snakemake
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
-from weskit.utils import get_current_time
+from weskit.utils import get_current_timestamp
 from typing import Optional
 import json
 import os
@@ -72,7 +72,7 @@ class Manager:
     def create_and_insert_run(self, request, database) -> Optional[Run]:
         run = Run(data={"run_id": database._create_run_id(),
                         "run_status": "UNKNOWN",
-                        "request_time": database.get_current_time(),
+                        "request_time": get_current_timestamp(),
                         "request": request})
         if database.insert_run(run):
             return run
@@ -144,13 +144,14 @@ class Manager:
             workflow_url = os.path.join(
                 run.execution_path,
                 secure_filename(run.request["workflow_url"]))
+
         # execute run
         run_kwargs = {
             "snakefile": workflow_url,
             "workdir": run.execution_path,
             "configfiles": [os.path.join(run.execution_path, "config.yaml")]
         }
-        run.start_time = get_current_time()
+        run.start_time = get_current_timestamp()
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
