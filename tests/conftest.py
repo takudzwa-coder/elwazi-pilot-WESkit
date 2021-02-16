@@ -1,14 +1,7 @@
-import logging
-import os
-import pytest
-import yaml
-from weskit.classes.Database import Database
+import os, pytest, yaml
 from weskit.classes.ServiceInfo import ServiceInfo
-from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
-from logging.config import dictConfig
-from weskit.classes.RunStatus import RunStatus
 
 
 def get_redis_url(redis_container):
@@ -57,6 +50,7 @@ def database_container():
 
     yield db_container
 
+
 @pytest.fixture(scope="session")
 def database(database_container):
     from weskit import create_database
@@ -66,11 +60,12 @@ def database(database_container):
     yield database
     database._db_runs().drop()
 
+
 @pytest.fixture(scope="session")
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
-    return redis_container
+    yield redis_container
 
 
 @pytest.fixture(scope="session")

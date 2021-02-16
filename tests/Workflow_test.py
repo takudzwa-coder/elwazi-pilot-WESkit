@@ -53,16 +53,13 @@ def test_execute_snakemake(database: Database, manager, celery_worker):
     timeout_seconds = 120
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf1/Snakefile"),
                        workflow_type="snakemake")
-    print("prep")
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
     start_time = time.time()
     while True:
         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
         status = run.run_status
-        print(status, file=sys.stderr)
         if status == RunStatus.COMPLETE:
-            print(run.outputs, file=sys.stderr)
             assert "hello_world.txt" in run.outputs["Workflow"]
             break  # = success
         else:

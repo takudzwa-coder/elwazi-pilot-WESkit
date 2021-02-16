@@ -57,7 +57,7 @@ def GetRunStatus(run_id):
             return jsonify({"msg": "Could not find %s" % run_id,
                             "status_code": 0}), 404
         else:
-            return jsonify(str(run.run_status)), 200
+            return jsonify(run.run_status.name), 200
     except Exception as e:
         current_app.logger.error(e, exc_info=True)
         raise e

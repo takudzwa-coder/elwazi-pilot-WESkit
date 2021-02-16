@@ -49,11 +49,15 @@ def test_run_snakemake(test_app, celery_worker):
     running = True
     while running:
         time.sleep(1)
+        print("Waiting for workflow to finish ...")
         status = test_app.get(
             "/ga4gh/wes/v1/runs/{}/status".format(run_id)
         )
-        if (status.json == "COMPLETE"):
-            running = False
+        if status.json in ["UNKNOWN", "EXECUTOR_ERROR", "SYSTEM_ERROR",
+                           "CANCELED", "CANCELING"]:
+            assert False, "Failing run status '{}'".format(status.json)
+        elif status.json == "COMPLETE":
+            running = False # = success
 
 
 def test_get_runs(test_app, celery_worker):
