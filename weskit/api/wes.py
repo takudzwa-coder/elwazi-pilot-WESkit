@@ -2,7 +2,6 @@ from flask import current_app, jsonify, request
 from flask import Blueprint
 from weskit import login as auth
 
-
 bp = Blueprint("wes", __name__)
 
 
@@ -62,6 +61,7 @@ def GetRunStatus(run_id):
         current_app.logger.error(e, exc_info=True)
         raise e
 
+
 @bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
 def GetServiceInfo(*args, **kwargs):
     try:
@@ -79,7 +79,8 @@ def GetServiceInfo(*args, **kwargs):
             "workflow_engine_versions":
                 current_app.service_info.get_workflow_engine_versions(),
             "default_workflow_engine_parameters":
-                current_app.service_info.get_default_workflow_engine_parameters(),
+                current_app.service_info.
+                get_default_workflow_engine_parameters(),
             "system_state_counts":
                 current_app.database.count_states(),
             "auth_instructions_url":
@@ -106,6 +107,7 @@ def ListRuns(*args, **kwargs):
     except Exception as e:
         current_app.logger.error(e, exc_info=True)
         raise e
+
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
 @auth.login_required
