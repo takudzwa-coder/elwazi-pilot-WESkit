@@ -55,11 +55,10 @@ def run_nextflow(self,
         print(timestamp, file=stderr)
         with open(os.path.join(workdir, "stdout"), "a") as stdout:
             print(timestamp, file=stdout)
-            completed_process = \
-                subprocess.run(command,
-                               cwd=str(pathlib.PurePath(workdir)),
-                               stdout=stdout,
-                               stderr=stderr)
+            subprocess.run(command,
+                           cwd=str(pathlib.PurePath(workdir)),
+                           stdout=stdout,
+                           stderr=stderr)
     # TODO What to do if completed_process.returncode != 0?
     # TODO Collect the output files from the output directory (all of them).
     outputs = []
