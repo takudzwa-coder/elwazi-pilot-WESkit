@@ -1,6 +1,7 @@
 import sys, uuid, pytest
 from pymongo import MongoClient
 from weskit.classes.Run import Run
+from weskit.classes.RunStatus import RunStatus
 
 mock_run_data = {
     "run_id": str(uuid.uuid4()),
@@ -14,7 +15,7 @@ mock_run_data = {
 
 def test_create_and_load_run(database_container):
     new_run = Run(mock_run_data)
-    new_run.run_status = "RUNNING"
+    new_run.run_status = RunStatus.RUNNING
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
     collection = db["test_runs"]

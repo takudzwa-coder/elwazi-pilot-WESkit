@@ -1,14 +1,7 @@
-import logging
-import os
-import pytest
-import yaml
-from weskit.classes.Database import Database
+import os, pytest, yaml
 from weskit.classes.ServiceInfo import ServiceInfo
-from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
-from logging.config import dictConfig
-from weskit.classes.RunStatus import RunStatus
 
 
 def get_redis_url(redis_container):
@@ -57,8 +50,9 @@ def database_container():
 
     yield db_container
 
+
 @pytest.fixture(scope="session")
-def database_connection(database_container):
+def database(database_container):
     from weskit import create_database
 
     database = create_database()
@@ -66,11 +60,12 @@ def database_connection(database_container):
     yield database
     database._db_runs().drop()
 
+
 @pytest.fixture(scope="session")
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
-    return redis_container
+    yield redis_container
 
 
 @pytest.fixture(scope="session")
@@ -86,17 +81,21 @@ def celery_worker_pool():
     return 'prefork'
 
 
+@pytest.fixture(scope='session')
+def celery_enable_logging():
+    return True
+
+
 @pytest.fixture(scope="session")
-def service_info(test_config, swagger, database_connection):
+def service_info(test_config, swagger, database):
     yield ServiceInfo(
         test_config["static_service_info"],
         swagger,
-        database_connection
+        database
     )
 
-
 @pytest.fixture(scope="session")
-def swagger(database_connection):
+def swagger(database):
     with open("weskit/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
@@ -104,7 +103,7 @@ def swagger(database_connection):
 
 
 @pytest.fixture(scope="session")
-def manager(database_connection, redis_container, test_config):
+def manager(database, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     from weskit.classes.Manager import Manager
