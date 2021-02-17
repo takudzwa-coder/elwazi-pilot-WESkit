@@ -190,7 +190,7 @@ class Manager:
 
         # execute run
         run_kwargs = {
-            "workflow_url": workflow_url,
+            "workflow_path": workflow_url,
             "workdir": run.execution_path,
             "configfiles": [os.path.join(run.execution_path, "config.yaml")]
         }
