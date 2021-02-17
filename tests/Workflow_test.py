@@ -1,4 +1,6 @@
-import time, os
+import time
+import os
+from weskit.utils import to_filename
 from weskit.classes.Database import Database
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
@@ -93,12 +95,14 @@ def test_execute_nextflow(database: Database, manager, celery_worker):
         status = run.run_status
         if status != RunStatus.COMPLETE:
             assert not status in test_failed_status
+            print("Waiting ...")
             time.sleep(1)
             run = manager.update_run(run)
             database.update_run(run)
+            continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
-        assert "hello_world.txt" in run.outputs["Workflow"]
+        assert "hello_world.txt" in to_filename(run.outputs["Workflow"])
         success = True
 
 

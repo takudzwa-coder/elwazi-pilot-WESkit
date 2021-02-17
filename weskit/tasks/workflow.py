@@ -1,5 +1,7 @@
 import pathlib, subprocess, os, logging
 from weskit.tasks.celery import celery_app
+from weskit.utils import get_absolute_file_paths
+from weskit.utils import to_uri
 from snakemake import snakemake
 import delegator
 
@@ -66,6 +68,6 @@ def run_nextflow(self,
               format(get_current_timestamp(), result.returncode),
               file=commandOut, flush=True)
     # TODO What to do if completed_process.returncode != 0?
-    # TODO Collect the output files from the output directory (all of them).
-    outputs = []
+
+    outputs = to_uri(get_absolute_file_paths(workdir))
     return outputs
