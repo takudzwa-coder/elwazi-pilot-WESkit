@@ -1,4 +1,7 @@
-import pathlib, subprocess, os, logging
+import pathlib
+import subprocess
+import os
+import logging
 from weskit.tasks.celery import celery_app
 from weskit.utils import get_absolute_file_paths
 from weskit.utils import to_uri
