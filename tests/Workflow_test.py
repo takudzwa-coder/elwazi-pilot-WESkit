@@ -106,14 +106,14 @@ def test_execute_nextflow(database: Database, manager, celery_worker):
         success = True
 
 
-def test_cancel_workflow(manager, celery_worker, redis_container):
-    run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
-                                                 "tests/wf2/Snakefile"),
-                       workflow_type="snakemake")
-    run = manager.prepare_execution(run, files=[])
-    run = manager.execute(run)
-    manager.cancel(run)
-    assert run.run_status == RunStatus.CANCELED
+# def test_cancel_workflow(manager, celery_worker, redis_container):
+#     run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
+#                                                  "tests/wf2/Snakefile"),
+#                        workflow_type="snakemake")
+#     run = manager.prepare_execution(run, files=[])
+#     run = manager.execute(run)
+#     manager.cancel(run)
+#     assert run.run_status == RunStatus.CANCELED
 
 
 # def test_update_all_runs(manager, celery_worker, database):

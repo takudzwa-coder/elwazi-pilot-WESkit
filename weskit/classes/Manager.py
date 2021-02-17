@@ -46,7 +46,6 @@ class Manager:
             elif workflow_engine == "nextflow":
                 self.workflow_kwargs[parameter["name"]] = eval(
                     parameter["type"])(parameter["default_value"])
-
         self.datadir = datadir
 
     def cancel(self, run: Run) -> Run:

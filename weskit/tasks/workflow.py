@@ -3,7 +3,6 @@ from weskit.tasks.celery import celery_app
 from weskit.utils import get_absolute_file_paths
 from weskit.utils import to_uri
 from snakemake import snakemake
-import delegator
 
 from weskit.utils import get_current_timestamp
 
