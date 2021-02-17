@@ -1,24 +1,21 @@
-import pathlib
-import subprocess
-import os
+import pathlib, subprocess, os, logging
 from weskit.tasks.celery import celery_app
 from snakemake import snakemake
-import logging
 
 from weskit.utils import get_current_timestamp
 
 
 @celery_app.task(bind=True)
 def run_snakemake(self,
-                  workflow_url: os.path,
+                  workflow_path: os.path,
                   workdir: os.path,
                   configfiles: list,
                   **kwargs):
     logging.getLogger().info("run_snakemake: {}, {}, {}".
-                             format(workflow_url, workdir, configfiles))
+                             format(workflow_path, workdir, configfiles))
     outputs = []
     snakemake(
-        snakefile=workflow_url,
+        snakefile=workflow_path,
         workdir=workdir,
         configfiles=configfiles,
         updated_files=outputs,
@@ -35,26 +32,28 @@ def run_snakemake(self,
 # Check https://www.nextflow.io/docs/latest/cli.html#options
 @celery_app.task(bind=True)
 def run_nextflow(self,
-                 workflow_url: os.path,
+                 workflow_path: os.path,
                  workdir: os.path,
                  configfiles: list,
                  **kwargs):
     logging.getLogger().info("run_nextflow: {}, {}, {}".
-                             format(workflow_url, workdir, configfiles))
+                             format(workflow_path, workdir, configfiles))
     timestamp = get_current_timestamp()
-
+    # TODO Make use of kwargs
     # TODO Always use -with-trace.
     # TODO Always use -resume.
     # TODO Log the exact command for reproducibility into the output dir.
     # TODO Always use -with-timeline
     # TODO Always use -log
-    command = ["nextflow", "run", workflow_url]
+    command = ["nextflow", "run", workflow_path]
     with open(os.path.join(workdir, "command"), "a") as commandOut:
-        print("{}: {}".format(timestamp, command), file=commandOut)
+        print("{}: {}".format(timestamp, command), file=commandOut, flush=True)
+
     with open(os.path.join(workdir, "stderr"), "a") as stderr:
-        print(timestamp, file=stderr)
+        print(timestamp, file=stderr, flush=True)
+        
         with open(os.path.join(workdir, "stdout"), "a") as stdout:
-            print(timestamp, file=stdout)
+            print(timestamp, file=stdout, flush=True)
             subprocess.run(command,
                            cwd=str(pathlib.PurePath(workdir)),
                            stdout=stdout,
