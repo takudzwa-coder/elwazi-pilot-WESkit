@@ -1,5 +1,8 @@
-import os, pytest, yaml
+import os
+import pytest
+import yaml
 from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.classes.WorkflowType import WorkflowType
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 
@@ -106,6 +109,14 @@ def swagger(database):
 def manager(database, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    from weskit.classes.Workflow import WorkflowFactory
     from weskit.classes.Manager import Manager
-    manager = Manager(config=test_config, datadir="tmp/")
+
+    factory = WorkflowFactory(test_config)
+    workflow_dict = {
+        WorkflowType.SNAKEMAKE: factory.get_workflow(factory, WorkflowType.SNAKEMAKE),
+        WorkflowType.NEXTFLOW: factory.get_workflow(factory, WorkflowType.NEXTFLOW)
+    }
+
+    manager = Manager(workflow_dict=workflow_dict, data_dir="tmp/")
     yield manager

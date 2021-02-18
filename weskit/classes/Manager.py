@@ -1,6 +1,6 @@
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from weskit.tasks.workflow import run_snakemake, run_nextflow
+from weskit.tasks.workflow import run_workflow
 from weskit.classes.WorkflowType import WorkflowType
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
@@ -10,13 +10,12 @@ import json
 import os
 import yaml
 
-
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
     "STARTED": RunStatus.RUNNING,
     "SUCCESS": RunStatus.COMPLETE,
     "FAILURE": RunStatus.EXECUTOR_ERROR,
-    "RETRY":   RunStatus.QUEUED,
+    "RETRY": RunStatus.QUEUED,
     "REVOKED": RunStatus.CANCELED
 }
 
@@ -35,18 +34,9 @@ via workflow_attachments."""
 
 class Manager:
 
-    def __init__(self, config: dict, datadir: str) -> None:
-        self.workflow_kwargs = {}
-        for parameter in (config["static_service_info"]
-                                ["default_workflow_engine_parameters"]):
-            workflow_engine = parameter["workflow_engine"].lower()
-            if workflow_engine == "snakemake":
-                self.workflow_kwargs[parameter["name"]] = eval(
-                    parameter["type"])(parameter["default_value"])
-            elif workflow_engine == "nextflow":
-                self.workflow_kwargs[parameter["name"]] = eval(
-                    parameter["type"])(parameter["default_value"])
-        self.datadir = datadir
+    def __init__(self, workflow_dict: dict, data_dir: str) -> None:
+        self.workflow_dict = workflow_dict
+        self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
         revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
@@ -54,43 +44,20 @@ class Manager:
         return run
 
     def update_state(self, run: Run) -> Run:
-        # get workflow_type
-        if WorkflowType.has_value(run.request["workflow_type"]):
-            workflow_type = WorkflowType(run.request["workflow_type"]).name
-        else:
-            raise Exception("Workflow type is not known.")
         # check if task is running and update state
         if run.run_status in running_states:
             if run.celery_task_id is not None:
-                if workflow_type == WorkflowType.SNAKEMAKE.name:
-                    running_task = \
-                        run_snakemake.AsyncResult(run.celery_task_id)
-                elif workflow_type == WorkflowType.NEXTFLOW.name:
-                    running_task = \
-                        run_nextflow.AsyncResult(run.celery_task_id)
-                else:
-                    raise Exception("Workflow type is not known.")
+                running_task = run_workflow.AsyncResult(run.celery_task_id)
                 run.run_status = celery_to_wes_state[running_task.state]
             else:
                 run.run_status = RunStatus.UNKNOWN
         return run
 
     def update_outputs(self, run: Run) -> Run:
-        # get workflow_type
-        if WorkflowType.has_value(run.request["workflow_type"]):
-            workflow_type = WorkflowType(run.request["workflow_type"]).name
-        else:
-            workflow_type = WorkflowType.ERROR
+
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
-                if workflow_type == WorkflowType.SNAKEMAKE.name:
-                    running_task = \
-                        run_snakemake.AsyncResult(run.celery_task_id)
-                elif workflow_type == WorkflowType.NEXTFLOW.name:
-                    running_task = \
-                        run_nextflow.AsyncResult(run.celery_task_id)
-                else:
-                    raise Exception("Workflow type is not known.")
+                running_task = run_workflow.AsyncResult(run.celery_task_id)
                 run.outputs["Workflow"] = running_task.get()
         return run
 
@@ -146,7 +113,7 @@ class Manager:
         run.run_status = RunStatus.INITIALIZING
 
         # prepare run directory
-        run_dir = os.path.abspath(os.path.join(self.datadir,
+        run_dir = os.path.abspath(os.path.join(self.data_dir,
                                                run.run_id[0:4],
                                                run.run_id))
         if not os.path.exists(run_dir):
@@ -189,23 +156,18 @@ class Manager:
 
         # execute run
         run_kwargs = {
+            "workflow_type": workflow_type.value,
             "workflow_path": workflow_url,
             "workdir": run.execution_path,
-            "configfiles": [os.path.join(run.execution_path, "config.yaml")]
+            "config_files": [os.path.join(run.execution_path, "config.yaml")]
         }
         run.start_time = get_current_timestamp()
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        if workflow_type == WorkflowType.SNAKEMAKE:
-            task = run_snakemake.apply_async(
+        task = run_workflow.apply_async(
                 args=[],
-                kwargs={**run_kwargs, **self.workflow_kwargs})
-        elif workflow_type == WorkflowType.NEXTFLOW:
-            task = run_nextflow.apply_async(
-                args=[],
-                kwargs={**run_kwargs, **self.workflow_kwargs})
-        else:
-            raise Exception("Workflow type is not known.")
+                kwargs={**run_kwargs, **self.workflow_dict[workflow_type].workflow_kwargs})
+
         run.celery_task_id = task.id
         return run
