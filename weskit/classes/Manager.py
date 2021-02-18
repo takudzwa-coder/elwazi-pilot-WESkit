@@ -167,7 +167,8 @@ class Manager:
         )
         task = run_workflow.apply_async(
                 args=[],
-                kwargs={**run_kwargs, **self.workflow_dict[workflow_type].workflow_kwargs})
+                kwargs={**run_kwargs,
+                        **self.workflow_dict[workflow_type].workflow_kwargs})
 
         run.celery_task_id = task.id
         return run

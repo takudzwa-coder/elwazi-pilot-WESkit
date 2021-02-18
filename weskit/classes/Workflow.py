@@ -1,9 +1,8 @@
 import os
 import pathlib
-import yaml
 import subprocess
 import logging
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABCMeta, abstractmethod
 from weskit.classes.WorkflowType import WorkflowType
 from weskit.utils import get_current_timestamp
 from weskit.utils import get_absolute_file_paths
@@ -66,8 +65,8 @@ class Nextflow(Workflow):
         command = ["nextflow", "run", workflow_path]
         with open(os.path.join(workdir, "command"), "a") as commandOut:
             print("{}: {}".format(timestamp, command), file=commandOut)
-            # Timestamp-writes are flushed to ensure they are written before the
-            # workflows stderr and stdout.
+            # Timestamp-writes are flushed to ensure they are written before
+            # the workflows stderr and stdout.
             with open(os.path.join(workdir, "stderr"), "a") as stderr:
                 print(timestamp, file=stderr, flush=True)
 
@@ -92,7 +91,7 @@ class WorkflowFactory:
 
         self.workflow_kwargs = {}
         for parameter in (config_file["static_service_info"]
-        ["default_workflow_engine_parameters"]):
+                                     ["default_workflow_engine_parameters"]):
             workflow_engine = parameter["workflow_engine"].lower()
             if workflow_engine == "snakemake":
                 self.workflow_kwargs[parameter["name"]] = eval(
@@ -108,6 +107,8 @@ class WorkflowFactory:
                 return Snakemake(self.workflow_kwargs)
             elif workflow_type == WorkflowType.NEXTFLOW:
                 return Nextflow(self.workflow_kwargs)
-            raise AssertionError("Workflow type '" + workflow_type.__str__() + "' is not known")
+            raise AssertionError("Workflow type '" +
+                                 workflow_type.__str__() +
+                                 "' is not known")
         except AssertionError as _e:
             print(_e)

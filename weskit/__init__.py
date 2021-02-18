@@ -79,8 +79,10 @@ def create_app():
 
     factory = WorkflowFactory(config)
     workflow_dict = {
-        WorkflowType.SNAKEMAKE: factory.get_workflow(factory, WorkflowType.SNAKEMAKE),
-        WorkflowType.NEXTFLOW: factory.get_workflow(factory, WorkflowType.NEXTFLOW)
+        WorkflowType.SNAKEMAKE: factory.get_workflow(factory,
+                                                     WorkflowType.SNAKEMAKE),
+        WorkflowType.NEXTFLOW: factory.get_workflow(factory,
+                                                    WorkflowType.NEXTFLOW)
     }
 
     app.manager = Manager(workflow_dict=workflow_dict,

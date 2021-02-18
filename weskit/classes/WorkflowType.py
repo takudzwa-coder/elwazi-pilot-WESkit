@@ -1,5 +1,5 @@
 import enum
-import json
+
 
 class WorkflowType(enum.Enum):
     SNAKEMAKE = "snakemake"

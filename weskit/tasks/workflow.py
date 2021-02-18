@@ -13,10 +13,20 @@ def run_workflow(self,
                  **workflow_kwargs):
     outputs = []
     if workflow_type == WorkflowType.SNAKEMAKE.value:
-        outputs = Snakemake.run(self, workflow_path, workdir, config_files, **workflow_kwargs)
+        outputs = Snakemake.run(self,
+                                workflow_path,
+                                workdir,
+                                config_files,
+                                **workflow_kwargs)
     elif workflow_type == WorkflowType.NEXTFLOW.value:
-        outputs = Nextflow.run(self, workflow_path, workdir, config_files, **workflow_kwargs)
+        outputs = Nextflow.run(self,
+                               workflow_path,
+                               workdir,
+                               config_files,
+                               **workflow_kwargs)
     else:
-        raise Exception("Workflow type '" + workflow_type.__str__() + "' is not known")
+        raise Exception("Workflow type '" +
+                        workflow_type.__str__() +
+                        "' is not known")
 
     return outputs
