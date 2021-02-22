@@ -8,8 +8,7 @@ from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask, current_app
-from weskit.classes.WorkflowType import WorkflowType
-from weskit.classes.Workflow import WorkflowFactory
+from weskit.classes.Workflow import Snakemake, Nextflow, WorkflowFactory
 from flask_jwt_extended import JWTManager
 
 
@@ -79,10 +78,10 @@ def create_app():
 
     factory = WorkflowFactory(config)
     workflow_dict = {
-        WorkflowType.SNAKEMAKE: factory.get_workflow(factory,
-                                                     WorkflowType.SNAKEMAKE),
-        WorkflowType.NEXTFLOW: factory.get_workflow(factory,
-                                                    WorkflowType.NEXTFLOW)
+        Snakemake.name(): factory.get_workflow(factory,
+                                               Snakemake.name()),
+        Nextflow.name(): factory.get_workflow(factory,
+                                              Nextflow.name())
     }
 
     app.manager = Manager(workflow_dict=workflow_dict,

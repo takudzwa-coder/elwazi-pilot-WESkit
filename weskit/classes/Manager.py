@@ -1,14 +1,14 @@
+import json
+import os
+import yaml
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
+from weskit.classes.Workflow import Snakemake, Nextflow
 from weskit.tasks.workflow import run_workflow
-from weskit.classes.WorkflowType import WorkflowType
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
 from typing import Optional
-import json
-import os
-import yaml
 
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
@@ -149,14 +149,16 @@ class Manager:
                 secure_filename(run.request["workflow_url"]))
 
         # set workflow_type
-        if WorkflowType.has_value(run.request["workflow_type"]):
-            workflow_type = WorkflowType(run.request["workflow_type"])
+        if run.request["workflow_type"] in self.workflow_dict:
+            workflow_type = run.request["workflow_type"]
         else:
-            raise Exception("Workflow type is not known.")
+            raise Exception("Workflow type:'" +
+                            run.request["workflow_type"] +
+                            "' is not known.")
 
         # execute run
         run_kwargs = {
-            "workflow_type": workflow_type.value,
+            "workflow_type": workflow_type,
             "workflow_path": workflow_url,
             "workdir": run.execution_path,
             "config_files": [os.path.join(run.execution_path, "config.yaml")]

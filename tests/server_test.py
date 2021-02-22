@@ -10,7 +10,7 @@ def get_workflow_data(workflowfile, config):
 
     data = {
         "workflow_params": workflow_params,
-        "workflow_type": "snakemake",
+        "workflow_type": "Snakemake",
         "workflow_type_version": "5.8.2",
         "workflow_url": workflowfile
     }

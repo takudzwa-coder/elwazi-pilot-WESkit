@@ -2,7 +2,7 @@ import os
 import pytest
 import yaml
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.WorkflowType import WorkflowType
+from weskit.classes.Workflow import Snakemake, Nextflow
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 
@@ -114,8 +114,10 @@ def manager(database, redis_container, test_config):
 
     factory = WorkflowFactory(test_config)
     workflow_dict = {
-        WorkflowType.SNAKEMAKE: factory.get_workflow(factory, WorkflowType.SNAKEMAKE),
-        WorkflowType.NEXTFLOW: factory.get_workflow(factory, WorkflowType.NEXTFLOW)
+        Snakemake.name(): factory.get_workflow(factory,
+                                               Snakemake.name()),
+        Nextflow.name(): factory.get_workflow(factory,
+                                              Nextflow.name())
     }
 
     manager = Manager(workflow_dict=workflow_dict, data_dir="tmp/")

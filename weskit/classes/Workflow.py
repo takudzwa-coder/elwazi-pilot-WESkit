@@ -3,7 +3,6 @@ import pathlib
 import subprocess
 import logging
 from abc import ABCMeta, abstractmethod
-from weskit.classes.WorkflowType import WorkflowType
 from weskit.utils import get_current_timestamp
 from weskit.utils import get_absolute_file_paths
 from weskit.utils import to_uri
@@ -15,12 +14,17 @@ class Workflow(metaclass=ABCMeta):
     def __init__(self, workflow_kwargs: dict):
         self.workflow_kwargs = workflow_kwargs
 
+    @staticmethod
     @abstractmethod
-    def run(self,
-            workflow_path: os.path,
+    def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
             **workflow_kwargs):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def name():
         pass
 
 
@@ -28,8 +32,8 @@ class Snakemake(Workflow):
     def __init__(self, workflow_kwargs: dict):
         super().__init__(workflow_kwargs)
 
-    def run(self,
-            workflow_path: os.path,
+    @staticmethod
+    def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
             **workflow_kwargs):
@@ -44,13 +48,17 @@ class Snakemake(Workflow):
             **workflow_kwargs)
         return outputs
 
+    @staticmethod
+    def name():
+        return __class__.__name__
+
 
 class Nextflow(Workflow):
     def __init__(self, workflow_kwargs: dict):
         super().__init__(workflow_kwargs)
 
-    def run(self,
-            workflow_path: os.path,
+    @staticmethod
+    def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
             **workflow_kwargs):
@@ -84,29 +92,40 @@ class Nextflow(Workflow):
         outputs = to_uri(get_absolute_file_paths(workdir))
         return outputs
 
+    @staticmethod
+    def name():
+        return __class__.__name__
+
 
 class WorkflowFactory:
 
     def __init__(self, config_file: dict) -> None:
 
-        self.workflow_kwargs = {}
+        self.snakemake_kwargs = {}
+        self.nextflow_kwargs = {}
         for parameter in (config_file["static_service_info"]
-                                     ["default_workflow_engine_parameters"]):
+        ["default_workflow_engine_parameters"]):
             workflow_engine = parameter["workflow_engine"].lower()
             if workflow_engine == "snakemake":
-                self.workflow_kwargs[parameter["name"]] = eval(
+                self.snakemake_kwargs[parameter["name"]] = eval(
                     parameter["type"])(parameter["default_value"])
             elif workflow_engine == "nextflow":
-                self.workflow_kwargs[parameter["name"]] = eval(
+                self.nextflow_kwargs[parameter["name"]] = eval(
                     parameter["type"])(parameter["default_value"])
 
     @staticmethod
-    def get_workflow(self, workflow_type: WorkflowType):
+    def extract_workflow_engine_parameters(config_file: dict,
+                                           workflow_tag: str) -> dict:
+        # TODO
+        pass
+
+    @staticmethod
+    def get_workflow(self, workflow_type: str):
         try:
-            if workflow_type == WorkflowType.SNAKEMAKE:
-                return Snakemake(self.workflow_kwargs)
-            elif workflow_type == WorkflowType.NEXTFLOW:
-                return Nextflow(self.workflow_kwargs)
+            if workflow_type == Snakemake.name():
+                return Snakemake(self.snakemake_kwargs)
+            elif workflow_type == Nextflow.name():
+                return Nextflow(self.nextflow_kwargs)
             raise AssertionError("Workflow type '" +
                                  workflow_type.__str__() +
                                  "' is not known")
