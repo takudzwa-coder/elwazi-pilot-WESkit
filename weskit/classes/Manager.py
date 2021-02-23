@@ -3,7 +3,6 @@ import os
 import yaml
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from weskit.classes.Workflow import Snakemake, Nextflow
 from weskit.tasks.workflow import run_workflow
 from celery.task.control import revoke
 from werkzeug.utils import secure_filename
