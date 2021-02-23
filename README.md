@@ -72,3 +72,35 @@ Perform a test:
 ```bash
 python -m pytest
 ```
+
+## States
+
+### Description
+
+Set by WESkit:
+ - **UNKNOWN**: User has sent a run request to WESkit.
+ - **INITIALIZING**: WESkit has initialized a run object. WESkit stores the run in the database and prepares the run by creating a working directory, by processing attachment files and by checking for a valid workflow url. Finally, WESkit sends a task to Celery.
+ - **SYSTEM_ERROR**: Workflow url is not valid.
+ - **CANCELING**: User sends a cancel request to WESkit and this triggers WESkit to send a cancel command to the Celery worker.
+
+Defined by Celery worker:
+ - **QUEUED**: WESkit has sent the task to Celery and the Celery worker returns **PENDING** or **RETRY**
+ - **RUNNING**: WESkit has sent the task to Celery and the Celery worker returns **STARTED**
+ - **COMPLETE**: WESkit has sent the task to Celery and the Celery worker returns **SUCCESS**
+ - **EXECUTOR_ERROR**: WESkit has sent the task to Celery and the Celery worker returns **FAILURE**
+ - **CANCELED**: WESkit has sent the task to Celery , user canceled the run and the Celery worker returns **REVOKED**
+
+Not set:
+ - **PAUSED**: Pausing a run is not supported by WESkit
+
+### transitions
+
+WESkit controls possible state transitions. Following state changes may occur during lifetime of a single run:
+
+ - **UNKNOWN** to **INITIALIZING**
+ - **INITIALIZING** to (**QUEUED**, **RUNNING**, **COMPLETE**, **EXECUTOR_ERROR**)
+ - (**QUEUED**, **RUNNING**) to (**QUEUED**, **RUNNING**, **COMPLETE**, **EXECUTOR_ERROR**)
+ - (**QUEUED**, **RUNNING**) to **SYSTEM_ERROR**
+ - (**QUEUED**, **RUNNING**) to **CANCELING**
+ - **CANCELING** to **CANCELED**
+

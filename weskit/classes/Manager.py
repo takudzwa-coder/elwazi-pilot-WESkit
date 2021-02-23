@@ -21,9 +21,7 @@ celery_to_wes_state = {
 
 running_states = [
     RunStatus.QUEUED,
-    RunStatus.INITIALIZING,
-    RunStatus.RUNNING,
-    RunStatus.PAUSED
+    RunStatus.RUNNING
 ]
 
 EXECUTOR_WF_NOT_FOUND = """
@@ -39,18 +37,24 @@ class Manager:
         self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
+        run.run_status = RunStatus.CANCELING
         revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
-        run.run_status = RunStatus.CANCELED
         return run
 
     def update_state(self, run: Run) -> Run:
-        # check if task is running and update state
-        if run.run_status in running_states:
+        # check if task is running, initializing or canceling and update state
+        if run.run_status in running_states or \
+           run.run_status == RunStatus.INITIALIZING or \
+           run.run_status == RunStatus.CANCELING:
             if run.celery_task_id is not None:
                 running_task = run_workflow.AsyncResult(run.celery_task_id)
-                run.run_status = celery_to_wes_state[running_task.state]
-            else:
-                run.run_status = RunStatus.UNKNOWN
+                if ((run.run_status != RunStatus.CANCELING) or
+                    (run.run_status == RunStatus.CANCELING and
+                     running_task.state == "REVOKED")):
+                    run.run_status = celery_to_wes_state[running_task.state]
+            elif (run.run_status in running_states or
+                  run.run_status == RunStatus.CANCELING):
+                run.run_status = RunStatus.SYSTEM_ERROR
         return run
 
     def update_outputs(self, run: Run) -> Run:
@@ -110,6 +114,10 @@ class Manager:
         return file_path
 
     def prepare_execution(self, run, files=[]):
+
+        if not run.run_status == RunStatus.UNKNOWN:
+            return run
+
         run.run_status = RunStatus.INITIALIZING
 
         # prepare run directory
