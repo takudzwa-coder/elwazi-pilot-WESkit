@@ -84,6 +84,11 @@ def celery_worker_pool():
     return 'prefork'
 
 
+@pytest.fixture(scope="session")
+def celery_worker_parameters():
+    return {"concurrency":4}
+
+
 @pytest.fixture(scope='session')
 def celery_enable_logging():
     return True
