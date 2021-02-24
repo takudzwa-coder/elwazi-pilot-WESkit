@@ -81,7 +81,7 @@ def celery_config(redis_container):
 
 @pytest.fixture(scope="session")
 def celery_worker_pool():
-    return 'prefork'
+    return 'solo'
 
 
 @pytest.fixture(scope='session')
