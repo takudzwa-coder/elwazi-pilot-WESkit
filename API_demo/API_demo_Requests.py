@@ -5,15 +5,18 @@ s = requests.Session()
 Credentials = {"username":"test","password":"test"}
 WrongCredentials = {"username":"stranger","password":"awierdPassword"}
 
+# Test with HTTPS
+baseURL="https://localhost:5000"
 
-
+# without HTTPS
+#baseURL="http://localhost:5000"
 
 def tryApiEndpoints(loginType,session):
 
     print("****************************************")
     # Try logging in with wrong credentials
     print( "%s - GET Requst to '/ga4gh/wes/user_status'"%(loginType) )
-    response1= session.get("http://localhost:5000/ga4gh/wes/user_status")
+    response1= session.get("%s/ga4gh/wes/user_status"%(baseURL))
     
     print("Status Code:",response1.status_code)
     print("Response:",response1.json())
@@ -22,28 +25,28 @@ def tryApiEndpoints(loginType,session):
     print("****************************************")
     # Try logging in with wrong credentials
     print( "%s - GET-Requst to '/ga4gh/wes/v1/service-info'"%(loginType) )
-    response2 = s.get("http://localhost:5000/ga4gh/wes/v1/service-info")
+    response2 = s.get("%s/ga4gh/wes/v1/service-info"%(baseURL))
     
     print("Status Code:",response2.status_code)
     print("Response:",response2.json())
     print("****************************************\n\n")
     print("****************************************")
     print("%s - GET-Requst to '/ga4gh/wes/v1/runs/'"%( loginType))
-    response3 = session.get("http://localhost:5000/ga4gh/wes/v1/runs")
+    response3 = session.get("%s/ga4gh/wes/v1/runs"%(baseURL))
     print("Status Code:",response3.status_code)
     print("Response:",response3.json())
     print("****************************************\n\n")
     
     print("****************************************")
     print("%s - GET-Requst to '/refresh'"%( loginType))
-    response4 = session.post("http://localhost:5000/refresh")
+    response4 = session.post("%s/refresh"%(baseURL))
     print("Status Code:",response4.status_code)
     print("Response:",response4.json())
     print("****************************************\n\n")
     
     print("****************************************")
     print("%s - GET-Requst to '/logout'"%( loginType))
-    response5 = session.get("http://localhost:5000/logout")
+    response5 = session.get("%s/logout"%(baseURL))
     print("Status Code:",response5.status_code)
     print("Response:",response5.json())
     print("****************************************\n")
@@ -60,7 +63,7 @@ print("_________________________________________________________________________
 
 print("****************************************")
 print("*        Test API with wrong login     *")
-loginresponse = s.post("http://localhost:5000/login",json=WrongCredentials)
+loginresponse = s.post("%s/login"%(baseURL),json=WrongCredentials)
 print("Status Code:",loginresponse.status_code)
 print("Response:",loginresponse.json())
 tryApiEndpoints('with wrong login ',s)
@@ -68,7 +71,7 @@ print("_________________________________________________________________________
 
 print("****************************************")
 print("*        Test API with with correct login     *")
-loginresponse = s.post("http://localhost:5000/login",json=Credentials)
+loginresponse = s.post("%s/login"%(baseURL),json=Credentials)
 print("Status Code:",loginresponse.status_code)
 print("Response:",loginresponse.json())
 tryApiEndpoints('with correct login ',s)

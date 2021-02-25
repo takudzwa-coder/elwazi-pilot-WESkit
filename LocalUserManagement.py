@@ -63,7 +63,8 @@ def dict2dbfile(file, users):
     try:
         with open(file, 'w') as stream:
             return(yaml.dump(users, stream))
-    except: # noqa E722
+    except Exception as e:
+        print(e)
         print("unable to write %s" % file)
         exit(0)
 
@@ -202,7 +203,8 @@ elif (args.function == 'remove'):
     # Print a message if username is not in DB
     if newUser not in users:
         print(
-            "%s is missing in DB %s. Use '%s list %s' to show all available users" % # noqa E501
+            ("%s is missing in DB %s. "
+            "Use '%s list %s' to show all available users") % 
             (newUser, args.Databasefile, sys.argv[0], args.Databasefile)
         )
 
@@ -232,7 +234,8 @@ elif (args.function == 'changeRoles'):
     # Print a message if username is not in DB
     if newUser not in users:
         print(
-            "%s is missing in DB %s. Use '%s list %s' to show all available users" % # noqa E501
+            ("%s is missing in DB %s. Use '%s list %s' "
+            "to show all available users") % 
             (newUser, args.Databasefile, sys.argv[0], args.Databasefile)
         )
 
