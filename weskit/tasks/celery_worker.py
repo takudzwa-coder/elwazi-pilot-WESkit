@@ -1,4 +1,6 @@
 from weskit.tasks.celery import celery_app
+from weskit.tasks.workflow import run_workflow
+from weskit.classes.Workflow import Snakemake, Nextflow
 import os
 
 
