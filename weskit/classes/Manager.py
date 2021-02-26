@@ -38,7 +38,9 @@ class Manager:
         self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
+        cwd = os.getcwd()
         revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
+        os.chdir(cwd)
         run.run_status = RunStatus.CANCELED
         return run
 
