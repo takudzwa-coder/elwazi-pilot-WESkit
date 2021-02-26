@@ -119,6 +119,5 @@ def manager(database, redis_container, test_config):
         Nextflow.name(): factory.get_workflow(factory,
                                               Nextflow.name())
     }
-
     manager = Manager(workflow_dict=workflow_dict, data_dir="tmp/")
     yield manager
