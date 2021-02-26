@@ -1,12 +1,19 @@
 import requests
+import os
 
-s = requests.Session()
+s = requests.session()
 
 Credentials = {"username":"test","password":"test"}
 WrongCredentials = {"username":"stranger","password":"awierdPassword"}
 
 # Test with HTTPS
 baseURL="https://localhost:5000"
+
+current_file=os.path.dirname(os.path.abspath(__file__))
+# Set path for self signed certificate
+s.verify= os.path.normpath(os.path.join(current_file,'../uWSGI_Server/certs/weskit.pem'))
+a=os.path.normpath(os.path.join(current_file,'../uWSGI_Server/certs/weskit.pem'))
+
 
 # without HTTPS
 #baseURL="http://localhost:5000"
@@ -16,7 +23,7 @@ def tryApiEndpoints(loginType,session):
     print("****************************************")
     # Try logging in with wrong credentials
     print( "%s - GET Requst to '/ga4gh/wes/user_status'"%(loginType) )
-    response1= session.get("%s/ga4gh/wes/user_status"%(baseURL))
+    response1= session.get("%s/ga4gh/wes/user_status"%(baseURL),verify=a)
     
     print("Status Code:",response1.status_code)
     print("Response:",response1.json())
