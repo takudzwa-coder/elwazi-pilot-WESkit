@@ -38,6 +38,9 @@ class Manager:
         self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
+        # This is a quickfix for executing the tests.
+        # This might be a bad solution for multithreaded use-cases,
+        # because the current working directory is touched.
         cwd = os.getcwd()
         revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
         os.chdir(cwd)
