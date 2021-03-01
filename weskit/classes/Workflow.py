@@ -99,33 +99,38 @@ class Nextflow(Workflow):
 
 class WorkflowFactory:
 
-    def __init__(self, config_file: dict) -> None:
+    @staticmethod
+    def extract_workflow_parameters(config_file: dict,
+                                    workflow_tag: str) -> dict:
 
-        self.snakemake_kwargs = {}
-        self.nextflow_kwargs = {}
-        for parameter in (config_file["static_service_info"]
-                                     ["default_workflow_engine_parameters"]):
-            workflow_engine = parameter["workflow_engine"].lower()
-            if workflow_engine == "snakemake":
-                self.snakemake_kwargs[parameter["name"]] = eval(
-                    parameter["type"])(parameter["default_value"])
-            elif workflow_engine == "nextflow":
-                self.nextflow_kwargs[parameter["name"]] = eval(
-                    parameter["type"])(parameter["default_value"])
+        kwargs = {}
+        if workflow_tag == "snakemake":
+            for parameter in (config_file["static_service_info"]
+                              ["default_workflow_engine_parameters"]):
+                workflow_engine = parameter["workflow_engine"].lower()
+                if workflow_engine == "snakemake":
+                    kwargs[parameter["name"]] = eval(
+                        parameter["type"])(parameter["default_value"])
+        elif workflow_tag == "nextflow":
+            for parameter in (config_file["static_service_info"]
+                              ["default_workflow_engine_parameters"]):
+                workflow_engine = parameter["workflow_engine"].lower()
+                if workflow_engine == "nextflow":
+                    kwargs[parameter["name"]] = eval(
+                        parameter["type"])(parameter["default_value"])
+        return kwargs
 
     @staticmethod
-    def extract_workflow_engine_parameters(config_file: dict,
-                                           workflow_tag: str) -> dict:
-        # TODO
-        pass
-
-    @staticmethod
-    def get_workflow(self, workflow_type: str):
+    def get_workflow(config_file: dict, workflow_type: str):
         try:
             if workflow_type == Snakemake.name():
-                return Snakemake(self.snakemake_kwargs)
+                return \
+                    Snakemake(WorkflowFactory.extract_workflow_parameters
+                              (config_file, "snakemake"))
             elif workflow_type == Nextflow.name():
-                return Nextflow(self.nextflow_kwargs)
+                return \
+                    Nextflow(WorkflowFactory.extract_workflow_parameters
+                             (config_file, "nextflow"))
             raise AssertionError("Workflow type '" +
                                  workflow_type.__str__() +
                                  "' is not known")

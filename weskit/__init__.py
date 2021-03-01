@@ -76,12 +76,11 @@ def create_app():
     app.validation = validation
     app.database = create_database()
 
-    factory = WorkflowFactory(config)
     workflow_dict = {
-        Snakemake.name(): factory.get_workflow(factory,
-                                               Snakemake.name()),
-        Nextflow.name(): factory.get_workflow(factory,
-                                              Nextflow.name())
+        Snakemake.name(): WorkflowFactory.get_workflow(config,
+                                                       Snakemake.name()),
+        Nextflow.name(): WorkflowFactory.get_workflow(config,
+                                                      Nextflow.name())
     }
 
     app.manager = Manager(workflow_dict=workflow_dict,

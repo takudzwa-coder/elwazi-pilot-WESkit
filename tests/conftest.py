@@ -117,12 +117,11 @@ def manager(database, redis_container, test_config):
     from weskit.classes.Workflow import WorkflowFactory
     from weskit.classes.Manager import Manager
 
-    factory = WorkflowFactory(test_config)
     workflow_dict = {
-        Snakemake.name(): factory.get_workflow(factory,
-                                               Snakemake.name()),
-        Nextflow.name(): factory.get_workflow(factory,
-                                              Nextflow.name())
+        Snakemake.name(): WorkflowFactory.get_workflow(test_config,
+                                                       Snakemake.name()),
+        Nextflow.name(): WorkflowFactory.get_workflow(test_config,
+                                                      Nextflow.name())
     }
     manager = Manager(workflow_dict=workflow_dict, data_dir="tmp/")
     yield manager
