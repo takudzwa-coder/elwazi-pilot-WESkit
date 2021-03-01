@@ -11,8 +11,21 @@ ENV: development
 TESTING: true
 
 static_service_info:
-    # The workflow_type_versions need to be among the workflow_engine_versions
-    # keys.
+    
+    supported_filesystem_protocols:
+        - s3
+        - posix
+    
+    # The identifiers used in workflow_engine_versions correspond to versions
+    # of the workflows available in WESkit. Currently, there are Snakemake
+    # and Nextflow Workflow-instances that identify as "snakemake" and "nextflow",
+    # respectively. Only these identifiers (Workflow.name) can be used here.
+    # These are also the versions-strings that WESkit accepts via its REST-API.
+    workflow_engine_versions:
+        snakemake: "5.8.2"
+        nextflow: "20.10.0"
+
+    # The workflow_type_versions need to be among the workflow_engine_versions.
     workflow_type_versions:
         snakemake:
             workflow_type_version:
@@ -20,17 +33,8 @@ static_service_info:
         nextflow:
             workflow_type_version:
               - "20"
-    
-    supported_filesystem_protocols:
-        - s3
-        - posix
-    
-    workflow_engine_versions:
-        snakemake: "5.8.2"
-        nextflow: "20.10.0"
 
-    # The workflow_engine values need to among the workflow_engine_versions
-    # keys.
+    # The workflow_engine values need to among the workflow_engine_versions.
     default_workflow_engine_parameters:
         - workflow_engine: "snakemake"
           name: "cores"
@@ -40,7 +44,6 @@ static_service_info:
           name: "cores"
           type: "int"
           default_value: "1"
-
     
     auth_instructions_url: "https://somewhere.org"
     

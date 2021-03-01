@@ -50,7 +50,7 @@ class Snakemake(Workflow):
 
     @staticmethod
     def name():
-        return __class__.__name__
+        return __class__.__name__.lower()
 
 
 class Nextflow(Workflow):
@@ -94,7 +94,7 @@ class Nextflow(Workflow):
 
     @staticmethod
     def name():
-        return __class__.__name__
+        return __class__.__name__.lower()
 
 
 class WorkflowFactory:
