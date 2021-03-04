@@ -7,11 +7,10 @@ import os
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
-from flask import Flask, current_app
-
-from flask_jwt_extended import JWTManager
+from flask import Flask
 
 from weskit.login import Login
+
 
 def read_swagger():
     '''Read the swagger file.'''
@@ -90,16 +89,16 @@ def create_app():
     ######################################
     #              Init Login            #
     ######################################
-    app.config["OIDC_ISSUER_URL"]="http://keycloak:8080/auth/realms/WESkit"
-    app.config["OIDC_REALM"]="WESkit"
-    app.config["OIDC_CLIENTID"]="WESkit"
-    app.config["OIDC_CIENT_SECRET"]="a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+    app.config["OIDC_ISSUER_URL"] = "http://keycloak:8080/auth/realms/WESkit"
+    app.config["OIDC_REALM"] = "WESkit"
+    app.config["OIDC_CLIENTID"] = "WESkit"
+    app.config["OIDC_CIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
 
-    app.config["OIDC_FLASKHOST"]="https://localhost:5000"
+    app.config["OIDC_FLASKHOST"] = "https://localhost:5000"
 
-    app.config['JWT_TOKEN_LOCATION'] = ['cookies','headers']
+    app.config['JWT_TOKEN_LOCATION'] = ['cookies', 'headers']
     app.config["JWT_ALGORITHM"] = "RS256"
-    app.config["JWT_DECODE_AUDIENCE"] ="account"
+    app.config["JWT_DECODE_AUDIENCE"] = "account"
     app.config["JWT_IDENTITY_CLAIM"] = "sub"
 
     # Only allow JWT cookies to be sent over https. In production, this
@@ -116,12 +115,7 @@ def create_app():
 
     # Enable csrf double submit protection. See this for a thorough
     # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
-    
-
-    # Set the secret key to sign the JWTs with
-    #app.config['JWT_SECRET_KEY'] = 'a8086bcc-44f3-40f9-9e15-fd5c3c98ab24'  # Change this!
 
     Login.odicLogin(app)
-
 
     return app

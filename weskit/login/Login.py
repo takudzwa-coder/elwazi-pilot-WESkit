@@ -13,6 +13,7 @@ from weskit.login import oidcBlueprint as login_bp
 from weskit.login.oidcUser import User
 from weskit.login.utils import onlineValidation, check_csrf_token
 
+
 class odicLogin:
     """ This Class Initializes the OIDC Login and creates a JWTManager
 during initialisation multiple additional endpoints will be created
@@ -118,9 +119,9 @@ def login_required(fn, validateOnline=True):
 
             # Check availablility of access_token
             checkJWT = jwt_required(fn)(*args, **kwargs)
-            csrf_state=check_csrf_token()
+            csrf_state = check_csrf_token()
             if csrf_state:
-                return(json.dumps({"msg":csrf_state}), 401)
+                return(json.dumps({"msg": csrf_state}), 401)
 
             if validateOnline:
                 if onlineValidation():
@@ -177,5 +178,3 @@ def group_required(group=""):
         return wrapper
 
     return decorator
-
-

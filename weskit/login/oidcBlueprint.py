@@ -1,17 +1,15 @@
-from flask import jsonify, request, Blueprint, redirect
+from flask import jsonify, request, Blueprint, redirect, abort
+from flask import current_app as app
 from flask_jwt_extended import (
-    set_access_cookies,
-    set_refresh_cookies,
     unset_jwt_cookies
 )
 
-from weskit.login.utils import requester_and_cookieSetter
-from flask import current_app as app
-import requests
 import urllib
 import json
 import time
 from base64 import b64decode
+
+from weskit.login.utils import requester_and_cookieSetter
 
 login = Blueprint('login', __name__, template_folder='templates')
 
@@ -44,25 +42,27 @@ def loginFct():
 
 
 @login.route('/login', methods=['POST'])
+def direct_auth():
     """
     Via Posting Login Credentials to /login
     {"username":"test","password":"test"}
     """
-def direct_auth():
-    username = request.json.get('username',None)
-    password = request.json.get('password',None)
-    if  not (username and password):
-        return jsonify({"msg":"username or password missing"}),401
+    if not request.is_json:
+        abort(400)  # or any custom BadRequest message
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+    if not (username and password):
+        return jsonify({"msg": "username or password missing"}), 401
     payload = {
         "grant_type": "password",
         "username": username,
-        "password":password,
+        "password": password,
         "client_id": app.config["OIDC_CLIENTID"],
         "client_secret": app.config["OIDC_CIENT_SECRET"]
         }
 
     # Make request
-    return(requester_and_cookieSetter(payload,setcookies=False))
+    return(requester_and_cookieSetter(payload, setcookies=False))
 
 
 @login.route('/login/callback', methods=['GET'])
@@ -70,7 +70,7 @@ def callbackFunction():
     """
     The ODIC authenticator redirects to this endpoint after login success.
     """
-    code=request.args.get("code",None)
+    code = request.args.get("code", None)
     # Payload
     payload = {
         "grant_type": "authorization_code",
@@ -89,7 +89,6 @@ def callbackFunction():
         )
     # Make request
     return(requester_and_cookieSetter(payload))
-
 
 
 @login.route('/login/logout', methods=['GET'])
@@ -132,7 +131,7 @@ def refesh_access_token():
         return jsonify(
             {'refresh': False, "msg": "Refresh Token Expired!"}
         ), 401
- 
+
     # Prepare Header and Payload for the OIDC request
     payload = {
             "grant_type": "refresh_token",
@@ -142,9 +141,7 @@ def refesh_access_token():
             }
 
     # Get an responce from OIDC authenticator
-    return(requester_and_cookieSetter(j))
-
-
+    return(requester_and_cookieSetter(payload))
 
 
 def refresh_token_timeOK(token):
