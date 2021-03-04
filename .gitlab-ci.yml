@@ -24,12 +24,18 @@ before_script:
   - conda env create -n weskit -f environment.yaml
   - conda activate weskit
 
-test:
+py_test:
+  image: continuumio/miniconda3:latest
+  script:
+    # - flake8 weskit/
+    #- python -m pytest -v -s --log-cli-level=debug
+    - python -m pytest -v
+
+code_style:
   image: continuumio/miniconda3:latest
   script:
     - flake8 weskit/
-    #- python -m pytest -v -s --log-cli-level=debug
-    - python -m pytest -v
+
 
 run:
   image: continuumio/miniconda3:latest
