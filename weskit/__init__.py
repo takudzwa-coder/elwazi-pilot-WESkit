@@ -11,6 +11,7 @@ from flask import Flask, current_app
 
 from flask_jwt_extended import JWTManager
 
+from weskit.login import Login
 
 def read_swagger():
     '''Read the swagger file.'''
@@ -89,105 +90,38 @@ def create_app():
     ######################################
     #              Init Login            #
     ######################################
+    app.config["OIDC_ISSUER_URL"]="http://keycloak:8080/auth/realms/WESkit"
+    app.config["OIDC_REALM"]="WESkit"
+    app.config["OIDC_CLIENTID"]="WESkit"
+    app.config["OIDC_CIENT_SECRET"]="a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
 
-    # Enable Login by Default
-    app.config["JWT_ENABLED"] = True
+    app.config["OIDC_FLASKHOST"]="https://localhost:5000"
 
-    # check if JWT auth is enabled in config
-    if "jwt_config" in config:
-        logger.info("User Authentication: ENABLED")
+    app.config['JWT_TOKEN_LOCATION'] = ['cookies','headers']
+    app.config["JWT_ALGORITHM"] = "RS256"
+    app.config["JWT_DECODE_AUDIENCE"] ="account"
+    app.config["JWT_IDENTITY_CLAIM"] = "sub"
 
-        ############################################
-        #  config that would require code changes  #
-        ############################################
+    # Only allow JWT cookies to be sent over https. In production, this
+    # should likely be True
+    app.config['JWT_COOKIE_SECURE'] = True
 
-        # Configure application to store JWTs in cookies
-        app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+    # Set the cookie paths, so that you are only sending your access token
+    # cookie to the access endpoints, and only sending your refresh token
+    # to the refresh endpoint. Technically this is optional but it is in
+    # your best interest to not send additional cookies in the request if
+    # they aren't needed.
+    app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
+    app.config['JWT_REFRESH_COOKIE_PATH'] = '/'
 
-        # Set the cookie paths, so that you are only sending your access token
-        # cookie to the access endpoints, and only sending your refresh token
-        # to the refresh endpoint. Technically this is optional, but it is in
-        # your best interest to not send additional cookies in the request if
-        # they aren't needed.
-        app.config['JWT_ACCESS_COOKIE_PATH'] = '/ga4gh/wes/'
-        app.config['JWT_REFRESH_COOKIE_PATH'] = '/refresh'
+    # Enable csrf double submit protection. See this for a thorough
+    # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
+    
 
-        ############################################
-        # Load config from config file            #
-        ############################################
-        for key, value in config["jwt_config"].items():
-            app.config[key] = value
+    # Set the secret key to sign the JWTs with
+    #app.config['JWT_SECRET_KEY'] = 'a8086bcc-44f3-40f9-9e15-fd5c3c98ab24'  # Change this!
 
-        jwt = JWTManager(app)
+    Login.odicLogin(app)
 
-        from weskit.login import LoginBlueprint as login_bp
-        app.register_blueprint(login_bp.login)
-
-        ############################################
-        #  Initialize local Config file            #
-        ############################################
-
-        if config["localAuth"]["enabled"]:
-            logger.info("Initialize Local Auth")
-            from weskit.login.auth.Local import Local as localAuth
-            logger.info(
-                "Using UserManagementFile %s!" %
-                (config["localAuth"]["yamlPath"])
-            )
-
-            loginfile = config["localAuth"]["yamlPath"]
-
-            app.authObject = localAuth(
-                loginfile,
-                'local',
-                logger=app.logger)
-
-    else:
-        app.config["JWT_ENABLED"] = False
-        logger.info(
-            "User Authentication: DISABLED - "
-            "'jwt_config' not present in WESKIT config!"
-        )
-
-    ####################################################################
-    #               Overwrite JWT default fuctions                     #
-    #  This allows the login to deal with objects instead of strings   #
-    ####################################################################
-    #  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv  #
-
-    # Create a function that will be called whenever create_access_token
-    # is used. It will take whatever object is passed into the
-    # create_access_token method, and lets us define what custom claims
-    # should be added to the access token.
-
-    @jwt.user_claims_loader
-    def add_claims_to_access_token(user):
-        if len(user.roles):
-            return {'roles': user.roles}
-        return(None)
-
-    # Create a function that will be called whenever create_access_token
-    # is used. It will take whatever object is passed into the
-    # create_access_token method, and lets us define what the identity
-    # of the access token should be.
-    @jwt.user_identity_loader
-    def user_identity_lookup(user):
-        return {'username': user.username, 'authType': user.authType}
-
-    # This function is called whenever a protected endpoint is accessed,
-    # and must return an object based on the tokens identity.
-    # This is called after the token is verified, so you can use
-    # get_jwt_claims() in here if desired. Note that this needs to
-    # return None if the user could not be loaded for any reason,
-    # such as not being found in the underlying data store
-
-    @jwt.user_loader_callback_loader
-    def user_loader_callback(identity):
-        return(current_app.authObject.get(identity['username']))
-
-    ####################################################################
-    #               END overwrite  JWT default fuctions                #
-    #  This allows the login to deal with objects instead of strings   #
-    ####################################################################
 
     return app

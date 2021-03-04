@@ -3,6 +3,9 @@ version: '3.1'
 networks:
   backend:
     driver: overlay
+    
+  oauth:
+    driver: overlay
 
 services:
 
@@ -25,9 +28,10 @@ services:
       - ${WESKIT_DATA}:/weskit_data
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
-      - ./users.yaml:/weskit/users.yaml:ro
+      - ./weskit:/weskit/weskit:ro
     networks:
       - backend
+      - oauth
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate weskit && pip install ./ && ln -s /run/secrets/weskit.* /weskit/uWSGI_Server/certs/  && uwsgi --ini /weskit/uWSGI_Server/uwsgi.ini"]
@@ -68,6 +72,44 @@ services:
     networks:
       - backend
 
+  ## Login System
+  
+
+  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
+  keycloak:
+
+    image: quay.io/keycloak/keycloak:12.0.2
+    environment:
+    #  KEYCLOAK_USER: admin
+    #  KEYCLOAK_PASSWORD: admin
+    #  KEYCLOAK_IMPORT: /tmp/weskit-realm.json
+      DB_USER: keycloak
+      DB_PASSWORD: secret_password
+      KEYCLOAK_FRONTEND_URL: http://localhost:8080/auth
+    working_dir: /weskit
+  #  entrypoint: ["bash", "-i", "-c"]
+  #  command: ["conda activate weskit; celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
+    volumes:
+      - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
+    networks:
+      - oauth
+    ports:
+      - 8080:8080
+      
+  # keycloak database
+  mysql:
+    image: mysql
+  #  container_name:
+  #    mysql
+    environment:
+       MYSQL_DATABASE: keycloak
+       MYSQL_USER: keycloak
+       MYSQL_PASSWORD: secret_password
+       MYSQL_ROOT_PASSWORD: secret_root_password
+    volumes:
+      - ./kc_login/test.sql:/docker-entrypoint-initdb.d/test.sql
+    networks:
+      - oauth
 secrets:
   weskit.key:
     file: uWSGI_Server/certs/weskit.key

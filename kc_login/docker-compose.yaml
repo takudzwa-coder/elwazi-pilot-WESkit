@@ -1,0 +1,50 @@
+version: '3.1'
+
+networks:
+  backend:
+    driver: overlay
+
+services:
+
+  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
+  keycloak:
+    image: quay.io/keycloak/keycloak:12.0.2
+    environment:
+    #  KEYCLOAK_USER: admin
+    #  KEYCLOAK_PASSWORD: admin
+    #  KEYCLOAK_IMPORT: /tmp/weskit-realm.json
+      DB_USER: keycloak
+      DB_PASSWORD: secret_password
+    working_dir: /weskit
+  #  entrypoint: ["bash", "-i", "-c"]
+  #  command: ["conda activate weskit; celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
+    volumes:
+      - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
+    networks:
+      - backend
+    ports:
+      - 8080:8080
+      
+  mysql:
+    image: mysql
+    container_name:
+      mysql
+    environment:
+       MYSQL_DATABASE: keycloak
+       MYSQL_USER: keycloak
+       MYSQL_PASSWORD: secret_password
+       MYSQL_ROOT_PASSWORD: secret_root_password
+    volumes:
+      - ./test.sql:/docker-entrypoint-initdb.d/test.sql
+    networks:
+      - backend
+
+
+secrets:
+  weskit.key:
+    file: uWSGI_Server/certs/weskit.key
+  weskit.crt:
+    file: uWSGI_Server/certs/weskit.crt
+    
+ 
+  

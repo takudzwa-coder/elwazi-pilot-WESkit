@@ -67,7 +67,9 @@ static_service_info:
       valuesrules:
         type: string
         
-jwt_config:
+        
+
+odic_config:
   type: dict
   required: false
   schema:
@@ -82,13 +84,50 @@ jwt_config:
       required: true
 
 
-localAuth:
-  type: dict
-  required: true
-  schema:
-    enabled:
-      required: true
-      type: boolean
-    yamlPath:
-      required: true
+    OIDC_ISSUER_URL:
       type: string
+      required: true
+
+    OIDC_REALM:
+      type: string
+      required: true
+    OIDC_CLIENTID:
+      type: string
+      required: true
+    OIDC_CIENT_SECRET:
+      type: string
+      required: true
+    OIDC_FLASKHOST:
+      type: string
+      required: true
+
+    JWT_TOKEN_LOCATION:
+      type: string
+      required: true
+    JWT_ALGORITHM:
+      type: string
+      required: true
+    JWT_DECODE_AUDIENCE:
+      type: string
+      required: true
+    JWT_IDENTITY_CLAIM:
+      type: string
+      required: true
+
+    JWT_COOKIE_SECURE:
+      type: boolean
+      required: true
+    JWT_CSRF_IN_COOKIES:
+      type: boolean
+      required: true
+
+    JWT_ACCESS_COOKIE_PATH:
+      type: string
+      required: true
+    JWT_REFRESH_COOKIE_PATH:
+      type: string
+      required: true
+
+    JWT_COOKIE_CSRF_PROTECT:
+      type: boolean
+      required: true

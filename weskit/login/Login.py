@@ -9,10 +9,9 @@ from flask import current_app
 
 from jwt.algorithms import RSAAlgorithm
 
-from login import oidcBlueprint as login_bp
-from login.oidcUser import User
-from login.utils import onlineValidation
-
+from weskit.login import oidcBlueprint as login_bp
+from weskit.login.oidcUser import User
+from weskit.login.utils import onlineValidation, check_csrf_token
 
 class odicLogin:
     """ This Class Initializes the OIDC Login and creates a JWTManager
@@ -90,6 +89,10 @@ for an manual login
 
         # Add Login blueprint and Setup JWTManager
         app.register_blueprint(login_bp.login)
+
+        # Deaktivate  JWT CSRF since it is not working with external oidc
+        # access tokens
+        app.config['JWT_COOKIE_CSRF_PROTECT'] = False
         self.jwt = JWTManager(app)
 
         # Define Custom jwt callback functions
@@ -112,10 +115,14 @@ def login_required(fn, validateOnline=True):
     def wrapper(*args, **kwargs):
         # Don't use endpoint protection if Loginin is not initialized
         if current_app.OIDC_Login is not None:
-            #
+
+            # Check availablility of access_token
+            checkJWT = jwt_required(fn)(*args, **kwargs)
+            csrf_state=check_csrf_token()
+            if csrf_state:
+                return(json.dumps({"msg":csrf_state}), 401)
+
             if validateOnline:
-                # Check availablility of access_token
-                checkJWT = jwt_required(fn)(*args, **kwargs)
                 if onlineValidation():
                     return checkJWT
                 else:
@@ -170,3 +177,5 @@ def group_required(group=""):
         return wrapper
 
     return decorator
+
+
