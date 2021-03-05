@@ -68,7 +68,7 @@ def database(database_container):
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
-    yield redis_container
+    return redis_container
 
 
 @pytest.fixture(scope="session")
