@@ -19,7 +19,7 @@ class odicLogin:
 during initialisation multiple additional endpoints will be created
 for an manual login
   """
-    def __init__(self, app):
+    def __init__(self, app, addLogin=True):
         app.OIDC_Login = self
         if not isinstance(app.logger, logging.Logger):
             self.logger = logging.getLogger("default")
@@ -88,8 +88,12 @@ for an manual login
             self.logger.exception(e)
             exit(1)
 
-        # Add Login blueprint and Setup JWTManager
-        app.register_blueprint(login_bp.login)
+        if addLogin:
+            self.logger.info("Creating Login Endpoints.")
+            # Add Login blueprint and Setup JWTManager
+            app.register_blueprint(login_bp.login)
+        else:
+            self.logger.info("Will not Create Login Endpoint.")
 
         # Deaktivate  JWT CSRF since it is not working with external oidc
         # access tokens

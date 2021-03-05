@@ -7,8 +7,11 @@ from weskit.classes.ServiceInfo import ServiceInfo
 from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
+from testcontainers.compose import DockerCompose
 from logging.config import dictConfig
 from weskit.classes.RunStatus import RunStatus
+
+
 
 
 def get_redis_url(redis_container):
@@ -20,9 +23,13 @@ def get_redis_url(redis_container):
 
 
 @pytest.fixture(scope="session")
-def test_app(database_container, redis_container):
+def test_app(database_container, redis_container,keycloak_container):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    os.environ["kc_backend"]="http://%s:%s/auth/realms/WESkit" % (
+        keycloak_container.get_service_host("keycloak",8080),
+        keycloak_container.get_service_port("keycloak",8080),
+    )
 
     # import here because env vars need to be set before
     from weskit import create_app
@@ -30,14 +37,21 @@ def test_app(database_container, redis_container):
     os.environ["WESKIT_CONFIG"] = "tests/config.yaml"
 
     app = create_app()
-
+    
+    os.environ["testing_only_tokenendpoint"]=app.OIDC_Login.oidc_config["token_endpoint"]
     app.testing = True
     with app.test_client() as testing_client:
         ctx = app.app_context()
         ctx.push()
         yield testing_client
 
+@pytest.fixture(scope="session")
+def keycloak_container():
 
+    kc_container = DockerCompose("./kc_login","docker-compose.yaml")
+    kc_container.start()
+    return kc_container
+    
 @pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.

@@ -89,7 +89,7 @@ def create_app():
     ######################################
     #              Init Login            #
     ######################################
-    app.config["OIDC_ISSUER_URL"] = "http://keycloak:8080/auth/realms/WESkit"
+    app.config["OIDC_ISSUER_URL"] = os.environ["kc_backend"]#"http://keycloak:8080/auth/realms/WESkit"
     app.config["OIDC_REALM"] = "WESkit"
     app.config["OIDC_CLIENTID"] = "WESkit"
     app.config["OIDC_CIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
@@ -116,6 +116,6 @@ def create_app():
     # Enable csrf double submit protection. See this for a thorough
     # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
 
-    Login.odicLogin(app)
+    Login.odicLogin(app, addLogin=False)
 
     return app

@@ -1,18 +1,14 @@
 version: '3.1'
 
 networks:
-  backend:
+  oauth:
     driver: overlay
 
 services:
 
-  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   keycloak:
     image: quay.io/keycloak/keycloak:12.0.2
     environment:
-    #  KEYCLOAK_USER: admin
-    #  KEYCLOAK_PASSWORD: admin
-    #  KEYCLOAK_IMPORT: /tmp/weskit-realm.json
       DB_USER: keycloak
       DB_PASSWORD: secret_password
     working_dir: /weskit
@@ -21,7 +17,7 @@ services:
     volumes:
       - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
     networks:
-      - backend
+      - oauth
     ports:
       - 8080:8080
       
@@ -37,14 +33,14 @@ services:
     volumes:
       - ./test.sql:/docker-entrypoint-initdb.d/test.sql
     networks:
-      - backend
+      - oauth
 
 
 secrets:
   weskit.key:
-    file: uWSGI_Server/certs/weskit.key
+    file: ../uWSGI_Server/certs/weskit.key
   weskit.crt:
-    file: uWSGI_Server/certs/weskit.crt
+    file: ../uWSGI_Server/certs/weskit.crt
     
  
   
