@@ -102,7 +102,6 @@ def login_required(
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        print(current_app.config.get('JWT_SECRET_KEY', None))
         if current_app.config.get("JWT_ENABLED", True):
             checkJWT = jwt_required(fn)
             return checkJWT(*args, **kwargs)
