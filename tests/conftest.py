@@ -1,14 +1,10 @@
-import logging
 import os
 import pytest
 import yaml
-from weskit.classes.Database import Database
 from weskit.classes.ServiceInfo import ServiceInfo
-from pymongo import MongoClient
+from weskit.classes.Workflow import Snakemake, Nextflow
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
-from logging.config import dictConfig
-from weskit.classes.RunStatus import RunStatus
 
 
 def get_redis_url(redis_container):
@@ -57,14 +53,16 @@ def database_container():
 
     yield db_container
 
+
 @pytest.fixture(scope="session")
-def database_connection(database_container):
+def database(database_container):
     from weskit import create_database
 
     database = create_database()
 
     yield database
     database._db_runs().drop()
+
 
 @pytest.fixture(scope="session")
 def redis_container():
@@ -87,16 +85,25 @@ def celery_worker_pool():
 
 
 @pytest.fixture(scope="session")
-def service_info(test_config, swagger, database_connection):
-    yield ServiceInfo(
-        test_config["static_service_info"],
-        swagger,
-        database_connection
-    )
+def celery_worker_parameters():
+    return {"concurrency":10}
+
+
+@pytest.fixture(scope='session')
+def celery_enable_logging():
+    return True
 
 
 @pytest.fixture(scope="session")
-def swagger(database_connection):
+def service_info(test_config, swagger, database):
+    yield ServiceInfo(
+        test_config["static_service_info"],
+        swagger,
+        database
+    )
+
+@pytest.fixture(scope="session")
+def swagger(database):
     with open("weskit/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
@@ -104,9 +111,17 @@ def swagger(database_connection):
 
 
 @pytest.fixture(scope="session")
-def manager(database_connection, redis_container, test_config):
+def manager(database, redis_container, test_config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    from weskit.classes.Workflow import WorkflowFactory
     from weskit.classes.Manager import Manager
-    manager = Manager(config=test_config, datadir="tmp/")
+
+    workflow_dict = {
+        Snakemake.name(): WorkflowFactory.get_workflow(test_config,
+                                                       Snakemake.name()),
+        Nextflow.name(): WorkflowFactory.get_workflow(test_config,
+                                                      Nextflow.name())
+    }
+    manager = Manager(workflow_dict=workflow_dict, data_dir="tmp/")
     yield manager
