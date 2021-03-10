@@ -104,7 +104,7 @@ class WorkflowFactory:
         self.snakemake_kwargs = {}
         self.nextflow_kwargs = {}
         for parameter in (config_file["static_service_info"]
-        ["default_workflow_engine_parameters"]):
+                                     ["default_workflow_engine_parameters"]):
             workflow_engine = parameter["workflow_engine"].lower()
             if workflow_engine == "snakemake":
                 self.snakemake_kwargs[parameter["name"]] = eval(
