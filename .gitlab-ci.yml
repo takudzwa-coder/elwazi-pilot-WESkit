@@ -6,6 +6,9 @@ cache:
     - /opt/conda/pkgs
     - /root/.conda/pkgs
 
+image:
+  name: docker/compose:latest
+
 services:
   - docker:dind
 
@@ -23,6 +26,7 @@ before_script:
   - conda config --show    # For debugging
   - conda env create -n weskit -f environment.yaml
   - conda activate weskit
+  - docker ps
 
 py_test:
   image: continuumio/miniconda3:latest
