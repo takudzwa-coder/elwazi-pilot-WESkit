@@ -6,8 +6,6 @@ cache:
     - /opt/conda/pkgs
     - /root/.conda/pkgs
 
-image:
-  name: docker/compose:latest
 
 services:
   - docker:dind

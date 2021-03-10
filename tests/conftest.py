@@ -48,9 +48,13 @@ def test_app(database_container, redis_container,keycloak_container):
 @pytest.fixture(scope="session")
 def keycloak_container():
 
-    kc_container = DockerCompose("./kc_login","docker-compose.yaml")
-    kc_container.start()
-    return kc_container
+    with DockerCompose("./kc_login","docker-compose.yaml") as kc_container:
+        kc_container.start()
+        url="http://%s:%s/auth/realms/WESkit/.well-known/openid-configuration" % (
+        kc_container.get_service_host("keycloak",8080),
+        kc_container.get_service_port("keycloak",8080))
+        kc_container.wait_for(url)
+        yield kc_container
     
 @pytest.fixture(scope="session")
 def test_config():
@@ -99,9 +103,9 @@ def celery_config(redis_container):
 def celery_worker_pool():
     return 'prefork'
 
-#@pytest.fixture(scope="session")
-#def celery_worker_parameters():
-#    return {"concurrency":10}
+@pytest.fixture(scope="session")
+def celery_worker_parameters():
+    return {"concurrency":1}
 
 
 @pytest.fixture(scope="session")

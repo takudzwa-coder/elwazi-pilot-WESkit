@@ -184,3 +184,8 @@ def test_get_runs_cookie(test_app, celery_worker):
     response = test_app.get("/ga4gh/wes/v1/runs", headers=session_token)
     assert len([x for x in response.json if x['run_id']== runID])==1
     assert response.status_code == 200
+
+
+def test_sleep_4_redis(test_app, celery_worker):
+    time.sleep(5)
+    assert(True) 
