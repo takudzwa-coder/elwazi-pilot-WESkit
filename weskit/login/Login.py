@@ -5,7 +5,7 @@ import requests
 from functools import wraps
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, get_raw_jwt, verify_jwt_in_request
-from flask import current_app
+from flask import current_app, jsonify
 
 from jwt.algorithms import RSAAlgorithm
 
@@ -125,14 +125,14 @@ def login_required(fn, validateOnline=True):
             checkJWT = jwt_required(fn)(*args, **kwargs)
             csrf_state = check_csrf_token()
             if csrf_state:
-                return(json.dumps({"msg": csrf_state}), 401)
+                return(jsonify({"msg": csrf_state}), 401)
 
             if validateOnline:
                 if onlineValidation():
                     return checkJWT
                 else:
                     return(
-                        json.dumps(
+                        jsonify(
                             {"msg":"Online Validation Failed, use new access_token"}  # noqa E501
                         ), 401
                     )
