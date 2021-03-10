@@ -86,7 +86,7 @@ def celery_worker_pool():
 
 @pytest.fixture(scope="session")
 def celery_worker_parameters():
-    return {"concurrency":4}
+    return {"concurrency":10}
 
 
 @pytest.fixture(scope='session')
