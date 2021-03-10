@@ -41,7 +41,7 @@ Set the following environmental variables:
 ##### Deactivate SSL encryption
 Usually WESkit uses SSL secured connections, since authentification data were transfered. Nevertheless it is possible to deactivate SSL by editing `uWSGI_Server/uwsgi.ini`. The comment the `https` option out and uncomment the `http` option. Furthermore, the weskit config must be changed to:
 ```yaml
-jwt_config:
+jwt:
     # Only allow JWT cookies to be sent over https. In production, this
     # should likely be True
     JWT_COOKIE_SECURE: false

@@ -94,7 +94,7 @@ def create_app():
     app.config["JWT_ENABLED"] = True
 
     # check if JWT auth is enabled in config
-    if "jwt_config" in config:
+    if "jwt" in config and config["jwt"]["enabled"]:
         logger.info("User Authentication: ENABLED")
 
         ############################################
@@ -115,7 +115,7 @@ def create_app():
         ############################################
         # Load config from config file            #
         ############################################
-        for key, value in config["jwt_config"].items():
+        for key, value in config["jwt"].items():
             app.config[key] = value
 
         jwt = JWTManager(app)
@@ -146,7 +146,7 @@ def create_app():
         app.config["JWT_ENABLED"] = False
         logger.info(
             "User Authentication: DISABLED - "
-            "'jwt_config' not present in WESKIT config!"
+            "'jwt' not present in WESKIT config!"
         )
 
     ####################################################################

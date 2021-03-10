@@ -45,7 +45,7 @@ The WESkit login part of the WESkit config should look similar to:
 ```yaml
 # If this block is missing WESkit will act without login
 
-jwt_config:
+jwt:
     # Only allow JWT cookies to be sent over https. In production, this
     # should likely be True
     JWT_COOKIE_SECURE: true
@@ -60,14 +60,18 @@ jwt_config:
     JWT_SECRET_KEY: 'super-secret'  # Change this!!!!!!
     
     
-# This block is only used if the jwt_config is present!
+# This block is only used if the jwt is present! and enabled=True
 # It allows the switch the auth backend in the future.
 localAuth:
   enabled: true    # currently always true!
   yamlPath: 'users.yaml'  # Path to users.yaml should not be changed if `docker stack` is used!
 ```
-### jwt_config Block
-A missing jwt_config block will be interpreted as "open WESkit". No login is required. In the most cases you want to set this block!
+### jwt Block
+A missing jwt block will be interpreted as "open WESkit". No login is required. In the most cases you want to set this block!
+
+***enabled **
+
+required boolean will enable or disable jwt functions
 
 **JWT_COOKIE_SECURE**
 
