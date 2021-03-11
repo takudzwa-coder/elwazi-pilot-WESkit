@@ -16,6 +16,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 before_script:
+  - docker ps
   - python -V              # For debugging
   - export PIP_CACHE_DIR="/opt/cache/pip"
   - conda init bash
