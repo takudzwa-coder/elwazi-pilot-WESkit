@@ -10,8 +10,6 @@ cache:
 services:
   - docker:dind
 
-image: docker/compose:latest
-
 variables:
   DOCKER_HOST: "tcp://docker:2375"
   DOCKER_DRIVER: overlay2
@@ -26,13 +24,15 @@ before_script:
   - conda config --show    # For debugging
   - conda env create -n weskit -f environment.yaml
   - conda activate weskit
-  - docker ps
+
 
 py_test:
   image: continuumio/miniconda3:latest
   script:
     # - flake8 weskit/
     #- python -m pytest -v -s --log-cli-level=debug
+    - conda install -c conda-forge docker-compose
+    - docker-compose version
     - python -m pytest -v
 
 code_style:
