@@ -31,7 +31,7 @@ py_test:
   script:
     # - flake8 weskit/
     #- python -m pytest -v -s --log-cli-level=debug
-    - conda install -c conda-forge docker-compose
+    - pip install docker-compose
     - docker-compose version
     - python -m pytest -v
 
