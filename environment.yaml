@@ -22,6 +22,6 @@ dependencies:
   - flask-jwt-extended=3.25.0
   - uwsgi=2.0.19.1
   - pip:
-     - testcontainers==3.0.0
+     - testcontainers==3.1.0
      - redis==3.5.1
 

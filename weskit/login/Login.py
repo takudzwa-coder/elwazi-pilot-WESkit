@@ -14,7 +14,7 @@ from weskit.login.oidcUser import User
 from weskit.login.utils import onlineValidation, check_csrf_token
 
 
-class odicLogin:
+class oidcLogin:
     """ This Class Initializes the OIDC Login and creates a JWTManager
 during initialisation multiple additional endpoints will be created
 for an manual login

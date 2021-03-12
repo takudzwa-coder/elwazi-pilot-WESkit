@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.4'
 
 networks:
   backend:
@@ -15,6 +15,8 @@ services:
     secrets:
       - weskit.key
       - weskit.crt
+      - keycloak.pem
+
     environment:
       WESKIT_CONFIG: /home/weskit/config.yaml
       WESKIT_LOG_CONFIG:
@@ -24,6 +26,7 @@ services:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
       FLASK_APP: weskit
+      REQUESTS_CA_BUNDLE: /run/secrets/keycloak.pem
     volumes:
       - ${WESKIT_DATA}:/weskit_data
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
@@ -80,27 +83,31 @@ services:
 
     image: quay.io/keycloak/keycloak:12.0.2
     environment:
-    #  KEYCLOAK_USER: admin
-    #  KEYCLOAK_PASSWORD: admin
-    #  KEYCLOAK_IMPORT: /tmp/weskit-realm.json
+     # KEYCLOAK_USER: admin
+     # KEYCLOAK_PASSWORD: admin
       DB_USER: keycloak
       DB_PASSWORD: secret_password
-      KEYCLOAK_FRONTEND_URL: http://localhost:8080/auth
+      KEYCLOAK_FRONTEND_URL: https://localhost:8443/auth
     working_dir: /weskit
-  #  entrypoint: ["bash", "-i", "-c"]
-  #  command: ["conda activate weskit; celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
-    volumes:
-      - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
+    #volumes:
+    #  - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
+    #  - ./uWSGI_Server/certs/weskit.crt:/etc/x509/https/tls.crt:ro
+    #  - ./uWSGI_Server/certs/weskit.key:/etc/x509/https/tls.key:ro
     networks:
       - oauth
     ports:
       - 8080:8080
+      - 8443:8443
+    secrets:
+      - source: weskit.key
+        target: /etc/x509/https/tls.key
+      - source: weskit.crt
+        target: /etc/x509/https/tls.crt
       
   # keycloak database
   mysql:
     image: mysql
-  #  container_name:
-  #    mysql
+
     environment:
        MYSQL_DATABASE: keycloak
        MYSQL_USER: keycloak
@@ -110,8 +117,12 @@ services:
       - ./kc_login/test.sql:/docker-entrypoint-initdb.d/test.sql
     networks:
       - oauth
+
+
 secrets:
   weskit.key:
     file: uWSGI_Server/certs/weskit.key
   weskit.crt:
     file: uWSGI_Server/certs/weskit.crt
+  keycloak.pem:
+    file: uWSGI_Server/certs/weskit.pem
