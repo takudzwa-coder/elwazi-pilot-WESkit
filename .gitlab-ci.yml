@@ -16,8 +16,6 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 before_script:
-  - pip install docker
-  - docker ps
   - python -V              # For debugging
   - export PIP_CACHE_DIR="/opt/cache/pip"
   - conda init bash
@@ -31,8 +29,6 @@ before_script:
 py_test:
   image: continuumio/miniconda3:latest
   script:
-    # - flake8 weskit/
-    #- python -m pytest -v -s --log-cli-level=debug
     - pip install docker-compose
     - docker-compose version
     - python -m pytest -v
