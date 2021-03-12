@@ -39,6 +39,14 @@ code_style:
   script:
     - flake8 weskit/
 
+py_t:
+  image: continuumio/miniconda3:latest
+  script:
+    - pip install docker-compose
+    - docker-compose version
+    - python -m pytest -v tests/server_test.py
+
+
 
 run:
   image: continuumio/miniconda3:latest
