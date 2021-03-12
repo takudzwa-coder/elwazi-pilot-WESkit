@@ -61,8 +61,7 @@ class Manager:
 
     def update_outputs(self, run: Run) -> Run:
 
-        if run.run_status not in running_states:
-            if run.celery_task_id is not None:
+        if run.run_status == RunStatus.COMPLETE:
                 running_task = run_workflow.AsyncResult(run.celery_task_id)
                 run.outputs["Workflow"] = running_task.get()
         return run
