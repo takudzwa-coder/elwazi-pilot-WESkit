@@ -36,8 +36,11 @@ class Manager:
         self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
-        run.run_status = RunStatus.CANCELING
-        revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
+        if run.run_status in running_states:
+            run.run_status = RunStatus.CANCELING
+            revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
+        elif run.run_status in RunStatus.INITIALIZING:
+            run.run_status = RunStatus.SYSTEM_ERROR
         return run
 
     def update_state(self, run: Run) -> Run:
@@ -172,10 +175,13 @@ class Manager:
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        task = run_workflow.apply_async(
-                args=[],
-                kwargs={**run_kwargs,
-                        **self.workflow_dict[workflow_type].workflow_kwargs})
+        if run.run_status == RunStatus.INITIALIZING:
+            task = run_workflow.apply_async(
+                    args=[],
+                    kwargs={**run_kwargs,
+                            **self.workflow_dict[
+                                workflow_type].workflow_kwargs})
 
-        run.celery_task_id = task.id
+            run.celery_task_id = task.id
+
         return run
