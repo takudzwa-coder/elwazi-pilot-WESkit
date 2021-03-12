@@ -22,7 +22,8 @@ before_script:
   - source /root/.bashrc
   - conda info             # For debugging
   - conda config --show    # For debugging
-  - conda env create -n weskit -f environment.yaml
+  - conda install mamba -n base -c conda-forge
+  - mamba env create -n weskit -f environment.yaml
   - conda activate weskit
 
 
