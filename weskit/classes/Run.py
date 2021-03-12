@@ -18,7 +18,7 @@ class Run:
         self.outputs = data.get("outputs", {})
         self.run_log = data.get("run_log", {})
         self.run_status = RunStatus.\
-            from_string(data.get("run_status", "UNKNOWN"))
+            from_string(data.get("run_status", "INITIALIZING"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])
 

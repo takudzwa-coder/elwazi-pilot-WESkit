@@ -20,7 +20,7 @@ def test_update_run(database):
     new_run.run_status = RunStatus.RUNNING
     database.update_run(new_run)
     assert new_run.run_status == RunStatus.RUNNING
-    assert run.run_status == RunStatus.UNKNOWN
+    assert run.run_status == RunStatus.INITIALIZING
 
 def test_get_runs(database):
     runs = database.get_runs(query={})

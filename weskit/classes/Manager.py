@@ -75,7 +75,7 @@ class Manager:
 
     def create_and_insert_run(self, request, database) -> Optional[Run]:
         run = Run(data={"run_id": database._create_run_id(),
-                        "run_status": "UNKNOWN",
+                        "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
                         "request": request})
         if database.insert_run(run):
@@ -114,10 +114,8 @@ class Manager:
 
     def prepare_execution(self, run, files=[]):
 
-        if not run.run_status == RunStatus.UNKNOWN:
+        if not run.run_status == RunStatus.INITIALIZING:
             return run
-
-        run.run_status = RunStatus.INITIALIZING
 
         # prepare run directory
         run_dir = os.path.abspath(os.path.join(self.data_dir,
