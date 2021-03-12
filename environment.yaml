@@ -22,6 +22,6 @@ dependencies:
   - flask-jwt-extended=3.25.0
   - nextflow=20.10.0
   - pip:
-     - testcontainers==3.2.0
+     - testcontainers==3.0.0
      - redis==3.5.1
 
