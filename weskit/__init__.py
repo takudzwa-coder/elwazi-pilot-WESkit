@@ -120,6 +120,6 @@ def create_app():
     # Enable csrf double submit protection. See this for a thorough
     # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
 
-    Login.odicLogin(app, addLogin=False)
+    Login.oidcLogin(app, addLogin=False)
 
     return app
