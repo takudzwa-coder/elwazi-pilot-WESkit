@@ -34,7 +34,7 @@ Set the following environmental variables:
   * `REDIS_CONFIG`: Path to redis configuration file.
   * `SHARED_FILESYSTEM_ROOT`: Path to file system directory for application data such as database files, redis files and Snakemake execution data.
   * `WESKIT_CONFIG`: Path to WESkit config.yaml
-  * `WESKIT_IMAGE`: Docker iamge tag (weskit:0.0.1)
+  * `WESKIT_IMAGE`: Docker image tag (weskit:0.0.1)
   * `WESKIT_ROOT`: Path to WESkit repository
 
 #### SSL configuration

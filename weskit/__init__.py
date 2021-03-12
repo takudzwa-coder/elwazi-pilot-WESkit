@@ -8,7 +8,7 @@ from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask, current_app
-
+from weskit.classes.Workflow import Snakemake, Nextflow, WorkflowFactory
 from flask_jwt_extended import JWTManager
 
 
@@ -76,8 +76,15 @@ def create_app():
     app.validation = validation
     app.database = create_database()
 
-    app.manager = Manager(config=config,
-                          datadir=os.getenv("WESKIT_DATA", "./tmp"))
+    workflow_dict = {
+        Snakemake.name(): WorkflowFactory.get_workflow(config,
+                                                       Snakemake.name()),
+        Nextflow.name(): WorkflowFactory.get_workflow(config,
+                                                      Nextflow.name())
+    }
+
+    app.manager = Manager(workflow_dict=workflow_dict,
+                          data_dir=os.getenv("WESKIT_DATA", "./tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)
     app.log_config = log_config

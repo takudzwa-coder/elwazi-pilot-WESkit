@@ -15,16 +15,15 @@ static_service_info:
     workflow_type_versions:
       type: dict
       required: true
-      schema:
-        Snakemake:
-          type: dict
-          required: true
-          schema:
-            workflow_type_version:
-                type: list
-                required: true
-                schema:
-                  type: string
+      valuesrules:
+        type: dict
+        required: true
+        schema:
+          workflow_type_version:
+              type: list
+              required: true
+              schema:
+                type: string
     supported_filesystem_protocols:
       type: list
       required: true
@@ -34,7 +33,9 @@ static_service_info:
       type: dict
       required: true
       schema:
-        Snakemake:
+        snakemake:
+          type: string
+        nextflow:
           type: string
     default_workflow_engine_parameters:
       type: list

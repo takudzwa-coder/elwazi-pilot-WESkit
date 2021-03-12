@@ -1,28 +1,29 @@
-from weskit.classes.Run import Run
-from weskit.tasks.snakemake import run_snakemake
-from celery.task.control import revoke
-from werkzeug.utils import secure_filename
-from weskit.utils import get_current_time
-from typing import Optional
 import json
 import os
 import yaml
-
+from weskit.classes.Run import Run
+from weskit.classes.RunStatus import RunStatus
+from weskit.tasks.workflow import run_workflow
+from celery.task.control import revoke
+from werkzeug.utils import secure_filename
+from weskit.utils import get_current_timestamp
+from typing import Optional
 
 celery_to_wes_state = {
-    "PENDING": "QUEUED",
-    "STARTED": "RUNNING",
-    "SUCCESS": "COMPLETE",
-    "FAILURE": "EXECUTOR_ERROR",
-    "RETRY": "QUEUED",
-    "REVOKED": "CANCELED"}
-
+    "PENDING": RunStatus.QUEUED,
+    "STARTED": RunStatus.RUNNING,
+    "SUCCESS": RunStatus.COMPLETE,
+    "FAILURE": RunStatus.EXECUTOR_ERROR,
+    "RETRY": RunStatus.QUEUED,
+    "REVOKED": RunStatus.CANCELED
+}
 
 running_states = [
-    "QUEUED",
-    "INITIALIZING",
-    "RUNNING",
-    "PAUSED"]
+    RunStatus.QUEUED,
+    RunStatus.INITIALIZING,
+    RunStatus.RUNNING,
+    RunStatus.PAUSED
+]
 
 EXECUTOR_WF_NOT_FOUND = """
 WESkit executor error: the workflow file was not found. Please provide either
@@ -31,48 +32,52 @@ via workflow_attachments."""
 
 
 class Manager:
-    def __init__(self, config: dict, datadir: str) -> None:
-        self.snakemake_kwargs = {}
-        for parameter in (config["static_service_info"]
-                                ["default_workflow_engine_parameters"]):
-            if parameter["workflow_engine"] == "snakemake":
-                self.snakemake_kwargs[parameter["name"]] = eval(
-                    parameter["type"])(parameter["default_value"])
-        self.datadir = datadir
+
+    def __init__(self, workflow_dict: dict, data_dir: str) -> None:
+        self.workflow_dict = workflow_dict
+        self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
+        # This is a quickfix for executing the tests.
+        # This might be a bad solution for multithreaded use-cases,
+        # because the current working directory is touched.
+        cwd = os.getcwd()
         revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
-        run.run_status = "CANCELED"
+        os.chdir(cwd)
+        run.run_status = RunStatus.CANCELED
         return run
 
     def update_state(self, run: Run) -> Run:
         # check if task is running and update state
         if run.run_status in running_states:
             if run.celery_task_id is not None:
-                running_task = run_snakemake.AsyncResult(run.celery_task_id)
+                running_task = run_workflow.AsyncResult(run.celery_task_id)
                 run.run_status = celery_to_wes_state[running_task.state]
             else:
-                run.run_status = "UNKNOWN"
+                run.run_status = RunStatus.UNKNOWN
         return run
 
     def update_outputs(self, run: Run) -> Run:
+
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
-                running_task = run_snakemake.AsyncResult(run.celery_task_id)
-                run.outputs["Snakemake"] = running_task.get()
+                running_task = run_workflow.AsyncResult(run.celery_task_id)
+                run.outputs["Workflow"] = running_task.get()
         return run
+
+    def update_run(self, run: Run) -> Run:
+        return self.update_outputs(self.update_state(run))
 
     def update_runs(self, database, query) -> None:
         runs = database.get_runs(query)
         for run in runs:
-            run = self.update_state(run)
-            run = self.update_outputs(run)
+            run = self.update_run(run)
             database.update_run(run)
 
     def create_and_insert_run(self, request, database) -> Optional[Run]:
         run = Run(data={"run_id": database._create_run_id(),
                         "run_status": "UNKNOWN",
-                        "request_time": database.get_current_time(),
+                        "request_time": get_current_timestamp(),
                         "request": request})
         if database.insert_run(run):
             return run
@@ -109,10 +114,12 @@ class Manager:
         return file_path
 
     def prepare_execution(self, run, files=[]):
-        run.run_status = "INITIALIZING"
+        run.run_status = RunStatus.INITIALIZING
 
         # prepare run directory
-        run_dir = os.path.abspath(os.path.join(self.datadir, run.run_id))
+        run_dir = os.path.abspath(os.path.join(self.data_dir,
+                                               run.run_id[0:4],
+                                               run.run_id))
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
         with open(run_dir + "/config.yaml", "w") as ff:
@@ -125,7 +132,7 @@ class Manager:
         # check for valid workflow_url
         if not (self._run_has_url_of_valid_absolute_file(run) or
                 run.request["workflow_url"] in attachment_filenames):
-            run.run_status = "SYSTEM_ERROR"
+            run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
                 filename="weskit_run_error.txt",
@@ -133,8 +140,8 @@ class Manager:
 
         return run
 
-    def execute(self, run):
-        if not run.run_status_check("INITIALIZING"):
+    def execute(self, run: Run) -> Run:
+        if not run.run_status == RunStatus.INITIALIZING:
             return run
 
         # set workflow_url
@@ -144,18 +151,30 @@ class Manager:
             workflow_url = os.path.join(
                 run.execution_path,
                 secure_filename(run.request["workflow_url"]))
+
+        # set workflow_type
+        if run.request["workflow_type"] in self.workflow_dict:
+            workflow_type = run.request["workflow_type"]
+        else:
+            raise Exception("Workflow type:'" +
+                            run.request["workflow_type"] +
+                            "' is not known.")
+
         # execute run
         run_kwargs = {
-            "snakefile": workflow_url,
+            "workflow_type": workflow_type,
+            "workflow_path": workflow_url,
             "workdir": run.execution_path,
-            "configfiles": [os.path.join(run.execution_path, "config.yaml")]
+            "config_files": [os.path.join(run.execution_path, "config.yaml")]
         }
-        run.start_time = get_current_time()
+        run.start_time = get_current_timestamp()
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        task = run_snakemake.apply_async(
-            args=[],
-            kwargs={**run_kwargs, **self.snakemake_kwargs})
+        task = run_workflow.apply_async(
+                args=[],
+                kwargs={**run_kwargs,
+                        **self.workflow_dict[workflow_type].workflow_kwargs})
+
         run.celery_task_id = task.id
         return run
