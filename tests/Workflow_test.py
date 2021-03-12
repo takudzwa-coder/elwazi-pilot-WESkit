@@ -8,6 +8,14 @@ from test_utils import get_mock_run
 from weskit.classes.RunStatus import RunStatus
 
 
+test_failed_status = [
+       RunStatus.UNKNOWN,
+       RunStatus.EXECUTOR_ERROR,
+       RunStatus.SYSTEM_ERROR,
+       RunStatus.CANCELED,
+       RunStatus.CANCELING
+    ]
+
 def test_snakemake_prepare_execution(manager):
 
     # 1.) use workflow on server
@@ -43,13 +51,7 @@ def test_snakemake_prepare_execution(manager):
 
 
 def test_execute_snakemake(database: Database, manager, celery_worker):
-    test_failed_status = [
-       RunStatus.UNKNOWN,
-       RunStatus.EXECUTOR_ERROR,
-       RunStatus.SYSTEM_ERROR,
-       RunStatus.CANCELED,
-       RunStatus.CANCELING
-       ]
+
     timeout_seconds = 120
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
                                                  "tests/wf1/Snakefile"),
@@ -75,13 +77,7 @@ def test_execute_snakemake(database: Database, manager, celery_worker):
 
 
 def test_execute_nextflow(database: Database, manager, celery_worker):
-    test_failed_status = [
-       RunStatus.UNKNOWN,
-       RunStatus.EXECUTOR_ERROR,
-       RunStatus.SYSTEM_ERROR,
-       RunStatus.CANCELED,
-       RunStatus.CANCELING
-       ]
+
     timeout_seconds = 120
     run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
                                                  "tests/wf3/helloworld.nf"),
@@ -106,15 +102,29 @@ def test_execute_nextflow(database: Database, manager, celery_worker):
         success = True
 
 
-# def test_cancel_workflow(manager, celery_worker, redis_container):
-#     run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
-#                                                  "tests/wf2/Snakefile"),
-#                        workflow_type="Snakemake")
-#     run = manager.prepare_execution(run, files=[])
-#     run = manager.execute(run)
-#     manager.cancel(run)
-#     assert run.run_status == RunStatus.CANCELED
+def test_running_to_cancel_workflow(manager, celery_worker, redis_container):
 
+    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"), workflow_type="Snakemake")
+    run = manager.prepare_execution(run, files=[])
+    run = manager.execute(run)
+
+    timeout_seconds = 120
+    start_time = time.time()
+
+    canceled = False
+    while not canceled:
+        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
+        run = manager.update_run(run)
+        print(run.run_status)
+        if run.run_status == RunStatus.RUNNING:
+            run = manager.cancel(run)
+            assert run.run_status ==  RunStatus.CANCELING
+            continue
+        if run.run_status == RunStatus.CANCELED:
+            canceled = True
+            continue
+        print("Waiting ...")
+        time.sleep(1)
 
 # def test_update_all_runs(manager, celery_worker, database):
 #     test_failed_status = [
