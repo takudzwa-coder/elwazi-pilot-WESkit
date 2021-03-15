@@ -40,12 +40,12 @@ code_style:
     - flake8 weskit/
 
 py_t:
-  image: continuumio/miniconda3:latest
+  image: docker-compose:alpine
   script:
-    - pip install docker-compose
+    #- pip install docker-compose
     - docker-compose version
-    - uWSGI_Server/generateDevelopmentCerts.sh
-    - conda install -c conda-forge docker
+    #- uWSGI_Server/generateDevelopmentCerts.sh
+    #- conda install -c conda-forge docker
     - docker swarm init
     - docker-compose -f kc_login/docker-compose.yaml up
    # - python -m pytest -v tests/server_test.py
