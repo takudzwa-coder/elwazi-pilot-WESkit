@@ -44,6 +44,7 @@ py_t:
   script:
     - pip install docker-compose
     - docker-compose version
+    - uWSGI_Server/generateDevelopmentCerts.sh
     - python -m pytest -v tests/server_test.py
 
 
