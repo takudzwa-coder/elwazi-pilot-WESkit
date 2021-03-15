@@ -16,6 +16,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 before_script:
+  - apt-get update
   - apt-get install docker.io -y
   - pip install docker-compose
   - docker-compose version
