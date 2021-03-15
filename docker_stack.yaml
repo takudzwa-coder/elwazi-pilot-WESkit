@@ -1,4 +1,4 @@
-version: '3'
+version: '3.1'
 
 networks:
   backend:
@@ -9,6 +9,9 @@ services:
   rest:
     hostname: weskit
     image: ${WESKIT_IMAGE}
+    secrets:
+      - weskit.key
+      - weskit.crt
     environment:
       WESKIT_CONFIG: /home/weskit/config.yaml
       WESKIT_LOG_CONFIG:
@@ -22,11 +25,12 @@ services:
       - ${WESKIT_DATA}:/weskit_data
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
+      - ./users.yaml:/weskit/users.yaml:ro
     networks:
       - backend
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate weskit && pip install ./ && flask run --host=0.0.0.0 --port=5000"]
+    command: ["conda activate weskit && pip install ./ && ln -s /run/secrets/weskit.* /weskit/uWSGI_Server/certs/  && uwsgi --ini /weskit/uWSGI_Server/uwsgi.ini"]
     ports:
       - 5000:5000
 
@@ -64,3 +68,8 @@ services:
     networks:
       - backend
 
+secrets:
+  weskit.key:
+    file: uWSGI_Server/certs/weskit.key
+  weskit.crt:
+    file: uWSGI_Server/certs/weskit.crt

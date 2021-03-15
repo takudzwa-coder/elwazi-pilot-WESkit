@@ -36,6 +36,33 @@ Set the following environmental variables:
   * `WESKIT_CONFIG`: Path to WESkit config.yaml
   * `WESKIT_IMAGE`: Docker image tag (weskit:0.0.1)
   * `WESKIT_ROOT`: Path to WESkit repository
+
+#### SSL configuration
+##### Deactivate SSL encryption
+Usually WESkit uses SSL secured connections, since authentification data were transfered. Nevertheless it is possible to deactivate SSL by editing `uWSGI_Server/uwsgi.ini`. The comment the `https` option out and uncomment the `http` option. Furthermore, the weskit config must be changed to:
+```yaml
+jwt:
+    # Only allow JWT cookies to be sent over https. In production, this
+    # should likely be True
+    JWT_COOKIE_SECURE: false
+```
+##### Self-Signed Certificates (Development)
+It is easily possible to generate a working self-signed certificate by running:
+```bash
+./uWSGI_Server/generateDevelopmentCerts.sh
+```
+This script will generate a new certificate if there is not already a certificated in /uWSGI_Server/certs/weskit.*
+
+##### Signed Certificates (Production)
+Adapt the secret section at bottom of the `docker_stack.yaml` to the location of your `*.key` and `*.crt` files.
+
+```yaml
+secrets:
+  weskit.key:
+    file: /MyCertificates/weskit.key        ## Change me
+  weskit.crt:
+    file: /MyCertificates/certs/weskit.crt  ## and me too
+```
   
 ### Run Docker stack
 
@@ -48,8 +75,18 @@ export WESKIT_CONFIG=/PATH/TO/WESKIT_CONFIG/config.yaml
 export WESKIT_IMAGE=weskit:0.0.1
 export WESKIT_ROOT=/PATH/TO/WESKIT/
 
+# create self signed certificates
+./uWSGI_Server/generateDevelopmentCerts.sh
+
 docker stack deploy --compose-file=docker_stack.yaml weskit
 ```
+### Login / Usermanagement
+
+WESkit has an integrated Usermanagement. Hints for the configuration and how to add users can be found [here](../../wikis/WESkit-Login-System-(local)).
+
+The per default the Login/ Usermanagement is activated. The default users is `test` and has the password `test`.
+Try to login at [https://localhost:5000/login](https://localhost:5000/login)
+
 
 ## Development
 
@@ -72,3 +109,15 @@ Perform a test:
 ```bash
 python -m pytest
 ```
+
+Start Server outside of a container:
+```bash
+uwsgi --ini uWSGI_Server/uwsgi.ini
+```
+**Note:** This is only for debugging the uwsgi config and login-system. Other parts that were related to the workflow submittion / status will throw exeptions, since that requires the further components of the stack.
+
+
+# FAQ
+
+## The server is not reachable
+Use https://localhost:5000 instead of http://localhost:5000.  Unencrypted conections are refused.
