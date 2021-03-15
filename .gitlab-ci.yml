@@ -45,6 +45,7 @@ py_t:
     - pip install docker-compose
     - docker-compose version
     - uWSGI_Server/generateDevelopmentCerts.sh
+    - docker swarm init
     - docker-compose -f kc_login/docker-compose.yaml up
    # - python -m pytest -v tests/server_test.py
 
