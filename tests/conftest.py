@@ -13,7 +13,7 @@ from weskit.classes.RunStatus import RunStatus
 
 from testcontainers.core import config
 
-config.MAX_TRIES=30
+config.MAX_TRIES=600
 
 
 
