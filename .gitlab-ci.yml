@@ -16,6 +16,8 @@ variables:
   DOCKER_TLS_CERTDIR: ""
 
 before_script:
+  - apt-get install docker.io -y
+  - pip install docker-compose
   - docker-compose version
   - docker swarm init
   - docker-compose -f kc_login/docker-compose.yaml up
@@ -43,7 +45,7 @@ code_style:
     - flake8 weskit/
 
 py_t:
-  image: docker/compose:debian-1.28.5
+  image: continuumio/miniconda3:latest
   script:
     #- pip install docker-compose
     - docker-compose version
