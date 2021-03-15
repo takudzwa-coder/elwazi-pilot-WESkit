@@ -37,3 +37,26 @@ static_service_info:
     tags:
         tag1: value1
         tag2: value2
+
+login:
+  enabled: true
+  jwt:
+    JWT_COOKIE_SECURE: true
+    JWT_TOKEN_LOCATION:
+      - cookies
+      - headers
+    JWT_ALGORITHM: "RS256"
+    JWT_DECODE_AUDIENCE: "account"
+    JWT_IDENTITY_CLAIM: "sub"
+    JWT_COOKIE_SECURE: true
+
+
+    JWT_ACCESS_COOKIE_PATH: "/"
+    JWT_REFRESH_COOKIE_PATH: "/"
+
+  oidc:
+    OIDC_FLASKHOST: "https://localhost:5000"
+    OIDC_ISSUER_URL: "https://keycloak:8443/auth/realms/WESkit"
+    OIDC_CIENT_SECRET: "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+    OIDC_REALM: "WESkit"
+    OIDC_CLIENTID: "WESkit"

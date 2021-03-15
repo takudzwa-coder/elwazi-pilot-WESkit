@@ -89,6 +89,36 @@ def create_app():
     ######################################
     #              Init Login            #
     ######################################
+    # print("_______________________")
+    # print(config)
+    # print("_______________________")
+    # if (
+        # "login" in config and
+        # config['login'].get("enabled",False) and
+        # "jwt" in config['login'] and
+        # "oidc" in config['login']
+        # ):
+        # for key, element in config['login']['jwt'].items():
+            # app.config[key]=element
+
+        # for key, element in config['login']['oidc'].items():
+            # app.config[key]=element
+
+        # if os.environ.get("kc_backend", False):
+            # app.config["OIDC_ISSUER_URL"] = os.environ["kc_backend"]
+        # print(app.config["JWT_TOKEN_LOCATION"])
+        # print(app.config["OIDC_FLASKHOST"])
+        
+
+    # else:
+        # app.logger.warning("Login System Disabled")
+        # app.logger.warning(
+        # """login:{}
+        # enabled:{}
+        # jwt:{}
+        # oidc:{}""".format("login" in config,config['login'].get("enabled",False),"jwt" in config['login'],"oidc" in config['login']))
+    
+    
     if os.environ.get("kc_backend", False):
         app.config["OIDC_ISSUER_URL"] = os.environ["kc_backend"]
     else:
@@ -117,8 +147,7 @@ def create_app():
     app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
     app.config['JWT_REFRESH_COOKIE_PATH'] = '/'
 
-    # Enable csrf double submit protection. See this for a thorough
-    # explanation: http://www.redotheweb.com/2015/11/09/api-security.html
+
 
     Login.oidcLogin(app, addLogin=False)
 

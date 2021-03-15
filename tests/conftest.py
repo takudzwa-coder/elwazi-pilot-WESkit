@@ -102,6 +102,10 @@ def celery_config(redis_container):
 @pytest.fixture(scope="session")
 def celery_worker_pool():
     return 'prefork'
+    
+@pytest.fixture(scope="session")
+def celery_worker_parameters():
+    return {"concurrency":10}
 
 
 @pytest.fixture(scope="session")

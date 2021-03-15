@@ -69,65 +69,56 @@ static_service_info:
         
         
 
-oidc:
+login:
   type: dict
   required: false
   schema:
-    JWT_COOKIE_SECURE:
+    enabled:
       type: boolean
       required: true
-    JWT_COOKIE_CSRF_PROTECT:
-      type: boolean
-      required: true
-    JWT_SECRET_KEY:
-      type: string
-      required: true
+      
+    jwt:
+      type: dict
+      required: false
+      schema:
+        JWT_COOKIE_SECURE:
+          type: boolean
+          required: true
+        JWT_TOKEN_LOCATION:
+          type: list
+          required: true
+        JWT_ALGORITHM:
+          type: string
+          required: true
+        JWT_DECODE_AUDIENCE:
+          type: string
+          required: true
+        JWT_IDENTITY_CLAIM:
+          type: string
+          required: true
+        JWT_ACCESS_COOKIE_PATH:
+          type: string
+          required: true
+        JWT_REFRESH_COOKIE_PATH:
+          type: string
+          required: true
+    oidc:
+      type: dict
+      required: false
+      schema:
+        OIDC_ISSUER_URL:
+          type: string
+          required: true
 
-
-    OIDC_ISSUER_URL:
-      type: string
-      required: true
-
-    OIDC_REALM:
-      type: string
-      required: true
-    OIDC_CLIENTID:
-      type: string
-      required: true
-    OIDC_CIENT_SECRET:
-      type: string
-      required: true
-    OIDC_FLASKHOST:
-      type: string
-      required: true
-
-    JWT_TOKEN_LOCATION:
-      type: string
-      required: true
-    JWT_ALGORITHM:
-      type: string
-      required: true
-    JWT_DECODE_AUDIENCE:
-      type: string
-      required: true
-    JWT_IDENTITY_CLAIM:
-      type: string
-      required: true
-
-    JWT_COOKIE_SECURE:
-      type: boolean
-      required: true
-    JWT_CSRF_IN_COOKIES:
-      type: boolean
-      required: true
-
-    JWT_ACCESS_COOKIE_PATH:
-      type: string
-      required: true
-    JWT_REFRESH_COOKIE_PATH:
-      type: string
-      required: true
-
-    JWT_COOKIE_CSRF_PROTECT:
-      type: boolean
-      required: true
+        OIDC_REALM:
+          type: string
+          required: true
+        OIDC_CLIENTID:
+          type: string
+          required: true
+        OIDC_CIENT_SECRET:
+          type: string
+          required: true
+        OIDC_FLASKHOST:
+          type: string
+          required: true
