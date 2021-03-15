@@ -11,6 +11,10 @@ from testcontainers.compose import DockerCompose
 from logging.config import dictConfig
 from weskit.classes.RunStatus import RunStatus
 
+from testcontainers.core import config
+
+config.MAX_TRIES=3000
+
 
 
 
