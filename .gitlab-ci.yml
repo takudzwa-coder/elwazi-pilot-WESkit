@@ -17,6 +17,7 @@ variables:
 
 before_script:
   - docker-compose version
+  - docker swarm init
   - docker-compose -f kc_login/docker-compose.yaml up
   - python -V              # For debugging
   - export PIP_CACHE_DIR="/opt/cache/pip"
