@@ -45,7 +45,7 @@ testServer:
     - apt-get update
     - apt-get install docker.io -y
     - uWSGI_Server/generateDevelopmentCerts.sh
-    - python -m pytest -v tests/server_test.py
+    - python -m pytest -v -s tests/server_test.py
 
 
 
