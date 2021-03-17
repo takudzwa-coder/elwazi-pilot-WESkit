@@ -42,6 +42,9 @@ code_style:
 testServer:
   image: continuumio/miniconda3:latest
   script:
+    - ls /
+    - realpath .
+    - ls .
     - apt-get update
     - apt-get install docker.io -y
     - uWSGI_Server/generateDevelopmentCerts.sh
