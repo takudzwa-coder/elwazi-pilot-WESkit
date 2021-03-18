@@ -5,13 +5,13 @@ import requests
 from functools import wraps
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, get_raw_jwt, verify_jwt_in_request
-from flask import current_app, jsonify
+from flask import current_app, jsonify, request
 
 from jwt.algorithms import RSAAlgorithm
 
 from weskit.login import oidcBlueprint as login_bp
 from weskit.login.oidcUser import User
-from weskit.login.utils import onlineValidation, check_csrf_token
+from weskit.login.utils import onlineValidation, check_csrf_token, getToken
 
 
 class oidcLogin:
@@ -19,6 +19,7 @@ class oidcLogin:
 during initialisation multiple additional endpoints will be created
 for an manual login
   """
+
     def __init__(self, app, addLogin=True):
         app.OIDC_Login = self
         if not isinstance(app.logger, logging.Logger):
@@ -27,7 +28,7 @@ for an manual login
             self.logger = app.logger
 
         # Check for ISSUER_URL in CONFIG
-        if ("OIDC_ISSUER_URL" not in app.config):
+        if "OIDC_ISSUER_URL" not in app.config:
             self.logger.error(
                 'app.config["OIDC_ISSUER_URL"] is not set!'
             )
@@ -40,7 +41,7 @@ for an manual login
                 "/.well-known/openid-configuration", verify=False
             ).json()
 
-            # Check Existance of oidc config values
+            # Check Existence of oidc config values
             self.oidc_config['authorization_endpoint']
             self.oidc_config["token_endpoint"]
             self.oidc_config["jwks_uri"]
@@ -95,7 +96,7 @@ for an manual login
         else:
             self.logger.info("Will not Create Login Endpoint.")
 
-        # Deaktivate  JWT CSRF since it is not working with external oidc
+        # Deactivate  JWT CSRF since it is not working with external oidc
         # access tokens
         app.config['JWT_COOKIE_CSRF_PROTECT'] = False
         self.jwt = JWTManager(app)
@@ -104,38 +105,78 @@ for an manual login
         @self.jwt.user_loader_callback_loader
         def user_loader_callback(identity):
             u = User()
-            return(u)
+            return (u)
+
+        if addLogin:
+            """
+            This code block is only used if the login endpoints are enabled on the server. The imports are only required
+            for this specific scenario.
+            """
+            from flask_jwt_extended import get_raw_jwt
+            import time
+
+            @app.after_request
+            def refresh_expiring_jwts(response):
+                """
+                This function checks if the access token cookie has exceeded the half of its expiration time. If it's
+                yes the access token in the cookie as well as the refresh token and csrf token will be replaced.
+
+                :param response: render function
+                :return: same as input potentially added new cookies.
+                """
+                # Do only something if JWT is transmitted via access_token cookie
+                if current_app.config["JWT_ACCESS_COOKIE_NAME"] in request.cookies:
+
+                    # Get the generation time and expiration time of the token
+                    jwt_expiration_time = get_raw_jwt().get("exp", None)
+                    jwt_last_refresh = get_raw_jwt().get("iat", None)
+
+                    # Test for existence of both values critical at logout
+                    if jwt_expiration_time and jwt_last_refresh:
+
+                        # Refresh cookies if it reaches half of lifetime
+                        target_timestamp = (jwt_expiration_time + jwt_last_refresh) / 2
+                        if time.time() > target_timestamp:
+                            return login_bp.refresh_access_token(response_object=response)
+
+                # Do nothing if no cookie is submitted or cookies are deleted
+                return response
 
 
-def login_required(fn, validateOnline=True):
+def login_required(fn, validateOnline=True, validate_csrf= True):
     """
-    this function checks if the login is initialized. If not all endpoints
-    were not protected.
-    Otherwise the function checks if an access_token is available
-    validateOnline should be true in high security cases (as workflow
-    submittions) validateOnline can be false for status requests.
+    This decorator checks if the login is initialized. If not all endpoints are exposed unprotected.
+    Otherwise the decorator validates the access_token. If validateOnline==True the access_token will be validated by
+    calling the identity provider. ValidateOnline==False will only check the certificate of the token offline.
+    validateOnline should be true in high security cases that will cause changes in the backend. (cancelRun, submitRun)
+    Also validate_csrf must be true high security cases. In this cases the client must write the "X-CSRF-TOKEN" to the
+    request header!
+
+    :param fn: render function
+    :param validateOnline: bool should the identity provider asked for validity of the token?
+    :param validate_csrf: bool should be the CSRF token be checked? (Imported at non only viewing calls)
     """
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        # Don't use endpoint protection if Loginin is not initialized
+        # Don't use endpoint protection if LoginModule is not initialized
         if current_app.OIDC_Login is not None:
 
-            # Check availablility of access_token
+            # Check availability of access_token
             checkJWT = jwt_required(fn)(*args, **kwargs)
             csrf_state = check_csrf_token()
-            if csrf_state:
-                return(jsonify({"msg": csrf_state}), 401)
+
+            # Check if csrf musst be checked
+            if validate_csrf and csrf_state:
+                return {"msg": csrf_state}, 401
 
             if validateOnline:
+                # make a request to oidc identity provider
                 if onlineValidation():
                     return checkJWT
                 else:
-                    return(
-                        jsonify(
-                            {"msg":"Online Validation Failed, use new access_token"}  # noqa E501
-                        ), 401
-                    )
+                    return {"msg": "Online Validation Failed, use new access_token"}, 401
+
             # in case of deactivated JWT ignore JWT validation
             return checkJWT
 
@@ -147,9 +188,10 @@ def login_required(fn, validateOnline=True):
 def group_required(group=""):
     """
     This function checks the Client specific Role for a specified group
-    If group was FOUND the Endpoind will be returned
+    If group was FOUND the Endpoint will be returned
     If group MISSING a 403 error will be returned
     """
+
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
@@ -158,7 +200,6 @@ def group_required(group=""):
 
             # custom group membership verification
             # Probably, needs to be changed in LDAP context!
-            # print(get_raw_jwt())
             groups = get_raw_jwt().get(
                 'resource_access',
                 dict()
@@ -168,17 +209,32 @@ def group_required(group=""):
             ).get('roles', dict())
             # print (groups)
             if group not in groups:
-                return (
-                    json.dumps(
-                        {
-                            "result": "user not in group'%s' required "
-                            "to access this endpoint" % group
-                        }
-                    ),
-                    403,
-                )
+                return {"result": "user not in group'%s' required to access this endpoint" % group}, 403
+
             return fn(*args, **kwargs)
 
         return wrapper
 
     return decorator
+
+
+def AutoLoginUser(fn,validateOnline=True):
+    """
+    This decorator redirects the user to the login form of the oidc identity provider and back to the requested page.
+    The client receives an access_token cookie, refresh_token cookie and CSRF token cookie.
+    In the case that the client has already an access_token this function is checks the validity of the token but not
+    of the CSRF token. Otherwise you would have to submit the CSRF token in header at every request!
+    :param fn: render function
+    :return: render function
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        # If there is no loadable token
+        if not getToken():
+
+            # use the function of the login endpoint and provide a redirect url
+            return login_bp.loginFct(requestedURL=request.full_path)
+        else:
+            return login_required(fn, validateOnline=validateOnline, validate_csrf=False)(*args, **kwargs)
+
+    return wrapper

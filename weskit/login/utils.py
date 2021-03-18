@@ -1,13 +1,13 @@
-from flask import current_app, request, jsonify
+from flask import current_app, request, jsonify, redirect
 
 from flask_jwt_extended.config import config
-import requests
+import requests, urllib
 from flask_jwt_extended.utils import (
     decode_token,
     get_raw_jwt,
     set_access_cookies,
     set_refresh_cookies
-    )
+)
 from flask_jwt_extended.view_decorators import (
     _decode_jwt_from_cookies,
     _decode_jwt_from_headers)
@@ -22,23 +22,23 @@ def onlineValidation():
 
     access_token = getToken()
     payload = {
-            "client_id": app.config["OIDC_CLIENTID"],
-            "client_secret": app.config["OIDC_CIENT_SECRET"],
-            "token": access_token
+        "client_id": app.config["OIDC_CLIENTID"],
+        "client_secret": app.config["OIDC_CIENT_SECRET"],
+        "token": access_token
     }
     try:
         # Make request
         j = requests.post(
             data=payload,
             url=app.OIDC_Login.oidc_config["introspection_endpoint"]
-            ).json()
+        ).json()
 
     except Exception as e:
         app.OIDC_Login.logger.exception(
             "Could not reach OIDC provider for online Validation"
         )
         app.OIDC_Login.logger.exception(e)
-        return(False)
+        return (False)
 
     return j.get('active', False)
 
@@ -46,7 +46,7 @@ def onlineValidation():
 def getToken(token_type="access", locations=None):
     """
     This function returns the encoded access_token from different sources.
-    Its basicaly identical to a function from jwt_extended but has diffrent
+    Its basically identical to a function from jwt_extended but has different
     return
     """
     # All the places we can get a JWT from in this request
@@ -71,12 +71,12 @@ def getToken(token_type="access", locations=None):
         try:
             encoded_token, csrf_token = get_encoded_token_function()
             decode_token(encoded_token, csrf_token)
-            return(encoded_token)
+            return (encoded_token)
             break
         except Exception:
             # In case token not found for this method
             pass
-    return(None)
+    return None
 
 
 def check_csrf_token():
@@ -84,13 +84,13 @@ def check_csrf_token():
     This function evaluates the csrf token.
     In case of success it returns None in error Cases it returns an
     string error message.
-    If the cookie is submitted it will allways be used as token
+    If the cookie is submitted it will always be used as token
     choise. If only a header token is submitted this function will
     allways return None.
     """
 
     cookieLoginbyCookie = (
-        current_app.config["JWT_ACCESS_COOKIE_NAME"] in request.cookies
+            current_app.config["JWT_ACCESS_COOKIE_NAME"] in request.cookies
     )
     headerAuth = request.headers.get("Authorization", None)
 
@@ -118,18 +118,22 @@ def check_csrf_token():
             current_app.OIDC_Login.logger.info(
                 "X-CSRF Token invalid"
             )
-            return("X-CSRF-TOKEN is not matching the access Token")
+            return ("X-CSRF-TOKEN is not matching the access Token")
         # Everything is OK
-        return(None)
+        return (None)
 
     # Header login is valid without csrf session token
     if headerAuth:
-        return(None)
+        return (None)
     # Unknown Error / Unsupported Method
     return ("Unknown error")
 
 
-def requester_and_cookieSetter(payload, setcookies=True):
+def requester_and_cookieSetter(
+        payload: str,
+        setcookies:bool = True,
+        response_object=None):
+
     # Make request
     try:
         j = requests.post(
@@ -146,26 +150,35 @@ def requester_and_cookieSetter(payload, setcookies=True):
         session_state = j.get("session_state", None)
         # In case of an invalid session or user logout return error
         if 'error' in j:
+            if response_object:
+                return response_object
             j['refresh'] = False
-            return(jsonify(j), 401)
+            return jsonify(j), 401
 
         if not setcookies:
-            return(jsonify(j), 200)
+            if response_object:
+                return response_object
+            return jsonify(j), 200
 
         if at and rt and session_state:
             # Set Cookie and Return
-            resp = jsonify({'login': True})
-            set_access_cookies(resp, at, ate)
-            set_refresh_cookies(resp, rt, rte)
-            resp.set_cookie("X-CSRF Token", session_state)
-            return(resp, 200)
+            if not response_object:
+                response_object = jsonify({'login': True}), 200
+            set_access_cookies(response_object, at, ate)
+            set_refresh_cookies(response_object, rt, rte)
+            response_object.set_cookie("X-CSRF Token", session_state)
+            return response_object
 
         else:
+            if response_object:
+                return response_object
             resp = jsonify({'login': False})
-            return(resp, 401)
+            return resp, 401
     except Exception as e:
         current_app.OIDC_Login.logger.exception("Login Process Failed")
         current_app.OIDC_Login.logger.exception(e)
-        return(jsonify(
+        if response_object:
+            return response_object
+        return (jsonify(
             {'refresh': False, 'msg': 'Login Process Failed'}
         ), 401)

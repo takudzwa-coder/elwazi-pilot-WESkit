@@ -89,19 +89,19 @@ services:
       DB_PASSWORD: secret_password
       KEYCLOAK_FRONTEND_URL: https://localhost:8443/auth
     working_dir: /weskit
+    # Add Realm to non existing DB
     #volumes:
     #  - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
-    #  - ./uWSGI_Server/certs/weskit.crt:/etc/x509/https/tls.crt:ro
-    #  - ./uWSGI_Server/certs/weskit.key:/etc/x509/https/tls.key:ro
+
     networks:
       - oauth
     ports:
       - 8080:8080
       - 8443:8443
     secrets:
-      - source: weskit.key
+      - source: keycloak.key
         target: /etc/x509/https/tls.key
-      - source: weskit.crt
+      - source: keycloak.crt
         target: /etc/x509/https/tls.crt
       
   # keycloak database
@@ -114,7 +114,7 @@ services:
        MYSQL_PASSWORD: secret_password
        MYSQL_ROOT_PASSWORD: secret_root_password
     volumes:
-      - ./kc_login/test.sql:/docker-entrypoint-initdb.d/test.sql
+      - ./config/keycloak_schema.sql:/docker-entrypoint-initdb.d/test.sql
     networks:
       - oauth
 
@@ -123,6 +123,10 @@ secrets:
   weskit.key:
     file: uWSGI_Server/certs/weskit.key
   weskit.crt:
+    file: uWSGI_Server/certs/weskit.crt
+  keycloak.key:
+    file: uWSGI_Server/certs/weskit.key
+  keycloak.crt:
     file: uWSGI_Server/certs/weskit.crt
   keycloak.pem:
     file: uWSGI_Server/certs/weskit.pem

@@ -20,25 +20,28 @@ login = Blueprint('login', __name__, template_folder='templates')
 
 
 @login.route('/login', methods=['GET'])
-def loginFct():
+def loginFct(requestedURL=""):
     """
     Browser Login via Redirect to Keyclaok Form
     """
     url = app.OIDC_Login.oidc_config['authorization_endpoint']
     params = (
-        "?client_id=%s&"
-        "redirect_uri=%s&"
-        "scope=openid+email+profile&"
-        "access_type=offline&"
-        "response_type=code&"
-        "openid.realm=%s") % (
-        app.config["OIDC_CLIENTID"],
-        urllib.parse.quote(
-            app.config["OIDC_FLASKHOST"] + '/login/callback', safe=''
-        ),
-        app.config["OIDC_REALM"])
+                 "?client_id=%s&"
+                 "redirect_uri=%s&"
+                 "scope=openid+email+profile&"
+                 "access_type=offline&"
+                 "response_type=code&"
+                 "openid.realm=%s&"
+                 "state=%s") % (
+                 app.config["OIDC_CLIENTID"],
+                 urllib.parse.quote(
+                     app.config["OIDC_FLASKHOST"] + '/login/callback', safe=''
+                 ),
+                 app.config["OIDC_REALM"],
+                 urllib.parse.quote(requestedURL)
+    )
 
-    return redirect(url+params, code=302)
+    return redirect(url + params, code=302)
 
 
 @login.route('/login', methods=['POST'])
@@ -59,10 +62,11 @@ def direct_auth():
         "password": password,
         "client_id": app.config["OIDC_CLIENTID"],
         "client_secret": app.config["OIDC_CIENT_SECRET"]
-        }
+    }
 
     # Make request
-    return(requester_and_cookieSetter(payload, setcookies=False))
+    return requester_and_cookieSetter(payload, setcookies=False)
+
 
 
 @login.route('/login/callback', methods=['GET'])
@@ -76,19 +80,29 @@ def callbackFunction():
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": "%s/login/callback" %
-        (app.config["OIDC_FLASKHOST"]),
+                        (app.config["OIDC_FLASKHOST"]),
         "client_id": app.config["OIDC_CLIENTID"],
         "client_secret": app.config["OIDC_CIENT_SECRET"]
-        }
+    }
 
     if not code:
-        return(
+        return (
             jsonify(
                 {'login': False, 'msg': 'login code missing'}
             ), 401
         )
+    response_object=None
+
+    # If redirect is requested
+    redirectPath = request.args.get('state', None)
+    if redirectPath:
+        response_object = redirect(
+            request.url_root.rstrip("/") + urllib.parse.unquote(redirectPath),
+            code=302
+        )
+
     # Make request
-    return(requester_and_cookieSetter(payload))
+    return (requester_and_cookieSetter(payload, True, response_object))
 
 
 @login.route('/login/logout', methods=['GET'])
@@ -105,14 +119,14 @@ def logoutFct():
         urllib.parse.quote(comebackURL, safe=''))
 
     # Initiate redirect
-    oidc_logout = redirect(url+params, code=302)
+    oidc_logout = redirect(url + params, code=302)
     # Delete Token Cookies
     unset_jwt_cookies(oidc_logout)
     return (oidc_logout)
 
 
 @login.route("/login/refresh", methods=['GET'])
-def refesh_access_token():
+def refresh_access_token(response_object=None):
     """
     This route updates the refresh token and the access token.
     """
@@ -120,28 +134,32 @@ def refesh_access_token():
     # Obtain the refresh cookie token name used by jwt_extended
     refreshCookieName = app.config["JWT_REFRESH_COOKIE_NAME"]
 
-    # Check for exisiting refresh cookie return error if not is present
+    # Check for existing refresh cookie return error if not is present
     if refreshCookieName not in request.cookies:
+        if response_object:
+            return response_object
         return jsonify(
-            {'refresh': False, "msg": "Refresh Token Missing!"}
+            {'refresh': False, "msg": "Missing Refresh Cookie!"}
         ), 401
 
-    # Check for exisiting refresh cookie return error if not is present
+    # Check for existing refresh cookie return error if not is present
     if not refresh_token_timeOK(request.cookies[refreshCookieName]):
+        if response_object:
+            return response_object
         return jsonify(
-            {'refresh': False, "msg": "Refresh Token Expired!"}
+            {'refresh': False, "msg": "Refresh Cookie Expired!"}
         ), 401
 
     # Prepare Header and Payload for the OIDC request
     payload = {
-            "grant_type": "refresh_token",
-            "refresh_token": request.cookies[refreshCookieName],
-            "client_id": app.config["OIDC_CLIENTID"],
-            "client_secret": app.config["OIDC_CIENT_SECRET"]
-            }
+        "grant_type": "refresh_token",
+        "refresh_token": request.cookies[refreshCookieName],
+        "client_id": app.config["OIDC_CLIENTID"],
+        "client_secret": app.config["OIDC_CIENT_SECRET"]
+    }
 
-    # Get an responce from OIDC authenticator
-    return(requester_and_cookieSetter(payload))
+    # Get an response from OIDC authenticator
+    return requester_and_cookieSetter(payload, setcookies=True, response_object=response_object)
 
 
 def refresh_token_timeOK(token):
@@ -153,7 +171,7 @@ def refresh_token_timeOK(token):
     try:
         a = token.split('.')
         if len(a) == 3:
-            return(json.loads(b64decode(a[1]+"==="))['exp'] >= time.time())
+            return (json.loads(b64decode(a[1] + "==="))['exp'] >= time.time())
     except Exception as e:
         app.OIDC_Login.logger.info("Got Invalid Refresh Token!", e)
-        return(False)
+        return (False)

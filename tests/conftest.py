@@ -1,20 +1,13 @@
-import logging
 import os
 import pytest
 import yaml
 import requests
 import time
-from weskit.classes.Database import Database
 from weskit.classes.ServiceInfo import ServiceInfo
-from pymongo import MongoClient
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
-from logging.config import dictConfig
-from weskit.classes.RunStatus import RunStatus
-
-
 
 
 def get_redis_url(redis_container):
@@ -82,7 +75,7 @@ def MySQL_keycloak_container ():
 
 @pytest.fixture(scope="session")
 def keycloak_container(MySQL_keycloak_container):
-    mysqlIP=getContainerProperties(MySQL_keycloak_container,'3306')["InternalIP"]
+    mysqlIP=getContainerProperties(MySQL_keycloak_container, '3306')["InternalIP"]
 
     kc_container=DockerContainer("jboss/keycloak")
     kc_container.with_exposed_ports('8080')
