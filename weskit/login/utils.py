@@ -1,7 +1,7 @@
-from flask import current_app, request, jsonify, redirect
+from flask import current_app, request, jsonify
 
 from flask_jwt_extended.config import config
-import requests, urllib
+import requests
 from flask_jwt_extended.utils import (
     decode_token,
     get_raw_jwt,
@@ -22,8 +22,8 @@ def onlineValidation():
 
     access_token = getToken()
     payload = {
-        "client_id": app.config["OIDC_CLIENTID"],
-        "client_secret": app.config["OIDC_CIENT_SECRET"],
+        "client_id": app.OIDC_Login.client_id,
+        "client_secret": app.OIDC_Login.client_secret,
         "token": access_token
     }
     try:
@@ -131,7 +131,7 @@ def check_csrf_token():
 
 def requester_and_cookieSetter(
         payload: str,
-        setcookies:bool = True,
+        setcookies: bool = True,
         response_object=None):
 
     # Make request

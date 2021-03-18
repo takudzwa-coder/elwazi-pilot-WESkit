@@ -89,66 +89,16 @@ def create_app():
     ######################################
     #              Init Login            #
     ######################################
-    print("_______________________")
-    print(config)
-    print("_______________________")
-    if (
-        "login" in config and
-        config['login'].get("enabled",False) and
-        "jwt" in config['login'] and
-        "oidc" in config['login']
-        ):
-        for key, element in config['login']['jwt'].items():
-            app.config[key]=element
 
-        for key, element in config['login']['oidc'].items():
-            app.config[key]=element
+    # Version for backend
+    # Login.oidcLogin(app, config, addLogin=False)
 
-        if os.environ.get("kc_backend", False):
-            app.config["OIDC_ISSUER_URL"] = os.environ["kc_backend"]
-        print(app.config["JWT_TOKEN_LOCATION"])
-        print(app.config["OIDC_FLASKHOST"])
-        
+    # Initialize for Dashboard
+    Login.oidcLogin(app, config, addLogin=True)
 
-    else:
-        app.logger.warning("Login System Disabled")
-        app.logger.warning(
-        """login:{}
-        enabled:{}
-        jwt:{}
-        oidc:{}""".format("login" in config,config['login'].get("enabled",False),"jwt" in config['login'],"oidc" in config['login']))
-    
-    
-    # if os.environ.get("kc_backend", False):
-        # app.config["OIDC_ISSUER_URL"] = os.environ["kc_backend"]
-    # else:
-        # app.config["OIDC_ISSUER_URL"] = "https://keycloak:8443/auth/realms/WESkit"  # noqa  E501 will be moved to config
-
-    # app.config["OIDC_REALM"] = "WESkit"
-    # app.config["OIDC_CLIENTID"] = "WESkit"
-    # app.config["OIDC_CIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
-
-    # app.config["OIDC_FLASKHOST"] = "https://localhost:5000"
-
-    # app.config['JWT_TOKEN_LOCATION'] = ['cookies', 'headers']
-    # app.config["JWT_ALGORITHM"] = "RS256"
-    # app.config["JWT_DECODE_AUDIENCE"] = "account"
-    # app.config["JWT_IDENTITY_CLAIM"] = "sub"
-
-    # # Only allow JWT cookies to be sent over https. In production, this
-    # # should likely be True
-    # app.config['JWT_COOKIE_SECURE'] = True
-
-    # # Set the cookie paths, so that you are only sending your access token
-    # # cookie to the access endpoints, and only sending your refresh token
-    # # to the refresh endpoint. Technically this is optional but it is in
-    # # your best interest to not send additional cookies in the request if
-    # # they aren't needed.
-    # app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
-    # app.config['JWT_REFRESH_COOKIE_PATH'] = '/'
-
-
-
-    Login.oidcLogin(app, addLogin=False)
-
+    # Add demo Login for Dashbord
+    @app.route("/test", methods=['GET'])
+    @Login.AutoLoginUser
+    def refesh_access_token():
+        return("yeah!")
     return app

@@ -63,7 +63,7 @@ def getContainerProperties(container,port):
 def MySQL_keycloak_container ():
     preDB=MySqlContainer('mysql:latest',MYSQL_USER="keycloak",MYSQL_PASSWORD="secret_password",MYSQL_DATABASE="keycloak",MYSQL_ROOT_PASSWORD= "secret_root_password")
     
-    configfile=os.path.abspath("kc_login/test.sql")
+    configfile=os.path.abspath("config/keycloak_schema.sql")
     print(configfile)
     preDB.with_volume_mapping(configfile,"/docker-entrypoint-initdb.d/test.sql")
     with  preDB as mysql:

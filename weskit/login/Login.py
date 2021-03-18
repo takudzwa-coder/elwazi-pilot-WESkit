@@ -1,11 +1,12 @@
 import json
 import logging
 import requests
+import os
 
 from functools import wraps
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required, get_raw_jwt, verify_jwt_in_request
-from flask import current_app, jsonify, request
+from flask import current_app, request
 
 from jwt.algorithms import RSAAlgorithm
 
@@ -20,25 +21,58 @@ during initialisation multiple additional endpoints will be created
 for an manual login
   """
 
-    def __init__(self, app, addLogin=True):
+    def __init__(self, app, config, addLogin=True):
         app.OIDC_Login = self
         if not isinstance(app.logger, logging.Logger):
             self.logger = logging.getLogger("default")
         else:
             self.logger = app.logger
 
-        # Check for ISSUER_URL in CONFIG
-        if "OIDC_ISSUER_URL" not in app.config:
-            self.logger.error(
-                'app.config["OIDC_ISSUER_URL"] is not set!'
-            )
-            exit(1)
+        ##############################################
+        # Configure Login
+        ##############################################
+        if (
+            "login" in config and
+            config['login'].get("enabled", False) and
+            "jwt" in config['login'] and
+            "oidc" in config['login']
+        ):
+
+            # the JWT config is expected to be in the app config
+            for key, element in config['login']['jwt'].items():
+                app.config[key] = element
+
+            # for key, element in config['login']['oidc'].items():
+            #    app.config[key] = element
+
+            self.issuer_url = config['login']['oidc']["OIDC_ISSUER_URL"]
+            self.client_secret = config['login']['oidc']['OIDC_CIENT_SECRET']
+            self.hostname = config['login']['oidc']['OIDC_FLASKHOST']
+            self.realm = config['login']['oidc']['OIDC_REALM']
+            self.client_id = config['login']['oidc']['OIDC_CLIENTID']
+
+            # Check if we are in test case
+            if os.environ.get("kc_backend", False):
+                self.issuer_url = os.environ["kc_backend"]
+
+            else:
+                self.logger.warning("Login System Disabled")
+                self.logger.warning(
+                    """login:{}
+                    enabled:{}
+                    jwt:{}
+                    oidc:{}""".format(
+                        "login" in config,
+                        config['login'].get("enabled", False),
+                        "jwt" in config['login'],
+                        "oidc" in config['login']))
+                return None
 
         # Request URLS from ODIC Endpoint
         try:
             self.oidc_config = requests.get(
-                app.config["OIDC_ISSUER_URL"] +
-                "/.well-known/openid-configuration", verify=False
+                self.issuer_url + "/.well-known/openid-configuration",
+                verify=False
             ).json()
 
             # Check Existence of oidc config values
@@ -46,23 +80,13 @@ for an manual login
             self.oidc_config["token_endpoint"]
             self.oidc_config["jwks_uri"]
 
-        except KeyError as ke:
-            self.logger.exception(
-                (
-                    'Unable to find required field in config!\nCheck'
-                    '%s/.well-known/openid-configuration'
-                ) % (app.config["OIDC_ISSUER_URL"])
-            )
-            self.logger.exception(ke)
-            exit(1)
-
         except Exception as e:
             self.logger.exception(
                 (
                     'Unable to load endpoint path from "%s'
                     '/.well-known/openid-configuration"\n Probably wrong '
-                    'url in app.config["OIDC_ISSUER_URL"] or json error'
-                ) % (app.config["OIDC_ISSUER_URL"])
+                    'url in config file or json error'
+                ) % (self.issuer_url)
             )
             self.logger.exception(e)
             exit(1)
@@ -143,7 +167,7 @@ for an manual login
                 return response
 
 
-def login_required(fn, validateOnline=True, validate_csrf= True):
+def login_required(fn, validateOnline=True, validate_csrf=True):
     """
     This decorator checks if the login is initialized. If not all endpoints are exposed unprotected.
     Otherwise the decorator validates the access_token. If validateOnline==True the access_token will be validated by
@@ -218,7 +242,7 @@ def group_required(group=""):
     return decorator
 
 
-def AutoLoginUser(fn,validateOnline=True):
+def AutoLoginUser(fn, validateOnline=True):
     """
     This decorator redirects the user to the login form of the oidc identity provider and back to the requested page.
     The client receives an access_token cookie, refresh_token cookie and CSRF token cookie.

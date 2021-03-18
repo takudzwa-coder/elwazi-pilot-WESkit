@@ -33,11 +33,11 @@ def loginFct(requestedURL=""):
                  "response_type=code&"
                  "openid.realm=%s&"
                  "state=%s") % (
-                 app.config["OIDC_CLIENTID"],
+                 app.OIDC_Login.client_id,
                  urllib.parse.quote(
-                     app.config["OIDC_FLASKHOST"] + '/login/callback', safe=''
+                     app.OIDC_Login.hostname + '/login/callback', safe=''
                  ),
-                 app.config["OIDC_REALM"],
+                 app.OIDC_Login.realm,
                  urllib.parse.quote(requestedURL)
     )
 
@@ -60,13 +60,12 @@ def direct_auth():
         "grant_type": "password",
         "username": username,
         "password": password,
-        "client_id": app.config["OIDC_CLIENTID"],
-        "client_secret": app.config["OIDC_CIENT_SECRET"]
+        "client_id": app.OIDC_Login.client_id,
+        "client_secret": app.OIDC_Login.client_secret
     }
 
     # Make request
     return requester_and_cookieSetter(payload, setcookies=False)
-
 
 
 @login.route('/login/callback', methods=['GET'])
@@ -80,9 +79,9 @@ def callbackFunction():
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": "%s/login/callback" %
-                        (app.config["OIDC_FLASKHOST"]),
-        "client_id": app.config["OIDC_CLIENTID"],
-        "client_secret": app.config["OIDC_CIENT_SECRET"]
+                        (app.OIDC_Login.hostname),
+        "client_id": app.OIDC_Login.client_id,
+        "client_secret": app.OIDC_Login.client_secret
     }
 
     if not code:
@@ -91,7 +90,7 @@ def callbackFunction():
                 {'login': False, 'msg': 'login code missing'}
             ), 401
         )
-    response_object=None
+    response_object = None
 
     # If redirect is requested
     redirectPath = request.args.get('state', None)
@@ -112,7 +111,7 @@ def logoutFct():
     the OIDC provider.
     """
     # ODIC host will return to this point after logout
-    comebackURL = app.config["OIDC_FLASKHOST"] + "/"
+    comebackURL = app.OIDC_Login.hostname + "/"
 
     url = app.OIDC_Login.oidc_config['end_session_endpoint']
     params = "?redirect_uri=%s" % (
@@ -154,8 +153,8 @@ def refresh_access_token(response_object=None):
     payload = {
         "grant_type": "refresh_token",
         "refresh_token": request.cookies[refreshCookieName],
-        "client_id": app.config["OIDC_CLIENTID"],
-        "client_secret": app.config["OIDC_CIENT_SECRET"]
+        "client_id": app.OIDC_Login.client_id,
+        "client_secret": app.OIDC_Login.client_secret
     }
 
     # Get an response from OIDC authenticator
