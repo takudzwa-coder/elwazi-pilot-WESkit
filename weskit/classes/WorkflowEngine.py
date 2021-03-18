@@ -9,7 +9,7 @@ from weskit.utils import to_uri
 from snakemake import snakemake
 
 
-class Workflow(metaclass=ABCMeta):
+class WorkflowEngine(metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, workflow_kwargs: dict):
         self.workflow_kwargs = workflow_kwargs
@@ -28,7 +28,7 @@ class Workflow(metaclass=ABCMeta):
         pass
 
 
-class Snakemake(Workflow):
+class Snakemake(WorkflowEngine):
     def __init__(self, workflow_kwargs: dict):
         super().__init__(workflow_kwargs)
 
@@ -37,7 +37,7 @@ class Snakemake(Workflow):
             workdir: os.path,
             config_files: list,
             **workflow_kwargs):
-        logging.getLogger().info("run_snakemake: {}, {}, {}".
+        logging.getLogger().info("Snakemake.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         outputs = []
         snakemake(
@@ -53,7 +53,7 @@ class Snakemake(Workflow):
         return __class__.__name__.lower()
 
 
-class Nextflow(Workflow):
+class Nextflow(WorkflowEngine):
     def __init__(self, workflow_kwargs: dict):
         super().__init__(workflow_kwargs)
 
@@ -62,7 +62,7 @@ class Nextflow(Workflow):
             workdir: os.path,
             config_files: list,
             **workflow_kwargs):
-        logging.getLogger().info("run_nextflow: {}, {}, {}".
+        logging.getLogger().info("Nextflow.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
         # TODO Require a profile configuration.
@@ -97,7 +97,7 @@ class Nextflow(Workflow):
         return __class__.__name__.lower()
 
 
-class WorkflowFactory:
+class WorkflowEngineFactory:
 
     @staticmethod
     def extract_workflow_parameters(config_file: dict,
@@ -121,18 +121,18 @@ class WorkflowFactory:
         return kwargs
 
     @staticmethod
-    def get_workflow(config_file: dict, workflow_type: str):
+    def get_engine(config_file: dict, workflow_type: str):
         try:
             if workflow_type == Snakemake.name():
                 return \
-                    Snakemake(WorkflowFactory.extract_workflow_parameters
+                    Snakemake(WorkflowEngineFactory.extract_workflow_parameters
                               (config_file, "snakemake"))
             elif workflow_type == Nextflow.name():
                 return \
-                    Nextflow(WorkflowFactory.extract_workflow_parameters
+                    Nextflow(WorkflowEngineFactory.extract_workflow_parameters
                              (config_file, "nextflow"))
             raise AssertionError("Workflow type '" +
                                  workflow_type.__str__() +
                                  "' is not known")
-        except AssertionError as _e:
-            print(_e)
+        except AssertionError as e:
+            print(e)

@@ -1,8 +1,10 @@
 import os
 import pytest
 import yaml
+
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.Workflow import Snakemake, Nextflow
+from weskit.classes.WorkflowEngine \
+    import Snakemake, Nextflow, WorkflowEngineFactory
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 
@@ -23,7 +25,7 @@ def test_app(database_container, redis_container):
     # import here because env vars need to be set before
     from weskit import create_app
 
-    os.environ["WESKIT_CONFIG"] = "tests/config.yaml"
+    os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
 
     app = create_app()
 
@@ -32,19 +34,19 @@ def test_app(database_container, redis_container):
         ctx = app.app_context()
         ctx.push()
         yield testing_client
+        ctx.pop()
 
 
 @pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.
-    with open("tests/config.yaml", "r") as ff:
+    with open("tests/weskit.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
 
 
 @pytest.fixture(scope="session")
 def database_container():
-
     MONGODB_CONTAINER = "mongo:4.2.3"
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
@@ -68,6 +70,8 @@ def database(database_container):
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     return redis_container
 
 
@@ -86,7 +90,7 @@ def celery_worker_pool():
 
 @pytest.fixture(scope="session")
 def celery_worker_parameters():
-    return {"concurrency":10}
+    return {"concurrency": 10}
 
 
 @pytest.fixture(scope='session')
@@ -102,6 +106,7 @@ def service_info(test_config, swagger, database):
         database
     )
 
+
 @pytest.fixture(scope="session")
 def swagger(database):
     with open("weskit/api/workflow_execution_service_1.0.0.yaml",
@@ -112,16 +117,19 @@ def swagger(database):
 
 @pytest.fixture(scope="session")
 def manager(database, redis_container, test_config):
-    os.environ["BROKER_URL"] = get_redis_url(redis_container)
-    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    from weskit.classes.Workflow import WorkflowFactory
     from weskit.classes.Manager import Manager
-
-    workflow_dict = {
-        Snakemake.name(): WorkflowFactory.get_workflow(test_config,
-                                                       Snakemake.name()),
-        Nextflow.name(): WorkflowFactory.get_workflow(test_config,
-                                                      Nextflow.name())
+    workflow_engines = {
+        Snakemake.name():
+            WorkflowEngineFactory.
+            get_engine(test_config,
+                       Snakemake.name()),
+        Nextflow.name():
+            WorkflowEngineFactory.
+            get_engine(test_config,
+                       Nextflow.name())
     }
-    manager = Manager(workflow_dict=workflow_dict, data_dir="tmp/")
-    yield manager
+    test_dir = "test-data/"
+    if not os.path.isdir(test_dir):
+        os.mkdir(test_dir)
+    return Manager(workflow_engines=workflow_engines, data_dir=test_dir)
+
