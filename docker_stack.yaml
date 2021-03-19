@@ -75,11 +75,8 @@ services:
       - backend
 
   ## Login System
-  
 
-  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
   keycloak:
-
     image: quay.io/keycloak/keycloak:12.0.2
     environment:
      # KEYCLOAK_USER: admin
@@ -87,6 +84,10 @@ services:
       DB_USER: keycloak
       DB_PASSWORD: secret_password
       KEYCLOAK_FRONTEND_URL: https://localhost:8443/auth
+      kc_container.with_env("DB_VENDOR","mysql")
+      DB_PORT: 3306
+      DB_ADDR: keycloak-database
+
     working_dir: /weskit
     # Add Realm to non existing DB
     #volumes:
@@ -104,7 +105,7 @@ services:
         target: /etc/x509/https/tls.crt
       
   # keycloak database
-  mysql:
+  keycloak-database:
     image: mysql
 
     environment:
