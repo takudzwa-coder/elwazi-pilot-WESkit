@@ -1,6 +1,5 @@
 import json
 import logging
-from builtins import function
 
 import requests
 import os
@@ -169,7 +168,7 @@ for an manual login
                 return response
 
 
-def login_required(fn: function, validateOnline: bool = True, validate_csrf: bool = True):
+def login_required(fn, validateOnline: bool = True, validate_csrf: bool = True):
     """
     This decorator checks if the login is initialized. If not all endpoints are exposed unprotected.
     Otherwise the decorator validates the access_token. If validateOnline==True the access_token will be validated by
@@ -244,7 +243,7 @@ def group_required(group: str = ""):
     return decorator
 
 
-def AutoLoginUser(fn: function, validateOnline: bool = True):
+def AutoLoginUser(fn, validateOnline: bool = True):
     """
     This decorator redirects the user to the login form of the oidc identity provider and back to the requested page.
     The client receives an access_token cookie, refresh_token cookie and CSRF token cookie.
