@@ -1,5 +1,7 @@
 import json
 import logging
+from builtins import function
+
 import requests
 import os
 
@@ -21,7 +23,7 @@ during initialisation multiple additional endpoints will be created
 for an manual login
   """
 
-    def __init__(self, app, config, addLogin=True):
+    def __init__(self, app, config: dict, addLogin: bool = True):
         app.OIDC_Login = self
         if not isinstance(app.logger, logging.Logger):
             self.logger = logging.getLogger("default")
@@ -167,7 +169,7 @@ for an manual login
                 return response
 
 
-def login_required(fn, validateOnline=True, validate_csrf=True):
+def login_required(fn: function, validateOnline: bool = True, validate_csrf: bool = True):
     """
     This decorator checks if the login is initialized. If not all endpoints are exposed unprotected.
     Otherwise the decorator validates the access_token. If validateOnline==True the access_token will be validated by
@@ -209,7 +211,7 @@ def login_required(fn, validateOnline=True, validate_csrf=True):
     return wrapper
 
 
-def group_required(group=""):
+def group_required(group: str = ""):
     """
     This function checks the Client specific Role for a specified group
     If group was FOUND the Endpoint will be returned
@@ -242,7 +244,7 @@ def group_required(group=""):
     return decorator
 
 
-def AutoLoginUser(fn, validateOnline=True):
+def AutoLoginUser(fn: function, validateOnline: bool = True):
     """
     This decorator redirects the user to the login form of the oidc identity provider and back to the requested page.
     The client receives an access_token cookie, refresh_token cookie and CSRF token cookie.

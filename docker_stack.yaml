@@ -29,7 +29,6 @@ services:
       REQUESTS_CA_BUNDLE: /run/secrets/keycloak.pem
     volumes:
       - ${WESKIT_DATA}:/weskit_data
-      - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
       - ${SHARED_FILESYSTEM_ROOT}:/data
       - ./weskit:/weskit/weskit:ro
     networks:
