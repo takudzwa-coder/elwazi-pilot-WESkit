@@ -24,10 +24,7 @@ for an manual login
 
     def __init__(self, app, config: dict, addLogin: bool = True):
         app.OIDC_Login = self
-        if not isinstance(app.logger, logging.Logger):
-            self.logger = logging.getLogger("default")
-        else:
-            self.logger = app.logger
+        self.logger = logging.getLogger(__name__)
 
         ##############################################
         # Configure Login
@@ -56,9 +53,9 @@ for an manual login
             if os.environ.get("kc_backend", False):
                 self.issuer_url = os.environ["kc_backend"]
 
-            else:
-                self.logger.warning("Login System Disabled")
-                self.logger.warning(
+        else:
+            self.logger.warning("Login System Disabled")
+            self.logger.warning(
                     """login:{}
                     enabled:{}
                     jwt:{}
@@ -66,10 +63,11 @@ for an manual login
                         "login" in config,
                         config['login'].get("enabled", False),
                         "jwt" in config['login'],
-                        "oidc" in config['login']))
-                return None
+                        "oidc" in config['login'])
+            )
+            return None
 
-        # Request URLS from ODIC Endpoint
+        # Request external configuration from Issuer URL
         try:
             self.oidc_config = requests.get(
                 self.issuer_url + "/.well-known/openid-configuration",
