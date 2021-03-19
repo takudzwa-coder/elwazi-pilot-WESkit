@@ -84,7 +84,7 @@ services:
       DB_USER: keycloak
       DB_PASSWORD: secret_password
       KEYCLOAK_FRONTEND_URL: https://localhost:8443/auth
-      kc_container.with_env("DB_VENDOR","mysql")
+      DB_VENDOR: mysql
       DB_PORT: 3306
       DB_ADDR: keycloak-database
 
