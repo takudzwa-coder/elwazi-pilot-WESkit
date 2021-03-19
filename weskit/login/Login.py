@@ -36,6 +36,8 @@ for an manual login
             "oidc" in config['login']
         ):
 
+            app.OIDC_Login = self
+
             # the JWT config is expected to be in the app config
             for key, element in config['login']['jwt'].items():
                 app.config[key] = element
@@ -253,6 +255,9 @@ def AutoLoginUser(fn, validateOnline: bool = True):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         # If there is no loadable token
+        if current_app.OIDC_Login is None:
+            raise Exception('OIDC_Login must be initialized before using the "AutoLoginUser" decorator')
+
         if not getToken():
 
             # use the function of the login endpoint and provide a redirect url
