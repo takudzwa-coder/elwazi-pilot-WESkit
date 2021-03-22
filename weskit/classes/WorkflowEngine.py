@@ -143,7 +143,6 @@ class WorkflowEngineFactory:
     @staticmethod
     def _extract_workflow_engine_params(config: Dict[dict, dict])\
             -> List[WorkflowEngineParam]:
-        print(config.keys())
         return [WorkflowEngineParam(name=k,
                                     type=config[k]["type"],
                                     value=config[k]["default_value"])

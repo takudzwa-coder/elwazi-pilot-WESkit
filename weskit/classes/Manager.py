@@ -5,13 +5,17 @@ import traceback
 from urllib.parse import urlparse
 
 import yaml
+from celery import Celery, Task
+
+from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from weskit.tasks.workflow import run_workflow
+from weskit.tasks.WorkflowTask import WorkflowTask
 from celery.worker.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
 from typing import Optional, List
+
 
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
@@ -39,19 +43,29 @@ logger = logging.getLogger(__name__)
 
 class Manager:
 
-    def __init__(self, workflow_engines: dict,
+    def __init__(self,
+                 celery_app: Celery,
+                 database: Database,
+                 workflow_engines: dict,
                  data_dir: str,
                  workflows_base_dir: str) -> None:
         self.workflow_engines = workflow_engines
         self.data_dir = data_dir
+        self.celery_app = celery_app
+        self.database = database
         self.workflows_base_dir = workflows_base_dir
+        # Register the relevant tasks with fully qualified name.
+        self.celery_app.task(WorkflowTask.run)
+
+    def _get_run_task(self) -> Task:
+        return self.celery_app.tasks["weskit.tasks.WorkflowTask.run"]
 
     def cancel(self, run: Run) -> Run:
         # This is a quickfix for executing the tests.
         # This might be a bad solution for multithreaded use-cases,
         # because the current working directory is touched.
         cwd = os.getcwd()
-        revoke(run.celery_task_id, terminate=True, signal='SIGKILL')
+        revoke(run.celery_task_id, terminate=True, signal='SIGTERM')
         os.chdir(cwd)
         run.run_status = RunStatus.CANCELED
         return run
@@ -60,7 +74,8 @@ class Manager:
         # check if task is running and update state
         if run.run_status in running_states:
             if run.celery_task_id is not None:
-                running_task = run_workflow.AsyncResult(run.celery_task_id)
+                running_task = self._get_run_task().\
+                    AsyncResult(run.celery_task_id)
                 run.run_status = celery_to_wes_state[running_task.state]
             else:
                 run.run_status = RunStatus.UNKNOWN
@@ -70,33 +85,35 @@ class Manager:
 
         if run.run_status not in running_states:
             if run.celery_task_id is not None:
-                running_task = run_workflow.AsyncResult(run.celery_task_id)
+                running_task = self._get_run_task().\
+                    AsyncResult(run.celery_task_id)
                 run.outputs["Workflow"] = running_task.get()
         return run
 
     def update_run(self, run: Run) -> Run:
         return self.update_outputs(self.update_state(run))
 
-    def update_runs(self, database, query) -> None:
-        runs = database.get_runs(query)
+    def update_runs(self, query) -> None:
+        runs = self.database.get_runs(query)
         for run in runs:
             run = self.update_run(run)
-            database.update_run(run)
+            self.database.update_run(run)
 
-    def create_and_insert_run(self, request, database) -> Optional[Run]:
-        run = Run(data={"run_id": database._create_run_id(),
+    def create_and_insert_run(self, request)\
+            -> Optional[Run]:
+        run = Run(data={"run_id": self.database._create_run_id(),
                         "run_status": "UNKNOWN",
                         "request_time": get_current_timestamp(),
                         "request": request})
-        if database.insert_run(run):
+        if self.database.insert_run(run):
             return run
         else:
             return None
 
-    def get_run(self, run_id, database, update) -> Run:
+    def get_run(self, run_id, update) -> Run:
         if update:
-            self.update_runs(database, query={"run_id": run_id})
-        return database.get_run(run_id)
+            self.update_runs(query={"run_id": run_id})
+        return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
     def _process_workflow_attachment(self, run, files):
@@ -207,7 +224,7 @@ class Manager:
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        task = run_workflow.apply_async(
+        task = self._get_run_task().apply_async(
                 args=[],
                 kwargs={**run_kwargs})
 
