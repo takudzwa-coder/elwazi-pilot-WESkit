@@ -2,6 +2,9 @@ from flask_jwt_extended import utils
 
 
 class User:
+    """
+    This class makes the content of the jwt easily accessible.
+    """
     def __init__(self):
         tokenData = utils.get_raw_jwt()
         self.id = tokenData.get('sub', None)

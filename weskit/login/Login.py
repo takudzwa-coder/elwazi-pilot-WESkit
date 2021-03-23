@@ -17,10 +17,11 @@ from weskit.login.utils import onlineValidation, check_csrf_token, getToken
 
 
 class oidcLogin:
-    """ This Class Initializes the OIDC Login and creates a JWTManager
-during initialisation multiple additional endpoints will be created
-for an manual login
-  """
+    """
+    This Class Initializes the OIDC Login and creates a JWTManager
+    during initialisation multiple additional endpoints will be created
+    for an manual login.
+    """
 
     def __init__(self, app, config: dict, addLogin: bool = True):
         app.OIDC_Login = self
@@ -126,17 +127,23 @@ for an manual login
         app.config['JWT_COOKIE_CSRF_PROTECT'] = False
         self.jwt = JWTManager(app)
 
-        # Define Custom jwt callback functions
+
         @self.jwt.user_loader_callback_loader
         def user_loader_callback(identity):
+            """
+            This function returns a User Object if the flask_jwt_extended current_user is called
+            :param identity:
+            :return: User
+            """
             u = User()
             return (u)
 
         if addLogin:
             """
-            This code block is only used if the login endpoints are enabled on the server. The imports are only required
-            for this specific scenario.
+            This code block is only used if the login endpoints should be accessible enabled on the server. The imports 
+            are only required for this specific scenario.
             """
+
             from flask_jwt_extended import get_raw_jwt
             import time
 

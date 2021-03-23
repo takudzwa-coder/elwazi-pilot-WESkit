@@ -71,8 +71,12 @@ def direct_auth():
 @login.route('/login/callback', methods=['GET'])
 def callbackFunction():
     """
-    The ODIC authenticator redirects to this endpoint after login success.
+    The ODIC authenticator redirects to this endpoint after login success and sets an one time session code as param.
+    This code can be used to obtain the access_token from the OIDC Identity provider. If this function is called by the
+    client it will recieve a session cookie and an access token via cookie.
+    Furthermore, the client will be redirected to the original requested endpoint.
     """
+
     code = request.args.get("code", None)
     # Payload
     payload = {
@@ -127,7 +131,9 @@ def logoutFct():
 @login.route("/login/refresh", methods=['GET'])
 def refresh_access_token(response_object=None):
     """
-    This route updates the refresh token and the access token.
+    This endpoint is called to refresh the access token be submitting the refresh token. I its automated called if an
+    user is authenticated with a access token cookie which reaches half it lifetime. The response object is the render
+    view of which is enriched with a new access token.
     """
 
     # Obtain the refresh cookie token name used by jwt_extended
@@ -163,9 +169,8 @@ def refresh_access_token(response_object=None):
 
 def refresh_token_timeOK(token):
     """
-    This funktion extracts the got an refresh_token and tries
-    to obtain it's expiration date. If it is passed this function
-    will return False and True if the refresh token is still valid.
+    This function extracts the users refresh_token and tries to obtain it's expiration date. If it is passed this
+    function will return False by default and in cases of exceptions and True if the refresh token is still valid.
     """
     try:
         a = token.split('.')
