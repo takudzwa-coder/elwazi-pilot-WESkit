@@ -127,7 +127,6 @@ class oidcLogin:
         app.config['JWT_COOKIE_CSRF_PROTECT'] = False
         self.jwt = JWTManager(app)
 
-
         @self.jwt.user_loader_callback_loader
         def user_loader_callback(identity):
             """
@@ -140,7 +139,7 @@ class oidcLogin:
 
         if addLogin:
             """
-            This code block is only used if the login endpoints should be accessible enabled on the server. The imports 
+            This code block is only used if the login endpoints should be accessible enabled on the server. The imports
             are only required for this specific scenario.
             """
 
