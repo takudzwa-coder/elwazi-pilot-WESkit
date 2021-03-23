@@ -116,7 +116,7 @@ login:
         OIDC_CLIENTID:
           type: string
           required: true
-        OIDC_CIENT_SECRET:
+        OIDC_CLIENT_SECRET:
           type: string
           required: true
         OIDC_FLASKHOST:

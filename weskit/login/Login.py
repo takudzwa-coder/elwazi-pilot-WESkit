@@ -47,7 +47,7 @@ class oidcLogin:
             #    app.config[key] = element
 
             self.issuer_url = config['login']['oidc']["OIDC_ISSUER_URL"]
-            self.client_secret = config['login']['oidc']['OIDC_CIENT_SECRET']
+            self.client_secret = config['login']['oidc']['OIDC_CLIENT_SECRET']
             self.hostname = config['login']['oidc']['OIDC_FLASKHOST']
             self.realm = config['login']['oidc']['OIDC_REALM']
             self.client_id = config['login']['oidc']['OIDC_CLIENTID']

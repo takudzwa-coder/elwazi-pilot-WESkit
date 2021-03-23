@@ -57,6 +57,6 @@ login:
   oidc:
     OIDC_FLASKHOST: "https://localhost:5000"
     OIDC_ISSUER_URL: "https://keycloak:8443/auth/realms/WESkit"
-    OIDC_CIENT_SECRET: "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+    OIDC_CLIENT_SECRET: "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
     OIDC_REALM: "WESkit"
     OIDC_CLIENTID: "WESkit"

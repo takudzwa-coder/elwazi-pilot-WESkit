@@ -110,7 +110,7 @@ class TestWithHeaderToken:
     the request header in the format "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
 
-    def test_run_workflow_header(self, test_app, runStorage, OIDC_credentials, celery_worker):
+    def test_accept_run_workflow_header(self, test_app, runStorage, OIDC_credentials, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
@@ -129,7 +129,7 @@ class TestWithHeaderToken:
                 running = False
         assert response.status_code == 200
 
-    def test_get_runs_header(self, test_app, runStorage, OIDC_credentials, celery_worker):
+    def test_accept_get_runs_header(self, test_app, runStorage, OIDC_credentials, celery_worker):
         response = test_app.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
@@ -141,7 +141,7 @@ class TestCSRFTokenOnly:
     token without an access token as Cookie.
     """
 
-    def test_run_workflow_CSRF_only(self, test_app, OIDC_credentials, celery_worker):
+    def test_reject_run_workflow_CSRF_only(self, test_app, OIDC_credentials, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
@@ -151,7 +151,7 @@ class TestCSRFTokenOnly:
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
                                 b' \\"access_token_cookie\\"; Missing Authorization Header)"}\n'
 
-    def test_get_runs_CSRF_only(self, test_app, OIDC_credentials, celery_worker):
+    def test_reject_get_runs_CSRF_only(self, test_app, OIDC_credentials, celery_worker):
         response = test_app.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert response.status_code == 401
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
@@ -165,7 +165,7 @@ class TestMissingCSRFToken:
     cookie with out the session token in the header.
     """
 
-    def test_run_workflow_cookie_only(self, test_app, OIDC_credentials, celery_worker):
+    def test_reject_run_workflow_cookie_only(self, test_app, OIDC_credentials, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         test_app.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
         data = get_workflow_data(
@@ -177,7 +177,7 @@ class TestMissingCSRFToken:
         assert response.status_code == 401
         assert response.data == b'{"msg":"Cookie Login detected: X-CSRF-TOKEN is not submitted via Header!"}\n'
 
-    def test_get_runs_cookie_only(self, test_app, celery_worker):
+    def test_reject_get_runs_cookie_only(self, test_app, celery_worker):
         response = test_app.get("/ga4gh/wes/v1/runs")
         assert response.status_code == 401
         assert response.data == b'{"msg":"Cookie Login detected: X-CSRF-TOKEN is not submitted via Header!"}\n'
@@ -188,7 +188,7 @@ class TestWithCookie:
     This TestWithCookie tests the correct functionality of the secured endpoint by using cookies with session token
     """
 
-    def test_run_workflow_cookie(self, test_app, runStorage, OIDC_credentials, celery_worker):
+    def test_accept_run_workflow_cookie(self, test_app, runStorage, OIDC_credentials, celery_worker):
 
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         test_app.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
@@ -212,7 +212,7 @@ class TestWithCookie:
                 running = False
         assert response.status_code == 200
 
-    def test_get_runs_cookie(self, test_app, runStorage, OIDC_credentials, celery_worker):
+    def test_accept_get_runs_cookie(self, test_app, runStorage, OIDC_credentials, celery_worker):
         response = test_app.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
