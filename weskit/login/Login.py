@@ -216,39 +216,6 @@ def login_required(fn, validateOnline: bool = True, validate_csrf: bool = True):
     return wrapper
 
 
-def group_required(group: str = ""):
-    """
-    This function checks the Client specific Role for a specified group
-    If group was FOUND the Endpoint will be returned
-    If group MISSING a 403 error will be returned
-    """
-
-    def decorator(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            # standard flask_jwt_extended token verifications
-            verify_jwt_in_request()
-
-            # custom group membership verification
-            # Probably, needs to be changed in LDAP context!
-            groups = get_raw_jwt().get(
-                'resource_access',
-                dict()
-            ).get(
-                current_app.config["OIDC_CLIENTID"],
-                dict()
-            ).get('roles', dict())
-            # print (groups)
-            if group not in groups:
-                return {"result": "user not in group'%s' required to access this endpoint" % group}, 403
-
-            return fn(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
 def AutoLoginUser(fn, validateOnline: bool = True):
     """
     This decorator redirects the user to the login form of the oidc identity provider and back to the requested page.
