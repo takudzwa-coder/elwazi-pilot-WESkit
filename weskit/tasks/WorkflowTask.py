@@ -1,7 +1,6 @@
 import os
 from weskit.classes.WorkflowEngine\
     import Snakemake, Nextflow
-from weskit.tasks.celery import celery_app
 
 
 class WorkflowTask:
@@ -29,5 +28,3 @@ class WorkflowTask:
                             "' is not known")
 
         return outputs
-
-    

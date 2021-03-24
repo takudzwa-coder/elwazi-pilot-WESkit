@@ -80,12 +80,12 @@ def create_app():
     workflow_dict = {
         Snakemake.name():
             WorkflowEngineFactory.
-                get_engine(config,
-                           Snakemake.name()),
+            get_engine(config,
+                       Snakemake.name()),
         Nextflow.name():
             WorkflowEngineFactory.
-                get_engine(config,
-                           Nextflow.name())
+            get_engine(config,
+                       Nextflow.name())
     }
 
     app.manager = Manager(workflow_engines=workflow_dict,
