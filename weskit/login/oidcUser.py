@@ -12,5 +12,7 @@ class User:
         self.email_verified = tokenData.get('email_verified', None)
         self.preferred_username = tokenData.get('preferred_username', None)
         self.email = tokenData.get('email', None)
-        self.user_claims = tokenData.get('user_claims', None)
+        #self.user_claims = tokenData.get('user_claims', None)
         self.auth_time = tokenData.get('auth_time', None)
+        self.realm_roles = tokenData.get('realm_access', dict()).get('roles', [])
+

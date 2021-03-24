@@ -96,9 +96,5 @@ def create_app():
     # Initialize for Dashboard
     Login.oidcLogin(app, config, addLogin=True)
 
-    # Add demo Login for Dashbord
-    @app.route("/test", methods=['GET'])
-    @Login.AutoLoginUser
-    def refesh_access_token():
-        return("yeah!")
+
     return app
