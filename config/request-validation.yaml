@@ -13,8 +13,25 @@ run_request:
     required: false
     type: dict
   workflow_engine_parameters:
+    # Note: The schema is the same as in default_workflow_engine_parameters
+    type: list
     required: false
-    type: dict
+    schema:
+      type: dict
+      required: true
+      schema:
+        name:
+          type: string
+          required: true
+        type:
+          type: string
+          required: true
+        default_value:
+          type: string
+          required: true
+        workflow_engine:
+          type: string
+          required: true
   workflow_url:
     required: true
     type: string

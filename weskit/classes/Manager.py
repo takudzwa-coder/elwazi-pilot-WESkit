@@ -1,13 +1,17 @@
 import json
+import logging
 import os
+import traceback
+from urllib.parse import urlparse
+
 import yaml
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.tasks.workflow import run_workflow
-from celery.task.control import revoke
+from celery.worker.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
-from typing import Optional
+from typing import Optional, List
 
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
@@ -30,12 +34,17 @@ WESkit executor error: the workflow file was not found. Please provide either
 a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
+logger = logging.getLogger(__name__)
+
 
 class Manager:
 
-    def __init__(self, workflow_engines: dict, data_dir: str) -> None:
+    def __init__(self, workflow_engines: dict,
+                 data_dir: str,
+                 workflows_base_dir: str) -> None:
         self.workflow_engines = workflow_engines
         self.data_dir = data_dir
+        self.workflows_base_dir = workflows_base_dir
 
     def cancel(self, run: Run) -> Run:
         # This is a quickfix for executing the tests.
@@ -89,13 +98,7 @@ class Manager:
             self.update_runs(database, query={"run_id": run_id})
         return database.get_run(run_id)
 
-    def _run_has_url_of_valid_absolute_file(self, run):
-        if os.path.isabs(run.request["workflow_url"]):
-            if os.path.isfile(run.request["workflow_url"]):
-                return True
-        return False
-
-    # check files, uploads and returns list of valid filesnames
+    # check files, uploads and returns list of valid filenames
     def _process_workflow_attachment(self, run, files):
         attachment_filenames = []
         if "workflow_attachment" in files:
@@ -113,6 +116,38 @@ class Manager:
             f.write("WESkit executor error: {}".format(message))
         return file_path
 
+    def _prepare_workflow_path(self,
+                               work_dir: str,
+                               url: str,
+                               attachment_filenames: List[str]) \
+            -> str:
+        """Compose the path to the workflow from a relative "file:" URI or
+        by (cached) downloading an "https://" URI.
+
+        Attached files are extracted to the run directory. (TODO Caching?)
+        Relative files are interpreted relative to self.workflow_base_dir.
+        """
+        workflow_url = urlparse(url)
+        workflow_path = None
+        if workflow_url.scheme in ["file", '']:
+            if os.path.isabs(workflow_url.path):
+                raise ValueError("Absolute workflow_url forbidden " +
+                                 "(should be validated already): '%s'" % url)
+            elif workflow_url.path in attachment_filenames:
+                # File has already been extracted to work-dir.
+                workflow_path = os.path.join(
+                    work_dir,
+                    workflow_url.path)
+            else:
+                workflow_path = os.path.join(
+                    self.workflows_base_dir,
+                    workflow_url.path)
+        elif workflow_url.scheme == "https":
+            # TODO Download the workflow with git clone. Use caching.
+            # TODO Copy to run directory?
+            raise NotImplementedError("workflow_url in https://")
+        return workflow_path
+
     def prepare_execution(self, run, files=[]):
         run.run_status = RunStatus.INITIALIZING
 
@@ -126,12 +161,19 @@ class Manager:
             yaml.dump(json.loads(run.request["workflow_params"]), ff)
         run.execution_path = run_dir
 
-        # process workflow attachment files
-        attachment_filenames = self._process_workflow_attachment(run, files)
-
-        # check for valid workflow_url
-        if not (self._run_has_url_of_valid_absolute_file(run) or
-                run.request["workflow_url"] in attachment_filenames):
+        # get workflow path from workflow_url
+        try:
+            workflow_path = self._prepare_workflow_path(
+                run.execution_path,
+                run.request["workflow_url"],
+                self._process_workflow_attachment(run, files))
+            if not os.path.exists(workflow_path):
+                raise IOError("Workflow directory does not exist: '%s'" %
+                              workflow_path)
+            run.workflow_path = workflow_path
+        except Exception as e:
+            logger.warning(traceback.TracebackException.from_exception(e).
+                           format())
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
@@ -144,28 +186,22 @@ class Manager:
         if not run.run_status == RunStatus.INITIALIZING:
             return run
 
-        # set workflow_url
-        if os.path.isabs(run.request["workflow_url"]):
-            workflow_url = run.request["workflow_url"]
-        else:
-            workflow_url = os.path.join(
-                run.execution_path,
-                secure_filename(run.request["workflow_url"]))
-
         # set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             raise Exception("Workflow type:'" +
                             run.request["workflow_type"] +
-                            "' is not known.")
+                            "' is not known. Know " +
+                            ", ".join(self.workflow_engines.keys()))
 
         # execute run
         run_kwargs = {
             "workflow_type": workflow_type,
-            "workflow_path": workflow_url,
+            "workflow_path": run.workflow_path,
             "workdir": run.execution_path,
-            "config_files": [os.path.join(run.execution_path, "config.yaml")]
+            "config_files": [os.path.join(run.execution_path, "config.yaml")],
+            "workflow_engine_params": []
         }
         run.start_time = get_current_timestamp()
         run.run_log["cmd"] = ", ".join(
@@ -173,9 +209,7 @@ class Manager:
         )
         task = run_workflow.apply_async(
                 args=[],
-                kwargs={**run_kwargs,
-                        **self.workflow_engines[workflow_type].
-                        workflow_kwargs})
+                kwargs={**run_kwargs})
 
         run.celery_task_id = task.id
         return run

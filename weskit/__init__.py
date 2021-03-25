@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Optional
 
 import yaml
 import sys
@@ -8,8 +9,9 @@ from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask, current_app
-from weskit.classes.WorkflowEngine \
-    import Snakemake, Nextflow, WorkflowEngineFactory
+
+from weskit.classes.RunRequestValidator import RunRequestValidator
+from weskit.classes.WorkflowEngine import WorkflowEngineFactory
 from flask_jwt_extended import JWTManager
 
 
@@ -34,9 +36,13 @@ def create_database():
 def create_validator(schema):
     """Return a validator function that can be provided a data structure to
     be validated. The validator is returned as second argument."""
-    def _validate(target):
+    def _validate(target) -> Optional[str]:
         validator = Validator()
-        return validator.validate(target, schema), validator
+        result = validator.validate(target, schema)
+        if result is True:
+            return None
+        else:
+            return validator.errors
     return _validate
 
 
@@ -54,6 +60,10 @@ def create_app():
     default_validation_config = os.getenv(
         "WESKIT_VALIDATION_CONFIG",
         os.path.join("config", "validation.yaml"))
+
+    workflows_base_dir = os.getenv(
+        "WESKIT_WORKFLOWS",
+        os.path.join(os.getcwd(), "workflows"))
 
     request_validation_config = \
         os.path.join("config", "request-validation.yaml")
@@ -77,10 +87,10 @@ def create_app():
         request_validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
     # Validate configuration YAML.
-    config_validation, validator = create_validator(validation)(config)
-    if config_validation is not True:
+    config_validation = create_validator(validation)(config)
+    if config_validation is not None:
         logger.error("Could not validate config.yaml: {}".
-                     format(validator.errors))
+                     format(config_validation))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
     swagger = read_swagger()
@@ -92,24 +102,16 @@ def create_app():
     # Create validators for each of the request types in the
     # request-validation.yaml. These are used in the API-calls to validate
     # the input.
-    app.request_validators = \
-        dict((name, create_validator(schema))
-             for (name, schema) in request_validation.items())
+    app.request_validators = {
+        "run_request": RunRequestValidator(create_validator(
+            request_validation["run_request"]))
+    }
 
     app.database = create_database()
 
-    workflow_dict = {
-        Snakemake.name():
-            WorkflowEngineFactory.
-            get_engine(config,
-                       Snakemake.name()),
-        Nextflow.name():
-            WorkflowEngineFactory.
-            get_engine(config,
-                       Nextflow.name())
-    }
-
-    app.manager = Manager(workflow_engines=workflow_dict,
+    app.manager = Manager(workflow_engines=WorkflowEngineFactory.
+                          workflow_engine_index(config),
+                          workflows_base_dir=workflows_base_dir,
                           data_dir=os.getenv("WESKIT_DATA", "./tmp"))
     app.service_info = ServiceInfo(config["static_service_info"],
                                    swagger, app.database)

@@ -27,10 +27,12 @@ services:
       WESKIT_VALIDATION_CONFIG:
       WESKIT_DATABASE_URL: mongodb://database:${MONGODB_PORT:-27017}
       WESKIT_DATA: /data
+      WESKIT_WORKFLOWS: /workflows
       RESULT_BACKEND: redis://result_broker:${REDIS_PORT:-6379}
       BROKER_URL: redis://result_broker:${REDIS_PORT:-6379}
       FLASK_APP: weskit
     volumes:
+      - ${WESKIT_WORKFLOWS}:/workflows:ro
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
       - ${WESKIT_LOG_CONFIG}:/home/weskit/log-config.yaml:ro
       - ${WESKIT_DATA}:/data
@@ -84,11 +86,13 @@ services:
     environment:
       RESULT_BACKEND: redis://result_broker:${REDIS_PORT:-6379}
       BROKER_URL: redis://result_broker:${REDIS_PORT:-6379}
+      WESKIT_WORKFLOWS: /workflows
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
     command: ["conda activate weskit && celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
     volumes:
       - ${WESKIT_DATA}:/data
+      - ${WESKIT_WORKFLOWS}:/workflows:ro
     networks:
       - backend
     deploy:

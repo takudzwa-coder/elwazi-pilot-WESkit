@@ -39,10 +39,10 @@ def test_login(test_app):
 
 def test_missing_fields_run_request(test_app, celery_worker):
     complete_data = {
-        "workflow_params": "{}",
-        "workflow_type": "not checked",
-        "workflow_type_version": "not checked",
-        "workflow_url": "not checked"
+        "workflow_params": {},
+        "workflow_type": "snakemake",
+        "workflow_type_version": "5",
+        "workflow_url": "https://some.git.repo/path/to/it.git"
     }
     for key in complete_data.keys():
         reduced_data = complete_data.copy()
@@ -50,13 +50,13 @@ def test_missing_fields_run_request(test_app, celery_worker):
         response = test_app.post("/ga4gh/wes/v1/runs", data=reduced_data)
         assert response.status_code == 400
         assert response.json["msg"] == \
-               "Malformed request: {'%s': ['required field']}" % key
+               "Malformed request: [{'%s': ['required field']}]" % key
 
 
 # WARNING: This test fails with 401 unauthorized, if run isolated.
 #          Run it together with the other server_test.py tests!
 def test_run_snakemake(test_app, celery_worker):
-    snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+    snakefile = "file:tests/wf1/Snakefile"
     data = get_workflow_data(
         workflow_file=snakefile,
         config="tests/wf1/config.yaml")
