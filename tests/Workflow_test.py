@@ -44,7 +44,7 @@ def test_snakemake_prepare_execution(manager):
     assert os.path.isfile(run.outputs["execution"])
 
 
-def test_execute_snakemake(database: Database, manager, celery_session_worker):
+def test_execute_snakemake(database: Database, manager, celery_worker):
     test_failed_status = [
        RunStatus.UNKNOWN,
        RunStatus.EXECUTOR_ERROR,
@@ -76,7 +76,7 @@ def test_execute_snakemake(database: Database, manager, celery_session_worker):
         success = True
 
 
-def test_execute_nextflow(database: Database, manager):
+def test_execute_nextflow(database: Database, manager, celery_worker):
     test_failed_status = [
        RunStatus.UNKNOWN,
        RunStatus.EXECUTOR_ERROR,
@@ -110,7 +110,7 @@ def test_execute_nextflow(database: Database, manager):
 
 # # Celery's revoke function applied to the Snakemake job results in a change of the
 # # main process's working directory. Therefore the test is turned off (until this is fixed).
-# def test_cancel_workflow(manager, celery_session_worker, redis_container):
+# def test_cancel_workflow(manager, redis_container):
 #     run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
 #                                                  "tests/wf2/Snakefile"),
 #                        workflow_type="snakemake")
@@ -120,7 +120,7 @@ def test_execute_nextflow(database: Database, manager):
 #     assert run.run_status == RunStatus.CANCELED
 
 
-def test_update_all_runs(manager, database):
+def test_update_all_runs(manager, database, celery_worker):
     test_failed_status = [
         RunStatus.UNKNOWN,
         RunStatus.EXECUTOR_ERROR,
@@ -142,7 +142,7 @@ def test_update_all_runs(manager, database):
         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
-            assert not status in test_failed_status
+            assert status not in test_failed_status
             print("Waiting ...")
             time.sleep(1)
             run = manager.update_state(run)

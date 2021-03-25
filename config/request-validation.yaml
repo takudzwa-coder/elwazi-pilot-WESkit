@@ -1,0 +1,20 @@
+# Compare GA4GH WES-API
+run_request:
+  workflow_params:
+    required: true
+    type: string     # Type: JSON string
+  workflow_type:
+    required: true
+    type: string
+  workflow_type_version:
+    required: true
+    type: string
+  tags:
+    required: false
+    type: dict
+  workflow_engine_parameters:
+    required: false
+    type: dict
+  workflow_url:
+    required: true
+    type: string

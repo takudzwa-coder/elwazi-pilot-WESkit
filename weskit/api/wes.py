@@ -116,19 +116,28 @@ def RunWorkflow():
         data = request.form
         current_app.logger.info("RunWorkflow")
 
-        run = current_app.manager.create_and_insert_run(
-            request=data,
-            database=current_app.database)
+        validator_func = current_app.request_validators["run_request"]
+        (validation_result, validator) = validator_func(data)
+        if not validation_result:
+            return {
+              "msg": "Malformed request: {}".format(validator.errors),
+              "status_code": 400
+            }, 400
+        else:
+            run = current_app.manager.create_and_insert_run(
+                request=data,
+                database=current_app.database)
 
-        current_app.logger.info("Prepare execution")
-        run = current_app.manager.prepare_execution(run, files=request.files)
-        current_app.database.update_run(run)
+            current_app.logger.info("Prepare execution")
+            run = current_app.manager.\
+                prepare_execution(run, files=request.files)
+            current_app.database.update_run(run)
 
-        current_app.logger.info("Execute Workflow")
-        run = current_app.manager.execute(run)
-        current_app.database.update_run(run)
+            current_app.logger.info("Execute Workflow")
+            run = current_app.manager.execute(run)
+            current_app.database.update_run(run)
 
-        return jsonify({"run_id": run.run_id}), 200
+            return jsonify({"run_id": run.run_id}), 200
     except Exception as e:
         current_app.logger.error(e, exc_info=True)
         raise e

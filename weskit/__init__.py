@@ -31,6 +31,15 @@ def create_database():
     return Database(MongoClient(DATABASE_URL), "WES")
 
 
+def create_validator(schema):
+    """Return a validator function that can be provided a data structure to
+    be validated. The validator is returned as second argument."""
+    def _validate(target):
+        validator = Validator()
+        return validator.validate(target, schema), validator
+    return _validate
+
+
 def create_app():
 
     from weskit.classes.Manager import Manager
@@ -45,6 +54,9 @@ def create_app():
     default_validation_config = os.getenv(
         "WESKIT_VALIDATION_CONFIG",
         os.path.join("config", "validation.yaml"))
+
+    request_validation_config = \
+        os.path.join("config", "request-validation.yaml")
 
     with open(default_log_config, "r") as yaml_file:
         log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
@@ -61,9 +73,11 @@ def create_app():
         logger.debug("Read validation specification from " +
                      default_validation_config)
 
+    with open(request_validation_config, "r") as yaml_file:
+        request_validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
     # Validate configuration YAML.
-    validator = Validator()
-    config_validation = validator.validate(config, validation)
+    config_validation, validator = create_validator(validation)(config)
     if config_validation is not True:
         logger.error("Could not validate config.yaml: {}".
                      format(validator.errors))
@@ -74,7 +88,14 @@ def create_app():
     app = Flask(__name__)
 
     # Global objects and information.
-    app.validation = validation
+
+    # Create validators for each of the request types in the
+    # request-validation.yaml. These are used in the API-calls to validate
+    # the input.
+    app.request_validators = \
+        dict((name, create_validator(schema))
+             for (name, schema) in request_validation.items())
+
     app.database = create_database()
 
     workflow_dict = {
