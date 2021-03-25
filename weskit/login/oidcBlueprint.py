@@ -10,7 +10,7 @@ import time
 from base64 import b64decode
 
 from weskit.login.utils import requester_and_cookieSetter
-from typing import Any
+
 
 login = Blueprint('login', __name__, template_folder='templates')
 

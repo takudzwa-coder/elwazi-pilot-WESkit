@@ -3,6 +3,7 @@ from flask_jwt_extended import current_user
 from flask import Blueprint
 bp = Blueprint('loginTestEndpoints', __name__, template_folder='templates')
 
+
 # Add demo Login for Dashboard
 @bp.route("/test", methods=['GET'])
 @AutoLoginUser

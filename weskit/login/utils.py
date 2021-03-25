@@ -140,7 +140,7 @@ def check_csrf_token() -> bool:
 def requester_and_cookieSetter(
         payload: str,
         setcookies: bool = True,
-        response_object: Generic = None) -> Generic :
+        response_object: Generic = None) -> Generic:
 
     # Make request
     try:

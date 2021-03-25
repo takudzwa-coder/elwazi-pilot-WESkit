@@ -96,5 +96,4 @@ def create_app():
     # Initialize for Dashboard
     Login.oidcLogin(app, config, addLogin=True)
 
-
     return app

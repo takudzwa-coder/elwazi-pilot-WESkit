@@ -6,7 +6,7 @@ import os
 
 from functools import wraps
 from flask_jwt_extended import JWTManager
-from flask_jwt_extended import jwt_required, get_raw_jwt, verify_jwt_in_request
+from flask_jwt_extended import jwt_required
 from flask import current_app, request
 
 from jwt.algorithms import RSAAlgorithm
@@ -14,6 +14,7 @@ from jwt.algorithms import RSAAlgorithm
 from weskit.login import oidcBlueprint as login_bp
 from weskit.login.oidcUser import User
 from weskit.login.utils import onlineValidation, check_csrf_token, getToken
+from typing import Callable
 
 
 class oidcLogin:
@@ -73,8 +74,7 @@ class oidcLogin:
         # Request external configuration from Issuer URL
         try:
             self.oidc_config = requests.get(
-                self.issuer_url + "/.well-known/openid-configuration",
-                verify=False
+                self.issuer_url + "/.well-known/openid-configuration"
             ).json()
 
             # Check Existence of oidc config values
@@ -99,10 +99,7 @@ class oidcLogin:
         self.logger.info("Extracting public certificate from Issuer")
 
         try:
-            self.oidc_jwks_uri = requests.get(
-                self.oidc_config["jwks_uri"],
-                verify=False
-            ).json()
+            self.oidc_jwks_uri = requests.get(self.oidc_config["jwks_uri"]).json()
 
             # retrieve first jwk entry from jwks_uri endpoint and use it to
             # construct the RSA public key
@@ -117,8 +114,14 @@ class oidcLogin:
 
         if addLogin:
             self.logger.info("Creating Login Endpoints.")
-            # Add Login blueprint and Setup JWTManager
+
+            # Add Login Endpoints to the app
             app.register_blueprint(login_bp.login)
+
+            if config.get("DEBUG", False):
+                from weskit.login import oidcDebugEndpoints as debugBP
+                app.register_blueprint(debugBP.bp)
+
         else:
             self.logger.info("Will not Create Login Endpoint.")
 
@@ -128,12 +131,13 @@ class oidcLogin:
         self.jwt = JWTManager(app)
 
         @self.jwt.user_loader_callback_loader
-        def user_loader_callback(identity):
+        def user_loader_callback(identity: str) -> User:
             """
             This function returns a User Object if the flask_jwt_extended current_user is called
-            :param identity:
+            :param identity: unused, since data of access token will be used here
             :return: User
             """
+
             u = User()
             return (u)
 
@@ -147,7 +151,7 @@ class oidcLogin:
             import time
 
             @app.after_request
-            def refresh_expiring_jwts(response):
+            def refresh_expiring_jwts(response: Callable) -> Callable:
                 """
                 This function checks if the access token cookie has exceeded the half of its expiration time. If it's
                 yes the access token in the cookie as well as the refresh token and csrf token will be replaced.
@@ -174,7 +178,7 @@ class oidcLogin:
                 return response
 
 
-def login_required(fn, validateOnline: bool = True, validate_csrf: bool = True):
+def login_required(fn: Callable, validateOnline: bool = True, validate_csrf: bool = True) -> Callable:
     """
     This decorator checks if the login is initialized. If not all endpoints are exposed unprotected.
     Otherwise the decorator validates the access_token. If validateOnline==True the access_token will be validated by
@@ -197,9 +201,11 @@ def login_required(fn, validateOnline: bool = True, validate_csrf: bool = True):
             checkJWT = jwt_required(fn)(*args, **kwargs)
             csrf_state = check_csrf_token()
 
-            # Check if csrf musst be checked
-            if validate_csrf and csrf_state:
-                return {"msg": csrf_state}, 401
+            # Check if csrf must be checked
+            if validate_csrf:
+                csrf_state = check_csrf_token()
+                if csrf_state:
+                    return {"msg": csrf_state}, 401
 
             if validateOnline:
                 # make a request to oidc identity provider
@@ -216,7 +222,7 @@ def login_required(fn, validateOnline: bool = True, validate_csrf: bool = True):
     return wrapper
 
 
-def AutoLoginUser(fn, validateOnline: bool = True):
+def AutoLoginUser(fn: Callable, validateOnline: bool = True) -> Callable:
     """
     This decorator redirects the user to the login form of the oidc identity provider and back to the requested page.
     The client receives an access_token cookie, refresh_token cookie and CSRF token cookie.
