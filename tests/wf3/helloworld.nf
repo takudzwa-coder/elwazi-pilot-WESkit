@@ -1,5 +1,4 @@
-process sayHello
-{
+process sayHello {
     publishDir "./", mode: "rellink"
 
 	output:
@@ -11,7 +10,6 @@ process sayHello
 	"""
 }
 
-workflow.onComplete
-{
+workflow.onComplete {
     log.info "Success!"
 }

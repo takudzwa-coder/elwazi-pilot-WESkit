@@ -33,8 +33,8 @@ via workflow_attachments."""
 
 class Manager:
 
-    def __init__(self, workflow_dict: dict, data_dir: str) -> None:
-        self.workflow_dict = workflow_dict
+    def __init__(self, workflow_engines: dict, data_dir: str) -> None:
+        self.workflow_engines = workflow_engines
         self.data_dir = data_dir
 
     def cancel(self, run: Run) -> Run:
@@ -153,7 +153,7 @@ class Manager:
                 secure_filename(run.request["workflow_url"]))
 
         # set workflow_type
-        if run.request["workflow_type"] in self.workflow_dict:
+        if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             raise Exception("Workflow type:'" +
@@ -174,7 +174,8 @@ class Manager:
         task = run_workflow.apply_async(
                 args=[],
                 kwargs={**run_kwargs,
-                        **self.workflow_dict[workflow_type].workflow_kwargs})
+                        **self.workflow_engines[workflow_type].
+                        workflow_kwargs})
 
         run.celery_task_id = task.id
         return run

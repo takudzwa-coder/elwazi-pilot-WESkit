@@ -56,6 +56,7 @@ static_service_info:
 
 jwt:
     enabled: true
+
     # Only allow JWT cookies to be sent over https. In production, this
     # should likely be True
     JWT_COOKIE_SECURE: false

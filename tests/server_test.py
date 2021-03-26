@@ -4,7 +4,7 @@ import yaml
 import os
 
 
-def get_workflow_data(workflowfile, config):
+def get_workflow_data(workflow_file, config):
     with open(config) as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
@@ -12,7 +12,7 @@ def get_workflow_data(workflowfile, config):
         "workflow_params": workflow_params,
         "workflow_type": "snakemake",
         "workflow_type_version": "5.8.2",
-        "workflow_url": workflowfile
+        "workflow_url": workflow_file
     }
     return data
 
@@ -22,26 +22,27 @@ def test_get_service_info(test_app):
     assert response.status_code == 200
     
 
-def test_LoginRestriction(test_app):
+def test_login_restriction(test_app):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
-        workflowfile=snakefile,
+        workflow_file=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     assert response.status_code == 401
 
 
-def test_login (test_app):
-    loginData={'password':'test','username':'test'}
-    response=test_app.post("/login",data=loginData)
+def test_login(test_app):
+    login_data = {'password': 'test', 'username': 'test'}
+    response = test_app.post("/login", data=login_data)
     assert response.status == '302 FOUND'
 
 
-# WARNING: This test fails with 401 unauthorized, if run isolated. Run it together with the other server_test.py tests!
-def test_run_snakemake(test_app, celery_worker):
+# WARNING: This test fails with 401 unauthorized, if run isolated.
+#          Run it together with the other server_test.py tests!
+def test_run_snakemake(test_app):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
-        workflowfile=snakefile,
+        workflow_file=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     assert response.status_code == 200
@@ -57,24 +58,24 @@ def test_run_snakemake(test_app, celery_worker):
                            "CANCELED", "CANCELING"]:
             assert False, "Failing run status '{}'".format(status.json)
         elif status.json == "COMPLETE":
-            running = False # = success
+            running = False  # = success
 
 
-def test_get_runs(test_app, celery_worker):
+def test_get_runs(test_app):
     response = test_app.get("/ga4gh/wes/v1/runs")
     assert response.status_code == 200
 
 
 def test_logout(test_app):
-    loginData=dict()
-    response=test_app.post("/logout",data=loginData)
+    login_data=dict()
+    response=test_app.post("/logout",data=login_data)
     assert response.status == '200 OK'
 
 
-def test_Logout_Successfull(test_app):
+def test_logout_successfull(test_app):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
-        workflowfile=snakefile,
+        workflow_file=snakefile,
         config="tests/wf1/config.yaml")
     response = test_app.post("/ga4gh/wes/v1/runs", data=data)
     assert response.status_code == 401
