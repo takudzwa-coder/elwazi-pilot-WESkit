@@ -67,7 +67,7 @@ def test_run_snakemake(test_client, celery_session_worker):
     start_time = time.time()
     while not success:
         time.sleep(1)
-        assert (start_time - time.time()) <= 30, "Test timed out"
+        assert (time.time() - start_time) <= 30, "Test timed out"
         status = test_client.get(
             "/ga4gh/wes/v1/runs/{}/status".format(run_id)
         )

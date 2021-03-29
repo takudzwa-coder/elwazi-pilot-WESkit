@@ -56,7 +56,7 @@ def test_execute_snakemake(test_client,
     start_time = time.time()
     success = False
     while not success:
-        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
+        assert (time.time() - start_time) <= timeout_seconds, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
             assert status not in test_failed_status
@@ -89,7 +89,7 @@ def test_execute_nextflow(test_client,
     start_time = time.time()
     success = False
     while not success:
-        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
+        assert (time.time() - start_time) <= timeout_seconds, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
             assert status not in test_failed_status
@@ -136,7 +136,7 @@ def test_update_all_runs(test_client,
     start_time = time.time()
     success = False
     while not success:
-        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
+        assert (time.time() - start_time) <= timeout_seconds, "Test timed out"
         status = run.run_status
         print("Waiting ... (status=%s)" % status.name)
         if status != RunStatus.COMPLETE:
