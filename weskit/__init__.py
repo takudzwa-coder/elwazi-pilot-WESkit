@@ -56,7 +56,7 @@ def create_app():
         logger.info("Read config from " + default_config)
 
     with open(default_validation_config, "r") as yaml_file:
-        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        validation = yaml.load(yaml_fileauthON)
         logger.debug("Read validation specification from " +
                      default_validation_config)
 
