@@ -3,7 +3,7 @@ import pathlib
 import subprocess
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import List
+from typing import List, Dict
 
 from weskit.utils import get_current_timestamp
 from weskit.utils import get_absolute_file_paths
@@ -34,7 +34,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def run_workflow_engine_params(self, params: List[WorkflowEngineParam])\
+    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam])\
             -> List[str]:
         """
         Take a list of WorkflowEngineParams for a specific run and combine
@@ -51,13 +51,8 @@ class WorkflowEngine(metaclass=ABCMeta):
     def name() -> str:
         pass
 
-    @staticmethod
-    @abstractmethod
-    def version() -> str:
-        pass
 
-
-class Snakemake_5(WorkflowEngine):  # noqa
+class Snakemake(WorkflowEngine):  # noqa
     def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params)
 
@@ -67,7 +62,7 @@ class Snakemake_5(WorkflowEngine):  # noqa
             config_files: list,
             workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("run_snakemake: {}, {}, {}".
+        logging.getLogger().info("Snakemake_5.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         outputs = []
         snakemake(
@@ -82,11 +77,7 @@ class Snakemake_5(WorkflowEngine):  # noqa
     def name():
         return "snakemake"
 
-    @staticmethod
-    def version():
-        return "5"
-
-    def run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
+    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
             -> List[str]:
         """
         TODO Implement this!
@@ -94,7 +85,7 @@ class Snakemake_5(WorkflowEngine):  # noqa
         return []
 
 
-class Nextflow_20(WorkflowEngine):  # noqa
+class Nextflow(WorkflowEngine):  # noqa
     def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params)
 
@@ -104,7 +95,7 @@ class Nextflow_20(WorkflowEngine):  # noqa
             config_files: list,
             workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("run_nextflow: {}, {}, {}".
+        logging.getLogger().info("Nextflow_20.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
         # TODO Require a profile configuration.
@@ -139,11 +130,7 @@ class Nextflow_20(WorkflowEngine):  # noqa
     def name():
         return "nextflow"
 
-    @staticmethod
-    def version():
-        return "20"
-
-    def run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
+    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
             -> List[str]:
         """
         TODO Implement this!
@@ -154,43 +141,30 @@ class Nextflow_20(WorkflowEngine):  # noqa
 class WorkflowEngineFactory:
 
     @staticmethod
-    def _extract_workflow_engine_params(config: List[dict],
-                                        workflow_type: str)\
+    def _extract_workflow_engine_params(config: Dict[dict, dict])\
             -> List[WorkflowEngineParam]:
-        return list(map(WorkflowEngineFactory._extract_workflow_engine_param,
-                        filter(lambda val:
-                               val["workflow_engine"] == workflow_type,
-                               config)))
+        print(config.keys())
+        return [WorkflowEngineParam(name=k,
+                                    type=config[k]["type"],
+                                    value=config[k]["default_value"])
+                for k in config.keys()]
 
     @staticmethod
-    def _extract_workflow_engine_param(config: dict) -> WorkflowEngineParam:
-        """Take a dictionary with name, type and value/default_value fields,
-        and create a WorkflowEngineParam() instance from it."""
-        assert not ("value" in config and "default_value" in config)
-        return WorkflowEngineParam(name=config["name"],
-                                   type=config["type"],
-                                   value=config.get("value",
-                                                    config["default_value"]))
-
-    @staticmethod
-    def workflow_engine_index(config: dict) -> dict:
+    def workflow_engine_index(engine_params: dict) -> dict:
         """Return a dictionary of all WorkflowEngines mapping workflow_engine
          to WorkflowEngine instances.
 
          This is yet statically implemented, but could at some
          point by done with https://stackoverflow.com/a/3862957/8784544.
          """
-        all_engine_params =\
-            config.get("static_service_info"). \
-            get("default_workflow_engine_parameters")
         workflow_engines = {
-            Snakemake_5.name():
-                Snakemake_5(WorkflowEngineFactory.
-                            _extract_workflow_engine_params
-                            (all_engine_params, Snakemake_5.name())),
-            Nextflow_20.name():
-                Nextflow_20(WorkflowEngineFactory.
-                            _extract_workflow_engine_params
-                            (all_engine_params, Nextflow_20.name()))
+            Snakemake.name():
+                Snakemake(WorkflowEngineFactory.
+                          _extract_workflow_engine_params
+                          (engine_params[Snakemake.name()])),
+            Nextflow.name():
+                Nextflow(WorkflowEngineFactory.
+                         _extract_workflow_engine_params
+                         (engine_params[Nextflow.name()]))
         }
         return workflow_engines

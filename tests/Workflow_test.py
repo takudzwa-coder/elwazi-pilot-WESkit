@@ -11,7 +11,7 @@ from weskit.classes.RunStatus import RunStatus
 def test_snakemake_prepare_execution(manager):
 
     # 1.) use workflow on server
-    run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
+    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
     assert run.run_status == RunStatus.INITIALIZING
@@ -55,7 +55,7 @@ def test_execute_snakemake(database: Database, manager, celery_worker):
         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
-            assert not status in test_failed_status
+            assert status not in test_failed_status
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
@@ -86,7 +86,7 @@ def test_execute_nextflow(database: Database, manager, celery_worker):
         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
-            assert not status in test_failed_status
+            assert status not in test_failed_status
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
@@ -98,8 +98,9 @@ def test_execute_nextflow(database: Database, manager, celery_worker):
         success = True
 
 
-# # Celery's revoke function applied to the Snakemake job results in a change of the
-# # main process's working directory. Therefore the test is turned off (until this is fixed).
+# # Celery's revoke function applied to the Snakemake job results in a change
+# # of the main process's working directory. Therefore the test is turned off
+# # (until this is fixed).
 # def test_cancel_workflow(manager, redis_container):
 #     run = get_mock_run(workflow_url=os.path.join(os.getcwd(),
 #                                                  "tests/wf2/Snakefile"),
@@ -130,9 +131,9 @@ def test_update_all_runs(manager, database, celery_worker):
     while not success:
         assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
         status = run.run_status
+        print("Waiting ... (status=%s)" % status.name)
         if status != RunStatus.COMPLETE:
             assert status not in test_failed_status
-            print("Waiting ...")
             time.sleep(1)
             run = manager.update_state(run)
             continue
@@ -140,4 +141,3 @@ def test_update_all_runs(manager, database, celery_worker):
         db_run = database.get_run(run_id=run.run_id)
         assert db_run.run_status == RunStatus.COMPLETE
         success = True
-

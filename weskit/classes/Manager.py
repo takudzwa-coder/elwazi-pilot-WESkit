@@ -168,7 +168,7 @@ class Manager:
                 run.request["workflow_url"],
                 self._process_workflow_attachment(run, files))
             if not os.path.exists(workflow_path):
-                raise IOError("Workflow directory does not exist: '%s'" %
+                raise IOError("Workflow path does not exist: '%s'" %
                               workflow_path)
             run.workflow_path = workflow_path
         except Exception as e:

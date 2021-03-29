@@ -1,3 +1,6 @@
+from unittest import TestCase
+
+
 def test_get_workflow_type_versions(service_info):
     assert service_info.get_workflow_type_versions() == {
         "snakemake": {"workflow_type_version": ["5"]},
@@ -22,10 +25,19 @@ def test_get_workflow_engine_versions(service_info):
 
 def test_get_default_workflow_engine_parameters(service_info):
     default = service_info.get_default_workflow_engine_parameters()
-    assert default[0]["name"] == "cores"
-    assert default[0]["type"] == "int"
-    assert default[0]["default_value"] == "1"
-    assert len(default) == 2
+    TestCase().assertDictEqual(default, {
+        "snakemake": {
+            "cores": {
+                "type": "int",
+                "default_value": "1"
+            }
+        },
+        "nextflow": {
+            "cores": {
+                "type": "int",
+                "default_value": "1"
+            }
+        }})
 
 
 def test_get_auth_instructions_url(service_info):

@@ -112,7 +112,10 @@ def manager(database, redis_container, test_config):
     from weskit.classes.WorkflowEngine import WorkflowEngineFactory
     from weskit.classes.Manager import Manager
     manager = Manager(workflow_engines=WorkflowEngineFactory.
-                      workflow_engine_index(test_config),
+                      workflow_engine_index(
+                        test_config
+                        ["static_service_info"]
+                        ["default_workflow_engine_parameters"]),
                       workflows_base_dir=workflows_base_dir,
                       data_dir="test-data/")
     yield manager

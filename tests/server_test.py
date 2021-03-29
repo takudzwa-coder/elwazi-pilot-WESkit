@@ -20,7 +20,7 @@ def get_workflow_data(workflow_file, config):
 def test_get_service_info(test_app):
     response = test_app.get("/ga4gh/wes/v1/service-info")
     assert response.status_code == 200
-    
+
 
 def test_login_restriction(test_app):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
@@ -83,8 +83,8 @@ def test_get_runs(test_app):
 
 
 def test_logout(test_app):
-    login_data=dict()
-    response=test_app.post("/logout",data=login_data)
+    login_data = dict()
+    response = test_app.post("/logout", data=login_data)
     assert response.status == '200 OK'
 
 

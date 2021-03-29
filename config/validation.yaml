@@ -38,24 +38,24 @@ static_service_info:
         nextflow:
           type: string
     default_workflow_engine_parameters:
-      type: list
-      required: true
-      schema:
+      type: dict
+      required: false
+      keysrules:
+        allowed:
+          - snakemake
+          - nextflow
+      valuesrules:
         type: dict
         required: true
-        schema:
-          name:
-            type: string
-            required: true
-          type:
-            type: string
-            required: true
-          default_value:
-            type: string
-            required: true
-          workflow_engine:
-            type: string
-            required: true
+        valuesrules:
+          type: dict
+          schema:
+            type:
+              type: string
+              required: true
+            default_value:
+              type: string
+              required: true
     auth_instructions_url:
       type: string
       required: true
