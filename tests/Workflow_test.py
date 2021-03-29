@@ -48,7 +48,6 @@ def test_execute_snakemake(test_client,
        RunStatus.CANCELED,
        RunStatus.CANCELING
        ]
-    timeout_seconds = 30
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
@@ -56,7 +55,7 @@ def test_execute_snakemake(test_client,
     start_time = time.time()
     success = False
     while not success:
-        assert (time.time() - start_time) <= timeout_seconds, "Test timed out"
+        assert (time.time() - start_time) <= 30, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
             assert status not in test_failed_status
@@ -81,7 +80,6 @@ def test_execute_nextflow(test_client,
        RunStatus.CANCELED,
        RunStatus.CANCELING
        ]
-    timeout_seconds = 30
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
                        workflow_type="nextflow")
     run = manager.prepare_execution(run, files=[])
@@ -89,7 +87,7 @@ def test_execute_nextflow(test_client,
     start_time = time.time()
     success = False
     while not success:
-        assert (time.time() - start_time) <= timeout_seconds, "Test timed out"
+        assert (time.time() - start_time) <= 30, "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
             assert status not in test_failed_status
@@ -126,7 +124,6 @@ def test_update_all_runs(test_client,
         RunStatus.CANCELED,
         RunStatus.CANCELING
     ]
-    timeout_seconds = 30
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="snakemake")
     manager.database.insert_run(run)
@@ -136,7 +133,7 @@ def test_update_all_runs(test_client,
     start_time = time.time()
     success = False
     while not success:
-        assert (time.time() - start_time) <= timeout_seconds, "Test timed out"
+        assert (time.time() - start_time) <= 30, "Test timed out"
         status = run.run_status
         print("Waiting ... (status=%s)" % status.name)
         if status != RunStatus.COMPLETE:

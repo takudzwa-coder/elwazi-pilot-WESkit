@@ -154,7 +154,6 @@ def create_app(celery: Celery, database: Database) -> Flask:
     app.log_config = log_config
     app.logger = logger
 
-
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 

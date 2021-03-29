@@ -67,7 +67,7 @@ def redis_container():
     redis_container.start()
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    yield redis_container
+    return redis_container
 
 
 @pytest.fixture(scope="session")
