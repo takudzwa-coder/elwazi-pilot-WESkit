@@ -12,6 +12,7 @@ from flask_jwt_extended.view_decorators import (
     _decode_jwt_from_cookies,
     _decode_jwt_from_headers)
 from typing import Optional, Generic, List
+import logging
 
 
 def onlineValidation() -> bool:
@@ -19,6 +20,7 @@ def onlineValidation() -> bool:
     checks the validity of a token with a request to OIDC provider.
     Returns True if cookie is valid and false if session ended.
     """
+    logger = logging.getLogger(__name__)
     app = current_app
 
     access_token = getToken()
@@ -35,10 +37,10 @@ def onlineValidation() -> bool:
         ).json()
 
     except Exception as e:
-        app.OIDC_Login.logger.exception(
+        logger.exception(
             "Could not reach OIDC provider for online Validation"
         )
-        app.OIDC_Login.logger.exception(e)
+        logger.exception(e)
 
         return (False)
 
@@ -84,7 +86,7 @@ def getToken(token_type: str = "access", locations: Optional[List[str]] = None) 
     return None
 
 
-def check_csrf_token() -> bool:
+def check_csrf_token() -> Optional[str]:
     """
     This function evaluates the csrf token.
     In case of success it returns None in error Cases it returns an
@@ -93,6 +95,7 @@ def check_csrf_token() -> bool:
     choise. If only a header token is submitted this function will
     allways return None.
     """
+    logger = logging.getLogger(__name__)
 
     cookieLoginbyCookie = (
             current_app.config["JWT_ACCESS_COOKIE_NAME"] in request.cookies
@@ -105,15 +108,15 @@ def check_csrf_token() -> bool:
 
         # Check session state in cookie
         if jwt_cookie_sessionstate is None:
-            current_app.OIDC_Login.logger.warning(
+            logger.warning(
                 "access_token has not 'session_state' attribute"
             )
-            return ("Access Token does not have session_state")
+            return "Access Token does not have session_state"
 
         csfr_sessionstate = request.headers.get("X-CSRF-TOKEN", None)
         # Session token in Header is missing
-        if (csfr_sessionstate is None):
-            current_app.OIDC_Login.logger.warning("Cookie login without csrf.")
+        if csfr_sessionstate is None:
+            logger.warning("Cookie login without csrf.")
             return (
                 "Cookie Login detected: "
                 "X-CSRF-TOKEN is not submitted via Header!"
@@ -121,20 +124,20 @@ def check_csrf_token() -> bool:
 
         # Session Token unequal
         if csfr_sessionstate != jwt_cookie_sessionstate:
-            current_app.OIDC_Login.logger.info(
+            logger.info(
                 "X-CSRF Token invalid"
             )
-            return ("X-CSRF-TOKEN is not matching the access Token")
+            return "X-CSRF-TOKEN is not matching the access Token"
 
         # Everything is OK
-        return (None)
+        return None
 
     # Header login is valid without csrf session token
     if headerAuth:
-        return (None)
+        return None
 
     # Unknown Error / Unsupported Method
-    return ("Unknown error")
+    return "Unknown error"
 
 
 def requester_and_cookieSetter(
@@ -190,8 +193,9 @@ def requester_and_cookieSetter(
             return {'login': False}, 401
 
     except Exception as e:
-        current_app.OIDC_Login.logger.exception("Login Process Failed")
-        current_app.OIDC_Login.logger.exception(e)
+        logger = logging.getLogger(__name__)
+        logger.exception("Login Process Failed")
+        logger.exception(e)
         if response_object:
             return response_object
         return (jsonify(

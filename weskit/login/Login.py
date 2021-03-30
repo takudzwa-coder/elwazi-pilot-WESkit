@@ -2,7 +2,7 @@ import json
 import logging
 
 import requests
-import os
+from time import sleep, time
 
 from functools import wraps
 from flask_jwt_extended import JWTManager
@@ -14,7 +14,9 @@ from jwt.algorithms import RSAAlgorithm
 from weskit.login import oidcBlueprint as login_bp
 from weskit.login.oidcUser import User
 from weskit.login.utils import onlineValidation, check_csrf_token, getToken
-from typing import Callable
+from typing import Callable, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class oidcLogin:
@@ -25,12 +27,17 @@ class oidcLogin:
     """
 
     def __init__(self, app, config: dict, addLogin: bool = True):
-        app.OIDC_Login = self
-        self.logger = logging.getLogger(__name__)
+        """
 
-        ##############################################
-        # Configure Login
-        ##############################################
+        :type addLogin: object
+        app: Flask App object
+        config: dictionary
+        addLogin: enables login endpoints (bool)
+        """
+
+        app.OIDC_Login = self
+
+        # Check if the Login System can be Initialized
         if (
             "login" in config and
             config['login'].get("enabled", False) and
@@ -40,12 +47,10 @@ class oidcLogin:
 
             app.OIDC_Login = self
 
-            # the JWT config is expected to be in the app config
+            # Flask_jwt_extended expect its configuration in the app.config object.
+            # Therefore we copy the config to the app object.
             for key, element in config['login']['jwt'].items():
                 app.config[key] = element
-
-            # for key, element in config['login']['oidc'].items():
-            #    app.config[key] = element
 
             self.issuer_url = config['login']['oidc']["OIDC_ISSUER_URL"]
             self.client_secret = config['login']['oidc']['OIDC_CLIENT_SECRET']
@@ -53,13 +58,9 @@ class oidcLogin:
             self.realm = config['login']['oidc']['OIDC_REALM']
             self.client_id = config['login']['oidc']['OIDC_CLIENTID']
 
-            # Check if we are in test case
-            if os.environ.get("kc_backend", False):
-                self.issuer_url = os.environ["kc_backend"]
-
         else:
-            self.logger.warning("Login System Disabled")
-            self.logger.warning(
+            logger.warning("Login System Disabled")
+            logger.warning(
                     """login:{}
                     enabled:{}
                     jwt:{}
@@ -72,62 +73,58 @@ class oidcLogin:
             return None
 
         # Request external configuration from Issuer URL
-        try:
-            self.oidc_config = requests.get(
-                self.issuer_url + "/.well-known/openid-configuration"
-            ).json()
+        config_url = "%s/.well-known/openid-configuration" % self.issuer_url
 
-            # Check Existence of oidc config values
-            self.oidc_config['authorization_endpoint']
-            self.oidc_config["token_endpoint"]
-            self.oidc_config["jwks_uri"]
+        for retry in range(4, -1, -1):
+            try:
+                self.oidc_config = requests.get(config_url).json()
+                break
 
-        except Exception as e:
-            self.logger.exception(
-                (
-                    'Unable to load endpoint path from "%s'
-                    '/.well-known/openid-configuration"\n Probably wrong '
-                    'url in config file or json error'
-                ) % (self.issuer_url)
-            )
-            self.logger.exception(e)
-            exit(1)
+            except Exception as e:
+                logger.exception(
+                    'Unable to load endpoint path from\n"%s"\n'
+                    ' Probably wrong url in config file or maybe json error will retry %d times' % (config_url, retry)
+                )
+                logger.exception(e)
 
-        self.logger.info("Loaded Issuer Config correctly!")
+                if not retry:
+                    logger.exception("Timeout! Could not receive config from the Identity Provider! Stopping Server!")
+                    exit(42)
+                sleep(20)
+
+        # check existence of required information from Identity Provider or stop!
+        validate_received_config_or_stop(self.oidc_config)
+
+        logger.info("Loaded Issuer Config correctly!")
 
         # Use the obtained Issuer Config to obtain public key
-        self.logger.info("Extracting public certificate from Issuer")
+        logger.info("Extracting public certificate from Issuer")
 
         try:
-            self.oidc_jwks_uri = requests.get(self.oidc_config["jwks_uri"]).json()
+            self.oidc_jwks_uri_response = requests.get(self.oidc_config["jwks_uri"]).json()
+
+        except Exception as e:
+            logger.exception("Could not connect to %s to receive the RSA public key!" % self.oidc_config["jwks_uri"])
+            logger.exception(e)
+            exit(45)
 
             # retrieve first jwk entry from jwks_uri endpoint and use it to
             # construct the RSA public key
+        try:
             app.config["JWT_PUBLIC_KEY"] = RSAAlgorithm.from_jwk(
-                json.dumps(self.oidc_jwks_uri["keys"][0])
-            )
+                json.dumps(self.oidc_jwks_uri_response["keys"][0]))
 
         except Exception as e:
-            self.logger.exception("Could not extract RSA public key!")
-            self.logger.exception(e)
-            exit(1)
+            logger.exception("An exception occurred during RSA key extraction from %s " % self.oidc_jwks_uri_response)
+            logger.exception(e)
+            logger.exception("The server will be stopped now!")
+            exit(46)
 
-        if addLogin:
-            self.logger.info("Creating Login Endpoints.")
-
-            # Add Login Endpoints to the app
-            app.register_blueprint(login_bp.login)
-
-            if config.get("DEBUG", False):
-                from weskit.login import oidcDebugEndpoints as debugBP
-                app.register_blueprint(debugBP.bp)
-
-        else:
-            self.logger.info("Will not Create Login Endpoint.")
-
-        # Deactivate  JWT CSRF since it is not working with external oidc
-        # access tokens
+        # Deactivate JWT CSRF since it is not working with external Identity Provider access tokens
+        # It is reimplemented by this module
         app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+
+        # Here here the flask_jwt_extended module will be initialized
         self.jwt = JWTManager(app)
 
         @self.jwt.user_loader_callback_loader
@@ -138,8 +135,7 @@ class oidcLogin:
             :return: User
             """
 
-            u = User()
-            return (u)
+            return User()
 
         if addLogin:
             """
@@ -148,13 +144,23 @@ class oidcLogin:
             """
 
             from flask_jwt_extended import get_raw_jwt
-            import time
+
+            logger.info("Creating Login Endpoints.")
+
+            # Add Login Endpoints to the app the login endpoints are located at /login, login/logout, login/refresh
+            app.register_blueprint(login_bp.login)
+
+            if config.get("DEBUG", False):
+                # In debug mode /login/test shows a demo of the current user object.
+                from weskit.login import oidcDebugEndpoints as debugBP
+                app.register_blueprint(debugBP.bp)
 
             @app.after_request
             def refresh_expiring_jwts(response: Callable) -> Callable:
                 """
-                This function checks if the access token cookie has exceeded the half of its expiration time. If it's
-                yes the access token in the cookie as well as the refresh token and csrf token will be replaced.
+                This function checks if the access token cookie has exceeded the half of its expiration time. If the
+                access token in a cookie is nearly gone the access token cookie will be refreshed as well as the refresh
+                token and csrf token.
 
                 :param response: render function
                 :return: same as input potentially added new cookies.
@@ -171,11 +177,13 @@ class oidcLogin:
 
                         # Refresh cookies if it reaches half of lifetime
                         target_timestamp = (jwt_expiration_time + jwt_last_refresh) / 2
-                        if time.time() > target_timestamp:
+                        if time() > target_timestamp:
                             return login_bp.refresh_access_token(response_object=response)
 
                 # Do nothing if no cookie is submitted or cookies are deleted
                 return response
+        else:
+            logger.info("Will not Create Login Endpoint.")
 
 
 def login_required(fn: Callable, validateOnline: bool = True, validate_csrf: bool = True) -> Callable:
@@ -245,3 +253,36 @@ def AutoLoginUser(fn: Callable, validateOnline: bool = True) -> Callable:
             return login_required(fn, validateOnline=validateOnline, validate_csrf=False)(*args, **kwargs)
 
     return wrapper
+
+
+def validate_received_config_or_stop(config: Any) -> Optional[dict]:
+    """
+    This function validates that the config received from the Identity Provider has the corect format and contains
+    all required fields.
+    :param config:
+    :return:
+    """
+
+    if not isinstance(config, dict):
+        logger.exception(
+            "The configuration received from Identity Provider does not have the expected type dict!"
+            "The type is %s. The server will be stopped now!" % str(type(config))
+        )
+        exit(43)
+
+    required_values = [
+            'authorization_endpoint',
+            'token_endpoint',
+            'jwks_uri'
+    ]
+
+    missing_values = [value for value in required_values if value not in config]
+    if missing_values:
+        logger.exception(
+            "The config received from the Identity Provider does not contain the required"
+            "information. The following keys are missing in the config [%s]\n"
+            "The server will be stopped now!" % ', '.join(missing_values)
+        )
+        exit(44)
+
+    return config

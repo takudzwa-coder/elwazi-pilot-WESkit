@@ -56,7 +56,7 @@ def create_app():
         logger.info("Read config from " + default_config)
 
     with open(default_validation_config, "r") as yaml_file:
-        validation = yaml.load(yaml_fileauthON)
+        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
         logger.debug("Read validation specification from " +
                      default_validation_config)
 
@@ -92,6 +92,10 @@ def create_app():
 
     # Version for backend
     # Login.oidcLogin(app, config, addLogin=False)
+
+    # Check if we are in test case
+    if os.environ.get("kc_backend", False):
+        config['login']['oidc']["OIDC_ISSUER_URL"] = os.environ["kc_backend"]
 
     # Initialize for Dashboard
     Login.oidcLogin(app, config, addLogin=True)

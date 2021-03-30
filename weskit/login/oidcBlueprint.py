@@ -8,6 +8,7 @@ import urllib
 import json
 import time
 from base64 import b64decode
+import logging
 
 from weskit.login.utils import requester_and_cookieSetter
 
@@ -178,5 +179,6 @@ def refresh_token_timeOK(token: str) -> bool:
         if len(a) == 3:
             return (json.loads(b64decode(a[1] + "==="))['exp'] >= time.time())
     except Exception as e:
-        app.OIDC_Login.logger.info("Got Invalid Refresh Token!", e)
+        logger = logging.getLogger(__name__)
+        logger.info("Got Invalid Refresh Token!", e)
         return (False)
