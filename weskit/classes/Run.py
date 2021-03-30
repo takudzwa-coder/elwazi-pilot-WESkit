@@ -1,3 +1,5 @@
+from typing import Optional
+
 from weskit.classes.RunStatus import RunStatus
 
 
@@ -15,6 +17,7 @@ class Run:
 
         self.celery_task_id = data.get("celery_task_id", None)
         self.execution_path = data.get("execution_path", [])
+        self.workflow_path = data.get("workflow_path", None)
         self.outputs = data.get("outputs", {})
         self.run_log = data.get("run_log", {})
         self.run_status = RunStatus.\
@@ -26,6 +29,7 @@ class Run:
         return {
             "celery_task_id": self.celery_task_id,
             "execution_path": self.execution_path,
+            "workflow_path": self.workflow_path,
             "request": self.__request,
             "request_time": self.__request_time,
             "run_id": self.__run_id,
@@ -53,6 +57,14 @@ class Run:
     @celery_task_id.setter
     def celery_task_id(self, celery_task_id):
         self.__celery_task_id = celery_task_id
+
+    @property
+    def workflow_path(self) -> Optional[str]:
+        return self.__workflow_path
+
+    @workflow_path.setter
+    def workflow_path(self, workflow_path: Optional[str]):
+        self.__workflow_path = workflow_path
 
     @property
     def execution_path(self):

@@ -3,8 +3,6 @@ import pytest
 import yaml
 
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.WorkflowEngine \
-    import Snakemake, Nextflow, WorkflowEngineFactory
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 
@@ -107,19 +105,17 @@ def swagger(database):
 
 @pytest.fixture(scope="session")
 def manager(database, redis_container, test_config):
+    workflows_base_dir = os.path.abspath(os.getcwd())
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    os.environ["WESKIT_WORKFLOWS"] = workflows_base_dir
+    from weskit.classes.WorkflowEngine import WorkflowEngineFactory
     from weskit.classes.Manager import Manager
-    workflow_engines = {
-        Snakemake.name():
-            WorkflowEngineFactory.
-            get_engine(test_config,
-                       Snakemake.name()),
-        Nextflow.name():
-            WorkflowEngineFactory.
-            get_engine(test_config,
-                       Nextflow.name())
-    }
-    test_dir = "test-data/"
-    if not os.path.isdir(test_dir):
-        os.mkdir(test_dir)
-    return Manager(workflow_engines=workflow_engines, data_dir=test_dir)
-
+    manager = Manager(workflow_engines=WorkflowEngineFactory.
+                      workflow_engine_index(
+                        test_config
+                        ["static_service_info"]
+                        ["default_workflow_engine_parameters"]),
+                      workflows_base_dir=workflows_base_dir,
+                      data_dir="test-data/")
+    yield manager

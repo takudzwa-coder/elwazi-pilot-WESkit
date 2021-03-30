@@ -13,8 +13,8 @@ run_request:
     required: false
     type: dict
   workflow_engine_parameters:
-    required: false
     type: dict
+    required: false
   workflow_url:
     required: true
     type: string
