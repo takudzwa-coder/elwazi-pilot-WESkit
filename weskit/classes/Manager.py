@@ -10,7 +10,7 @@ from celery import Celery, Task
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from weskit.tasks.WorkflowTask import WorkflowTask
+from weskit.tasks.WorkflowTask import run_workflow
 from celery.worker.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
@@ -55,17 +55,19 @@ class Manager:
         self.database = database
         self.workflows_base_dir = workflows_base_dir
         # Register the relevant tasks with fully qualified name.
-        self.celery_app.task(WorkflowTask.run)
+        self.celery_app.task(run_workflow)
 
     def _get_run_task(self) -> Task:
-        return self.celery_app.tasks["weskit.tasks.WorkflowTask.run"]
+        return self.celery_app.tasks["weskit.tasks.WorkflowTask.run_workflow"]
 
     def cancel(self, run: Run) -> Run:
         # This is a quickfix for executing the tests.
         # This might be a bad solution for multithreaded use-cases,
         # because the current working directory is touched.
         cwd = os.getcwd()
-        revoke(run.celery_task_id, terminate=True, signal='SIGTERM')
+        revoke(run.celery_task_id,
+               terminate=True,
+               signal='SIGKILL')
         os.chdir(cwd)
         run.run_status = RunStatus.CANCELED
         return run

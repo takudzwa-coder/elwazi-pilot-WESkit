@@ -29,10 +29,12 @@ class WESApp(Flask):
     def __init__(self,
                  manager: Manager,
                  service_info: ServiceInfo,
+                 request_validators: dict,
                  *args, **kwargs):
         super().__init__(__name__, *args, **kwargs)
         setattr(self, 'manager', manager)
         setattr(self, 'service_info', service_info)
+        setattr(self, 'request_validators', request_validators)
 
 
 def create_celery(broker_url=None,
@@ -141,15 +143,17 @@ def create_app(celery: Celery, database: Database) -> Flask:
                                read_swagger(),
                                database)
 
-    app = WESApp(manager, service_info)
-
     # Create validators for each of the request types in the
     # request-validation.yaml. These are used in the API-calls to validate
     # the input.
-    app.request_validators = {
+    request_validators = {
         "run_request": RunRequestValidator(create_validator(
             request_validation["run_request"]))
     }
+
+    app = WESApp(manager,
+                 service_info,
+                 request_validators)
 
     app.log_config = log_config
     app.logger = logger

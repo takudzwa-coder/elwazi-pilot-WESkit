@@ -44,7 +44,7 @@ def CancelRun(run_id):
         else:
             run = current_app.manager.cancel(run)
             logger.info("Run %s is canceled" % run_id)
-            return run["run_id"], 200
+            return {"run_id": run["run_id"]}, 200
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
