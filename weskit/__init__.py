@@ -5,14 +5,54 @@ import yaml
 import sys
 import logging
 import os
+
+from celery import Celery
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask, current_app
 
+from weskit.classes.Database import Database
 from weskit.classes.RunRequestValidator import RunRequestValidator
 from weskit.classes.WorkflowEngine import WorkflowEngineFactory
 from flask_jwt_extended import JWTManager
+from weskit.classes.Manager import Manager
+from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.classes.ErrorCodes import ErrorCodes
+
+
+class WESApp(Flask):
+    """We make a subclass of Flask that takes the important app-global
+    (~thread local) resources.
+    Compare https://stackoverflow.com/a/21845744/8784544"""
+
+    def __init__(self,
+                 manager: Manager,
+                 service_info: ServiceInfo,
+                 request_validators: dict,
+                 *args, **kwargs):
+        super().__init__(__name__, *args, **kwargs)
+        setattr(self, 'manager', manager)
+        setattr(self, 'service_info', service_info)
+        setattr(self, 'request_validators', request_validators)
+
+
+def create_celery(broker_url=None,
+                  backend_url=None):
+    if broker_url is None:
+        broker_url = os.environ.get("BROKER_URL")
+    if backend_url is None:
+        broker_url = os.environ.get("RESULT_BACKEND")
+    celery = Celery(
+        app="WESkit",
+        broker=broker_url,
+        backend=backend_url
+    )
+    celery_config = dict()
+    celery_config["broker_url"] = broker_url
+    celery_config["result_backend"] = backend_url
+    celery.conf.update(celery_config)
+    return celery
 
 
 def read_swagger():
@@ -26,11 +66,10 @@ def read_swagger():
     return swagger
 
 
-def create_database():
-    from weskit.classes.Database import Database
-
-    DATABASE_URL = os.getenv("WESKIT_DATABASE_URL")
-    return Database(MongoClient(DATABASE_URL), "WES")
+def create_database(database_url=None):
+    if database_url is None:
+        os.getenv("WESKIT_DATABASE_URL")
+    return Database(MongoClient(database_url), "WES")
 
 
 def create_validator(schema):
@@ -46,12 +85,7 @@ def create_validator(schema):
     return _validate
 
 
-def create_app():
-
-    from weskit.classes.Manager import Manager
-    from weskit.classes.ServiceInfo import ServiceInfo
-    from weskit.classes.ErrorCodes import ErrorCodes
-
+def create_app(celery: Celery, database: Database) -> Flask:
     default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
@@ -64,6 +98,8 @@ def create_app():
     workflows_base_dir = os.getenv(
         "WESKIT_WORKFLOWS",
         os.path.join(os.getcwd(), "workflows"))
+
+    weskit_data = os.getenv("WESKIT_DATA", "./tmp")
 
     request_validation_config = \
         os.path.join("config", "request-validation.yaml")
@@ -93,31 +129,32 @@ def create_app():
                      format(config_errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
-    swagger = read_swagger()
-
-    app = Flask(__name__)
-
-    # Global objects and information.
-
-    # Create validators for each of the request types in the
-    # request-validation.yaml. These are used in the API-calls to validate
-    # the input.
-    app.request_validators = {
-        "run_request": RunRequestValidator(create_validator(
-            request_validation["run_request"]))
-    }
-
-    app.database = create_database()
-
-    app.manager = \
-        Manager(workflow_engines=WorkflowEngineFactory.
+    manager = \
+        Manager(celery_app=celery,
+                database=database,
+                workflow_engines=WorkflowEngineFactory.
                 workflow_engine_index(config
                                       ["static_service_info"]
                                       ["default_workflow_engine_parameters"]),
                 workflows_base_dir=workflows_base_dir,
-                data_dir=os.getenv("WESKIT_DATA", "./tmp"))
-    app.service_info = ServiceInfo(config["static_service_info"],
-                                   swagger, app.database)
+                data_dir=weskit_data)
+
+    service_info = ServiceInfo(config["static_service_info"],
+                               read_swagger(),
+                               database)
+
+    # Create validators for each of the request types in the
+    # request-validation.yaml. These are used in the API-calls to validate
+    # the input.
+    request_validators = {
+        "run_request": RunRequestValidator(create_validator(
+            request_validation["run_request"]))
+    }
+
+    app = WESApp(manager,
+                 service_info,
+                 request_validators)
+
     app.log_config = log_config
     app.logger = logger
 
@@ -202,7 +239,7 @@ def create_app():
     def add_claims_to_access_token(user):
         if len(user.roles):
             return {'roles': user.roles}
-        return(None)
+        return None
 
     # Create a function that will be called whenever create_access_token
     # is used. It will take whatever object is passed into the
@@ -221,7 +258,7 @@ def create_app():
 
     @jwt.user_loader_callback_loader
     def user_loader_callback(identity):
-        return(current_app.authObject.get(identity['username']))
+        return current_app.authObject.get(identity['username'])
 
     ####################################################################
     #               END overwrite  JWT default fuctions                #
