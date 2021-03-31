@@ -3,6 +3,7 @@ import os
 
 from flask import current_app
 
+from weskit.classes import Manager
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
@@ -105,7 +106,8 @@ def test_execute_nextflow(test_client,
 # # Celery's revoke function applied to the Snakemake job results in a change
 # # of the main process's working directory. Therefore the test is turned off
 # # (until this is fixed).
-# def test_cancel_workflow(manager, redis_container):
+# def test_cancel_workflow_after_execute(manager: Manager,
+#                                        celery_session_worker):
 #     run = get_mock_run(workflow_url="tests/wf2/Snakefile",
 #                        workflow_type="snakemake")
 #     run = manager.prepare_execution(run, files=[])

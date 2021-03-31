@@ -6,12 +6,13 @@ from urllib.parse import urlparse
 
 import yaml
 from celery import Celery, Task
+from celery.app.control import Control
+from celery.worker.control import revoke
 
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.tasks.WorkflowTask import run_workflow
-from celery.worker.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
 from typing import Optional, List
@@ -61,13 +62,17 @@ class Manager:
         return self.celery_app.tasks["weskit.tasks.WorkflowTask.run_workflow"]
 
     def cancel(self, run: Run) -> Run:
+        """See https://docs.celeryproject.org/en/latest/userguide/workers.html
+        TODO Consider persistent revokes.
+        """
         # This is a quickfix for executing the tests.
         # This might be a bad solution for multithreaded use-cases,
         # because the current working directory is touched.
         cwd = os.getcwd()
-        revoke(run.celery_task_id,
-               terminate=True,
-               signal='SIGKILL')
+        Control(self.celery_app).\
+            revoke(task_id=run.celery_task_id,
+                   terminate=False,
+                   signal='SIGKILL')
         os.chdir(cwd)
         run.run_status = RunStatus.CANCELED
         return run
