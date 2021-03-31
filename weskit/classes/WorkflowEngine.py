@@ -3,41 +3,66 @@ import pathlib
 import subprocess
 import logging
 from abc import ABCMeta, abstractmethod
+from typing import List, Dict
+
 from weskit.utils import get_current_timestamp
 from weskit.utils import get_absolute_file_paths
 from weskit.utils import to_uri
 from snakemake import snakemake
+from dataclasses import dataclass
+
+
+@dataclass()
+class WorkflowEngineParam(object):
+    name: str
+    type: str
+    value: str
 
 
 class WorkflowEngine(metaclass=ABCMeta):
     @abstractmethod
-    def __init__(self, workflow_kwargs: dict):
-        self.workflow_kwargs = workflow_kwargs
+    def __init__(self, default_params: List[WorkflowEngineParam]):
+        self.default_params = default_params
 
     @staticmethod
     @abstractmethod
     def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
+            workflow_engine_params: list,
             **workflow_kwargs):
+        pass
+
+    @abstractmethod
+    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam])\
+            -> List[str]:
+        """
+        Take a list of WorkflowEngineParams for a specific run and combine
+        them with the self.default_engine_params. The return value is a list
+        of command-line parameters that can directly be inserted into the
+        workflow manager call.
+        :param params:
+        :return:
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def name():
+    def name() -> str:
         pass
 
 
-class Snakemake(WorkflowEngine):
-    def __init__(self, workflow_kwargs: dict):
-        super().__init__(workflow_kwargs)
+class Snakemake(WorkflowEngine):  # noqa
+    def __init__(self, default_params: List[WorkflowEngineParam]):
+        super().__init__(default_params)
 
     @staticmethod
     def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
+            workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("Snakemake.run: {}, {}, {}".
+        logging.getLogger().info("Snakemake_5.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         outputs = []
         snakemake(
@@ -50,19 +75,27 @@ class Snakemake(WorkflowEngine):
 
     @staticmethod
     def name():
-        return __class__.__name__.lower()
+        return "snakemake"
+
+    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
+            -> List[str]:
+        """
+        TODO Implement this!
+        """
+        return []
 
 
-class Nextflow(WorkflowEngine):
-    def __init__(self, workflow_kwargs: dict):
-        super().__init__(workflow_kwargs)
+class Nextflow(WorkflowEngine):  # noqa
+    def __init__(self, default_params: List[WorkflowEngineParam]):
+        super().__init__(default_params)
 
     @staticmethod
     def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
+            workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("Nextflow.run: {}, {}, {}".
+        logging.getLogger().info("Nextflow_20.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
         # TODO Require a profile configuration.
@@ -72,7 +105,8 @@ class Nextflow(WorkflowEngine):
         # TODO Always use -with-timeline
         command = ["nextflow", "run", workflow_path]
         with open(os.path.join(workdir, "command"), "a") as commandOut:
-            print("{}: {}".format(timestamp, command), file=commandOut)
+            print("{}: {}, workddir={}".format(timestamp, command, workdir),
+                  file=commandOut)
             # Timestamp-writes are flushed to ensure they are written before
             # the workflows stderr and stdout.
             with open(os.path.join(workdir, "stderr"), "a") as stderr:
@@ -94,45 +128,42 @@ class Nextflow(WorkflowEngine):
 
     @staticmethod
     def name():
-        return __class__.__name__.lower()
+        return "nextflow"
+
+    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
+            -> List[str]:
+        """
+        TODO Implement this!
+        """
+        return []
 
 
 class WorkflowEngineFactory:
 
     @staticmethod
-    def extract_workflow_parameters(config_file: dict,
-                                    workflow_tag: str) -> dict:
-
-        kwargs = {}
-        if workflow_tag == "snakemake":
-            for parameter in (config_file["static_service_info"]
-                              ["default_workflow_engine_parameters"]):
-                workflow_engine = parameter["workflow_engine"].lower()
-                if workflow_engine == "snakemake":
-                    kwargs[parameter["name"]] = eval(
-                        parameter["type"])(parameter["default_value"])
-        elif workflow_tag == "nextflow":
-            for parameter in (config_file["static_service_info"]
-                              ["default_workflow_engine_parameters"]):
-                workflow_engine = parameter["workflow_engine"].lower()
-                if workflow_engine == "nextflow":
-                    kwargs[parameter["name"]] = eval(
-                        parameter["type"])(parameter["default_value"])
-        return kwargs
+    def _extract_workflow_engine_params(config: Dict[dict, dict])\
+            -> List[WorkflowEngineParam]:
+        return [WorkflowEngineParam(name=k,
+                                    type=config[k]["type"],
+                                    value=config[k]["default_value"])
+                for k in config.keys()]
 
     @staticmethod
-    def get_engine(config_file: dict, workflow_type: str):
-        try:
-            if workflow_type == Snakemake.name():
-                return \
-                    Snakemake(WorkflowEngineFactory.extract_workflow_parameters
-                              (config_file, "snakemake"))
-            elif workflow_type == Nextflow.name():
-                return \
-                    Nextflow(WorkflowEngineFactory.extract_workflow_parameters
-                             (config_file, "nextflow"))
-            raise AssertionError("Workflow type '" +
-                                 workflow_type.__str__() +
-                                 "' is not known")
-        except AssertionError as e:
-            print(e)
+    def workflow_engine_index(engine_params: dict) -> dict:
+        """Return a dictionary of all WorkflowEngines mapping workflow_engine
+         to WorkflowEngine instances.
+
+         This is yet statically implemented, but could at some
+         point by done with https://stackoverflow.com/a/3862957/8784544.
+         """
+        workflow_engines = {
+            Snakemake.name():
+                Snakemake(WorkflowEngineFactory.
+                          _extract_workflow_engine_params
+                          (engine_params[Snakemake.name()])),
+            Nextflow.name():
+                Nextflow(WorkflowEngineFactory.
+                         _extract_workflow_engine_params
+                         (engine_params[Nextflow.name()]))
+        }
+        return workflow_engines

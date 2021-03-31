@@ -3,10 +3,10 @@ import pytest
 import yaml
 
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.WorkflowEngine \
-    import Snakemake, Nextflow, WorkflowEngineFactory
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
+from weskit import create_app, Manager, WorkflowEngineFactory
+from weskit import create_database
 
 
 def get_redis_url(redis_container):
@@ -18,23 +18,21 @@ def get_redis_url(redis_container):
 
 
 @pytest.fixture(scope="session")
-def test_app(database_container, redis_container):
+def test_client(celery_session_app,
+                celery_session_worker,
+                test_database,
+                redis_container):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-
-    # import here because env vars need to be set before
-    from weskit import create_app
-
     os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
 
-    app = create_app()
-
+    app = create_app(celery=celery_session_app,
+                     database=test_database)
     app.testing = True
     with app.test_client() as testing_client:
-        ctx = app.app_context()
-        ctx.push()
-        yield testing_client
-        ctx.pop()
+        with app.app_context():
+            # This sets `current_app` for accessing the Flask app in the tests.
+            yield testing_client
 
 
 @pytest.fixture(scope="session")
@@ -57,11 +55,8 @@ def database_container():
 
 
 @pytest.fixture(scope="session")
-def database(database_container):
-    from weskit import create_database
-
-    database = create_database()
-
+def test_database(database_container):
+    database = create_database(database_container.get_connection_url())
     yield database
     database._db_runs().drop()
 
@@ -84,31 +79,16 @@ def celery_config(redis_container):
 
 
 @pytest.fixture(scope="session")
-def celery_worker_pool():
-    return 'prefork'
-
-
-@pytest.fixture(scope="session")
-def celery_worker_parameters():
-    return {"concurrency": 10}
-
-
-@pytest.fixture(scope='session')
-def celery_enable_logging():
-    return True
-
-
-@pytest.fixture(scope="session")
-def service_info(test_config, swagger, database):
+def service_info(test_config, swagger, test_database):
     yield ServiceInfo(
         test_config["static_service_info"],
         swagger,
-        database
+        test_database
     )
 
 
 @pytest.fixture(scope="session")
-def swagger(database):
+def swagger():
     with open("weskit/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
@@ -116,20 +96,18 @@ def swagger(database):
 
 
 @pytest.fixture(scope="session")
-def manager(database, redis_container, test_config):
-    from weskit.classes.Manager import Manager
-    workflow_engines = {
-        Snakemake.name():
-            WorkflowEngineFactory.
-            get_engine(test_config,
-                       Snakemake.name()),
-        Nextflow.name():
-            WorkflowEngineFactory.
-            get_engine(test_config,
-                       Nextflow.name())
-    }
+def manager(celery_session_app, redis_container, test_config, test_database):
+    workflows_base_dir = os.path.abspath(os.getcwd())
+    os.environ["WESKIT_WORKFLOWS"] = workflows_base_dir
     test_dir = "test-data/"
     if not os.path.isdir(test_dir):
         os.mkdir(test_dir)
-    return Manager(workflow_engines=workflow_engines, data_dir=test_dir)
-
+    return Manager(celery_app=celery_session_app,
+                   database=test_database,
+                   workflow_engines=WorkflowEngineFactory.
+                   workflow_engine_index(
+                       test_config
+                       ["static_service_info"]
+                       ["default_workflow_engine_parameters"]),
+                   workflows_base_dir=workflows_base_dir,
+                   data_dir=test_dir)

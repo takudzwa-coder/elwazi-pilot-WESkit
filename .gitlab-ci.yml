@@ -1,40 +1,35 @@
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
+services:
+  - docker:dind
+
+image: continuumio/miniconda3:latest
+
 cache:
   paths:
     - /opt/cache/pip
     - /opt/conda/pkgs
     - /root/.conda/pkgs
 
-services:
-  - docker:dind
-
 variables:
   DOCKER_HOST: "tcp://docker:2375"
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
+  PIP_CACHE_DIR: "/opt/cache/pip"
 
 before_script:
   - python -V              # For debugging
-  - export PIP_CACHE_DIR="/opt/cache/pip"
   - conda init bash
   - source /root/.bashrc
   - conda info             # For debugging
   - conda config --show    # For debugging
-  - conda env create -n weskit -f environment.yaml
+  - conda install mamba -n base -c conda-forge   # To speed up env creation
+  - mamba env create -n weskit -f environment.yaml
   - conda activate weskit
 
 test:
-  image: continuumio/miniconda3:latest
+  stage: test
   script:
     - flake8 weskit/
     #- python -m pytest -v -s --log-cli-level=debug
     - python -m pytest -v
-
-run:
-  image: continuumio/miniconda3:latest
-  script:
-    - python setup.py bdist_wheel
-  artifacts:
-    paths:
-      - dist/*.whl

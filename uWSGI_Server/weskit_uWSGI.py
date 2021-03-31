@@ -1,3 +1,4 @@
-from weskit import create_app
+from weskit import create_app, create_celery, create_database
 
-app = create_app()
+app = create_app(create_celery(),
+                 create_database())
