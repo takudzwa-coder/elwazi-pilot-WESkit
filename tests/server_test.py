@@ -90,7 +90,7 @@ def test_logout(test_client):
     assert response.status == '200 OK'
 
 
-def test_logout_successfull(test_client):
+def test_logout_successful(test_client):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
         workflow_file=snakefile,

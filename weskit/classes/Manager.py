@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
-from celery.worker.control import revoke
 
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run

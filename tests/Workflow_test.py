@@ -3,7 +3,6 @@ import os
 
 from flask import current_app
 
-from weskit.classes import Manager
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
