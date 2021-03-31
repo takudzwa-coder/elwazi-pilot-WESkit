@@ -102,23 +102,3 @@ login:
         JWT_REFRESH_COOKIE_PATH:
           type: string
           required: true
-    oidc:
-      type: dict
-      required: false
-      schema:
-        OIDC_ISSUER_URL:
-          type: string
-          required: true
-
-        OIDC_REALM:
-          type: string
-          required: true
-        OIDC_CLIENTID:
-          type: string
-          required: true
-        OIDC_CLIENT_SECRET:
-          type: string
-          required: true
-        OIDC_FLASKHOST:
-          type: string
-          required: true

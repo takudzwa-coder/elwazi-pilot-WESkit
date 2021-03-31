@@ -93,10 +93,6 @@ def create_app():
     # Version for backend
     # Login.oidcLogin(app, config, addLogin=False)
 
-    # Check if we are in test case
-    if os.environ.get("kc_backend", False):
-        config['login']['oidc']["OIDC_ISSUER_URL"] = os.environ["kc_backend"]
-
     # Initialize for Dashboard
     Login.oidcLogin(app, config, addLogin=True)
 

@@ -25,10 +25,14 @@ def test_app(database_container, redis_container,keycloak_container):
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     
     keycloakContainerProperties=getContainerProperties(keycloak_container,'8080')
-    os.environ["kc_backend"]="http://%s:%s/auth/realms/WESkit" % (
+    os.environ["OIDC_ISSUER_URL"]="http://%s:%s/auth/realms/WESkit" % (
         keycloakContainerProperties["ExternalHostname"],
         keycloakContainerProperties["ExposedPorts"],
     )
+    os.environ["WESKIT_PUBLIC_HOST_PORT"] = "https://localhost:5000" # Not used
+    os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+    os.environ["OIDC_REALM"] = "WESkit"
+    os.environ["OIDC_CLIENTID"] = "WESkit"
 
     # import here because env vars need to be set before
     from weskit import create_app
@@ -37,7 +41,7 @@ def test_app(database_container, redis_container,keycloak_container):
 
     app = create_app()
     
-    os.environ["testing_only_tokenendpoint"]=app.OIDC_Login.oidc_config["token_endpoint"]
+    os.environ["testing_only_tokenendpoint"] = app.OIDC_Login.oidc_config["token_endpoint"]
     app.testing = True
     with app.test_client() as testing_client:
         ctx = app.app_context()

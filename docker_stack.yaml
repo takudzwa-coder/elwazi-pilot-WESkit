@@ -18,6 +18,7 @@ services:
       - keycloak.pem
 
     environment:
+      WESKIT_PUBLIC_HOST_PORT: https://localhost:5000
       WESKIT_CONFIG: /home/weskit/config.yaml
       WESKIT_LOG_CONFIG:
       WESKIT_VALIDATION_CONFIG:
@@ -26,6 +27,11 @@ services:
       RESULT_BACKEND: redis://result_broker:6379
       BROKER_URL: redis://result_broker:6379
       FLASK_APP: weskit
+      OIDC_ISSUER_URL: https://keycloak:8443/auth/realms/WESkit
+      OIDC_CLIENT_SECRET: a8086bcc-44f3-40f9-9e15-fd5c3c98ab24
+      OIDC_REALM: WESkit
+      OIDC_CLIENTID: WESkit
+
       REQUESTS_CA_BUNDLE: /run/secrets/keycloak.pem
     volumes:
       - ${WESKIT_DATA}:/weskit_data
@@ -90,9 +96,6 @@ services:
       DB_ADDR: keycloak-database
 
     working_dir: /weskit
-    # Add Realm to non existing DB
-    #volumes:
-    #  - ./WESkit_realm.json:/tmp/weskit-realm.json:ro
 
     networks:
       - oauth
