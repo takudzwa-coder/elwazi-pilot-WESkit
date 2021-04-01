@@ -32,7 +32,8 @@ RUN conda init bash
 RUN cd /weskit && \
     conda config --set proxy_servers.http "$HTTP_PROXY" && \
     conda config --set proxy_servers.https "$HTTPS_PROXY" && \
-    conda env create -n weskit -f environment.yaml && \
+    conda install mamba -n base -c conda-forge && \
+    mamba env create -n weskit -f environment.yaml && \
     source activate weskit && \
     pip install ./ && \
     conda clean --all -f -y
