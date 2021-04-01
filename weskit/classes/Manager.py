@@ -66,12 +66,12 @@ class Manager:
             # because the current working directory is touched.
             cwd = os.getcwd()
             revoke(run.celery_task_id,
-                terminate=True,
-                signal='SIGKILL')
+                   terminate=True,
+                   signal='SIGKILL')
             os.chdir(cwd)
         elif run.run_status in RunStatus.INITIALIZING:
             run.run_status = RunStatus.SYSTEM_ERROR
-        
+
         return run
 
     def update_state(self, run: Run) -> Run:
@@ -237,5 +237,6 @@ class Manager:
             task = self._get_run_task().apply_async(
                     args=[],
                     kwargs={**run_kwargs})
+            run.celery_task_id = task.id
 
         return run
