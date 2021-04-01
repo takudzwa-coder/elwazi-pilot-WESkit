@@ -109,7 +109,7 @@ class Manager:
     def create_and_insert_run(self, request)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database._create_run_id(),
-                        "run_status": "UNKNOWN",
+                        "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
                         "request": request})
         if self.database.insert_run(run):
