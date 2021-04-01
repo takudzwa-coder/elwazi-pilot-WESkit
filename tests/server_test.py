@@ -238,11 +238,3 @@ class TestWithCookie:
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
-
-
-def test_sleep_4_redis(test_client, celery_session_worker):
-    """
-    This function adds just some delay to allow celery finishing its task before the redis container is stopped
-    """
-    time.sleep(5)
-    assert True

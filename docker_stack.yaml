@@ -49,7 +49,7 @@ services:
     volumes:
       - ${WESKIT_WORKFLOWS}:/workflows:ro
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
-      #- ./weskit:/weskit/weskit:ro
+      - ./weskit:/weskit/weskit:ro
       - ${WESKIT_LOG_CONFIG}:/home/weskit/log-config.yaml:ro
       - ${WESKIT_DATA}:/data
       - ./users.yaml:/weskit/users.yaml:ro

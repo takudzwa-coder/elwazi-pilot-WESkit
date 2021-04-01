@@ -85,7 +85,6 @@ def MySQL_keycloak_container ():
 
 @pytest.fixture(scope="session")
 def test_client(celery_session_app,
-                celery_session_worker,
                 test_database,
                 redis_container,
                 keycloak_container):
