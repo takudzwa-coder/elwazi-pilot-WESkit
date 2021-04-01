@@ -1,13 +1,12 @@
 import uuid
 from weskit.classes.Run import Run
-from weskit.utils import get_current_time
 from bson.son import SON
 from weskit.classes.RunStatus import RunStatus
 from typing import List, Optional
 
 
 class Database:
-    """ This is a database."""
+    """Database abstraction."""
 
     def __init__(self, mongo_client, database_name):
         self.db = mongo_client[database_name]
@@ -34,10 +33,7 @@ class Database:
                 runs.append(Run(run_data))
         return runs
 
-    def get_current_time(self):
-        return get_current_time()
-
-    def list_run_ids_and_states(self):
+    def list_run_ids_and_states(self) -> list:
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,

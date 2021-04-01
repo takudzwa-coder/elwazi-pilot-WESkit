@@ -3,11 +3,14 @@ import pytest
 import yaml
 import requests
 import time
+
 from weskit.classes.ServiceInfo import ServiceInfo
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.redis import RedisContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
+from weskit import create_app, Manager, WorkflowEngineFactory
+from weskit import create_database
 
 
 def get_redis_url(redis_container):
@@ -19,39 +22,14 @@ def get_redis_url(redis_container):
     return url
 
 
-@pytest.fixture(scope="session")
-def test_app(database_container, redis_container,keycloak_container):
-    os.environ["BROKER_URL"] = get_redis_url(redis_container)
-    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    
-    keycloakContainerProperties=getContainerProperties(keycloak_container,'8080')
-    os.environ["OIDC_ISSUER_URL"]="http://%s:%s/auth/realms/WESkit" % (
-        keycloakContainerProperties["ExternalHostname"],
-        keycloakContainerProperties["ExposedPorts"],
-    )
-    os.environ["WESKIT_PUBLIC_HOST_PORT"] = "https://localhost:5000" # Not used
-    os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
-    os.environ["OIDC_REALM"] = "WESkit"
-    os.environ["OIDC_CLIENTID"] = "WESkit"
 
-    # import here because env vars need to be set before
-    from weskit import create_app
-
-    os.environ["WESKIT_CONFIG"] = "tests/config.yaml"
-
-    app = create_app()
-    
-    os.environ["testing_only_tokenendpoint"] = app.OIDC_Login.oidc_config["token_endpoint"]
-    app.testing = True
-    with app.test_client() as testing_client:
-        ctx = app.app_context()
-        ctx.push()
-        yield testing_client
         
 """
 KeyCloak Containers
 
 """
+
+
 
 def getContainerProperties(container,port):
     return(
@@ -74,6 +52,67 @@ def MySQL_keycloak_container ():
         print(yaml.dump(getContainerProperties(mysql,'3306')))
         yield mysql
         print("Killing keycloaks MySQL")
+
+
+# @pytest.fixture(scope="session")
+# def test_app(database_container, redis_container, keycloak_container):
+#     os.environ["BROKER_URL"] = get_redis_url(redis_container)
+#     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+#
+#     keycloakContainerProperties = getContainerProperties(keycloak_container, '8080')
+#     os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
+#         keycloakContainerProperties["ExternalHostname"],
+#         keycloakContainerProperties["ExposedPorts"],
+#     )
+#     os.environ["WESKIT_PUBLIC_HOST_PORT"] = "https://localhost:5000"  # Not used
+#     os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+#     os.environ["OIDC_REALM"] = "WESkit"
+#     os.environ["OIDC_CLIENTID"] = "WESkit"
+#
+#     # import here because env vars need to be set before
+#     from weskit import create_app
+#
+#     os.environ["WESKIT_CONFIG"] = "tests/config.yaml"
+#
+#     app = create_app()
+#
+#     os.environ["testing_only_tokenendpoint"] = app.OIDC_Login.oidc_config["token_endpoint"]
+#     app.testing = True
+#     with app.test_client() as testing_client:
+#         ctx = app.app_context()
+#         ctx.push()
+#         yield testing_client
+
+@pytest.fixture(scope="session")
+def test_client(celery_session_app,
+                celery_session_worker,
+                test_database,
+                redis_container,
+                keycloak_container):
+    print("huhu")
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
+
+    keycloakContainerProperties = getContainerProperties(keycloak_container, '8080')
+    os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
+        keycloakContainerProperties["ExternalHostname"],
+        keycloakContainerProperties["ExposedPorts"],
+    )
+    # Define Variables that would be defined in the docker stack file
+    os.environ["WESKIT_PUBLIC_HOST_PORT"] = "https://localhost:5000"  # Not used
+    os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+    os.environ["OIDC_REALM"] = "WESkit"
+    os.environ["OIDC_CLIENTID"] = "WESkit"
+
+    app = create_app(celery=celery_session_app,
+                     database=test_database)
+    app.testing = True
+    os.environ["testing_only_tokenendpoint"] = app.OIDC_Login.oidc_config["token_endpoint"]
+    with app.test_client() as testing_client:
+        with app.app_context():
+            # This sets `current_app` for accessing the Flask app in the tests.
+            yield testing_client
 
 
 
@@ -115,14 +154,13 @@ def keycloak_container(MySQL_keycloak_container):
 @pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.
-    with open("tests/config.yaml", "r") as ff:
+    with open("tests/weskit.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
 
 
 @pytest.fixture(scope="session")
 def database_container():
-
     MONGODB_CONTAINER = "mongo:4.2.3"
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
@@ -131,19 +169,20 @@ def database_container():
 
     yield db_container
 
+
 @pytest.fixture(scope="session")
-def database_connection(database_container):
-    from weskit import create_database
-
-    database = create_database()
-
+def test_database(database_container):
+    database = create_database(database_container.get_connection_url())
     yield database
     database._db_runs().drop()
+
 
 @pytest.fixture(scope="session")
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
     redis_container.start()
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     return redis_container
 
 
@@ -156,25 +195,16 @@ def celery_config(redis_container):
 
 
 @pytest.fixture(scope="session")
-def celery_worker_pool():
-    return 'prefork'
-    
-@pytest.fixture(scope="session")
-def celery_worker_parameters():
-    return {"concurrency":10}
-
-
-@pytest.fixture(scope="session")
-def service_info(test_config, swagger, database_connection):
+def service_info(test_config, swagger, test_database):
     yield ServiceInfo(
         test_config["static_service_info"],
         swagger,
-        database_connection
+        test_database
     )
 
 
 @pytest.fixture(scope="session")
-def swagger(database_connection):
+def swagger():
     with open("weskit/api/workflow_execution_service_1.0.0.yaml",
               "r") as ff:
         swagger = yaml.load(ff, Loader=yaml.FullLoader)
@@ -182,9 +212,18 @@ def swagger(database_connection):
 
 
 @pytest.fixture(scope="session")
-def manager(database_connection, redis_container, test_config):
-    os.environ["BROKER_URL"] = get_redis_url(redis_container)
-    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    from weskit.classes.Manager import Manager
-    manager = Manager(config=test_config, datadir="tmp/")
-    yield manager
+def manager(celery_session_app, redis_container, test_config, test_database):
+    workflows_base_dir = os.path.abspath(os.getcwd())
+    os.environ["WESKIT_WORKFLOWS"] = workflows_base_dir
+    test_dir = "test-data/"
+    if not os.path.isdir(test_dir):
+        os.mkdir(test_dir)
+    return Manager(celery_app=celery_session_app,
+                   database=test_database,
+                   workflow_engines=WorkflowEngineFactory.
+                   workflow_engine_index(
+                       test_config
+                       ["static_service_info"]
+                       ["default_workflow_engine_parameters"]),
+                   workflows_base_dir=workflows_base_dir,
+                   data_dir=test_dir)

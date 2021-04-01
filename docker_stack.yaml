@@ -1,31 +1,44 @@
-version: '3.4'
+version: '3.9'
+
 
 networks:
   backend:
     driver: overlay
-    
+    driver_opts:
+      encrypted: "false"
   oauth:
     driver: overlay
+
+volumes:
+  mongodb-configdb:
+  mongodb-data:
+  redis-data:
+
 
 services:
 
   rest:
-    hostname: weskit
     image: ${WESKIT_IMAGE}
     secrets:
       - weskit.key
       - weskit.crt
       - keycloak.pem
 
+    depends_on:
+      - database
+      - result_broker
+      - keycloak
+
     environment:
       WESKIT_PUBLIC_HOST_PORT: https://localhost:5000
       WESKIT_CONFIG: /home/weskit/config.yaml
-      WESKIT_LOG_CONFIG:
+      WESKIT_LOG_CONFIG: /home/weskit/log-config.yaml
       WESKIT_VALIDATION_CONFIG:
-      WESKIT_DATABASE_URL: mongodb://database:27017
-      WESKIT_DATA: /weskit_data
-      RESULT_BACKEND: redis://result_broker:6379
-      BROKER_URL: redis://result_broker:6379
+      WESKIT_DATABASE_URL: mongodb://database:${MONGODB_PORT:-27017}
+      WESKIT_DATA: /data
+      WESKIT_WORKFLOWS: /workflows
+      RESULT_BACKEND: redis://result_broker:${REDIS_PORT:-6379}
+      BROKER_URL: redis://result_broker:${REDIS_PORT:-6379}
       FLASK_APP: weskit
       OIDC_ISSUER_URL: https://keycloak:8443/auth/realms/WESkit
       OIDC_CLIENT_SECRET: a8086bcc-44f3-40f9-9e15-fd5c3c98ab24
@@ -34,57 +47,86 @@ services:
 
       REQUESTS_CA_BUNDLE: /run/secrets/keycloak.pem
     volumes:
-      - ${WESKIT_DATA}:/weskit_data
+      - ${WESKIT_WORKFLOWS}:/workflows:ro
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
-      - ${SHARED_FILESYSTEM_ROOT}:/data
-      - ./weskit:/weskit/weskit:ro
+      #- ./weskit:/weskit/weskit:ro
+      - ${WESKIT_LOG_CONFIG}:/home/weskit/log-config.yaml:ro
+      - ${WESKIT_DATA}:/data
+      - ./users.yaml:/weskit/users.yaml:ro
+
     networks:
       - backend
       - oauth
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate weskit && pip install ./ && ln -s /run/secrets/weskit.* /weskit/uWSGI_Server/certs/  && uwsgi --ini /weskit/uWSGI_Server/uwsgi.ini"]
+    command: [ "conda activate weskit && pip install ./ && ln -s /run/secrets/weskit.* /weskit/uWSGI_Server/certs/  && uwsgi --ini /weskit/uWSGI_Server/uwsgi.ini" ]
     ports:
-      - 5000:5000
+      - "${WESKIT_PORT:-5000}:5000"
+    # healthcheck:
+    #   test: ["CMD-SHELL", "(curl -f http://localhost:5000/gh4gh/wes/v1/service-info | grep '\"environment\": \"development\"') && echo 'OK'"]
+    #   interval: 10s
+    #   timeout: 2s
+    #   retries: 3
 
   database:
     image: mongo:4.2.3
     volumes:
-      - ${SHARED_FILESYSTEM_ROOT}:/var/lib/mongodb
+      - mongodb-data:/data/db
+      - mongodb-configdb:/data/configdb
     networks:
       - backend
     ports:
-      - 27017:27017
+      - "${MONGODB_PORT:-27017}:27017"
+    deploy:
+      # Deploy on the manager only, because the data volume is local on that machine
+      placement:
+        constraints: [node.role == manager]
 
   result_broker:
     image: redis:6.0.1-alpine
     volumes:
       - ${REDIS_CONFIG}:/usr/local/etc/redis/redis.conf:ro
-      - ${SHARED_FILESYSTEM_ROOT}:/data
+      # Used for persistence of the broker data.
+      - redis-data:/data
     networks:
       - backend
     ports:
-      - 6379:6379
+      - "${REDIS_PORT:-6379}:6379"
+    deploy:
+      # Deploy on the manager only, because the data volume is local on that machine
+      placement:
+        constraints: [node.role == manager]
 
-  # Workers are probably better started more dynamically, e.g. in LSF cluster, Docker swarm or Kubernetes.
-  worker1:
+  worker:
     image: ${WESKIT_IMAGE}
+    depends_on:
+      - result_broker
     environment:
-      RESULT_BACKEND: redis://result_broker:6379
-      BROKER_URL: redis://result_broker:6379
+      RESULT_BACKEND: redis://result_broker:${REDIS_PORT:-6379}
+      BROKER_URL: redis://result_broker:${REDIS_PORT:-6379}
+      WESKIT_WORKFLOWS: /workflows
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate weskit; celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
+    command: ["conda activate weskit && celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
     volumes:
-      - ${WESKIT_DATA}:/weskit_data
-      - ${SHARED_FILESYSTEM_ROOT}:/data
+      - ${WESKIT_DATA}:/data
+      - ${WESKIT_WORKFLOWS}:/workflows:ro
     networks:
       - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+#      placement:
+#        # Limit the number of replicas. Probably the memory consumption is limiting.
+#        max_replicas_per_node: 32
+
 
   ## Login System
 
   keycloak:
     image: quay.io/keycloak/keycloak:12.0.2
+    depends_on:
+      - keycloak-database
     environment:
      # KEYCLOAK_USER: admin
      # KEYCLOAK_PASSWORD: admin

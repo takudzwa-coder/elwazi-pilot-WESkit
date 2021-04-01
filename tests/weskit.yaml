@@ -1,0 +1,74 @@
+## Flask configuration values
+## (see https://flask.palletsprojects.com/en/1.1.x/config/#builtin-configuration-values)
+
+# Enable this during running of tests
+DEBUG: true
+
+# development | production
+ENV: development
+
+# Enable this during running of tests.
+TESTING: true
+
+static_service_info:
+
+    supported_filesystem_protocols:
+      - s3
+      - posix
+
+    # The identifiers used in workflow_engine_versions correspond to versions
+    # of the workflows available in WESkit. Currently, there are Snakemake
+    # and Nextflow Workflow-instances that identify as "snakemake" and "nextflow",
+    # respectively. Only these identifiers (Workflow.name) can be used here.
+    # These are also the versions-strings that WESkit accepts via its REST-API.
+    workflow_engine_versions:
+        snakemake: "5.8.2"
+        nextflow: "20.10.0"
+
+    # The keys need to be among the workflow_engine_versions keys.
+    default_workflow_engine_parameters:
+      snakemake:
+        cores:
+          type: "int"
+          default_value: "1"
+      nextflow:
+        cores:
+          type: "int"
+          default_value: "1"
+
+    # The workflow_type_versions need to be among the workflow_engine_versions.
+    # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91
+    workflow_type_versions:
+      snakemake:
+        workflow_type_version:
+          - "5"
+      nextflow:
+        workflow_type_version:
+          - "20"
+
+    auth_instructions_url: "https://somewhere.org"
+
+    contact_info_url:
+        your@email.de
+
+    tags:
+        tag1: value1
+        tag2: value2
+
+login:
+  enabled: true
+  jwt:
+    # Only allow JWT cookies to be sent over https. In production, this
+    # should likely be True
+    JWT_COOKIE_SECURE: true
+    JWT_TOKEN_LOCATION:
+      - cookies
+      - headers
+    JWT_ALGORITHM: "RS256"
+    JWT_DECODE_AUDIENCE: "account"
+    JWT_IDENTITY_CLAIM: "sub"
+    JWT_COOKIE_SECURE: true
+
+
+    JWT_ACCESS_COOKIE_PATH: "/"
+    JWT_REFRESH_COOKIE_PATH: "/"

@@ -1,20 +1,24 @@
 import json
 import logging
+from functools import wraps
+from time import sleep, time
+from typing import Callable
 
 import requests
-from time import sleep, time
-
-from functools import wraps
+from flask import current_app, request
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import jwt_required
-from flask import current_app, request
-
 from jwt.algorithms import RSAAlgorithm
 
 from weskit.login import oidcBlueprint as login_bp
 from weskit.login.oidcUser import User
 from weskit.login.utils import onlineValidation, check_csrf_token, getToken
-from typing import Callable, Any, Optional
+from weskit.login.loginConfigValidator import (
+    isLoginEnabled,
+    validate_setup_login_config,
+    validate_received_config_or_stop
+)
+from weskit.classes.ErrorCodes import ErrorCodes
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +33,6 @@ class oidcLogin:
     def __init__(self, app, config: dict, addLogin: bool = True):
         """
 
-        :type addLogin: object
         app: Flask App object
         config: dictionary
         addLogin: enables login endpoints (bool)
@@ -38,38 +41,13 @@ class oidcLogin:
         app.OIDC_Login = self
 
         # Check if the Login System can be Initialized
-        if (
-            "login" in config and
-            config['login'].get("enabled", False) and
-            "jwt" in config['login'] and
-            "oidc" in config['login']
-        ):
+        if isLoginEnabled(config):
 
             app.OIDC_Login = self
-
-            # Flask_jwt_extended expect its configuration in the app.config object.
-            # Therefore we copy the config to the app object.
-            for key, element in config['login']['jwt'].items():
-                app.config[key] = element
-
-            self.issuer_url = config['login']['oidc']["OIDC_ISSUER_URL"]
-            self.client_secret = config['login']['oidc']['OIDC_CLIENT_SECRET']
-            self.hostname = config['login']['oidc']['OIDC_FLASKHOST']
-            self.realm = config['login']['oidc']['OIDC_REALM']
-            self.client_id = config['login']['oidc']['OIDC_CLIENTID']
+            validate_setup_login_config(app, self, config)
 
         else:
-            logger.warning("Login System Disabled")
-            logger.warning(
-                    """login:{}
-                    enabled:{}
-                    jwt:{}
-                    oidc:{}""".format(
-                        "login" in config,
-                        config['login'].get("enabled", False),
-                        "jwt" in config['login'],
-                        "oidc" in config['login'])
-            )
+
             return None
 
         # Request external configuration from Issuer URL
@@ -81,15 +59,15 @@ class oidcLogin:
                 break
 
             except Exception as e:
-                logger.exception(
+                logger.info(
                     'Unable to load endpoint path from\n"%s"\n'
-                    ' Probably wrong url in config file or maybe json error will retry %d times' % (config_url, retry)
+                    'Probably wrong url in config file or maybe json error will retry %d times' % (config_url, retry)
                 )
-                logger.exception(e)
 
                 if not retry:
                     logger.exception("Timeout! Could not receive config from the Identity Provider! Stopping Server!")
-                    exit(42)
+                    logger.exception(e)
+                    exit(ErrorCodes.LOGIN_CONFIGURATION_ERROR)
                 sleep(20)
 
         # check existence of required information from Identity Provider or stop!
@@ -98,7 +76,7 @@ class oidcLogin:
         logger.info("Loaded Issuer Config correctly!")
 
         # Use the obtained Issuer Config to obtain public key
-        logger.info("Extracting public certificate from Issuer")
+        logger.info("Extracting Public Certificate from Issuer")
 
         try:
             self.oidc_jwks_uri_response = requests.get(self.oidc_config["jwks_uri"]).json()
@@ -106,7 +84,7 @@ class oidcLogin:
         except Exception as e:
             logger.exception("Could not connect to %s to receive the RSA public key!" % self.oidc_config["jwks_uri"])
             logger.exception(e)
-            exit(45)
+            exit(ErrorCodes.LOGIN_CONFIGURATION_ERROR)
 
             # retrieve first jwk entry from jwks_uri endpoint and use it to
             # construct the RSA public key
@@ -118,7 +96,7 @@ class oidcLogin:
             logger.exception("An exception occurred during RSA key extraction from %s " % self.oidc_jwks_uri_response)
             logger.exception(e)
             logger.exception("The server will be stopped now!")
-            exit(46)
+            exit(ErrorCodes.LOGIN_CONFIGURATION_ERROR)
 
         # Deactivate JWT CSRF since it is not working with external Identity Provider access tokens
         # It is reimplemented by this module
@@ -253,36 +231,3 @@ def AutoLoginUser(fn: Callable, validateOnline: bool = True) -> Callable:
             return login_required(fn, validateOnline=validateOnline, validate_csrf=False)(*args, **kwargs)
 
     return wrapper
-
-
-def validate_received_config_or_stop(config: Any) -> Optional[dict]:
-    """
-    This function validates that the config received from the Identity Provider has the corect format and contains
-    all required fields.
-    :param config:
-    :return:
-    """
-
-    if not isinstance(config, dict):
-        logger.exception(
-            "The configuration received from Identity Provider does not have the expected type dict!"
-            "The type is %s. The server will be stopped now!" % str(type(config))
-        )
-        exit(43)
-
-    required_values = [
-            'authorization_endpoint',
-            'token_endpoint',
-            'jwks_uri'
-    ]
-
-    missing_values = [value for value in required_values if value not in config]
-    if missing_values:
-        logger.exception(
-            "The config received from the Identity Provider does not contain the required"
-            "information. The following keys are missing in the config [%s]\n"
-            "The server will be stopped now!" % ', '.join(missing_values)
-        )
-        exit(44)
-
-    return config

@@ -65,9 +65,9 @@ def get_workflow_data(snakefile, config):
 
     data = {
         "workflow_params": workflow_params,
-        "workflow_type": "Snakemake",
+        "workflow_type": "snakemake",
         "workflow_type_version": "5.8.2",
-        "workflow_url": snakefile
+        "workflow_url": "file:tests/wf1/Snakefile"
     }
     return data
 
@@ -77,8 +77,8 @@ class TestOpenEndpoint:
     The TestOpenEndpoint class ensures that all endpoint that should be accessible without login are accessible.
     """
 
-    def test_get_service_info(self, test_app):
-        response = test_app.get("/ga4gh/wes/v1/service-info")
+    def test_get_service_info(self, test_client):
+        response = test_client.get("/ga4gh/wes/v1/service-info")
         assert response.status_code == 200
 
 
@@ -87,20 +87,20 @@ class TestWithoutLogin:
     The TestWithoutLogin class ensures that all secured endpoints are not accessible without credentials.
     """
 
-    def test_list_runs_wo_login(self, test_app):
+    def test_list_runs_wo_login(self, test_client):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
             config="tests/wf1/config.yaml")
-        response = test_app.post("/ga4gh/wes/v1/runs", data=data)
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
         assert response.status_code == 401
 
-    def test_submit_workflow_wo_login(self, test_app, celery_worker):
+    def test_submit_workflow_wo_login(self, test_client, celery_session_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
             config="tests/wf1/config.yaml")
-        response = test_app.post("/ga4gh/wes/v1/runs", data=data)
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
         assert response.status_code == 401
 
 
@@ -110,27 +110,42 @@ class TestWithHeaderToken:
     the request header in the format "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
 
-    def test_accept_run_workflow_header(self, test_app, runStorage, OIDC_credentials, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+    def test_accept_run_workflow_header(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+        print("~~~~~!!!!~~~")
+
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_app.post("/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.headerToken)
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.headerToken)
+        print(response.data)
         run_id = response.json["run_id"]
+
+
         runStorage.runid = response.json["run_id"]
-        running = True
-        while running:
+        success = False
+        start_time = time.time()
+        while not success:
+
             time.sleep(1)
-            status = test_app.get(
+            status = test_client.get(
                 "/ga4gh/wes/v1/runs/{}/status".format(run_id),
                 headers=OIDC_credentials.headerToken
             )
+            assert (time.time() - start_time) <= 30, "Test timed out"
+
+            print("Waiting ... (status=%s)" % status.json)
+            if status.json in ["UNKNOWN", "EXECUTOR_ERROR", "SYSTEM_ERROR",
+                               "CANCELED", "CANCELING"]:
+                assert False, "Failing run status '{}'".format(status.json)
+
             if status.json == "COMPLETE":
-                running = False
+                success = True
+
+
         assert response.status_code == 200
 
-    def test_accept_get_runs_header(self, test_app, runStorage, OIDC_credentials, celery_worker):
-        response = test_app.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
+    def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+        response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
 
@@ -141,18 +156,18 @@ class TestCSRFTokenOnly:
     token without an access token as Cookie.
     """
 
-    def test_reject_run_workflow_CSRF_only(self, test_app, OIDC_credentials, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+    def test_reject_run_workflow_CSRF_only(self, test_client, OIDC_credentials, celery_session_worker):
+
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="file:tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_app.post("/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.session_token)
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.session_token)
         assert response.status_code == 401
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
                                 b' \\"access_token_cookie\\"; Missing Authorization Header)"}\n'
 
-    def test_reject_get_runs_CSRF_only(self, test_app, OIDC_credentials, celery_worker):
-        response = test_app.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
+    def test_reject_get_runs_CSRF_only(self, test_client, OIDC_credentials, celery_session_worker):
+        response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert response.status_code == 401
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
                                 b' \\"access_token_cookie\\"; Missing Authorization Header)"}\n'
@@ -165,20 +180,18 @@ class TestMissingCSRFToken:
     cookie with out the session token in the header.
     """
 
-    def test_reject_run_workflow_cookie_only(self, test_app, OIDC_credentials, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
-        test_app.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
+    def test_reject_run_workflow_cookie_only(self, test_client, OIDC_credentials, celery_session_worker):
+        test_client.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="file:tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_app.post("/ga4gh/wes/v1/runs", data=data)
-        print("FOOOO")
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
         print(response.data)
         assert response.status_code == 401
         assert response.data == b'{"msg":"Cookie Login detected: X-CSRF-TOKEN is not submitted via Header!"}\n'
 
-    def test_reject_get_runs_cookie_only(self, test_app, celery_worker):
-        response = test_app.get("/ga4gh/wes/v1/runs")
+    def test_reject_get_runs_cookie_only(self, test_client, celery_worker):
+        response = test_client.get("/ga4gh/wes/v1/runs")
         assert response.status_code == 401
         assert response.data == b'{"msg":"Cookie Login detected: X-CSRF-TOKEN is not submitted via Header!"}\n'
 
@@ -188,37 +201,46 @@ class TestWithCookie:
     This TestWithCookie tests the correct functionality of the secured endpoint by using cookies with session token
     """
 
-    def test_accept_run_workflow_cookie(self, test_app, runStorage, OIDC_credentials, celery_worker):
-
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
-        test_app.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
+    def test_accept_run_workflow_cookie(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+        test_client.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="file:tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_app.post("/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.session_token)
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.session_token)
         run_id = response.json["run_id"]
         runStorage.runid = response.json["run_id"]
         print(response.json)
-        running = True
-        while running:
+
+        success = False
+        start_time=time.time()
+
+        while success:
             time.sleep(1)
-            status = test_app.get(
+
+            status = test_client.get(
                 "/ga4gh/wes/v1/runs/{}/status".format(run_id),
                 headers=OIDC_credentials.session_token
             )
-            print(status.data)
-            print(status.json)
+
+            assert (time.time() - start_time) <= 30, "Test timed out"
+
+            print("Waiting ... (status=%s)" % status.json)
+            if status.json in ["UNKNOWN", "EXECUTOR_ERROR", "SYSTEM_ERROR",
+                               "CANCELED", "CANCELING"]:
+                assert False, "Failing run status '{}'".format(status.json)
+
             if status.json == "COMPLETE":
-                running = False
+                success = True
+                
         assert response.status_code == 200
 
-    def test_accept_get_runs_cookie(self, test_app, runStorage, OIDC_credentials, celery_worker):
-        response = test_app.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
+    def test_accept_get_runs_cookie(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+        response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
 
 
-def test_sleep_4_redis(test_app, celery_worker):
+def test_sleep_4_redis(test_client, celery_session_worker):
     """
     This function adds just some delay to allow celery finishing its task before the redis container is stopped
     """

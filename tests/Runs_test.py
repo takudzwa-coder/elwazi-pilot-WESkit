@@ -1,6 +1,8 @@
-import sys, uuid, pytest
+import uuid
+import pytest
 from pymongo import MongoClient
 from weskit.classes.Run import Run
+from weskit.classes.RunStatus import RunStatus
 
 mock_run_data = {
     "run_id": str(uuid.uuid4()),
@@ -12,9 +14,10 @@ mock_run_data = {
     },
 }
 
+
 def test_create_and_load_run(database_container):
     new_run = Run(mock_run_data)
-    new_run.run_status = "RUNNING"
+    new_run.run_status = RunStatus.RUNNING
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
     collection = db["test_runs"]
@@ -24,6 +27,7 @@ def test_create_and_load_run(database_container):
         load_run = Run(x)
         if load_run.run_id == new_run.run_id:
             assert load_run.get_data() == new_run.get_data()
+
 
 def test_create_run_fails(database_container):
     with pytest.raises(Exception):

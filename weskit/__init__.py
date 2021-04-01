@@ -1,19 +1,63 @@
 #!/usr/bin/env python3
+from typing import Optional
 
 import yaml
 import sys
 import logging
 import os
+
+from celery import Celery
 from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask
 
+
 from weskit.login import Login
+from weskit.classes.Database import Database
+from weskit.classes.RunRequestValidator import RunRequestValidator
+from weskit.classes.WorkflowEngine import WorkflowEngineFactory
+from weskit.classes.Manager import Manager
+from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.classes.ErrorCodes import ErrorCodes
+
+
+class WESApp(Flask):
+    """We make a subclass of Flask that takes the important app-global
+    (~thread local) resources.
+    Compare https://stackoverflow.com/a/21845744/8784544"""
+
+    def __init__(self,
+                 manager: Manager,
+                 service_info: ServiceInfo,
+                 request_validators: dict,
+                 *args, **kwargs):
+        super().__init__(__name__, *args, **kwargs)
+        setattr(self, 'manager', manager)
+        setattr(self, 'service_info', service_info)
+        setattr(self, 'request_validators', request_validators)
+
+
+def create_celery(broker_url=None,
+                  backend_url=None):
+    if broker_url is None:
+        broker_url = os.environ.get("BROKER_URL")
+    if backend_url is None:
+        broker_url = os.environ.get("RESULT_BACKEND")
+    celery = Celery(
+        app="WESkit",
+        broker=broker_url,
+        backend=backend_url
+    )
+    celery_config = dict()
+    celery_config["broker_url"] = broker_url
+    celery_config["result_backend"] = backend_url
+    celery.conf.update(celery_config)
+    return celery
 
 
 def read_swagger():
-    '''Read the swagger file.'''
+    """Read the swagger file."""
     # This is hardcoded, because if it is changed, probably also quite some
     # code needs to be changed.
     swagger_file = "weskit/api/workflow_execution_service_1.0.0.yaml"
@@ -23,19 +67,26 @@ def read_swagger():
     return swagger
 
 
-def create_database():
-    from weskit.classes.Database import Database
+def create_database(database_url=None):
+    if database_url is None:
+        os.getenv("WESKIT_DATABASE_URL")
+    return Database(MongoClient(database_url), "WES")
 
-    DATABASE_URL = os.getenv("WESKIT_DATABASE_URL")
-    return Database(MongoClient(DATABASE_URL), "WES")
+
+def create_validator(schema):
+    """Return a validator function that can be provided a data structure to
+    be validated. The validator is returned as second argument."""
+    def _validate(target) -> Optional[str]:
+        validator = Validator()
+        result = validator.validate(target, schema)
+        if result:
+            return None
+        else:
+            return validator.errors
+    return _validate
 
 
-def create_app():
-
-    from weskit.classes.Manager import Manager
-    from weskit.classes.ServiceInfo import ServiceInfo
-    from weskit.classes.ErrorCodes import ErrorCodes
-
+def create_app(celery: Celery, database: Database) -> Flask:
     default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
@@ -44,6 +95,15 @@ def create_app():
     default_validation_config = os.getenv(
         "WESKIT_VALIDATION_CONFIG",
         os.path.join("config", "validation.yaml"))
+
+    workflows_base_dir = os.getenv(
+        "WESKIT_WORKFLOWS",
+        os.path.join(os.getcwd(), "workflows"))
+
+    weskit_data = os.getenv("WESKIT_DATA", "./tmp")
+
+    request_validation_config = \
+        os.path.join("config", "request-validation.yaml")
 
     with open(default_log_config, "r") as yaml_file:
         log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
@@ -60,26 +120,42 @@ def create_app():
         logger.debug("Read validation specification from " +
                      default_validation_config)
 
+    with open(request_validation_config, "r") as yaml_file:
+        request_validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
     # Validate configuration YAML.
-    validator = Validator()
-    config_validation = validator.validate(config, validation)
-    if config_validation is not True:
+    config_errors = create_validator(validation)(config)
+    if config_errors:
         logger.error("Could not validate config.yaml: {}".
-                     format(validator.errors))
+                     format(config_errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
 
-    swagger = read_swagger()
+    manager = \
+        Manager(celery_app=celery,
+                database=database,
+                workflow_engines=WorkflowEngineFactory.
+                workflow_engine_index(config
+                                      ["static_service_info"]
+                                      ["default_workflow_engine_parameters"]),
+                workflows_base_dir=workflows_base_dir,
+                data_dir=weskit_data)
 
-    app = Flask(__name__)
+    service_info = ServiceInfo(config["static_service_info"],
+                               read_swagger(),
+                               database)
 
-    # Global objects and information.
-    app.validation = validation
-    app.database = create_database()
+    # Create validators for each of the request types in the
+    # request-validation.yaml. These are used in the API-calls to validate
+    # the input.
+    request_validators = {
+        "run_request": RunRequestValidator(create_validator(
+            request_validation["run_request"]))
+    }
 
-    app.manager = Manager(config=config,
-                          datadir=os.getenv("WESKIT_DATA", "./tmp"))
-    app.service_info = ServiceInfo(config["static_service_info"],
-                                   swagger, app.database)
+    app = WESApp(manager,
+                 service_info,
+                 request_validators)
+
     app.log_config = log_config
     app.logger = logger
 
