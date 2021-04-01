@@ -24,6 +24,6 @@ dependencies:
   - uwsgi=2.0.19.1
   - nextflow=20.10.0
   - pip:
-     - testcontainers==3.0.0
+     - testcontainers==3.4.0
      - redis==3.5.1
 
