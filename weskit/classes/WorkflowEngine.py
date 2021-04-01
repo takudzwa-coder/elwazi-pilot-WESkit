@@ -20,7 +20,6 @@ class WorkflowEngineParam(object):
 
 
 class WorkflowEngine(metaclass=ABCMeta):
-
     @abstractmethod
     def __init__(self, default_params: List[WorkflowEngineParam]):
         self.default_params = default_params

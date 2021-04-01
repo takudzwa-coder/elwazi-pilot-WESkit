@@ -19,12 +19,12 @@ def get_redis_url(redis_container):
 
 @pytest.fixture(scope="session")
 def test_client(celery_session_app,
+                celery_session_worker,
                 test_database,
                 redis_container):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
-    os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
     app = create_app(celery=celery_session_app,
                      database=test_database)

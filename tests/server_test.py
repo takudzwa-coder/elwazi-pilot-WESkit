@@ -37,7 +37,7 @@ def test_login(test_client):
     assert response.status == '302 FOUND'
 
 
-def test_missing_fields_run_request(test_client, celery_worker):
+def test_missing_fields_run_request(test_client, celery_session_worker):
     complete_data = {
         "workflow_params": {},
         "workflow_type": "snakemake",
@@ -55,7 +55,7 @@ def test_missing_fields_run_request(test_client, celery_worker):
 
 # WARNING: This test fails with 401 unauthorized, if run isolated.
 #          Run it together with the other server_test.py tests!
-def test_run_snakemake(test_client, celery_worker):
+def test_run_snakemake(test_client, celery_session_worker):
     snakefile = "file:tests/wf1/Snakefile"
     data = get_workflow_data(
         workflow_file=snakefile,
@@ -74,8 +74,7 @@ def test_run_snakemake(test_client, celery_worker):
         print("Waiting ... (status=%s)" % status.json)
         if status.json in ["UNKNOWN", "EXECUTOR_ERROR", "SYSTEM_ERROR",
                            "CANCELED", "CANCELING"]:
-            assert False, "Failing run status '{}': {}".format(status.json,
-                                                               status.msg)
+            assert False, "Failing run status '{}'".format(status.json)
         elif status.json == "COMPLETE":
             success = True
 
@@ -91,7 +90,7 @@ def test_logout(test_client):
     assert response.status == '200 OK'
 
 
-def test_logout_successful(test_client):
+def test_logout_successfull(test_client):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
         workflow_file=snakefile,
