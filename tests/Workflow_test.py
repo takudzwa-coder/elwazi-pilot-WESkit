@@ -121,28 +121,6 @@ def test_execute_nextflow(test_client,
 #     manager.cancel(run)
 #     assert run.run_status == RunStatus.CANCELED
 
-    run = get_mock_run(workflow_url=os.path.join(os.getcwd(), "tests/wf2/Snakefile"), workflow_type="Snakemake")
-    run = manager.prepare_execution(run, files=[])
-    run = manager.execute(run)
-
-    timeout_seconds = 120
-    start_time = time.time()
-
-    canceled = False
-    while not canceled:
-        assert (start_time - time.time()) <= timeout_seconds, "Test timed out"
-        run = manager.update_run(run)
-        print(run.run_status)
-        if run.run_status == RunStatus.RUNNING:
-            run = manager.cancel(run)
-            assert run.run_status ==  RunStatus.CANCELING
-            continue
-        if run.run_status == RunStatus.CANCELED:
-            canceled = True
-            continue
-        print("Waiting ...")
-        time.sleep(1)
-
 def test_update_all_runs(test_client,
                          celery_session_worker):
     manager = current_app.manager
