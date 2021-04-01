@@ -1,8 +1,11 @@
+from weskit.classes.Database import Database
+
+
 class ServiceInfo:
-    '''Note that the static_service_info is not validated in here. External
-    validaton is required. ServiceInfo returns whatever it gets as static
-    service info.'''
-    def __init__(self, static_service_info, swagger, database):
+    """Note that the static_service_info is not validated in here. External
+    validation is required. ServiceInfo returns whatever it gets as static
+    service info."""
+    def __init__(self, static_service_info, swagger, database: Database):
         self._static_service_info = static_service_info
         self._db = database
         self._swagger = swagger

@@ -14,3 +14,7 @@ scratch/
 mongo
 compose
 *~
+.Trash*
+data/
+test-data/
+*.gz

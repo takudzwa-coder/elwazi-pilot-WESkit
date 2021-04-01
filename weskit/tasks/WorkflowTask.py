@@ -1,22 +1,24 @@
-import os
-from weskit.classes.Workflow import Snakemake, Nextflow
-from weskit.tasks.celery import celery_app
+import logging
+from weskit.classes.WorkflowEngine\
+    import Snakemake, Nextflow
+
+logger = logging.getLogger(__name__)
 
 
-@celery_app.task(bind=True)
-def run_workflow(self,
-                 workflow_type: str,
-                 workflow_path: os.path,
-                 workdir: os.path,
+def run_workflow(workflow_type: str,
+                 workflow_path: str,
+                 workdir: str,
                  config_files: list,
                  **workflow_kwargs):
     outputs = []
     if workflow_type == Snakemake.name():
+        logger.info("Running Snakemake_5 in %s" % workflow_path)
         outputs = Snakemake.run(workflow_path,
                                 workdir,
                                 config_files,
                                 **workflow_kwargs)
     elif workflow_type == Nextflow.name():
+        logger.info("Running Nextflow_20 in %s" % workflow_path)
         outputs = Nextflow.run(workflow_path,
                                workdir,
                                config_files,
