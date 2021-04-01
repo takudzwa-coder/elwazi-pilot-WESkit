@@ -80,7 +80,8 @@ class Manager:
            run.run_status == RunStatus.INITIALIZING or \
            run.run_status == RunStatus.CANCELING:
             if run.celery_task_id is not None:
-                running_task = self._get_run_task().AsyncResult(run.celery_task_id)
+                running_task = self._get_run_task().\
+                    AsyncResult(run.celery_task_id)
                 if ((run.run_status != RunStatus.CANCELING) or
                     (run.run_status == RunStatus.CANCELING and
                      running_task.state == "REVOKED")):
