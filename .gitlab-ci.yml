@@ -31,5 +31,5 @@ test:
   stage: test
   script:
     - flake8 weskit/
-    - python -m pytest -v -s --log-cli-level=debug
-    #- python -m pytest -v
+    #- python -m pytest -v -s --log-cli-level=debug
+    - python -m pytest -v
