@@ -186,7 +186,7 @@ class Manager:
             if "run_dir" in run.request["tags"].keys():
                 run_dir = os.path.abspath(os.path.join(
                     self.data_dir, run.request["tags"]["run_dir"]))
-        print(run_dir)
+
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
 
