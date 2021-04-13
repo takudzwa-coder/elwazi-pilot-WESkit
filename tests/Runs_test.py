@@ -6,7 +6,7 @@ from weskit.classes.RunStatus import RunStatus
 
 mock_run_data = {
     "run_id": str(uuid.uuid4()),
-    "run_status": "UNKNOWN",
+    "run_status": "INITIALIZING",
     "request_time": None,
     "request": {
         "workflow_url": "",

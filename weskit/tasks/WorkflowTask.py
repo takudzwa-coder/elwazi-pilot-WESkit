@@ -12,13 +12,13 @@ def run_workflow(workflow_type: str,
                  **workflow_kwargs):
     outputs = []
     if workflow_type == Snakemake.name():
-        logger.info("Running Snakemake_5 in %s" % workflow_path)
+        logger.info("Running Snakemake in %s" % workflow_path)
         outputs = Snakemake.run(workflow_path,
                                 workdir,
                                 config_files,
                                 **workflow_kwargs)
     elif workflow_type == Nextflow.name():
-        logger.info("Running Nextflow_20 in %s" % workflow_path)
+        logger.info("Running Nextflow in %s" % workflow_path)
         outputs = Nextflow.run(workflow_path,
                                workdir,
                                config_files,

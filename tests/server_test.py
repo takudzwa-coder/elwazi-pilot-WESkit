@@ -87,7 +87,7 @@ class TestWithoutLogin:
     The TestWithoutLogin class ensures that all secured endpoints are not accessible without credentials.
     """
 
-    def test_list_runs_wo_login(self, test_client):
+    def test_list_runs_wo_login(self, test_client, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
@@ -95,7 +95,7 @@ class TestWithoutLogin:
         response = test_client.post("/ga4gh/wes/v1/runs", data=data)
         assert response.status_code == 401
 
-    def test_submit_workflow_wo_login(self, test_client, celery_session_worker):
+    def test_submit_workflow_wo_login(self, test_client, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
@@ -110,7 +110,7 @@ class TestWithHeaderToken:
     the request header in the format "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
 
-    def test_accept_run_workflow_header(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+    def test_accept_run_workflow_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
         print("~~~~~!!!!~~~")
 
         data = get_workflow_data(
@@ -144,7 +144,7 @@ class TestWithHeaderToken:
 
         assert response.status_code == 200
 
-    def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+    def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
@@ -156,7 +156,7 @@ class TestCSRFTokenOnly:
     token without an access token as Cookie.
     """
 
-    def test_reject_run_workflow_CSRF_only(self, test_client, OIDC_credentials, celery_session_worker):
+    def test_reject_run_workflow_CSRF_only(self, test_client, OIDC_credentials, celery_worker):
 
         data = get_workflow_data(
             snakefile="file:tests/wf1/Snakefile",
@@ -166,7 +166,7 @@ class TestCSRFTokenOnly:
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
                                 b' \\"access_token_cookie\\"; Missing Authorization Header)"}\n'
 
-    def test_reject_get_runs_CSRF_only(self, test_client, OIDC_credentials, celery_session_worker):
+    def test_reject_get_runs_CSRF_only(self, test_client, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert response.status_code == 401
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
@@ -180,7 +180,7 @@ class TestMissingCSRFToken:
     cookie with out the session token in the header.
     """
 
-    def test_reject_run_workflow_cookie_only(self, test_client, OIDC_credentials, celery_session_worker):
+    def test_reject_run_workflow_cookie_only(self, test_client, OIDC_credentials, celery_worker):
         test_client.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
         data = get_workflow_data(
             snakefile="file:tests/wf1/Snakefile",
@@ -201,7 +201,7 @@ class TestWithCookie:
     This TestWithCookie tests the correct functionality of the secured endpoint by using cookies with session token
     """
 
-    def test_accept_run_workflow_cookie(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+    def test_accept_run_workflow_cookie(self, test_client, runStorage, OIDC_credentials, celery_worker):
         test_client.set_cookie('localhost', 'access_token_cookie', OIDC_credentials.access_token)
         data = get_workflow_data(
             snakefile="file:tests/wf1/Snakefile",
@@ -234,7 +234,7 @@ class TestWithCookie:
                 
         assert response.status_code == 200
 
-    def test_accept_get_runs_cookie(self, test_client, runStorage, OIDC_credentials, celery_session_worker):
+    def test_accept_get_runs_cookie(self, test_client, runStorage, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.session_token)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200

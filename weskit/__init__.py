@@ -70,7 +70,6 @@ def read_swagger():
 def create_database(database_url=None):
     if database_url is None:
         database_url = os.getenv("WESKIT_DATABASE_URL")
-
     return Database(MongoClient(database_url), "WES")
 
 

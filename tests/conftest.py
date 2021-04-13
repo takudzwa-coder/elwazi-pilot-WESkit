@@ -92,6 +92,7 @@ def test_client(celery_session_app,
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
+    os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
     keycloakContainerProperties = getContainerProperties(keycloak_container, '8080')
     os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
@@ -189,7 +190,8 @@ def redis_container():
 def celery_config(redis_container):
     return {
         "broker_url": get_redis_url(redis_container),
-        "result_backend": get_redis_url(redis_container)
+        "result_backend": get_redis_url(redis_container),
+        "task_track_started": True
     }
 
 
