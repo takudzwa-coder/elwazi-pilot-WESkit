@@ -182,16 +182,13 @@ class Manager:
         run_dir = os.path.abspath(
             os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
 
-        if "tags" in run.request:
-            if "run_dir" in run.request["tags"]:
+        if "tags" in run.request.keys():
+            if "run_dir" in run.request["tags"].keys():
                 run_dir = os.path.abspath(os.path.join(
-                    self.data_dir, run.request.tags["run_dir"]))
-
+                    self.data_dir, run.request["tags"]["run_dir"]))
+        print(run_dir)
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
-        else:
-            run.run_status = RunStatus.SYSTEM_ERROR
-            return run
 
         with open(run_dir + "/config.yaml", "w") as ff:
             yaml.dump(json.loads(run.request["workflow_params"]), ff)
