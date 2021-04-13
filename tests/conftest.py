@@ -112,4 +112,5 @@ def manager(celery_session_app, redis_container, test_config, test_database):
                        ["static_service_info"]
                        ["default_workflow_engine_parameters"]),
                    workflows_base_dir=workflows_base_dir,
-                   data_dir=test_dir)
+                   data_dir=test_dir,
+                   use_custom_workdir=False)

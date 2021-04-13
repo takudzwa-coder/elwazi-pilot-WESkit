@@ -10,6 +10,9 @@ ENV: development
 # Enable this during running of tests.
 TESTING: true
 
+# Use a custon workdir for each run. This needs to be defined by tags field in request
+USE_CUSTOM_WORKDIR: false
+
 static_service_info:
 
     supported_filesystem_protocols:

@@ -46,12 +46,14 @@ class Manager:
                  database: Database,
                  workflow_engines: dict,
                  data_dir: str,
-                 workflows_base_dir: str) -> None:
+                 workflows_base_dir: str,
+                 use_custom_workdir: bool) -> None:
         self.workflow_engines = workflow_engines
         self.data_dir = data_dir
         self.celery_app = celery_app
         self.database = database
         self.workflows_base_dir = workflows_base_dir
+        self.use_custom_workdir = use_custom_workdir
         # Register the relevant tasks with fully qualified name.
         self.celery_app.task(run_workflow)
 
@@ -179,13 +181,12 @@ class Manager:
             return run
 
         # prepare run directory
-        run_dir = os.path.abspath(
-            os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
-
-        if "tags" in run.request.keys():
-            if "run_dir" in run.request["tags"].keys():
-                run_dir = os.path.abspath(os.path.join(
-                    self.data_dir, run.request["tags"]["run_dir"]))
+        if self.use_custom_workdir:
+            run_dir = os.path.abspath(os.path.join(
+                self.data_dir, run.request["tags"]["run_dir"]))
+        else:
+            run_dir = os.path.abspath(
+                os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
 
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
