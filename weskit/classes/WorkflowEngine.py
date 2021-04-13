@@ -8,7 +8,6 @@ from typing import List, Dict
 from weskit.utils import get_current_timestamp
 from weskit.utils import get_absolute_file_paths
 from weskit.utils import to_uri
-from snakemake import snakemake
 from dataclasses import dataclass
 
 
@@ -62,15 +61,33 @@ class Snakemake(WorkflowEngine):  # noqa
             config_files: list,
             workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("Snakemake_5.run: {}, {}, {}".
+        logging.getLogger().info("snakemake_5.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
-        outputs = []
-        snakemake(
-            snakefile=workflow_path,
-            workdir=workdir,
-            configfiles=config_files,
-            updated_files=outputs,
-            **workflow_kwargs)
+        timestamp = get_current_timestamp()
+
+        command = ["snakemake", "--snakefile", workflow_path, "--cores", "all"] # for not, using all cores (need to specify number of cores)
+        if config_files:
+            command += ["--configfile"] + config_files
+
+        with open(os.path.join(workdir, "command"), "a") as commandOut:
+            print("{}: {}, workddir={}".format(timestamp, command, workdir),
+                  file=commandOut)
+
+            with open(os.path.join(workdir, "stderr"), "a") as stderr:
+                print(timestamp, file=stderr, flush=True)
+
+                with open(os.path.join(workdir, "stdout"), "a") as stdout:
+                    print(timestamp, file=stdout, flush=True)
+                    result = \
+                        subprocess.run(command,
+                                       cwd=str(pathlib.PurePath(workdir)),
+                                       stdout=stdout,
+                                       stderr=stderr)
+            print("{}: exit code = {}".
+                  format(get_current_timestamp(), result.returncode),
+                  file=commandOut, flush=True)
+
+        outputs = to_uri(get_absolute_file_paths(workdir))
         return outputs
 
     @staticmethod
