@@ -20,6 +20,7 @@ class WorkflowEngineParam(object):
 
 
 class WorkflowEngine(metaclass=ABCMeta):
+
     @abstractmethod
     def __init__(self, default_params: List[WorkflowEngineParam]):
         self.default_params = default_params
@@ -62,7 +63,7 @@ class Snakemake(WorkflowEngine):  # noqa
             config_files: list,
             workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("Snakemake_5.run: {}, {}, {}".
+        logging.getLogger().info("Snakemake.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         outputs = []
         snakemake(
@@ -95,7 +96,7 @@ class Nextflow(WorkflowEngine):  # noqa
             config_files: list,
             workflow_engine_params: list,
             **workflow_kwargs):
-        logging.getLogger().info("Nextflow_20.run: {}, {}, {}".
+        logging.getLogger().info("Nextflow.run: {}, {}, {}".
                                  format(workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
         # TODO Require a profile configuration.

@@ -6,6 +6,7 @@ services:
 image: continuumio/miniconda3:latest
 
 cache:
+  key: cache-for-all-branches
   paths:
     - /opt/cache/pip
     - /opt/conda/pkgs
