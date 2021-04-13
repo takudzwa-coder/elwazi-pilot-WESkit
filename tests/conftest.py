@@ -25,6 +25,7 @@ def test_client(celery_session_app,
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
+    os.environ["WESKIT_DATA"] = "test-data/"
 
     app = create_app(celery=celery_session_app,
                      database=test_database)
