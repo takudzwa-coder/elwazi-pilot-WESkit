@@ -10,6 +10,14 @@ from test_utils import get_mock_run
 from weskit.classes.RunStatus import RunStatus
 
 
+test_failed_status = [
+       RunStatus.UNKNOWN,
+       RunStatus.EXECUTOR_ERROR,
+       RunStatus.SYSTEM_ERROR,
+       RunStatus.CANCELED,
+       RunStatus.CANCELING
+    ]
+
 def test_snakemake_prepare_execution(manager):
 
     # 1.) use workflow on server
@@ -112,7 +120,6 @@ def test_execute_nextflow(test_client,
 #     run = manager.execute(run)
 #     manager.cancel(run)
 #     assert run.run_status == RunStatus.CANCELED
-
 
 def test_update_all_runs(test_client,
                          celery_session_worker):

@@ -28,9 +28,7 @@ celery_to_wes_state = {
 
 running_states = [
     RunStatus.QUEUED,
-    RunStatus.INITIALIZING,
-    RunStatus.RUNNING,
-    RunStatus.PAUSED
+    RunStatus.RUNNING
 ]
 
 EXECUTOR_WF_NOT_FOUND = """
@@ -61,35 +59,43 @@ class Manager:
         return self.celery_app.tasks["weskit.tasks.WorkflowTask.run_workflow"]
 
     def cancel(self, run: Run) -> Run:
-        # This is a quickfix for executing the tests.
-        # This might be a bad solution for multithreaded use-cases,
-        # because the current working directory is touched.
-        cwd = os.getcwd()
-        revoke(run.celery_task_id,
-               terminate=True,
-               signal='SIGKILL')
-        os.chdir(cwd)
-        run.run_status = RunStatus.CANCELED
+        if run.run_status in running_states:
+            run.run_status = RunStatus.CANCELING
+            # This is a quickfix for executing the tests.
+            # This might be a bad solution for multithreaded use-cases,
+            # because the current working directory is touched.
+            cwd = os.getcwd()
+            revoke(run.celery_task_id,
+                   terminate=True,
+                   signal='SIGKILL')
+            os.chdir(cwd)
+        elif run.run_status in RunStatus.INITIALIZING:
+            run.run_status = RunStatus.SYSTEM_ERROR
+
         return run
 
     def update_state(self, run: Run) -> Run:
-        # check if task is running and update state
-        if run.run_status in running_states:
+        # check if task is running, initializing or canceling and update state
+        if run.run_status in running_states or \
+           run.run_status == RunStatus.INITIALIZING or \
+           run.run_status == RunStatus.CANCELING:
             if run.celery_task_id is not None:
                 running_task = self._get_run_task().\
                     AsyncResult(run.celery_task_id)
-                run.run_status = celery_to_wes_state[running_task.state]
-            else:
-                run.run_status = RunStatus.UNKNOWN
+                if ((run.run_status != RunStatus.CANCELING) or
+                    (run.run_status == RunStatus.CANCELING and
+                     running_task.state == "REVOKED")):
+                    run.run_status = celery_to_wes_state[running_task.state]
+            elif (run.run_status in running_states or
+                  run.run_status == RunStatus.CANCELING):
+                run.run_status = RunStatus.SYSTEM_ERROR
         return run
 
     def update_outputs(self, run: Run) -> Run:
 
-        if run.run_status not in running_states:
-            if run.celery_task_id is not None:
-                running_task = self._get_run_task().\
-                    AsyncResult(run.celery_task_id)
-                run.outputs["Workflow"] = running_task.get()
+        if run.run_status == RunStatus.COMPLETE:
+            running_task = self._get_run_task().AsyncResult(run.celery_task_id)
+            run.outputs["Workflow"] = running_task.get()
         return run
 
     def update_run(self, run: Run) -> Run:
@@ -104,7 +110,7 @@ class Manager:
     def create_and_insert_run(self, request)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database._create_run_id(),
-                        "run_status": "UNKNOWN",
+                        "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
                         "request": request})
         if self.database.insert_run(run):
@@ -168,7 +174,9 @@ class Manager:
         return workflow_path
 
     def prepare_execution(self, run, files=[]):
-        run.run_status = RunStatus.INITIALIZING
+
+        if not run.run_status == RunStatus.INITIALIZING:
+            return run
 
         # prepare run directory
         run_dir = os.path.abspath(
@@ -235,9 +243,10 @@ class Manager:
         run.run_log["cmd"] = ", ".join(
             "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
         )
-        task = self._get_run_task().apply_async(
-                args=[],
-                kwargs={**run_kwargs})
+        if run.run_status == RunStatus.INITIALIZING:
+            task = self._get_run_task().apply_async(
+                    args=[],
+                    kwargs={**run_kwargs})
+            run.celery_task_id = task.id
 
-        run.celery_task_id = task.id
         return run

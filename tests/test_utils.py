@@ -5,7 +5,7 @@ from weskit.classes.Run import Run
 def get_mock_run(workflow_url, workflow_type):
     run = Run({
         "run_id": str(uuid.uuid4()),
-        "run_status": "UNKNOWN",
+        "run_status": "INITIALIZING",
         "request_time": None,
         "request": {
             "workflow_url": workflow_url,
