@@ -51,6 +51,7 @@ def test_snakemake_prepare_execution(manager):
                        tags={"run_dir":"sample1/my_workdir"})
     run = manager.prepare_execution(run, files=[])
     assert run.run_status == RunStatus.INITIALIZING
+    assert run.execution_path.endswith("sample1/my_workdir")
 
 def test_execute_snakemake(test_client,
                            celery_session_worker):
