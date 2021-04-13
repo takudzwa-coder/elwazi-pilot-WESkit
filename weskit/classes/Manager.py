@@ -198,7 +198,7 @@ class Manager:
                     run=run,
                     filename="weskit_run_error.txt",
                     message=EXECUTOR_WORKDIR_MISSING)
-            return run
+                return run
         else:
             run_dir = os.path.abspath(
                 os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
