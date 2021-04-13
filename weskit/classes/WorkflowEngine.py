@@ -1,13 +1,6 @@
-import os
-import pathlib
-import subprocess
-import logging
 from abc import ABCMeta, abstractmethod
-from typing import List, Dict
-
-from weskit.utils import get_current_timestamp
-from weskit.utils import get_relative_file_paths
 from dataclasses import dataclass
+from typing import List, Dict
 
 
 @dataclass()
@@ -20,50 +13,26 @@ class WorkflowEngineParam(object):
 class WorkflowEngine(metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, default_params: List[WorkflowEngineParam]):
+    def __init__(self,
+                 default_params: List[WorkflowEngineParam]):
         self.default_params = default_params
 
-    @staticmethod
     @abstractmethod
-    def _command(workflow_path, config_files=None):
+    def command(self,
+                workflow_path: str,
+                workdir: str,
+                config_files: List[str],
+                workflow_engine_params: List[WorkflowEngineParam],
+                **workflow_kwargs)\
+            -> List[str]:
+        """
+        Use the instance variables and run parameters to compose a command to be executed
+        by the run method.
+        """
         pass
 
-    @classmethod
-    def run(cls, workflow_path: str,
-            workdir: str,
-            config_files: list,
-            workflow_engine_params: list,
-            **workflow_kwargs):
-
-        command = cls._command(workflow_path, config_files)
-
-        logging.getLogger().info("run: {}, {}, {}"
-                                 .format(workflow_path, workdir, config_files))
-        timestamp = get_current_timestamp()
-
-        with open(os.path.join(workdir, "command"), "a") as commandOut:
-            print("{}: {}, workddir={}".format(timestamp, command, workdir),
-                  file=commandOut)
-
-            with open(os.path.join(workdir, "stderr"), "a") as stderr:
-                print(timestamp, file=stderr, flush=True)
-
-                with open(os.path.join(workdir, "stdout"), "a") as stdout:
-                    print(timestamp, file=stdout, flush=True)
-                    result = \
-                        subprocess.run(command,
-                                       cwd=str(pathlib.PurePath(workdir)),
-                                       stdout=stdout,
-                                       stderr=stderr)
-            print("{}: exit code = {}".
-                  format(get_current_timestamp(), result.returncode),
-                  file=commandOut, flush=True)
-
-        outputs = get_relative_file_paths(workdir)
-        return outputs
-
-    @abstractmethod
-    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam])\
+    def _run_workflow_engine_params(self,
+                                    params: List[WorkflowEngineParam])\
             -> List[str]:
         """
         Take a list of WorkflowEngineParams for a specific run and combine
@@ -73,7 +42,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         :param params:
         :return:
         """
-        pass
+        return []
 
     @staticmethod
     @abstractmethod
@@ -81,47 +50,43 @@ class WorkflowEngine(metaclass=ABCMeta):
         pass
 
 
-class Snakemake(WorkflowEngine):  # noqa
+class Snakemake(WorkflowEngine):
     def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params)
-
-    @staticmethod
-    def _command(workflow_path, config_files):
-        command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
-        if config_files:
-            command += ["--configfile"] + config_files
-        return command
 
     @staticmethod
     def name():
         return "snakemake"
 
-    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
+    def command(self,
+                workflow_path: str,
+                workdir: str,
+                config_files: list,
+                workflow_engine_params: list,
+                **workflow_kwargs)\
             -> List[str]:
-        """
-        TODO Implement this!
-        """
-        return []
+        command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
+        if config_files:
+            command += ["--configfile"] + config_files
+        return command
 
 
-class Nextflow(WorkflowEngine):  # noqa
+class Nextflow(WorkflowEngine):
     def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params)
-
-    @staticmethod
-    def _command(workflow_path, config_files):
-        return ["nextflow", "run", workflow_path]
 
     @staticmethod
     def name():
         return "nextflow"
 
-    def _run_workflow_engine_params(self, params: List[WorkflowEngineParam]) \
+    def command(self,
+                workflow_path: str,
+                workdir: str,
+                config_files: list,
+                workflow_engine_params: list,
+                **workflow_kwargs)\
             -> List[str]:
-        """
-        TODO Implement this!
-        """
-        return []
+        return ["nextflow", "run", workflow_path]
 
 
 class WorkflowEngineFactory:
