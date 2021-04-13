@@ -74,9 +74,8 @@ def test_execute_snakemake(test_client,
             continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
-        assert "hello_world.txt" in run.outputs["Workflow"]
+        assert "hello_world.txt" in to_filename(run.outputs["Workflow"])
         success = True
-
 
 def test_execute_nextflow(test_client,
                           celery_session_worker):
