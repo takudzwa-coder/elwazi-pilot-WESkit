@@ -6,12 +6,12 @@ from urllib.parse import urlparse
 
 import yaml
 from celery import Celery, Task
+from celery.app.control import Control
 
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.tasks.WorkflowTask import run_workflow
-from celery.worker.control import revoke
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
 from typing import Optional, List
@@ -63,19 +63,22 @@ class Manager:
         return self.celery_app.tasks["weskit.tasks.WorkflowTask.run_workflow"]
 
     def cancel(self, run: Run) -> Run:
+        """See https://docs.celeryproject.org/en/latest/userguide/workers.html
+        TODO Consider persistent revokes.
+        """
         if run.run_status in running_states:
             run.run_status = RunStatus.CANCELING
             # This is a quickfix for executing the tests.
             # This might be a bad solution for multithreaded use-cases,
             # because the current working directory is touched.
             cwd = os.getcwd()
-            revoke(run.celery_task_id,
-                   terminate=True,
-                   signal='SIGKILL')
+            Control(self.celery_app). \
+                revoke(task_id=run.celery_task_id,
+                       terminate=True,
+                       signal='SIGKILL')
             os.chdir(cwd)
-        elif run.run_status in RunStatus.INITIALIZING:
+        elif run.run_status is RunStatus.INITIALIZING:
             run.run_status = RunStatus.SYSTEM_ERROR
-
         return run
 
     def update_state(self, run: Run) -> Run:
@@ -113,7 +116,7 @@ class Manager:
 
     def create_and_insert_run(self, request)\
             -> Optional[Run]:
-        run = Run(data={"run_id": self.database._create_run_id(),
+        run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
                         "request": request})
