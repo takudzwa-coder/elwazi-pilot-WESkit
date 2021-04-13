@@ -45,6 +45,12 @@ def test_snakemake_prepare_execution(manager):
     assert run.run_status == RunStatus.INITIALIZING
     assert os.path.isfile(os.path.join(run.execution_path, wf_url))
 
+    # 4.) set custom workdir
+    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
+                       workflow_type="snakemake",
+                       tags={"run_dir":"sample1/my_workdir"})
+    run = manager.prepare_execution(run, files=[])
+    assert run.run_status == RunStatus.INITIALIZING
 
 def test_execute_snakemake(test_client,
                            celery_session_worker):
