@@ -108,7 +108,7 @@ class Run:
 
     @property
     def start_time(self):
-        return self.__outputs
+        return self.__start_time
 
     @start_time.setter
     def start_time(self, start_time: str):
