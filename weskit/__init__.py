@@ -42,7 +42,7 @@ def create_celery(broker_url=None,
     if broker_url is None:
         broker_url = os.environ.get("BROKER_URL")
     if backend_url is None:
-        broker_url = os.environ.get("RESULT_BACKEND")
+        backend_url = os.environ.get("RESULT_BACKEND")
     celery = Celery(
         app="WESkit",
         broker=broker_url,
@@ -68,7 +68,7 @@ def read_swagger():
 
 def create_database(database_url=None):
     if database_url is None:
-        os.getenv("WESKIT_DATABASE_URL")
+        database_url = os.getenv("WESKIT_DATABASE_URL")
     return Database(MongoClient(database_url), "WES")
 
 

@@ -18,6 +18,7 @@ test_failed_status = [
        RunStatus.CANCELING
     ]
 
+
 def test_snakemake_prepare_execution(manager):
 
     # 1.) use workflow on server
@@ -47,15 +48,8 @@ def test_snakemake_prepare_execution(manager):
 
 
 def test_execute_snakemake(test_client,
-                           celery_session_worker):
+                           celery_worker):
     manager = current_app.manager
-    test_failed_status = [
-       RunStatus.UNKNOWN,
-       RunStatus.EXECUTOR_ERROR,
-       RunStatus.SYSTEM_ERROR,
-       RunStatus.CANCELED,
-       RunStatus.CANCELING
-       ]
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
@@ -78,15 +72,8 @@ def test_execute_snakemake(test_client,
         success = True
 
 def test_execute_nextflow(test_client,
-                          celery_session_worker):
+                          celery_worker):
     manager = current_app.manager
-    test_failed_status = [
-       RunStatus.UNKNOWN,
-       RunStatus.EXECUTOR_ERROR,
-       RunStatus.SYSTEM_ERROR,
-       RunStatus.CANCELED,
-       RunStatus.CANCELING
-       ]
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
                        workflow_type="nextflow")
     run = manager.prepare_execution(run, files=[])
@@ -110,26 +97,25 @@ def test_execute_nextflow(test_client,
 
 
 # # Celery's revoke function applied to the Snakemake job results in a change
-# # of the main process's working directory. Therefore the test is turned off
-# # (until this is fixed).
-# def test_cancel_workflow(manager, redis_container):
+# # of the main process's working directory, if a celery_session_worker is
+# # used. Therefore the test should use a celery_worker. THIS does NOT solve
+# # the general problem though, if in production workers are reused for new
+# # tasks!
+# def test_cancel_workflow(manager, celery_worker):
 #     run = get_mock_run(workflow_url="tests/wf2/Snakefile",
 #                        workflow_type="snakemake")
 #     run = manager.prepare_execution(run, files=[])
 #     run = manager.execute(run)
+#     # Before we cancel, we need to wait that the execution actually started.
+#     # Cancellation of the preparation is not implemented.
+#     time.sleep(5)
 #     manager.cancel(run)
 #     assert run.run_status == RunStatus.CANCELED
 
+
 def test_update_all_runs(test_client,
-                         celery_session_worker):
+                         celery_worker):
     manager = current_app.manager
-    test_failed_status = [
-        RunStatus.UNKNOWN,
-        RunStatus.EXECUTOR_ERROR,
-        RunStatus.SYSTEM_ERROR,
-        RunStatus.CANCELED,
-        RunStatus.CANCELING
-    ]
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="snakemake")
     manager.database.insert_run(run)
