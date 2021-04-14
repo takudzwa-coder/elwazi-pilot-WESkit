@@ -1,4 +1,11 @@
 #!/bin/bash
+# This script generates self signed development certificates.
+# Per default the certificates will be stored in the certs sub-folder.
+# The path can be changed by setting command line arg 1
+# It will not overwrite existing certificates
+
+# localhost and hostname of the generating machine are valid dns names for the certificate!
+
 
 if [ -z $1 ]; then 
 path=$(dirname $(realpath $pwd$0))"/certs"

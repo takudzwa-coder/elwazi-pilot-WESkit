@@ -1,4 +1,4 @@
-from flask import current_app, request, jsonify
+from flask import current_app, request, jsonify, make_response
 
 from flask_jwt_extended.config import config
 import requests
@@ -178,7 +178,7 @@ def requester_and_cookieSetter(
         if at and rt and session_state:
             # Set Cookie and Return
             if not response_object:
-                response_object = jsonify({'login': True}), 200
+                response_object = make_response(({'login': True}, 200))
 
             set_access_cookies(response_object, at, ate)
             set_refresh_cookies(response_object, rt, rte)
