@@ -37,6 +37,7 @@ services:
       - ${WESKIT_LOG_CONFIG}:/home/weskit/log-config.yaml:ro
       - ${WESKIT_DATA}:/data
       - ./users.yaml:/weskit/users.yaml:ro
+      - ./weskit:/weskit/weskit:ro
     networks:
       - backend
     working_dir: /weskit
@@ -89,10 +90,11 @@ services:
       WESKIT_WORKFLOWS: /workflows
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
-    command: ["conda activate weskit && celery worker --loglevel DEBUG --concurrency 1 --app weskit.tasks.celery_worker.celery_app"]
+    command: ["conda activate weskit && celery --app weskit.tasks.celery_worker.celery_app worker --loglevel DEBUG --concurrency 1 -l info"]
     volumes:
       - ${WESKIT_DATA}:/data
       - ${WESKIT_WORKFLOWS}:/workflows:ro
+      - ./weskit:/weskit/weskit:ro
     networks:
       - backend
     deploy:
