@@ -18,4 +18,3 @@ compose
 data/
 test-data/
 *.gz
-uWSGI_Server/certs
