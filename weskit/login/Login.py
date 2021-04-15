@@ -185,7 +185,6 @@ def login_required(fn: Callable, validateOnline: bool = True, validate_csrf: boo
 
             # Check availability of access_token
             checkJWT = jwt_required(fn)(*args, **kwargs)
-            csrf_state = check_csrf_token()
 
             # Check if csrf must be checked
             if validate_csrf:
