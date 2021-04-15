@@ -167,9 +167,9 @@ def create_app(celery: Celery, database: Database) -> Flask:
     ######################################
 
     # Version for backend
-    # Login.oidcLogin(app, config, addLogin=False)
+    Login.oidcLogin(app, config, addLogin=False)
 
     # Initialize for Dashboard
-    Login.oidcLogin(app, config, addLogin=True)
+    # Login.oidcLogin(app, config, addLogin=True)
 
     return app

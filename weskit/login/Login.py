@@ -117,8 +117,8 @@ class oidcLogin:
 
         if addLogin:
             """
-            This code block is only used if the login endpoints should be accessible enabled on the server. The imports
-            are only required for this specific scenario.
+            The following Code Block is only active for the WESkit Dashboard. It should be disabled for the RAW WESkit
+            API.
             """
 
             from flask_jwt_extended import get_raw_jwt
