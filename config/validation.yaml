@@ -8,8 +8,9 @@ ENV:
 DEBUG:
   type: boolean
 
-USE_CUSTOM_WORKDIR:
+require_workdir_tag:
   type: boolean
+  required: true
 
 static_service_info:
   type: dict

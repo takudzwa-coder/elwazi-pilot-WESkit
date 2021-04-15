@@ -11,7 +11,7 @@ ENV: development
 TESTING: true
 
 # Use a custon workdir for each run. This needs to be defined by tags field in request
-USE_CUSTOM_WORKDIR: false
+require_workdir_tag: false
 
 static_service_info:
 

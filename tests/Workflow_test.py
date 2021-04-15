@@ -47,14 +47,14 @@ def test_snakemake_prepare_execution(manager):
     assert os.path.isfile(os.path.join(run.execution_path, wf_url))
 
     # 4.) set custom workdir
-    manager.use_custom_workdir = True
+    manager.require_workdir_tag = True
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake",
                        tags={"run_dir":"sample1/my_workdir"})
     run = manager.prepare_execution(run, files=[])
     assert run.run_status == RunStatus.INITIALIZING
     assert run.execution_path.endswith("sample1/my_workdir")
-    manager.use_custom_workdir = False
+    manager.require_workdir_tag = False
 
 def test_execute_snakemake(test_client,
                            celery_worker):
