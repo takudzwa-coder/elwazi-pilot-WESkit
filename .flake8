@@ -15,4 +15,5 @@ exclude =
     *.yaml,
     *.json,
     *.tar.gz,
-    .editorconfig
+    .editorconfig,
+    uWSGI_Server/certs
