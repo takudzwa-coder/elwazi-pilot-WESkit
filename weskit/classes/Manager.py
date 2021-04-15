@@ -202,8 +202,8 @@ class Manager:
                               workflow_path)
             run.workflow_path = workflow_path
         except Exception as e:
-            logger.warning(traceback.TracebackException.from_exception(e).
-                           format())
+            logger.warning(e, stack_info=True, exc_info=True)         
+
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
