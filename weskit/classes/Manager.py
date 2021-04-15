@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import traceback
 from urllib.parse import urlparse
 
 import yaml
@@ -202,7 +201,7 @@ class Manager:
                               workflow_path)
             run.workflow_path = workflow_path
         except Exception as e:
-            logger.warning(e, stack_info=True, exc_info=True)         
+            logger.warning(e, stack_info=True, exc_info=True)
 
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(

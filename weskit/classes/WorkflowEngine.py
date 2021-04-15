@@ -66,7 +66,8 @@ class Snakemake(WorkflowEngine):  # noqa
                                  format(workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
 
-        command = ["snakemake", "--snakefile", workflow_path, "--cores", "all"] # for now, using all cores (need to specify number of cores)
+        # for now, using all cores (need to specify number of cores)
+        command = ["snakemake", "--snakefile", workflow_path, "--cores", "all"]
         if config_files:
             command += ["--configfile"] + config_files
 
