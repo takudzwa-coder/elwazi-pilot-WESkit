@@ -1,9 +1,12 @@
 import copy
+import pytest
+
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from test_utils import get_mock_run
 
 
+@pytest.mark.integration
 def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
                         workflow_type="snakemake")
@@ -14,6 +17,7 @@ def test_insert_and_load_run(test_database):
     assert len(run_id_and_states) == 1
 
 
+@pytest.mark.integration
 def test_update_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake")
@@ -25,6 +29,7 @@ def test_update_run(test_database):
     assert run.run_status == RunStatus.INITIALIZING
 
 
+@pytest.mark.integration
 def test_get_runs(test_database):
     runs = test_database.get_runs(query={})
     assert len(runs) > 0
@@ -32,12 +37,14 @@ def test_get_runs(test_database):
         assert isinstance(run, Run)
 
 
+@pytest.mark.integration
 def test_count_states(test_database):
     counts = test_database.count_states()
     for status in RunStatus:
         assert status.name in counts.keys()
 
 
+@pytest.mark.integration
 def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake")

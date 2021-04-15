@@ -204,7 +204,7 @@ elif (args.function == 'remove'):
     if newUser not in users:
         print(
             ("%s is missing in DB %s. "
-            "Use '%s list %s' to show all available users") % 
+             "Use '%s list %s' to show all available users") %
             (newUser, args.Databasefile, sys.argv[0], args.Databasefile)
         )
 
@@ -224,7 +224,7 @@ elif (args.function == 'remove'):
 #   Function Switch:   changeRoles        #
 #      asks again if user should be admin #
 ###########################################
-elif (args.function == 'changeRoles'):
+elif args.function == 'changeRoles':
     # Load Database-File
     users = dbfile2dict(args.Databasefile)
 
@@ -235,7 +235,7 @@ elif (args.function == 'changeRoles'):
     if newUser not in users:
         print(
             ("%s is missing in DB %s. Use '%s list %s' "
-            "to show all available users") % 
+             "to show all available users") %
             (newUser, args.Databasefile, sys.argv[0], args.Databasefile)
         )
 
