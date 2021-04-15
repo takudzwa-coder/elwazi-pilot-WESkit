@@ -120,7 +120,6 @@ class TestWithHeaderToken:
         print(response.data)
         run_id = response.json["run_id"]
 
-
         runStorage.runid = response.json["run_id"]
         success = False
         start_time = time.time()
@@ -140,7 +139,6 @@ class TestWithHeaderToken:
 
             if status.json == "COMPLETE":
                 success = True
-
 
         assert response.status_code == 200
 
@@ -171,7 +169,6 @@ class TestCSRFTokenOnly:
         assert response.status_code == 401
         assert response.data == b'{"msg":"Missing JWT in cookies or headers (Missing cookie' \
                                 b' \\"access_token_cookie\\"; Missing Authorization Header)"}\n'
-
 
 
 class TestMissingCSRFToken:
@@ -212,7 +209,7 @@ class TestWithCookie:
         print(response.json)
 
         success = False
-        start_time=time.time()
+        start_time = time.time()
 
         while success:
             time.sleep(1)
@@ -231,7 +228,7 @@ class TestWithCookie:
 
             if status.json == "COMPLETE":
                 success = True
-                
+
         assert response.status_code == 200
 
     def test_accept_get_runs_cookie(self, test_client, runStorage, OIDC_credentials, celery_worker):
