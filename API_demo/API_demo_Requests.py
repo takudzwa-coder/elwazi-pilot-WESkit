@@ -2,8 +2,6 @@ import requests
 import os
 import yaml
 import json
-from time import sleep
-
 
 weskit_host = "https://localhost:5000"
 keycloak_host = "https://localhost:8443/auth/realms/WESkit/protocol/openid-connect/token"
@@ -49,17 +47,17 @@ def tryApiEndpoints(loginType, cookie=None, header=None):
     print("****************************************")
     print("%s - GET-Requst to '/ga4gh/wes/v1/service-info'" % (loginType))
 
-    response1 = requests.get("%s/ga4gh/wes/v1/service-info" % (weskit_host),verify=cert)
+    response1 = requests.get("%s/ga4gh/wes/v1/service-info" % (weskit_host), verify=cert)
 
     print("Status Code:", response1.status_code)
     print("Response:", response1.json())
     print("****************************************\n\n")
 
     response2 = requests.post("%s/ga4gh/wes/v1/runs" % (weskit_host),
-                             data=get_workflow_data(),
-                             headers=header,
-                             cookies=cookie,
-                             verify=cert)
+                              data=get_workflow_data(),
+                              headers=header,
+                              cookies=cookie,
+                              verify=cert)
     print(response2.status_code)
     print(response2.json())
 
@@ -67,29 +65,29 @@ def tryApiEndpoints(loginType, cookie=None, header=None):
     print("%s - GET-Requst to '/ga4gh/wes/v1/runs/'" % (loginType))
 
     response3 = requests.get("%s/ga4gh/wes/v1/runs" % (weskit_host),
-                            headers=header,
-                            cookies=cookie,
-                            verify=cert)
+                             headers=header,
+                             cookies=cookie,
+                             verify=cert)
 
     print("Status Code:", response3.status_code)
     print("Response:")
     print(yaml.dump(response3.json()))
     print("****************************************\n\n")
 
-
     print("****************************************")
     print("%s - GET-Requst to '/ga4gh/wes/v1/runs/%s/status'" % (loginType, response2.json()['run_id']))
 
     response4 = requests.get("%s/ga4gh/wes/v1/runs/%s/status" % (weskit_host, response2.json()['run_id']),
-                            headers=header,
-                            cookies=cookie,
-                            verify=cert)
+                             headers=header,
+                             cookies=cookie,
+                             verify=cert)
 
     print("Status Code:", response4.status_code)
     print("Response:", response4.json())
     print("****************************************\n\n")
 
-token = get_access_token_from_keycloak( hostname=keycloak_host, credentials=Credentials)
+
+token = get_access_token_from_keycloak(hostname=keycloak_host, credentials=Credentials)
 
 print("****************************************")
 print("*  Test API access token in header     *")
@@ -99,7 +97,7 @@ print(header)
 tryApiEndpoints('with access token in Header ', header=header)
 print("________________________________________________________________________________")
 
-header={"X-CSRF-TOKEN": token["session_state"]}
+header = {"X-CSRF-TOKEN": token["session_state"]}
 
 tryApiEndpoints('with access token in cookie ', header=header, cookie=dict(access_token_cookie=token["access_token"]))
 print("________________________________________________________________________________")
