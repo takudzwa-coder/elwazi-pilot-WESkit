@@ -1,0 +1,19 @@
+[flake8]
+max-line-length=100
+exclude =
+    .idea,
+    .pytest_cache,
+    .snakemake,
+    API_demo,
+    config,
+    test-data,
+    tmp,
+    workflows,
+    .dockerignore,
+    .git*,
+    Dockerfile,
+    *.yaml,
+    *.json,
+    *.tar.gz,
+    .editorconfig,
+    uWSGI_Server/certs

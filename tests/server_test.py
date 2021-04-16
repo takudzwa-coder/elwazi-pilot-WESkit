@@ -1,11 +1,13 @@
 import json
 import time
+
+import pytest
 import yaml
 import os
 import requests
 import pytest
 
-
+@pytest.mark.integration
 @pytest.fixture(name="runStorage", scope="class")
 def runid_fixture():
     """
@@ -22,7 +24,7 @@ def runid_fixture():
 
     return RunID()
 
-
+@pytest.mark.integration
 @pytest.fixture(name="OIDC_credentials", scope="session")
 def login_fixture():
 
@@ -78,7 +80,7 @@ class TestOpenEndpoint:
     The TestOpenEndpoint class ensures that all endpoint that should be accessible without
     login are accessible.
     """
-
+    @pytest.mark.integration
     def test_get_service_info(self, test_client):
         response = test_client.get("/ga4gh/wes/v1/service-info")
         assert response.status_code == 200
@@ -89,7 +91,7 @@ class TestWithoutLogin:
     The TestWithoutLogin class ensures that all secured endpoints are not accessible without
     credentials.
     """
-
+    @pytest.mark.integration
     def test_list_runs_wo_login(self, test_client, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
@@ -97,7 +99,7 @@ class TestWithoutLogin:
             config="tests/wf1/config.yaml")
         response = test_client.post("/ga4gh/wes/v1/runs", data=data)
         assert response.status_code == 401
-
+    @pytest.mark.integration
     def test_submit_workflow_wo_login(self, test_client, celery_worker):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
@@ -113,7 +115,7 @@ class TestWithHeaderToken:
     submitting an access token in the request header in the format
     "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
-
+    @pytest.mark.integration
     def test_accept_run_workflow_header(
             self,
             test_client,
@@ -152,7 +154,7 @@ class TestWithHeaderToken:
                 success = True
 
         assert response.status_code == 200
-
+    @pytest.mark.integration
     def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
