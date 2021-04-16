@@ -62,7 +62,6 @@ login:
     # should likely be True
     JWT_COOKIE_SECURE: true
     JWT_TOKEN_LOCATION:
-      - cookies
       - headers
     JWT_ALGORITHM: "RS256"
     JWT_DECODE_AUDIENCE: "account"

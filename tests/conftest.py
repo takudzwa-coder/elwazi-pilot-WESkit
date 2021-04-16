@@ -140,13 +140,18 @@ def keycloak_container(MySQL_keycloak_container):
     for i in range(retry):
         try:
             print("connect to keycloak try : %d" % (i + 1))
+
             requests.get("http://" + kc_host + ":" + kc_port)
             kc_running = True
+
             print("connection attempted try %d: Success" % (i + 1))
             break
+
         except Exception:
-            print("connection attempted try %d: Failed - Will retry in %d seconds" % (i + 1, waitingSeconds))
+            print("connection attempted try %d: Failed - Will retry in %d seconds" %
+                  (i + 1, waitingSeconds))
             time.sleep(waitingSeconds)
+
     assert kc_running
     print("KC ready")
     yield kc_container
