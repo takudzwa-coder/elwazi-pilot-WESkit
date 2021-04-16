@@ -190,8 +190,7 @@ class Manager:
                 run_dir = os.path.abspath(os.path.join(
                     self.data_dir, run.request["tags"]["run_dir"]))
             except Exception as e:
-                logger.warning(traceback.TracebackException.from_exception(e).
-                               format())
+                logger.warning(get_traceback(e))
                 run.run_status = RunStatus.SYSTEM_ERROR
                 run.outputs["execution"] = self._create_run_executions_logfile(
                     run=run,
