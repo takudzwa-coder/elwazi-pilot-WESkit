@@ -31,6 +31,6 @@ before_script:
 test:
   stage: test
   script:
-    - flake8 weskit/
+    - flake8
     #- python -m pytest -v -s --log-cli-level=debug
     - python -m pytest -v

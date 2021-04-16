@@ -1,9 +1,12 @@
 import json
 import time
+
+import pytest
 import yaml
 import os
 
 
+@pytest.mark.integration
 def get_workflow_data(workflow_file, config):
     with open(config) as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
@@ -17,11 +20,13 @@ def get_workflow_data(workflow_file, config):
     return data
 
 
+@pytest.mark.integration
 def test_get_service_info(test_client):
     response = test_client.get("/ga4gh/wes/v1/service-info")
     assert response.status_code == 200
 
 
+@pytest.mark.integration
 def test_login_restriction(test_client):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
@@ -31,12 +36,14 @@ def test_login_restriction(test_client):
     assert response.status_code == 401
 
 
+@pytest.mark.integration
 def test_login(test_client):
     login_data = {'password': 'test', 'username': 'test'}
     response = test_client.post("/login", data=login_data)
     assert response.status == '302 FOUND'
 
 
+@pytest.mark.integration
 def test_missing_fields_run_request(test_client, celery_worker):
     complete_data = {
         "workflow_params": {},
@@ -55,6 +62,7 @@ def test_missing_fields_run_request(test_client, celery_worker):
 
 # WARNING: This test fails with 401 unauthorized, if run isolated.
 #          Run it together with the other server_test.py tests!
+@pytest.mark.integration
 def test_run_snakemake(test_client, celery_worker):
     snakefile = "file:tests/wf1/Snakefile"
     data = get_workflow_data(
@@ -80,17 +88,20 @@ def test_run_snakemake(test_client, celery_worker):
             success = True
 
 
+@pytest.mark.integration
 def test_get_runs(test_client):
     response = test_client.get("/ga4gh/wes/v1/runs")
     assert response.status_code == 200
 
 
+@pytest.mark.integration
 def test_logout(test_client):
     login_data = dict()
     response = test_client.post("/logout", data=login_data)
     assert response.status == '200 OK'
 
 
+@pytest.mark.integration
 def test_logout_successful(test_client):
     snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     data = get_workflow_data(
