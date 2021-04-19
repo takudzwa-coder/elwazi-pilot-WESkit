@@ -2,8 +2,8 @@ import uuid
 from weskit.classes.Run import Run
 
 
-def get_mock_run(workflow_url, workflow_type):
-    run = Run({
+def get_mock_run(workflow_url, workflow_type, tags=None):
+    data = {
         "run_id": str(uuid.uuid4()),
         "run_status": "INITIALIZING",
         "request_time": None,
@@ -17,5 +17,8 @@ def get_mock_run(workflow_url, workflow_type):
         "task_logs": [],
         "outputs": {},
         "celery_task_id": None,
-    })
+    }
+    if tags is not None:
+        data["request"]["tags"] = tags
+    run = Run(data)
     return run

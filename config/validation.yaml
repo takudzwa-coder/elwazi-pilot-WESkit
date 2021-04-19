@@ -8,6 +8,10 @@ ENV:
 DEBUG:
   type: boolean
 
+require_workdir_tag:
+  type: boolean
+  required: true
+
 static_service_info:
   type: dict
   required: true

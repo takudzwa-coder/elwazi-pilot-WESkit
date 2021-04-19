@@ -24,6 +24,7 @@ def test_client(celery_session_app,
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
+    os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
     app = create_app(celery=celery_session_app,
@@ -111,4 +112,5 @@ def manager(celery_session_app, redis_container, test_config, test_database):
                        ["static_service_info"]
                        ["default_workflow_engine_parameters"]),
                    workflows_base_dir=workflows_base_dir,
-                   data_dir=test_dir)
+                   data_dir=test_dir,
+                   require_workdir_tag=False)

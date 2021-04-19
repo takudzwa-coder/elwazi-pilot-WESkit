@@ -119,7 +119,8 @@ def RunWorkflow():
         data = request.form
         logger.info("RunWorkflow")
         validator = current_app.request_validators["run_request"]
-        validation_errors = validator.validate(data)
+        validation_errors = validator.validate(
+            data, require_workdir_tag=current_app.manager.require_workdir_tag)
         if len(validation_errors) > 0:
             return {
               "msg": "Malformed request: {}".format(validation_errors),

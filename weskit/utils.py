@@ -1,5 +1,6 @@
 import os
 import pathlib
+import traceback
 from urllib.parse import urlparse
 from datetime import datetime
 
@@ -34,3 +35,7 @@ def all_subclasses(cls):
     """Stolen from https://stackoverflow.com/a/3862957/8784544"""
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+
+
+def get_traceback(e: Exception) -> str:
+    return ''.join(traceback.format_exception(None, e, e.__traceback__))
