@@ -186,17 +186,8 @@ class Manager:
 
         # prepare run directory
         if self.require_workdir_tag:
-            try:
-                run_dir = os.path.abspath(os.path.join(
-                    self.data_dir, run.request["tags"]["run_dir"]))
-            except Exception as e:
-                logger.warning(get_traceback(e))
-                run.run_status = RunStatus.SYSTEM_ERROR
-                run.outputs["execution"] = self._create_run_executions_logfile(
-                    run=run,
-                    filename="weskit_run_error.txt",
-                    message=EXECUTOR_WORKDIR_MISSING)
-                return run
+            run_dir = os.path.abspath(os.path.join(
+                self.data_dir, run.request["tags"]["run_dir"]))
         else:
             run_dir = os.path.abspath(
                 os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
