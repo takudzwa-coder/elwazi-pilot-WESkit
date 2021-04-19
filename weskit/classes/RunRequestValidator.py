@@ -15,7 +15,9 @@ class RunRequestValidator(object):
          an error message, if there is an error, or None otherwise."""
         self.syntax_validator = syntax_validator
 
-    def validate(self, data: dict) -> Optional[List[str]]:
+    def validate(self,
+                 data: dict,
+                 require_workdir_tag: bool) -> Optional[List[str]]:
         """Validate the overall structure, types and values of the run request
         fields. workflow_params and workflow_engine_parameters are not tested
         semantically but their structure is validated (see schema)."""
@@ -32,8 +34,12 @@ class RunRequestValidator(object):
                                    self._validate_workflow_type_version)
         url_error = applyIfNotNone(data.get("workflow_url", None),
                                    self._validate_workflow_url)
+        workdir_tag_error = self._validate_workdir_tag(
+            data.get("tags", None), require_workdir_tag)
+
         return list(filter(lambda v: v is not None,
-                           [stx_error, wev_error, wtv_error, url_error]))
+                           [stx_error, wev_error, wtv_error,
+                            url_error, workdir_tag_error]))
 
     def _validate_syntax(self, data: dict) -> Optional[str]:
         return self.syntax_validator(data)
@@ -78,3 +84,19 @@ class RunRequestValidator(object):
                        " are allowed: '%s'" % url
         except Exception:
             return "Could not parse URI '%s'" % url
+
+    def _validate_workdir_tag(self, tags, require_workdir_tag):
+        try:
+            if require_workdir_tag:
+                if tags is None:
+                    return "'run_dir' tag is required and tags field is missing"
+                elif "run_dir" not in tags.keys():
+                    return "'run_dir' tag is required and missing"
+                parsed_url = urlparse(tags["run_dir"])
+                if parsed_url.scheme == "https" or\
+                   parsed_url.scheme == "file" or\
+                   os.path.isabs(parsed_url.path):
+                    return "Not a relative path: '%s'" % tags["run_dir"]
+            return None
+        except Exception:
+            return "Could not parse 'run_dir' tag"

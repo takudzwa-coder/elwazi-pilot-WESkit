@@ -137,7 +137,8 @@ def create_app(celery: Celery, database: Database) -> Flask:
                                       ["static_service_info"]
                                       ["default_workflow_engine_parameters"]),
                 workflows_base_dir=workflows_base_dir,
-                data_dir=weskit_data)
+                data_dir=weskit_data,
+                require_workdir_tag=config["require_workdir_tag"])
 
     service_info = ServiceInfo(config["static_service_info"],
                                read_swagger(),

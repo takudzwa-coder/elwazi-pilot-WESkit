@@ -35,6 +35,8 @@ WESkit executor error: the workflow file was not found. Please provide either
 a URL with a workflow file on the server or attach a workflow
 via workflow_attachments."""
 
+EXECUTOR_WORKDIR_MISSING = """Workdir missing."""
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,12 +47,14 @@ class Manager:
                  database: Database,
                  workflow_engines: dict,
                  data_dir: str,
-                 workflows_base_dir: str) -> None:
+                 workflows_base_dir: str,
+                 require_workdir_tag: bool) -> None:
         self.workflow_engines = workflow_engines
         self.data_dir = data_dir
         self.celery_app = celery_app
         self.database = database
         self.workflows_base_dir = workflows_base_dir
+        self.require_workdir_tag = require_workdir_tag
         # Register the relevant tasks with fully qualified name.
         self.celery_app.task(run_workflow)
 
@@ -181,11 +185,16 @@ class Manager:
             return run
 
         # prepare run directory
-        run_dir = os.path.abspath(os.path.join(self.data_dir,
-                                               run.run_id[0:4],
-                                               run.run_id))
+        if self.require_workdir_tag:
+            run_dir = os.path.abspath(os.path.join(
+                self.data_dir, run.request["tags"]["run_dir"]))
+        else:
+            run_dir = os.path.abspath(
+                os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
+
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
+
         with open(run_dir + "/config.yaml", "w") as ff:
             yaml.dump(json.loads(run.request["workflow_params"]), ff)
         run.execution_path = run_dir
