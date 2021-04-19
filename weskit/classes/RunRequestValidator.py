@@ -86,9 +86,17 @@ class RunRequestValidator(object):
             return "Could not parse URI '%s'" % url
 
     def _validate_workdir_tag(self, tags, require_workdir_tag):
-        if require_workdir_tag:
-            if tags is None:
-                return "'run_dir' tag is required and tags field is missing"
-            elif "run_dir" not in tags.keys():
-                return "'run_dir' tag is required and missing"
-        return None
+        try:
+            if require_workdir_tag:
+                if tags is None:
+                    return "'run_dir' tag is required and tags field is missing"
+                elif "run_dir" not in tags.keys():
+                    return "'run_dir' tag is required and missing"
+                parsed_url = urlparse(tags["run_dir"])
+                if parsed_url.scheme == "https" or\
+                   parsed_url.scheme == "file" or\
+                   os.path.isabs(parsed_url.path):
+                    return "Not a relative path: '%s'" % tags["run_dir"]
+            return None
+        except Exception:
+            return "Could not parse 'run_dir' tag"
