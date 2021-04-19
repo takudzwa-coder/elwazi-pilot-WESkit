@@ -12,7 +12,7 @@ from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.tasks.WorkflowTask import run_workflow
 from werkzeug.utils import secure_filename
-from weskit.utils import get_current_timestamp, get_traceback
+from weskit.utils import get_current_timestamp
 from typing import Optional, List
 
 
