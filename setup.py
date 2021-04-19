@@ -6,7 +6,9 @@ setup(name='WESkit',
       packages=find_packages(),
       version='0.0.1',
       entry_points={
-          "console_scripts": ["weskit = weskit.__main__:main"]
+            "console_scripts": [
+                  "weskit = weskit.__main__:main"
+            ]
       },
       include_package_data=True
       )

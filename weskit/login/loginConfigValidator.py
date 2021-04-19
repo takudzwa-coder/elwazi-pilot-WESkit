@@ -64,7 +64,7 @@ def validate_setup_login_config(flaskapp: Flask, oidcLoginObject, config: dict) 
         for key in jwt_config_items:
             flaskapp.config[key] = config['login']['jwt'][key]
 
-        oidcLoginObject.issuer_url = os.environ["OIDC_ISSUER_URL"]  # config['login']['oidc']["OIDC_ISSUER_URL"]
+        oidcLoginObject.issuer_url = os.environ["OIDC_ISSUER_URL"]
         oidcLoginObject.hostname = os.environ["WESKIT_PUBLIC_HOST_PORT"]
 
         oidcLoginObject.client_secret = os.environ['OIDC_CLIENT_SECRET']
@@ -97,16 +97,16 @@ def validate_setup_login_config(flaskapp: Flask, oidcLoginObject, config: dict) 
 
 def validate_received_config_or_stop(config: Any) -> Optional[dict]:
     """
-    This function validates that the config received from the Identity Provider has the correct format and contains
-    all required data.
+    This function validates that the config received from the Identity Provider has the correct
+    format and contains all required data.
     :param config:
     :return:
     """
 
     if not isinstance(config, dict):
         logger.exception(
-            "The configuration received from Identity Provider does not have the expected type dict!"
-            "The type is %s. The server will be stopped now!" % str(type(config))
+            "The configuration received from Identity Provider does not have the expected"
+            "type dict! The type is %s. The server will be stopped now!" % str(type(config))
         )
         exit(ErrorCodes.LOGIN_CONFIGURATION_ERROR)
 

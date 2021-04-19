@@ -75,12 +75,15 @@ def tryApiEndpoints(loginType, cookie=None, header=None):
     print("****************************************\n\n")
 
     print("****************************************")
-    print("%s - GET-Requst to '/ga4gh/wes/v1/runs/%s/status'" % (loginType, response2.json()['run_id']))
+    print(
+        "%s - GET-Requst to '/ga4gh/wes/v1/runs/%s/status'" %
+        (loginType, response2.json()['run_id']))
 
-    response4 = requests.get("%s/ga4gh/wes/v1/runs/%s/status" % (weskit_host, response2.json()['run_id']),
-                             headers=header,
-                             cookies=cookie,
-                             verify=cert)
+    response4 = requests.get(
+        "%s/ga4gh/wes/v1/runs/%s/status" % (weskit_host, response2.json()['run_id']),
+        headers=header,
+        cookies=cookie,
+        verify=cert)
 
     print("Status Code:", response4.status_code)
     print("Response:", response4.json())
@@ -95,9 +98,4 @@ print("*  Test API access token in header     *")
 header = dict(Authorization="Bearer " + token["access_token"])
 print(header)
 tryApiEndpoints('with access token in Header ', header=header)
-print("________________________________________________________________________________")
-
-header = {"X-CSRF-TOKEN": token["session_state"]}
-
-tryApiEndpoints('with access token in cookie ', header=header, cookie=dict(access_token_cookie=token["access_token"]))
 print("________________________________________________________________________________")
