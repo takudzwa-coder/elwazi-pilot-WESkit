@@ -38,9 +38,8 @@ services:
       WESKIT_WORKFLOWS: /workflows
       RESULT_BACKEND: redis://result_broker:${REDIS_PORT:-6379}
       BROKER_URL: redis://result_broker:${REDIS_PORT:-6379}
-      FLASK_APP: weskit
       OIDC_ISSUER_URL: https://keycloak:8443/auth/realms/WESkit
-      OIDC_CLIENT_SECRET: a8086bcc-44f3-40f9-9e15-fd5c3c98ab24
+      OIDC_CLIENT_SECRET: ${WESKIT_CLIENT_SECRET} #example from keyclaok.sql file: export WESKIT_CLIENT_SECRET=a8086bcc-44f3-40f9-9e15-fd5c3c98ab24
       OIDC_REALM: WESkit
       OIDC_CLIENTID: WESkit
 
@@ -128,10 +127,10 @@ services:
     depends_on:
       - keycloak-database
     environment:
-     # KEYCLOAK_USER: admin
-     # KEYCLOAK_PASSWORD: admin
-      DB_USER: keycloak
-      DB_PASSWORD: secret_password
+      KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
+      DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-unsecret_password}
       KEYCLOAK_FRONTEND_URL: https://localhost:8443/auth
       DB_VENDOR: mysql
       DB_PORT: 3306
@@ -142,7 +141,6 @@ services:
     networks:
       - oauth
     ports:
-      - 8080:8080
       - 8443:8443
     secrets:
       - source: keycloak.key
@@ -156,9 +154,9 @@ services:
 
     environment:
        MYSQL_DATABASE: keycloak
-       MYSQL_USER: keycloak
-       MYSQL_PASSWORD: secret_password
-       MYSQL_ROOT_PASSWORD: secret_root_password
+       MYSQL_USER: ${KEYCLOAK_DB_USER:-keycloak}
+       MYSQL_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-unsecret_password}
+       MYSQL_ROOT_PASSWORD: ${KEYCLOAK_DB_ROOT_PASSWORD:-unsecret_root_password}
     volumes:
       - ./config/keycloak_schema.sql:/docker-entrypoint-initdb.d/test.sql
     networks:
