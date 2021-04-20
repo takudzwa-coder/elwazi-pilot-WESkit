@@ -131,7 +131,7 @@ services:
       KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
       DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
       DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-unsecret_password}
-      KEYCLOAK_FRONTEND_URL: https://localhost:8443/auth
+      KEYCLOAK_FRONTEND_URL: ${KEYCLOAK_FRONTEND_URL:-https://localhost:8443/auth}
       DB_VENDOR: mysql
       DB_PORT: 3306
       DB_ADDR: keycloak-database
