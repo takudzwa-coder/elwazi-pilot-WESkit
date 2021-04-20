@@ -7,6 +7,7 @@ import requests
 import pytest
 from flask import current_app
 
+from tests.test_utils import get_run_success
 
 @pytest.fixture(name="runStorage", scope="class")
 def runid_fixture():
@@ -147,15 +148,8 @@ class TestWithHeaderToken:
                 "/ga4gh/wes/v1/runs/{}/status".format(run_id),
                 headers=OIDC_credentials.headerToken
             )
-            assert (time.time() - start_time) <= 30, "Test timed out"
 
-            print("Waiting ... (status=%s)" % status.json)
-            if status.json in ["UNKNOWN", "EXECUTOR_ERROR", "SYSTEM_ERROR",
-                               "CANCELED", "CANCELING"]:
-                assert False, "Failing run status '{}'".format(status.json)
-
-            if status.json == "COMPLETE":
-                success = True
+            success = get_run_success(status.json, start_time)
 
         assert response.status_code == 200
 
