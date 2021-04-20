@@ -65,7 +65,6 @@ def validate_setup_login_config(flaskapp: Flask, oidcLoginObject, config: dict) 
             flaskapp.config[key] = config['login']['jwt'][key]
 
         oidcLoginObject.issuer_url = os.environ["OIDC_ISSUER_URL"]
-        oidcLoginObject.hostname = os.environ["WESKIT_PUBLIC_HOST_PORT"]
 
         oidcLoginObject.client_secret = os.environ['OIDC_CLIENT_SECRET']
         oidcLoginObject.realm = os.environ['OIDC_REALM']
@@ -73,7 +72,6 @@ def validate_setup_login_config(flaskapp: Flask, oidcLoginObject, config: dict) 
     except KeyError as ke:
         environ = [
             "OIDC_ISSUER_URL",
-            "WESKIT_PUBLIC_HOST_PORT",
             "OIDC_CLIENT_SECRET",
             "OIDC_REALM",
             "OIDC_CLIENTID"

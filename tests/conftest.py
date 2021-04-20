@@ -18,7 +18,7 @@ def get_redis_url(redis_container):
         redis_container.get_container_host_ip(),
         redis_container.get_exposed_port(6379)
     )
-    print("REDISURL:%s" % redis_container.get_container_host_ip())
+
     return url
 
 
@@ -49,60 +49,31 @@ def MySQL_keycloak_container():
                            )
 
     configfile = os.path.abspath("config/keycloak_schema.sql")
-    print(configfile)
+
     preDB.with_volume_mapping(configfile, "/docker-entrypoint-initdb.d/test.sql")
     with preDB as mysql:
-        print(yaml.dump(getContainerProperties(mysql, '3306')))
         yield mysql
-        print("Killing keycloaks MySQL")
 
-
-# @pytest.fixture(scope="session")
-# def test_app(database_container, redis_container, keycloak_container):
-#     os.environ["BROKER_URL"] = get_redis_url(redis_container)
-#     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-#
-#     keycloakContainerProperties = getContainerProperties(keycloak_container, '8080')
-#     os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
-#         keycloakContainerProperties["ExternalHostname"],
-#         keycloakContainerProperties["ExposedPorts"],
-#     )
-#     os.environ["WESKIT_PUBLIC_HOST_PORT"] = "https://localhost:5000"  # Not used
-#     os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
-#     os.environ["OIDC_REALM"] = "WESkit"
-#     os.environ["OIDC_CLIENTID"] = "WESkit"
-#
-#     # import here because env vars need to be set before
-#     from weskit import create_app
-#
-#     os.environ["WESKIT_CONFIG"] = "tests/config.yaml"
-#
-#     app = create_app()
-#
-#     os.environ["testing_only_tokenendpoint"] = app.OIDC_Login.oidc_config["token_endpoint"]
-#     app.testing = True
-#     with app.test_client() as testing_client:
-#         ctx = app.app_context()
-#         ctx.push()
-#         yield testing_client
 
 @pytest.fixture(scope="session")
 def test_client(celery_session_app,
                 test_database,
                 redis_container,
                 keycloak_container):
+
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = "tests/weskit.yaml"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
     keycloakContainerProperties = getContainerProperties(keycloak_container, '8080')
+
     os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
         keycloakContainerProperties["ExternalHostname"],
         keycloakContainerProperties["ExposedPorts"],
     )
+
     # Define Variables that would be defined in the docker stack file
-    os.environ["WESKIT_PUBLIC_HOST_PORT"] = "https://localhost:5000"  # Not used
     os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
     os.environ["OIDC_REALM"] = "WESkit"
     os.environ["OIDC_CLIENTID"] = "WESkit"
@@ -110,52 +81,48 @@ def test_client(celery_session_app,
     app = create_app(celery=celery_session_app,
                      database=test_database)
     app.testing = True
-    os.environ["testing_only_tokenendpoint"] = app.OIDC_Login.oidc_config["token_endpoint"]
+
     with app.test_client() as testing_client:
         with app.app_context():
+
             # This sets `current_app` for accessing the Flask app in the tests.
             yield testing_client
 
 
 @pytest.fixture(scope="session")
 def keycloak_container(MySQL_keycloak_container):
-    mysqlIP = getContainerProperties(MySQL_keycloak_container, '3306')["InternalIP"]
+    mysql_ip = getContainerProperties(MySQL_keycloak_container, '3306')["InternalIP"]
 
     kc_container = DockerContainer("jboss/keycloak")
     kc_container.with_exposed_ports('8080')
     kc_container.with_env("DB_VENDOR", "mysql")
     kc_container.with_env("DB_PORT", '3306')
-    kc_container.with_env("DB_ADDR", mysqlIP)
+    kc_container.with_env("DB_ADDR", mysql_ip)
     kc_container.with_env("DB_USER", "keycloak")
     kc_container.with_env("DB_PASSWORD", "secret_password")
+
     kc_container.start()
     time.sleep(5)
+
     kc_port = kc_container.get_exposed_port('8080')
     kc_host = kc_container.get_container_host_ip()
-    print("Waiting for Keycloak Container")
-    print(yaml.dump(getContainerProperties(kc_container, '8080')))
+
     retry = 20
     waitingSeconds = 5
     kc_running = False
     for i in range(retry):
         try:
-            print("connect to keycloak try : %d" % (i + 1))
-
             requests.get("http://" + kc_host + ":" + kc_port)
             kc_running = True
 
-            print("connection attempted try %d: Success" % (i + 1))
             break
 
         except Exception:
-            print("connection attempted try %d: Failed - Will retry in %d seconds" %
-                  (i + 1, waitingSeconds))
             time.sleep(waitingSeconds)
 
     assert kc_running
-    print("KC ready")
+
     yield kc_container
-    print("Killing KeyCloak")
 
 
 @pytest.fixture(scope="session")
