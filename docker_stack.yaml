@@ -30,7 +30,6 @@ services:
       - keycloak
 
     environment:
-      WESKIT_PUBLIC_HOST_PORT: https://localhost:5000
       WESKIT_CONFIG: /home/weskit/config.yaml
       WESKIT_LOG_CONFIG: /home/weskit/log-config.yaml
       WESKIT_VALIDATION_CONFIG:
