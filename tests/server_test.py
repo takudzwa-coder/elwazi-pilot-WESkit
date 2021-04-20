@@ -5,7 +5,7 @@ import yaml
 import os
 import requests
 import pytest
-
+from flask import current_app
 
 @pytest.fixture(name="runStorage", scope="class")
 def runid_fixture():
@@ -44,8 +44,6 @@ def login_fixture():
 
     class LoginClass:
         def __init__(self):
-            print("____")
-            print(os.environ["testing_only_tokenendpoint"])
             payload = {
                 "grant_type": "password",
                 "username": "test",
@@ -53,7 +51,8 @@ def login_fixture():
                 "client_id": "OTP",
                 "client_secret": "7670fd00-9318-44c2-bda3-1a1d2743492d"
             }
-            r2 = requests.post(url=os.environ["testing_only_tokenendpoint"], data=payload).json()
+
+            r2 = requests.post(url=current_app.OIDC_Login.oidc_config["token_endpoint"], data=payload).json()
             self.access_token = r2.get('access_token', "None2")
             self.session_token = {"X-Csrf-Token": r2.get('session_state', "None2")}
             self.headerToken = {'Authorization': 'Bearer %s' % self.access_token}
@@ -131,7 +130,6 @@ class TestWithHeaderToken:
         response = test_client.post(
             "/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.headerToken)
 
-        print(response.data)
         run_id = response.json["run_id"]
 
         runStorage.runid = response.json["run_id"]
