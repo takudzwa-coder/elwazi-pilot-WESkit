@@ -9,6 +9,7 @@ from flask import current_app
 
 from tests.test_utils import get_run_success
 
+
 @pytest.fixture(name="runStorage", scope="class")
 def runid_fixture():
     """
