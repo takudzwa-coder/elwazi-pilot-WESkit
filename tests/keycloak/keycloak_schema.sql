@@ -16,6 +16,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Current Database: `keycloak`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `keycloak` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+USE `keycloak`;
+
+--
 -- Table structure for table `ADMIN_EVENT_ENTITY`
 --
 
@@ -1895,7 +1903,7 @@ CREATE TABLE `REDIRECT_URIS` (
 
 LOCK TABLES `REDIRECT_URIS` WRITE;
 /*!40000 ALTER TABLE `REDIRECT_URIS` DISABLE KEYS */;
-INSERT INTO `REDIRECT_URIS` VALUES ('48ca4365-c4d8-477b-91ce-d3509dc77334','https://localhost:5000/*'),('4b528bc5-f5d0-446f-834d-5b834ea41103','https://localhost:5000/'),('4f8082eb-2eb8-4217-9b7d-e70fa5da2c6a','/admin/master/console/*'),('5060e61b-233b-4347-94e2-4d84d3e67dcc','/realms/master/account/*'),('6445f320-dddf-4a4f-8e54-4ec19fbcb7ae','/admin/WESkit/console/*'),('77249ec3-5596-4d8b-a2d3-15604ca70de5','/realms/WESkit/account/*'),('e47088a1-3190-435b-a237-e4e0b50988d5','/realms/master/account/*'),('e9783fd8-bd55-44f6-bbea-0325f9ca5e03','/realms/WESkit/account/*');
+INSERT INTO `REDIRECT_URIS` VALUES ('48ca4365-c4d8-477b-91ce-d3509dc77334','https://localhost:5000/*'),('4b528bc5-f5d0-446f-834d-5b834ea41103','https://localhost:5001/*'),('4f8082eb-2eb8-4217-9b7d-e70fa5da2c6a','/admin/master/console/*'),('5060e61b-233b-4347-94e2-4d84d3e67dcc','/realms/master/account/*'),('6445f320-dddf-4a4f-8e54-4ec19fbcb7ae','/admin/WESkit/console/*'),('77249ec3-5596-4d8b-a2d3-15604ca70de5','/realms/WESkit/account/*'),('e47088a1-3190-435b-a237-e4e0b50988d5','/realms/master/account/*'),('e9783fd8-bd55-44f6-bbea-0325f9ca5e03','/realms/WESkit/account/*');
 /*!40000 ALTER TABLE `REDIRECT_URIS` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2722,4 +2730,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-05 10:30:59
+-- Dump completed on 2021-03-29  8:13:49
