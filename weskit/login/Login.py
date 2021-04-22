@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 class oidcLogin:
     """
-    This Class Initializes the OIDC Login and creates a JWTManager
-    during initialisation multiple additional endpoints will be created
-    for an manual login.
+    This Class Initializes the OIDC Login and creates a flask_jwt_extended JWTManager. It allows a
+    login with access token in the request header. It is not possible to directly login into the
+     WESkit API. Use the WESkit Dashboard for a browsable login endpoint.
     """
 
     def __init__(self, app, config: dict):
@@ -34,7 +34,6 @@ class oidcLogin:
 
         app: Flask App object
         config: dictionary
-        addLogin: enables login endpoints (bool)
         """
 
         app.OIDC_Login = self
