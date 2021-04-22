@@ -49,6 +49,14 @@ def validate_setup_login_config(flaskapp: Flask, oidcLoginObject, config: dict) 
     :param oidcLoginObject:
     :param config:
     """
+
+    environ = [
+        "OIDC_ISSUER_URL",
+        "OIDC_CLIENT_SECRET",
+        "OIDC_REALM",
+        "OIDC_CLIENTID"
+    ]
+
     try:
         # Flask_jwt_extended expect its configuration in the app.config object.
         # Therefore we copy the config to the app object.
@@ -69,17 +77,20 @@ def validate_setup_login_config(flaskapp: Flask, oidcLoginObject, config: dict) 
         oidcLoginObject.client_secret = os.environ['OIDC_CLIENT_SECRET']
         oidcLoginObject.realm = os.environ['OIDC_REALM']
         oidcLoginObject.client_id = os.environ['OIDC_CLIENTID']
-    except KeyError as ke:
-        environ = [
-            "OIDC_ISSUER_URL",
-            "OIDC_CLIENT_SECRET",
-            "OIDC_REALM",
-            "OIDC_CLIENTID"
-        ]
+
+        # Check that env variables are not empty:
+        if [key for key in environ if not len(os.environ[key])]:
+            raise ValueError("Empty Env Variable"
+                             "")
+    except (KeyError, ValueError) as ke:
 
         missing_config = {
-            "Environment Variables": [key for key in environ if key not in os.environ.keys()],
-            "Configfile jwt": [key for key in jwt_config_items if key not in config['login']['jwt']]
+            "Environment Variables": [
+                key for key in environ if key not in os.environ.keys() or not len(os.environ[key])
+            ],
+            "Configfile jwt": [
+                key for key in jwt_config_items if key not in config['login']['jwt']
+            ]
         }
 
         import yaml

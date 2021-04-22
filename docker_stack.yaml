@@ -158,7 +158,7 @@ services:
        MYSQL_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-unsecret_password}
        MYSQL_ROOT_PASSWORD: ${KEYCLOAK_DB_ROOT_PASSWORD:-unsecret_root_password}
     volumes:
-      - ./config/keycloak_schema.sql:/docker-entrypoint-initdb.d/test.sql
+      - ./tests/keycloak/keycloak_schema.sql:/docker-entrypoint-initdb.d/test.sql
     networks:
       - oauth
 

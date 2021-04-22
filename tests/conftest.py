@@ -48,7 +48,7 @@ def MySQL_keycloak_container():
                            MYSQL_ROOT_PASSWORD="secret_root_password"
                            )
 
-    configfile = os.path.abspath("config/keycloak_schema.sql")
+    configfile = os.path.abspath("tests/keycloak/keycloak_schema.sql")
 
     preDB.with_volume_mapping(configfile, "/docker-entrypoint-initdb.d/test.sql")
     with preDB as mysql:

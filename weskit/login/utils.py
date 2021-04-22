@@ -35,7 +35,7 @@ def onlineValidation() -> bool:
         )
         logger.exception(e)
 
-        return (False)
+        return False
 
     return j.get('active', False)
 
