@@ -1,13 +1,73 @@
 import json
 import time
 
-import pytest
 import yaml
 import os
+import requests
+import pytest
+from flask import current_app
+
+from tests.test_utils import get_run_success
 
 
-@pytest.mark.integration
-def get_workflow_data(workflow_file, config):
+@pytest.fixture(name="runStorage", scope="class")
+def runid_fixture():
+    """
+    This fixture returns a class that stores the run ID as variable within a Test Class.
+    This makes it possible to exchange variables between tests of a class without using
+    global variables
+
+    accessible via "runStorage.runid" if runStorage is declared in the call of the testfunction
+    """
+
+    class RunID:
+        def __init__(self):
+            self.runid = ""
+
+    return RunID()
+
+
+@pytest.fixture(name="OIDC_credentials", scope="session")
+def login_fixture():
+
+    """
+    This fixture connects to a keycloak server requests an access token and
+    returns a LoginClass object with the the following values:
+
+    The access token which can be used as cookie.
+    The header token which is the word "Bearer: " + access token
+    The session token which is a specific value of the access token and is used for CSRF protection
+
+    "OIDC_credentials" must be declared in the test function call to access this object.
+    :return:
+    OIDC_credentials.access_token
+    OIDC_credentials.session_token
+    OIDC_credentials.headerToken
+    """
+
+    class LoginClass:
+        def __init__(self):
+            payload = {
+                "grant_type": "password",
+                "username": "test",
+                "password": "test",
+                "client_id": "OTP",
+                "client_secret": "7670fd00-9318-44c2-bda3-1a1d2743492d"
+            }
+
+            r2 = requests.post(
+                url=current_app.OIDC_Login.oidc_config["token_endpoint"],
+                data=payload
+            ).json()
+
+            self.access_token = r2.get('access_token', "None2")
+            self.session_token = {"X-Csrf-Token": r2.get('session_state', "None2")}
+            self.headerToken = {'Authorization': 'Bearer %s' % self.access_token}
+
+    return LoginClass()
+
+
+def get_workflow_data(snakefile, config):
     with open(config) as file:
         workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
@@ -15,97 +75,87 @@ def get_workflow_data(workflow_file, config):
         "workflow_params": workflow_params,
         "workflow_type": "snakemake",
         "workflow_type_version": "5.8.2",
-        "workflow_url": workflow_file
+        "workflow_url": "file:tests/wf1/Snakefile"
     }
     return data
 
 
-@pytest.mark.integration
-def test_get_service_info(test_client):
-    response = test_client.get("/ga4gh/wes/v1/service-info")
-    assert response.status_code == 200
+class TestOpenEndpoint:
+    """
+    The TestOpenEndpoint class ensures that all endpoint that should be accessible without
+    login are accessible.
+    """
+    @pytest.mark.integration
+    def test_get_service_info(self, test_client):
+        response = test_client.get("/ga4gh/wes/v1/service-info")
+        assert response.status_code == 200
 
 
-@pytest.mark.integration
-def test_login_restriction(test_client):
-    snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
-    data = get_workflow_data(
-        workflow_file=snakefile,
-        config="tests/wf1/config.yaml")
-    response = test_client.post("/ga4gh/wes/v1/runs", data=data)
-    assert response.status_code == 401
+class TestWithoutLogin:
+    """
+    The TestWithoutLogin class ensures that all secured endpoints are not accessible without
+    credentials.
+    """
+    @pytest.mark.integration
+    def test_list_runs_wo_login(self, test_client, celery_worker):
+        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+        data = get_workflow_data(
+            snakefile=snakefile,
+            config="tests/wf1/config.yaml")
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
+        assert response.status_code == 401
+
+    @pytest.mark.integration
+    def test_submit_workflow_wo_login(self, test_client, celery_worker):
+        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+        data = get_workflow_data(
+            snakefile=snakefile,
+            config="tests/wf1/config.yaml")
+        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
+        assert response.status_code == 401
 
 
-@pytest.mark.integration
-def test_login(test_client):
-    login_data = {'password': 'test', 'username': 'test'}
-    response = test_client.post("/login", data=login_data)
-    assert response.status == '302 FOUND'
+class TestWithHeaderToken:
+    """
+    The TestWithHeaderToken class ensures that some protected endpoints are accessible by
+    submitting an access token in the request header in the format
+    "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
+    """
 
+    @pytest.mark.integration
+    def test_accept_run_workflow_header(
+            self,
+            test_client,
+            runStorage,
+            OIDC_credentials,
+            celery_worker):
 
-@pytest.mark.integration
-def test_missing_fields_run_request(test_client, celery_worker):
-    complete_data = {
-        "workflow_params": {},
-        "workflow_type": "snakemake",
-        "workflow_type_version": "5",
-        "workflow_url": "https://some.git.repo/path/to/it.git"
-    }
-    for key in complete_data.keys():
-        reduced_data = complete_data.copy()
-        del reduced_data[key]
-        response = test_client.post("/ga4gh/wes/v1/runs", data=reduced_data)
-        assert response.status_code == 400
-        assert response.json["msg"] == \
-               "Malformed request: [{'%s': ['required field']}]" % key
+        data = get_workflow_data(
+            snakefile="tests/wf1/Snakefile",
+            config="tests/wf1/config.yaml")
 
+        response = test_client.post(
+            "/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.headerToken)
 
-# WARNING: This test fails with 401 unauthorized, if run isolated.
-#          Run it together with the other server_test.py tests!
-@pytest.mark.integration
-def test_run_snakemake(test_client, celery_worker):
-    snakefile = "file:tests/wf1/Snakefile"
-    data = get_workflow_data(
-        workflow_file=snakefile,
-        config="tests/wf1/config.yaml")
-    response = test_client.post("/ga4gh/wes/v1/runs", data=data)
-    assert response.status_code == 200
-    run_id = response.json["run_id"]
-    success = False
-    start_time = time.time()
-    while not success:
-        time.sleep(1)
-        assert (time.time() - start_time) <= 30, "Test timed out"
-        status = test_client.get(
-            "/ga4gh/wes/v1/runs/{}/status".format(run_id)
-        )
-        print("Waiting ... (status=%s)" % status.json)
-        if status.json in ["UNKNOWN", "EXECUTOR_ERROR", "SYSTEM_ERROR",
-                           "CANCELED", "CANCELING"]:
-            assert False, "Failing run status '{}': {}".format(status.json,
-                                                               status.msg)
-        elif status.json == "COMPLETE":
-            success = True
+        run_id = response.json["run_id"]
 
+        runStorage.runid = response.json["run_id"]
+        success = False
+        start_time = time.time()
+        while not success:
 
-@pytest.mark.integration
-def test_get_runs(test_client):
-    response = test_client.get("/ga4gh/wes/v1/runs")
-    assert response.status_code == 200
+            time.sleep(1)
+            status = test_client.get(
+                "/ga4gh/wes/v1/runs/{}/status".format(run_id),
+                headers=OIDC_credentials.headerToken
+            )
 
+            success = get_run_success(status.json, start_time)
 
-@pytest.mark.integration
-def test_logout(test_client):
-    login_data = dict()
-    response = test_client.post("/logout", data=login_data)
-    assert response.status == '200 OK'
+        assert response.status_code == 200
 
-
-@pytest.mark.integration
-def test_logout_successful(test_client):
-    snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
-    data = get_workflow_data(
-        workflow_file=snakefile,
-        config="tests/wf1/config.yaml")
-    response = test_client.post("/ga4gh/wes/v1/runs", data=data)
-    assert response.status_code == 401
+    @pytest.mark.integration
+    def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+        response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
+        assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
+        assert response.status_code == 200
