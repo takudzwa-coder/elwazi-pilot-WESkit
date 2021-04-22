@@ -2,7 +2,7 @@ import logging
 
 from flask import current_app, jsonify, request
 from flask import Blueprint
-from weskit import login as auth
+from weskit.login.Login import login_required
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("wes", __name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
-@auth.login_required
+@login_required
 def GetRunLog(run_id):
     try:
         logger.info("GetRun")
@@ -31,7 +31,7 @@ def GetRunLog(run_id):
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
-@auth.login_required
+@login_required
 def CancelRun(run_id):
     try:
         logger.info("CancelRun")
@@ -51,7 +51,7 @@ def CancelRun(run_id):
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
-@auth.login_required
+@login_required
 def GetRunStatus(run_id):
     try:
         logger.info("GetRunStatus")
@@ -100,7 +100,7 @@ def GetServiceInfo(*args, **kwargs):
 
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
-@auth.login_required
+@login_required
 def ListRuns(*args, **kwargs):
     try:
         logger.info("ListRuns")
@@ -113,7 +113,7 @@ def ListRuns(*args, **kwargs):
 
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
-@auth.login_required
+@login_required
 def RunWorkflow():
     try:
         data = request.form

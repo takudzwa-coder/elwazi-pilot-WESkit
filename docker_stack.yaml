@@ -1,15 +1,19 @@
 version: '3.9'
 
+
 networks:
   backend:
     driver: overlay
     driver_opts:
       encrypted: "false"
+  oauth:
+    driver: overlay
 
 volumes:
   mongodb-configdb:
   mongodb-data:
   redis-data:
+
 
 services:
 
@@ -18,9 +22,13 @@ services:
     secrets:
       - weskit.key
       - weskit.crt
+      - keycloak.pem
+
     depends_on:
       - database
       - result_broker
+      - keycloak
+
     environment:
       WESKIT_CONFIG: /home/weskit/config.yaml
       WESKIT_LOG_CONFIG: /home/weskit/log-config.yaml
@@ -30,7 +38,12 @@ services:
       WESKIT_WORKFLOWS: /workflows
       RESULT_BACKEND: redis://result_broker:${REDIS_PORT:-6379}
       BROKER_URL: redis://result_broker:${REDIS_PORT:-6379}
-      FLASK_APP: weskit
+      OIDC_ISSUER_URL: https://keycloak:8443/auth/realms/WESkit
+      OIDC_CLIENT_SECRET: ${WESKIT_CLIENT_SECRET} #example from keyclaok.sql file: export WESKIT_CLIENT_SECRET=a8086bcc-44f3-40f9-9e15-fd5c3c98ab24
+      OIDC_REALM: WESkit
+      OIDC_CLIENTID: WESkit
+
+      REQUESTS_CA_BUNDLE: /run/secrets/keycloak.pem
     volumes:
       - ${WESKIT_WORKFLOWS}:/workflows:ro
       - ${WESKIT_CONFIG}:/home/weskit/config.yaml:ro
@@ -38,8 +51,10 @@ services:
       - ${WESKIT_DATA}:/data
       - ./users.yaml:/weskit/users.yaml:ro
       - ./weskit:/weskit/weskit:ro
+
     networks:
       - backend
+      - oauth
     working_dir: /weskit
     entrypoint: ["bash", "-i", "-c"]
     command: [ "conda activate weskit && pip install ./ && ln -s /run/secrets/weskit.* /weskit/uWSGI_Server/certs/  && uwsgi --ini /weskit/uWSGI_Server/uwsgi.ini" ]
@@ -105,8 +120,57 @@ services:
 #        max_replicas_per_node: 32
 
 
+  ## Login System
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:12.0.2
+    depends_on:
+      - keycloak-database
+    environment:
+      KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-admin}
+      DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-unsecret_password}
+      KEYCLOAK_FRONTEND_URL: ${KEYCLOAK_FRONTEND_URL:-https://localhost:8443/auth}
+      DB_VENDOR: mysql
+      DB_PORT: 3306
+      DB_ADDR: keycloak-database
+
+    working_dir: /weskit
+
+    networks:
+      - oauth
+    ports:
+      - 8443:8443
+    secrets:
+      - source: keycloak.key
+        target: /etc/x509/https/tls.key
+      - source: keycloak.crt
+        target: /etc/x509/https/tls.crt
+      
+  # keycloak database
+  keycloak-database:
+    image: mysql
+
+    environment:
+       MYSQL_DATABASE: keycloak
+       MYSQL_USER: ${KEYCLOAK_DB_USER:-keycloak}
+       MYSQL_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-unsecret_password}
+       MYSQL_ROOT_PASSWORD: ${KEYCLOAK_DB_ROOT_PASSWORD:-unsecret_root_password}
+    volumes:
+      - ./tests/keycloak/keycloak_schema.sql:/docker-entrypoint-initdb.d/test.sql
+    networks:
+      - oauth
+
+
 secrets:
   weskit.key:
     file: uWSGI_Server/certs/weskit.key
   weskit.crt:
     file: uWSGI_Server/certs/weskit.crt
+  keycloak.key:
+    file: uWSGI_Server/certs/weskit.key
+  keycloak.crt:
+    file: uWSGI_Server/certs/weskit.crt
+  keycloak.pem:
+    file: uWSGI_Server/certs/weskit.pem
