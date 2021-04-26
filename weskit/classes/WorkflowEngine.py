@@ -25,13 +25,44 @@ class WorkflowEngine(metaclass=ABCMeta):
         self.default_params = default_params
 
     @staticmethod
-    @abstractmethod
     def run(workflow_path: os.path,
             workdir: os.path,
             config_files: list,
+            workflow_type: str,
             workflow_engine_params: list,
             **workflow_kwargs):
-        pass
+
+        if workflow_type == "snakemake":
+            command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
+            if config_files:
+                command += ["--configfile"] + config_files
+
+        elif workflow_type == "nextflow":
+            command = ["nextflow", "run", workflow_path]
+
+        logging.getLogger().info("{}.run: {}, {}, {}".format(workflow_type, workflow_path, workdir, config_files))
+        timestamp = get_current_timestamp()
+
+        with open(os.path.join(workdir, "command"), "a") as commandOut:
+            print("{}: {}, workddir={}".format(timestamp, command, workdir),
+                  file=commandOut)
+
+            with open(os.path.join(workdir, "stderr"), "a") as stderr:
+                print(timestamp, file=stderr, flush=True)
+
+                with open(os.path.join(workdir, "stdout"), "a") as stdout:
+                    print(timestamp, file=stdout, flush=True)
+                    result = \
+                        subprocess.run(command,
+                                       cwd=str(pathlib.PurePath(workdir)),
+                                       stdout=stdout,
+                                       stderr=stderr)
+            print("{}: exit code = {}".
+                  format(get_current_timestamp(), result.returncode),
+                  file=commandOut, flush=True)
+
+        outputs = to_uri(get_absolute_file_paths(workdir))
+        return outputs
 
     @abstractmethod
     def _run_workflow_engine_params(self, params: List[WorkflowEngineParam])\
@@ -57,42 +88,6 @@ class Snakemake(WorkflowEngine):  # noqa
         super().__init__(default_params)
 
     @staticmethod
-    def run(workflow_path: os.path,
-            workdir: os.path,
-            config_files: list,
-            workflow_engine_params: list,
-            **workflow_kwargs):
-        logging.getLogger().info("Snakemake.run: {}, {}, {}".
-                                 format(workflow_path, workdir, config_files))
-        timestamp = get_current_timestamp()
-
-        # for now, using all cores (need to specify number of cores)
-        command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
-        if config_files:
-            command += ["--configfile"] + config_files
-
-        with open(os.path.join(workdir, "command"), "a") as commandOut:
-            print("{}: {}, workddir={}".format(timestamp, command, workdir),
-                  file=commandOut)
-
-            with open(os.path.join(workdir, "stderr"), "a") as stderr:
-                print(timestamp, file=stderr, flush=True)
-
-                with open(os.path.join(workdir, "stdout"), "a") as stdout:
-                    print(timestamp, file=stdout, flush=True)
-                    result = \
-                        subprocess.run(command,
-                                       cwd=str(pathlib.PurePath(workdir)),
-                                       stdout=stdout,
-                                       stderr=stderr)
-            print("{}: exit code = {}".
-                  format(get_current_timestamp(), result.returncode),
-                  file=commandOut, flush=True)
-
-        outputs = to_uri(get_absolute_file_paths(workdir))
-        return outputs
-
-    @staticmethod
     def name():
         return "snakemake"
 
@@ -107,43 +102,6 @@ class Snakemake(WorkflowEngine):  # noqa
 class Nextflow(WorkflowEngine):  # noqa
     def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params)
-
-    @staticmethod
-    def run(workflow_path: os.path,
-            workdir: os.path,
-            config_files: list,
-            workflow_engine_params: list,
-            **workflow_kwargs):
-        logging.getLogger().info("Nextflow.run: {}, {}, {}".
-                                 format(workflow_path, workdir, config_files))
-        timestamp = get_current_timestamp()
-        # TODO Require a profile configuration.
-        # TODO Handle WFMS-specific settings, such as Java memory settings
-        # TODO Make use of kwargs. Ensure same semantics as for Snakemake.
-        # TODO Always use -with-trace, -resume, -offline
-        # TODO Always use -with-timeline
-        command = ["nextflow", "run", workflow_path]
-        with open(os.path.join(workdir, "command"), "a") as commandOut:
-            print("{}: {}, workddir={}".format(timestamp, command, workdir),
-                  file=commandOut)
-            # Timestamp-writes are flushed to ensure they are written before
-            # the workflows stderr and stdout.
-            with open(os.path.join(workdir, "stderr"), "a") as stderr:
-                print(timestamp, file=stderr, flush=True)
-
-                with open(os.path.join(workdir, "stdout"), "a") as stdout:
-                    print(timestamp, file=stdout, flush=True)
-                    result = \
-                        subprocess.run(command,
-                                       cwd=str(pathlib.PurePath(workdir)),
-                                       stdout=stdout,
-                                       stderr=stderr)
-            print("{}: exit code = {}".
-                  format(get_current_timestamp(), result.returncode),
-                  file=commandOut, flush=True)
-        # TODO What to do if completed_process.returncode != 0?
-        outputs = to_uri(get_absolute_file_paths(workdir))
-        return outputs
 
     @staticmethod
     def name():
