@@ -34,4 +34,3 @@ def test_create_and_load_run(database_container):
 def test_create_run_fails():
     with pytest.raises(Exception):
         Run({})
-
