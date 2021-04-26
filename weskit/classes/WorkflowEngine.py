@@ -40,7 +40,8 @@ class WorkflowEngine(metaclass=ABCMeta):
         elif workflow_type == "nextflow":
             command = ["nextflow", "run", workflow_path]
 
-        logging.getLogger().info("{}.run: {}, {}, {}".format(workflow_type, workflow_path, workdir, config_files))
+        logging.getLogger().info("{}.run: {}, {}, {}"
+                                 .format(workflow_type, workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
 
         with open(os.path.join(workdir, "command"), "a") as commandOut:
