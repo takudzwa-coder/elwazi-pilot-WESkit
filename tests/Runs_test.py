@@ -8,6 +8,7 @@ mock_run_data = {
     "run_id": str(uuid.uuid4()),
     "run_status": "INITIALIZING",
     "request_time": None,
+    "user_id": "test_id",
     "request": {
         "workflow_url": "",
         "workflow_params": '{"text":"hello_world"}'
@@ -33,3 +34,4 @@ def test_create_and_load_run(database_container):
 def test_create_run_fails():
     with pytest.raises(Exception):
         Run({})
+

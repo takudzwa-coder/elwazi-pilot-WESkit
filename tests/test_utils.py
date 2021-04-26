@@ -8,6 +8,7 @@ def get_mock_run(workflow_url, workflow_type, tags=None):
         "run_id": str(uuid.uuid4()),
         "run_status": "INITIALIZING",
         "request_time": None,
+        "user_id": "test_id",
         "request": {
             "workflow_url": workflow_url,
             "workflow_type": workflow_type,

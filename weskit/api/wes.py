@@ -3,6 +3,8 @@ import logging
 from flask import current_app, jsonify, request
 from flask import Blueprint
 from weskit.login.Login import login_required
+from flask_jwt_extended import current_user
+from weskit import utils as u
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("wes", __name__)
@@ -16,15 +18,19 @@ logger = logging.getLogger(__name__)
 def GetRunLog(run_id):
     try:
         logger.info("GetRun")
+        user_id = current_user.id
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        if run is None:
-            current_app.error_logger.error("Could not find %s" % run_id)
-            return {"msg": "Could not find %s" % run_id,
-                    "status_code": 0
-                    }, 404
-        else:
+        conditions = u.check_conditions(run_id, user_id, run)
+
+        if conditions is None:
             return run.get_run_log(), 200
+        else:
+            return conditions
+
+    except KeyError as k:
+        logger.error(k, exc_info=True)
+        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -35,16 +41,20 @@ def GetRunLog(run_id):
 def CancelRun(run_id):
     try:
         logger.info("CancelRun")
+        user_id = current_user.id
         run = current_app.manager.database.get_run(run_id)
-        if run is None:
-            current_app.error_logger.error("Could not find %s" % run_id)
-            return {"msg": "Could not find %s" % run_id,
-                    "status_code": 0
-                    }, 404
-        else:
+        conditions = u.check_conditions(run_id, user_id, run)
+
+        if conditions is None:
             run = current_app.manager.cancel(run)
             logger.info("Run %s is canceled" % run_id)
             return {"run_id": run["run_id"]}, 200
+        else:
+            return conditions
+
+    except KeyError as k:
+        logger.error(k, exc_info=True)
+        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -55,13 +65,18 @@ def CancelRun(run_id):
 def GetRunStatus(run_id):
     try:
         logger.info("GetRunStatus")
+        user_id = current_user.id
         run = current_app.manager.get_run(run_id=run_id, update=True)
-        if run is None:
-            logger.error("Could not find %s" % run_id)
-            return {"msg": "Could not find %s" % run_id,
-                    "status_code": 0}, 404
-        else:
+        conditions = u.check_conditions(run_id, user_id, run)
+
+        if conditions is None:
             return jsonify(run.run_status.name), 200
+        else:
+            return conditions
+
+    except KeyError as k:
+        logger.error(k, exc_info=True)
+        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -105,8 +120,15 @@ def ListRuns(*args, **kwargs):
     try:
         logger.info("ListRuns")
         current_app.manager.update_runs(query={})
+        user_id = current_user.id
         response = current_app.manager.database.list_run_ids_and_states()
+        # filter for runs for this user
+        response = [run for run in response if run["user_id"] == user_id]
         return jsonify(response), 200
+
+    except KeyError as k:
+        logger.error(k, exc_info=True)
+        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -127,7 +149,8 @@ def RunWorkflow():
               "status_code": 400
             }, 400
         else:
-            run = current_app.manager.create_and_insert_run(request=data)
+            user = current_user.id
+            run = current_app.manager.create_and_insert_run(request=data, user=user)
 
             logger.info("Prepare execution")
             run = current_app.manager.\

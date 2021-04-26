@@ -3,6 +3,7 @@ import pathlib
 import traceback
 from urllib.parse import urlparse
 from datetime import datetime
+from flask import current_app
 
 
 def get_absolute_file_paths(directory):
@@ -39,3 +40,19 @@ def all_subclasses(cls):
 
 def get_traceback(e: Exception) -> str:
     return ''.join(traceback.format_exception(None, e, e.__traceback__))
+
+
+def check_conditions(run_id, user_id, run=None):
+
+    if run is None:
+        current_app.error_logger.error("Could not find %s" % run_id)
+        return {"msg": "Could not find %s" % run_id,
+                "status_code": 0
+                }, 404
+
+    if user_id != run.user_id:
+        current_app.error_logger.error("User not allowed to perform this action on %s" % run_id)
+        return {"msg": "User not allowed to perform this action on %s" % run_id,
+                       "status_code": 0}, 403
+
+    return None
