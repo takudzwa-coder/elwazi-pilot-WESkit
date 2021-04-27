@@ -159,7 +159,6 @@ def test_database(database_container):
 @pytest.fixture(scope="session")
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
-    redis_container.start()
     with redis_container as rc:
         os.environ["BROKER_URL"] = get_redis_url(rc)
         os.environ["RESULT_BACKEND"] = get_redis_url(rc)
