@@ -25,20 +25,19 @@ class WorkflowEngine(metaclass=ABCMeta):
         self.default_params = default_params
 
     @staticmethod
-    def run(workflow_path: os.path,
+    @abstractmethod
+    def _command(workflow_path, config_files=None):
+        pass
+
+    @classmethod
+    def run(cls, workflow_path: os.path,
             workdir: os.path,
             config_files: list,
             workflow_type: str,
             workflow_engine_params: list,
             **workflow_kwargs):
 
-        if workflow_type == "snakemake":
-            command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
-            if config_files:
-                command += ["--configfile"] + config_files
-
-        elif workflow_type == "nextflow":
-            command = ["nextflow", "run", workflow_path]
+        command = cls._command(workflow_path, config_files)
 
         logging.getLogger().info("{}.run: {}, {}, {}"
                                  .format(workflow_type, workflow_path, workdir, config_files))
@@ -89,6 +88,13 @@ class Snakemake(WorkflowEngine):  # noqa
         super().__init__(default_params)
 
     @staticmethod
+    def _command(workflow_path, config_files):
+        command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
+        if config_files:
+            command += ["--configfile"] + config_files
+        return command
+
+    @staticmethod
     def name():
         return "snakemake"
 
@@ -103,6 +109,10 @@ class Snakemake(WorkflowEngine):  # noqa
 class Nextflow(WorkflowEngine):  # noqa
     def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params)
+
+    @staticmethod
+    def _command(workflow_path, config_files):
+        return ["nextflow", "run", workflow_path]
 
     @staticmethod
     def name():
