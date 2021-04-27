@@ -4,7 +4,7 @@ from flask import current_app, jsonify, request
 from flask import Blueprint
 from weskit.login.Login import login_required
 from flask_jwt_extended import current_user
-from weskit import utils as u
+from weskit.api import utils as u
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("wes", __name__)
@@ -21,12 +21,12 @@ def GetRunLog(run_id):
         user_id = current_user.id
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        conditions = u.check_conditions(run_id, user_id, run)
+        access_denied_response = u.get_access_denied_response(run_id, user_id, run)
 
-        if conditions is None:
+        if access_denied_response is None:
             return run.get_run_log(), 200
         else:
-            return conditions
+            return access_denied_response
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -40,14 +40,14 @@ def CancelRun(run_id):
         logger.info("CancelRun")
         user_id = current_user.id
         run = current_app.manager.database.get_run(run_id)
-        conditions = u.check_conditions(run_id, user_id, run)
+        access_denied_response = u.get_access_denied_response(run_id, user_id, run)
 
-        if conditions is None:
+        if access_denied_response is None:
             run = current_app.manager.cancel(run)
             logger.info("Run %s is canceled" % run_id)
             return {"run_id": run["run_id"]}, 200
         else:
-            return conditions
+            return access_denied_response
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -61,12 +61,12 @@ def GetRunStatus(run_id):
         logger.info("GetRunStatus")
         user_id = current_user.id
         run = current_app.manager.get_run(run_id=run_id, update=True)
-        conditions = u.check_conditions(run_id, user_id, run)
+        access_denied_response = u.get_access_denied_response(run_id, user_id, run)
 
-        if conditions is None:
+        if access_denied_response is None:
             return jsonify(run.run_status.name), 200
         else:
-            return conditions
+            return access_denied_response
 
     except Exception as e:
         logger.error(e, exc_info=True)
