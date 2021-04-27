@@ -28,9 +28,6 @@ def GetRunLog(run_id):
         else:
             return conditions
 
-    except KeyError as k:
-        logger.error(k, exc_info=True)
-        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -52,9 +49,6 @@ def CancelRun(run_id):
         else:
             return conditions
 
-    except KeyError as k:
-        logger.error(k, exc_info=True)
-        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -74,9 +68,6 @@ def GetRunStatus(run_id):
         else:
             return conditions
 
-    except KeyError as k:
-        logger.error(k, exc_info=True)
-        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -126,9 +117,6 @@ def ListRuns(*args, **kwargs):
         response = [run for run in response if run["user_id"] == user_id]
         return jsonify(response), 200
 
-    except KeyError as k:
-        logger.error(k, exc_info=True)
-        raise k
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
