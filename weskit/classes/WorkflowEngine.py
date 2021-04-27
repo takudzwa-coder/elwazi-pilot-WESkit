@@ -30,8 +30,8 @@ class WorkflowEngine(metaclass=ABCMeta):
         pass
 
     @classmethod
-    def run(cls, workflow_path: os.path,
-            workdir: os.path,
+    def run(cls, workflow_path: str,
+            workdir: str,
             config_files: list,
             workflow_type: str,
             workflow_engine_params: list,
