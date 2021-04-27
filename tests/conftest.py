@@ -139,10 +139,14 @@ def database_container():
     MONGODB_CONTAINER = "mongo:4.2.3"
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
-    db_container.start()
-    os.environ["WESKIT_DATABASE_URL"] = db_container.get_connection_url()
 
-    yield db_container
+    with db_container as mongoDB:
+        # Add delay to avoid empty container port, dependent on time docker needs to start container
+        time.sleep(0.5)
+
+        os.environ["WESKIT_DATABASE_URL"] = mongoDB.get_connection_url()
+
+        yield mongoDB
 
 
 @pytest.fixture(scope="session")
@@ -155,10 +159,10 @@ def test_database(database_container):
 @pytest.fixture(scope="session")
 def redis_container():
     redis_container = RedisContainer("redis:6.0.1-alpine")
-    redis_container.start()
-    os.environ["BROKER_URL"] = get_redis_url(redis_container)
-    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
-    return redis_container
+    with redis_container as rc:
+        os.environ["BROKER_URL"] = get_redis_url(rc)
+        os.environ["RESULT_BACKEND"] = get_redis_url(rc)
+        yield rc
 
 
 @pytest.fixture(scope="session")
