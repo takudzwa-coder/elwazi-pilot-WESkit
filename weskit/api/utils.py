@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def get_access_denied_response(run_id: str,
                                user_id: str,
-                               run: Run=None):
+                               run: Run = None):
     if run is None:
         logger.error("Could not find %s" % run_id)
         return {"msg": "Could not find %s" % run_id,
