@@ -33,14 +33,13 @@ class WorkflowEngine(metaclass=ABCMeta):
     def run(cls, workflow_path: str,
             workdir: str,
             config_files: list,
-            workflow_type: str,
             workflow_engine_params: list,
             **workflow_kwargs):
 
         command = cls._command(workflow_path, config_files)
 
-        logging.getLogger().info("{}.run: {}, {}, {}"
-                                 .format(workflow_type, workflow_path, workdir, config_files))
+        logging.getLogger().info("run: {}, {}, {}"
+                                 .format(workflow_path, workdir, config_files))
         timestamp = get_current_timestamp()
 
         with open(os.path.join(workdir, "command"), "a") as commandOut:

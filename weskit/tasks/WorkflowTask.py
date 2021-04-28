@@ -16,14 +16,12 @@ def run_workflow(workflow_type: str,
         outputs = Snakemake.run(workflow_path,
                                 workdir,
                                 config_files,
-                                workflow_type,
                                 **workflow_kwargs)
     elif workflow_type == Nextflow.name():
         logger.info("Running Nextflow in %s" % workflow_path)
         outputs = Nextflow.run(workflow_path,
                                workdir,
                                config_files,
-                               workflow_type,
                                **workflow_kwargs)
     else:
         raise Exception("Workflow type '" +
