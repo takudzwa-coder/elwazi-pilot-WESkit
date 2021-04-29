@@ -12,7 +12,7 @@ from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.tasks.WorkflowTask import run_workflow
 from werkzeug.utils import secure_filename
-from weskit.utils import get_current_timestamp, get_traceback
+from weskit.utils import get_current_timestamp
 from typing import Optional, List
 
 
@@ -210,7 +210,8 @@ class Manager:
                               workflow_path)
             run.workflow_path = workflow_path
         except Exception as e:
-            logger.warning(get_traceback(e))
+            logger.warning(e, stack_info=True, exc_info=True)
+
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
