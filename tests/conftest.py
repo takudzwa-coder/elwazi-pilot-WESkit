@@ -13,6 +13,8 @@ from testcontainers.core.container import DockerContainer
 from weskit import create_app, Manager, WorkflowEngineFactory
 from weskit import create_database
 
+logger = logging.getLogger(__name__)
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ def get_redis_url(redis_container):
     return url
 
 
-def get_keycloak_container_properties(container, port):
+def get_container_properties(container, port):
     return (
         {
             "ExternalHostname": container.get_container_host_ip(),
@@ -38,15 +40,17 @@ def get_keycloak_container_properties(container, port):
 
 @pytest.fixture(scope="session")
 def mysql_keycloak_container():
-    preDB = MySqlContainer('mysql:latest',
-                           MYSQL_USER="keycloak",
-                           MYSQL_PASSWORD="secret_password",
-                           MYSQL_DATABASE="keycloak",
-                           MYSQL_ROOT_PASSWORD="secret_root_password"
-                           )
+    container = MySqlContainer('mysql:latest',
+                               MYSQL_USER="keycloak",
+                               MYSQL_PASSWORD="secret_password",
+                               MYSQL_DATABASE="keycloak",
+                               MYSQL_ROOT_PASSWORD="secret_root_password"
+                               )
+
     configfile = os.path.abspath("tests/keycloak/keycloak_schema.sql")
-    preDB.with_volume_mapping(configfile, "/docker-entrypoint-initdb.d/test.sql")
-    with preDB as mysql:
+
+    container.with_volume_mapping(configfile, "/docker-entrypoint-initdb.d/test.sql")
+    with container as mysql:
         yield mysql
 
 
@@ -62,13 +66,12 @@ def test_client(celery_session_app,
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
-    keycloak_container_properties = get_keycloak_container_properties(keycloak_container, '8080')
-
+    # TODO Remove this!
+    keycloak_container_properties = get_container_properties(keycloak_container, '8080')
     os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
-        keycloak_container_properties["ExternalHostname"],
-        keycloak_container_properties["ExposedPorts"],
-    )
-
+            keycloak_container_properties["ExternalHostname"],
+            keycloak_container_properties["ExposedPorts"],
+        )
     # Define Variables that would be defined in the docker stack file
     os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
     os.environ["OIDC_REALM"] = "WESkit"
@@ -86,10 +89,13 @@ def test_client(celery_session_app,
 
 @pytest.fixture(scope="session")
 def keycloak_container(mysql_keycloak_container):
-    mysql_ip = get_keycloak_container_properties(mysql_keycloak_container, '3306')["InternalIP"]
-
+    mysql_ip = get_container_properties(mysql_keycloak_container, '3306')["InternalIP"]
     kc_container = DockerContainer("jboss/keycloak")
     kc_container.with_exposed_ports('8080')
+    # Keycloak admin UI login credentials are defined in tests/keycloak/keycloak_schema.sql.
+    # as admin:admin. The following does not work here:
+    # kc_container.with_env("KEYCLOAK_USER", "admins")
+    # kc_container.with_env("KEYCLOAK_PASSWORD", "test")
     kc_container.with_env("DB_VENDOR", "mysql")
     kc_container.with_env("DB_PORT", '3306')
     kc_container.with_env("DB_ADDR", mysql_ip)
@@ -104,7 +110,7 @@ def keycloak_container(mysql_keycloak_container):
         kc_host = keycloak.get_container_host_ip()
 
         retry = 20
-        waitingSeconds = 5
+        waiting_seconds = 5
         kc_running = False
         for i in range(retry):
             try:
@@ -112,9 +118,17 @@ def keycloak_container(mysql_keycloak_container):
                 kc_running = True
                 break
             except Exception:
-                time.sleep(waitingSeconds)
+                logger.warning("Retrying connecting to Keycloak container {}/{}".format(i, retry))
+                time.sleep(waiting_seconds)
 
         assert kc_running
+
+        # TODO Uncomment
+        # # Define Variables that would be defined in the docker stack file
+        # os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (kc_host, kc_port)
+        # os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+        # os.environ["OIDC_REALM"] = "WESkit"
+        # os.environ["OIDC_CLIENTID"] = "WESkit"
 
         yield keycloak
 

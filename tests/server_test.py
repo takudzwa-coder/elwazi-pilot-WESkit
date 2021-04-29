@@ -1,5 +1,5 @@
+import logging
 import time
-
 import yaml
 import os
 import requests
@@ -7,6 +7,9 @@ import pytest
 from flask import current_app
 
 from tests.test_utils import get_run_success
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(name="runStorage", scope="class")
@@ -54,7 +57,7 @@ def login_fixture():
             }
 
             r2 = requests.post(
-                url=current_app.OIDC_Login.oidc_config["token_endpoint"],
+                url=current_app.oidc_login.token_endpoint,
                 data=payload
             ).json()
 
@@ -150,13 +153,14 @@ class TestWithHeaderToken:
         response = test_client.post(
             "/ga4gh/wes/v1/runs", json=data, headers=OIDC_credentials.headerToken)
 
+        assert response.status_code == 200
+
         run_id = response.json["run_id"]
 
-        runStorage.runid = response.json["run_id"]
+        runStorage.runid = run_id
         success = False
         start_time = time.time()
         while not success:
-
             time.sleep(1)
             status = test_client.get("/ga4gh/wes/v1/runs/{}/status".format(run_id),
                                      headers=OIDC_credentials.headerToken)
@@ -175,8 +179,8 @@ class TestWithHeaderToken:
     @pytest.mark.integration
     def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
-        assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
+        assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
 
     @pytest.mark.integration
     def test_list_runs_extended_with_header(self,

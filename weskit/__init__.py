@@ -12,8 +12,8 @@ from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask
 
-
-from weskit.login import Login
+from weskit.oidc.Login import Login
+from weskit.oidc import Factory as OIDCFactory
 from weskit.classes.Database import Database
 from weskit.classes.RunRequestValidator import RunRequestValidator
 from weskit.classes.WorkflowEngine import WorkflowEngineFactory
@@ -31,11 +31,13 @@ class WESApp(Flask):
                  manager: Manager,
                  service_info: ServiceInfo,
                  request_validators: dict,
+                 oidc_login: Optional[Login] = None,
                  *args, **kwargs):
         super().__init__(__name__, *args, **kwargs)
         setattr(self, 'manager', manager)
         setattr(self, 'service_info', service_info)
         setattr(self, 'request_validators', request_validators)
+        setattr(self, 'oidc_login', oidc_login)
 
 
 def create_celery(broker_url=None,
@@ -163,11 +165,7 @@ def create_app(celery: Celery, database: Database) -> Flask:
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
-    ######################################
-    #              Init Login            #
-    ######################################
-
-    # Version for backend
-    Login.oidcLogin(app, config)
+    if OIDCFactory.is_login_enabled(config):
+        OIDCFactory.setup(app, config)
 
     return app
