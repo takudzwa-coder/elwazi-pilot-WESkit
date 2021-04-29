@@ -1,5 +1,4 @@
 import os
-import pathlib
 import traceback
 from urllib.parse import urlparse
 from datetime import datetime
