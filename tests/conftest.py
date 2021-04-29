@@ -102,28 +102,29 @@ def keycloak_container(MySQL_keycloak_container):
     kc_container.with_env("DB_USER", "keycloak")
     kc_container.with_env("DB_PASSWORD", "secret_password")
 
-    kc_container.start()
-    time.sleep(5)
+    # kc_container.start()
+    with kc_container as keycloak:
+        time.sleep(5)
 
-    kc_port = kc_container.get_exposed_port('8080')
-    kc_host = kc_container.get_container_host_ip()
+        kc_port = keycloak.get_exposed_port('8080')
+        kc_host = keycloak.get_container_host_ip()
 
-    retry = 20
-    waitingSeconds = 5
-    kc_running = False
-    for i in range(retry):
-        try:
-            requests.get("http://" + kc_host + ":" + kc_port)
-            kc_running = True
+        retry = 20
+        waitingSeconds = 5
+        kc_running = False
+        for i in range(retry):
+            try:
+                requests.get("http://" + kc_host + ":" + kc_port)
+                kc_running = True
 
-            break
+                break
 
-        except Exception:
-            time.sleep(waitingSeconds)
+            except Exception:
+                time.sleep(waitingSeconds)
 
-    assert kc_running
+        assert kc_running
 
-    yield kc_container
+        yield keycloak
 
 
 @pytest.fixture(scope="session")
