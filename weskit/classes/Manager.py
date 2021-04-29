@@ -113,12 +113,13 @@ class Manager:
             run = self.update_run(run)
             self.database.update_run(run)
 
-    def create_and_insert_run(self, request)\
+    def create_and_insert_run(self, request, user)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
-                        "request": request})
+                        "request": request,
+                        "user_id": user})
         if self.database.insert_run(run):
             return run
         else:
