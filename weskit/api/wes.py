@@ -18,10 +18,9 @@ logger = logging.getLogger(__name__)
 def GetRunLog(run_id):
     try:
         logger.info("GetRun")
-        user_id = current_user.id
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, user_id, run)
+        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
 
         if access_denied_response is None:
             return run.get_run_log(), 200
@@ -38,9 +37,8 @@ def GetRunLog(run_id):
 def CancelRun(run_id):
     try:
         logger.info("CancelRun")
-        user_id = current_user.id
         run = current_app.manager.database.get_run(run_id)
-        access_denied_response = u.get_access_denied_response(run_id, user_id, run)
+        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
 
         if access_denied_response is None:
             run = current_app.manager.cancel(run)
@@ -59,9 +57,8 @@ def CancelRun(run_id):
 def GetRunStatus(run_id):
     try:
         logger.info("GetRunStatus")
-        user_id = current_user.id
         run = current_app.manager.get_run(run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, user_id, run)
+        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
 
         if access_denied_response is None:
             return jsonify(run.run_status.name), 200
@@ -137,8 +134,7 @@ def RunWorkflow():
               "status_code": 400
             }, 400
         else:
-            user = current_user.id
-            run = current_app.manager.create_and_insert_run(request=data, user=user)
+            run = current_app.manager.create_and_insert_run(request=data, user=current_user.id)
 
             logger.info("Prepare execution")
             run = current_app.manager.\
