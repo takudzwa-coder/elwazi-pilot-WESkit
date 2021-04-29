@@ -12,7 +12,7 @@ from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.tasks.WorkflowTask import run_workflow
 from werkzeug.utils import secure_filename
-from weskit.utils import get_current_timestamp, get_traceback
+from weskit.utils import get_current_timestamp
 from typing import Optional, List
 
 
@@ -113,12 +113,13 @@ class Manager:
             run = self.update_run(run)
             self.database.update_run(run)
 
-    def create_and_insert_run(self, request)\
+    def create_and_insert_run(self, request, user)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
-                        "request": request})
+                        "request": request,
+                        "user_id": user})
         if self.database.insert_run(run):
             return run
         else:
@@ -210,7 +211,8 @@ class Manager:
                               workflow_path)
             run.workflow_path = workflow_path
         except Exception as e:
-            logger.warning(get_traceback(e))
+            logger.warning(e, stack_info=True, exc_info=True)
+
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,

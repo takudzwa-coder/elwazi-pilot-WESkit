@@ -37,7 +37,8 @@ class Database:
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,
-                        "run_status": True
+                        "run_status": True,
+                        "user_id": True
                         }))
 
     def count_states(self):

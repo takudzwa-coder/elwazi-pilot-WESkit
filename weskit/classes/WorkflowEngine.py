@@ -8,7 +8,6 @@ from typing import List, Dict
 from weskit.utils import get_current_timestamp
 from weskit.utils import get_absolute_file_paths
 from weskit.utils import to_uri
-from snakemake import snakemake
 from dataclasses import dataclass
 
 
@@ -27,12 +26,42 @@ class WorkflowEngine(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def run(workflow_path: os.path,
-            workdir: os.path,
+    def _command(workflow_path, config_files=None):
+        pass
+
+    @classmethod
+    def run(cls, workflow_path: str,
+            workdir: str,
             config_files: list,
             workflow_engine_params: list,
             **workflow_kwargs):
-        pass
+
+        command = cls._command(workflow_path, config_files)
+
+        logging.getLogger().info("run: {}, {}, {}"
+                                 .format(workflow_path, workdir, config_files))
+        timestamp = get_current_timestamp()
+
+        with open(os.path.join(workdir, "command"), "a") as commandOut:
+            print("{}: {}, workddir={}".format(timestamp, command, workdir),
+                  file=commandOut)
+
+            with open(os.path.join(workdir, "stderr"), "a") as stderr:
+                print(timestamp, file=stderr, flush=True)
+
+                with open(os.path.join(workdir, "stdout"), "a") as stdout:
+                    print(timestamp, file=stdout, flush=True)
+                    result = \
+                        subprocess.run(command,
+                                       cwd=str(pathlib.PurePath(workdir)),
+                                       stdout=stdout,
+                                       stderr=stderr)
+            print("{}: exit code = {}".
+                  format(get_current_timestamp(), result.returncode),
+                  file=commandOut, flush=True)
+
+        outputs = to_uri(get_absolute_file_paths(workdir))
+        return outputs
 
     @abstractmethod
     def _run_workflow_engine_params(self, params: List[WorkflowEngineParam])\
@@ -58,21 +87,11 @@ class Snakemake(WorkflowEngine):  # noqa
         super().__init__(default_params)
 
     @staticmethod
-    def run(workflow_path: os.path,
-            workdir: os.path,
-            config_files: list,
-            workflow_engine_params: list,
-            **workflow_kwargs):
-        logging.getLogger().info("Snakemake.run: {}, {}, {}".
-                                 format(workflow_path, workdir, config_files))
-        outputs = []
-        snakemake(
-            snakefile=workflow_path,
-            workdir=workdir,
-            configfiles=config_files,
-            updated_files=outputs,
-            **workflow_kwargs)
-        return outputs
+    def _command(workflow_path, config_files):
+        command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
+        if config_files:
+            command += ["--configfile"] + config_files
+        return command
 
     @staticmethod
     def name():
@@ -91,41 +110,8 @@ class Nextflow(WorkflowEngine):  # noqa
         super().__init__(default_params)
 
     @staticmethod
-    def run(workflow_path: os.path,
-            workdir: os.path,
-            config_files: list,
-            workflow_engine_params: list,
-            **workflow_kwargs):
-        logging.getLogger().info("Nextflow.run: {}, {}, {}".
-                                 format(workflow_path, workdir, config_files))
-        timestamp = get_current_timestamp()
-        # TODO Require a profile configuration.
-        # TODO Handle WFMS-specific settings, such as Java memory settings
-        # TODO Make use of kwargs. Ensure same semantics as for Snakemake.
-        # TODO Always use -with-trace, -resume, -offline
-        # TODO Always use -with-timeline
-        command = ["nextflow", "run", workflow_path]
-        with open(os.path.join(workdir, "command"), "a") as commandOut:
-            print("{}: {}, workddir={}".format(timestamp, command, workdir),
-                  file=commandOut)
-            # Timestamp-writes are flushed to ensure they are written before
-            # the workflows stderr and stdout.
-            with open(os.path.join(workdir, "stderr"), "a") as stderr:
-                print(timestamp, file=stderr, flush=True)
-
-                with open(os.path.join(workdir, "stdout"), "a") as stdout:
-                    print(timestamp, file=stdout, flush=True)
-                    result = \
-                        subprocess.run(command,
-                                       cwd=str(pathlib.PurePath(workdir)),
-                                       stdout=stdout,
-                                       stderr=stderr)
-            print("{}: exit code = {}".
-                  format(get_current_timestamp(), result.returncode),
-                  file=commandOut, flush=True)
-        # TODO What to do if completed_process.returncode != 0?
-        outputs = to_uri(get_absolute_file_paths(workdir))
-        return outputs
+    def _command(workflow_path, config_files):
+        return ["nextflow", "run", workflow_path]
 
     @staticmethod
     def name():

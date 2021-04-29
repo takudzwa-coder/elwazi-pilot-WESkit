@@ -14,6 +14,7 @@ class Run:
         self.__run_id = data["run_id"]
         self.__request_time = data["request_time"]
         self.__request = data["request"]
+        self.__user_id = data["user_id"]
 
         self.celery_task_id = data.get("celery_task_id", None)
         self.execution_path = data.get("execution_path", [])
@@ -37,7 +38,8 @@ class Run:
             "run_status": self.run_status.name,
             "outputs": self.outputs,
             "start_time": self.start_time,
-            "task_logs": self.task_logs
+            "task_logs": self.task_logs,
+            "user_id": self.__user_id
         }
 
     def get_run_log(self) -> dict:
@@ -47,7 +49,8 @@ class Run:
             "state": self.run_status.name,
             "run_log": self.run_log,
             "task_logs": self.task_logs,
-            "outputs": self.outputs
+            "outputs": self.outputs,
+            "user_id": self.__user_id
         }
 
     @property
@@ -113,3 +116,7 @@ class Run:
     @start_time.setter
     def start_time(self, start_time: str):
         self.__start_time = start_time
+
+    @property
+    def user_id(self):
+        return self.__user_id

@@ -79,7 +79,7 @@ def test_execute_snakemake(manager,
             continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
-        assert "hello_world.txt" in run.outputs["Workflow"]
+        assert "hello_world.txt" in to_filename(run.outputs["Workflow"])
         success = True
 
 

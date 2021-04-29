@@ -1,91 +1,101 @@
 import requests
 import os
+import yaml
+import json
 
-s = requests.session()
+weskit_host = "https://localhost:5000"
+keycloak_host = "https://localhost:8443/auth/realms/WESkit/protocol/openid-connect/token"
 
-Credentials = {"username":"test","password":"test"}
-WrongCredentials = {"username":"stranger","password":"awierdPassword"}
+Credentials = dict(
+    username="test",
+    password="test",
+    client_id="OTP",
+    client_secret="7670fd00-9318-44c2-bda3-1a1d2743492d"
+)
 
-# Test with HTTPS
-baseURL="https://localhost:5000"
-
-current_file=os.path.dirname(os.path.abspath(__file__))
+current_file = os.path.dirname(os.path.abspath(__file__))
 # Set path for self signed certificate
-s.verify= os.path.normpath(os.path.join(current_file,'../uWSGI_Server/certs/weskit.pem'))
-a=os.path.normpath(os.path.join(current_file,'../uWSGI_Server/certs/weskit.pem'))
+
+cert = os.path.normpath(os.path.join(current_file, '../uWSGI_Server/certs/weskit.pem'))
 
 
-# without HTTPS
-#baseURL="http://localhost:5000"
+def get_workflow_data():
+    with open(os.path.normpath(os.path.join(current_file, '../tests/wf1/config.yaml'))) as file:
+        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
+    snakefile = "file:tests/wf1/Snakefile"
+    data = {
+        "workflow_params": workflow_params,
+        "workflow_type": "snakemake",
+        "workflow_type_version": "5.8.2",
+        "workflow_url": snakefile
+    }
+    return data
 
-def tryApiEndpoints(loginType,session):
+
+def get_access_token_from_keycloak(hostname, credentials):
+    credentials["grant_type"] = "password"
+    print("These credentials will be submitted to keycloak:")
+    print(yaml.dump(credentials))
+    print(hostname)
+    response = requests.post(url=hostname, data=credentials, verify=cert).json()
+    print("Keycloak response:")
+    print(yaml.dump(response))
+    return response
+
+
+def tryApiEndpoints(loginType, cookie=None, header=None):
+    print("****************************************")
+    print("%s - GET-Requst to '/ga4gh/wes/v1/service-info'" % (loginType))
+
+    response1 = requests.get("%s/ga4gh/wes/v1/service-info" % (weskit_host), verify=cert)
+
+    print("Status Code:", response1.status_code)
+    print("Response:", response1.json())
+    print("****************************************\n\n")
+
+    response2 = requests.post("%s/ga4gh/wes/v1/runs" % (weskit_host),
+                              data=get_workflow_data(),
+                              headers=header,
+                              cookies=cookie,
+                              verify=cert)
+    print(response2.status_code)
+    print(response2.json())
 
     print("****************************************")
-    # Try logging in with wrong credentials
-    print( "%s - GET Requst to '/ga4gh/wes/user_status'"%(loginType) )
-    response1= session.get("%s/ga4gh/wes/user_status"%(baseURL),verify=a)
-    
-    print("Status Code:",response1.status_code)
-    print("Response:",response1.json())
+    print("%s - GET-Requst to '/ga4gh/wes/v1/runs/'" % (loginType))
+
+    response3 = requests.get("%s/ga4gh/wes/v1/runs" % (weskit_host),
+                             headers=header,
+                             cookies=cookie,
+                             verify=cert)
+
+    print("Status Code:", response3.status_code)
+    print("Response:")
+    print(yaml.dump(response3.json()))
     print("****************************************\n\n")
-    
+
     print("****************************************")
-    # Try logging in with wrong credentials
-    print( "%s - GET-Requst to '/ga4gh/wes/v1/service-info'"%(loginType) )
-    response2 = s.get("%s/ga4gh/wes/v1/service-info"%(baseURL))
-    
-    print("Status Code:",response2.status_code)
-    print("Response:",response2.json())
+    print(
+        "%s - GET-Requst to '/ga4gh/wes/v1/runs/%s/status'" %
+        (loginType, response2.json()['run_id']))
+
+    response4 = requests.get(
+        "%s/ga4gh/wes/v1/runs/%s/status" % (weskit_host, response2.json()['run_id']),
+        headers=header,
+        cookies=cookie,
+        verify=cert)
+
+    print("Status Code:", response4.status_code)
+    print("Response:", response4.json())
     print("****************************************\n\n")
-    print("****************************************")
-    print("%s - GET-Requst to '/ga4gh/wes/v1/runs/'"%( loginType))
-    response3 = session.get("%s/ga4gh/wes/v1/runs"%(baseURL))
-    print("Status Code:",response3.status_code)
-    print("Response:",response3.json())
-    print("****************************************\n\n")
-    
-    print("****************************************")
-    print("%s - GET-Requst to '/refresh'"%( loginType))
-    response4 = session.post("%s/refresh"%(baseURL))
-    print("Status Code:",response4.status_code)
-    print("Response:",response4.json())
-    print("****************************************\n\n")
-    
-    print("****************************************")
-    print("%s - GET-Requst to '/logout'"%( loginType))
-    response5 = session.get("%s/logout"%(baseURL))
-    print("Status Code:",response5.status_code)
-    print("Response:",response5.json())
-    print("****************************************\n")
-    
+
+
+token = get_access_token_from_keycloak(hostname=keycloak_host, credentials=Credentials)
 
 print("****************************************")
-print("*        Test API without login        *")
+print("*  Test API access token in header     *")
 
-tryApiEndpoints('without login ',s)
+header = dict(Authorization="Bearer " + token["access_token"])
+print(header)
+tryApiEndpoints('with access token in Header ', header=header)
 print("________________________________________________________________________________")
-
-
-
-
-print("****************************************")
-print("*        Test API with wrong login     *")
-loginresponse = s.post("%s/login"%(baseURL),json=WrongCredentials)
-print("Status Code:",loginresponse.status_code)
-print("Response:",loginresponse.json())
-tryApiEndpoints('with wrong login ',s)
-print("________________________________________________________________________________")
-
-print("****************************************")
-print("*        Test API with with correct login     *")
-loginresponse = s.post("%s/login"%(baseURL),json=Credentials)
-print("Status Code:",loginresponse.status_code)
-print("Response:",loginresponse.json())
-tryApiEndpoints('with correct login ',s)
-print("________________________________________________________________________________")
-
-print("****************************************")
-print("*      Try after Successful logout     *")
-tryApiEndpoints('after logout ',s)
-print("________________________________________________________________________________")
-
