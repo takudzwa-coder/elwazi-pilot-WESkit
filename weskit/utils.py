@@ -5,11 +5,11 @@ from urllib.parse import urlparse
 from datetime import datetime
 
 
-def get_absolute_file_paths(directory):
+def get_relative_file_paths(directory):
     files = []
     for dir_path, _, filenames in os.walk(directory):
         for f in filenames:
-            files.append(os.path.abspath(os.path.join(dir_path, f)))
+            files.append(os.path.relpath(os.path.join(dir_path, f), directory))
     return files
 
 
