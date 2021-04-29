@@ -1,4 +1,4 @@
-.weskit.code-workspace
+*.code-workspace
 tmp/
 trash/
 __pycache__/
