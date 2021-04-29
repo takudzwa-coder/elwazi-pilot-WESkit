@@ -149,3 +149,72 @@ def RunWorkflow():
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
+
+
+@bp.route("/weskit/v1/runs", methods=["GET"])
+@login_required
+def ListRunsExtended(*args, **kwargs):
+    try:
+        logger.info("ListRunsExtended")
+        current_app.manager.update_runs(query={})
+        user_id = current_user.id
+        response = current_app.manager.database.list_run_ids_and_states_and_times()
+
+        # filter for runs for this user
+        response = [run for run in response if run["user_id"] == user_id]
+        
+        # workaround for propper JSON format
+        try:
+            for run in response:
+                run["request"]["workflow_params"] = json.loads(run["request"]["workflow_params"])
+        except:
+            pass
+        return jsonify(response), 200
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise e
+
+
+@bp.route("/weskit/v1/runs/<string:run_id>/stderr", methods=["GET"])
+@login_required
+def GetRunStderr(run_id):
+    try:
+        logger.info("GetStderr")
+        run = current_app.manager.get_run(
+            run_id=run_id, update=True)
+        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+
+        if access_denied_response is None:
+            path = run.execution_path
+            with open(f"{path}/stderr", "r") as f:
+                content = f.read()
+            print(content)
+            return jsonify({"content": content}), 200
+        else:
+            return access_denied_response
+
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise e
+
+
+@bp.route("/weskit/v1/runs/<string:run_id>/stdout", methods=["GET"])
+@login_required
+def GetRunStdout(run_id):
+    try:
+        logger.info("GetStdout")
+        run = current_app.manager.get_run(
+            run_id=run_id, update=True)
+        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+
+        if access_denied_response is None:
+            path = run.execution_path
+            with open(f"{path}/stdout", "r") as f:
+                content = f.read()
+            return jsonify({"content": content}), 200
+        else:
+            return access_denied_response
+
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise e
