@@ -13,13 +13,6 @@ def get_relative_file_paths(directory):
     return files
 
 
-def to_uri(paths):
-    uri_paths = []
-    for path in paths:
-        uri_paths.append(pathlib.Path(path).as_uri())
-    return uri_paths
-
-
 def to_filename(uris):
     filenames = []
     for uri in uris:
