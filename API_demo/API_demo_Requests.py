@@ -21,7 +21,7 @@ cert = os.path.normpath(os.path.join(current_file, '../uWSGI_Server/certs/weskit
 
 def get_workflow_data():
     with open(os.path.normpath(os.path.join(current_file, '../tests/wf1/config.yaml'))) as file:
-        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
+        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
     snakefile = "file:tests/wf1/Snakefile"
     data = {
         "workflow_params": workflow_params,
@@ -54,7 +54,7 @@ def tryApiEndpoints(loginType, cookie=None, header=None):
     print("****************************************\n\n")
 
     response2 = requests.post("%s/ga4gh/wes/v1/runs" % (weskit_host),
-                              data=get_workflow_data(),
+                              json=get_workflow_data(),
                               headers=header,
                               cookies=cookie,
                               verify=cert)
