@@ -29,7 +29,6 @@ def runid_fixture():
 
 @pytest.fixture(name="OIDC_credentials", scope="session")
 def login_fixture():
-
     """
     This fixture connects to a keycloak server requests an access token and
     returns a LoginClass object with the the following values:
@@ -110,7 +109,7 @@ class TestWithoutLogin:
     def test_get_run_stderr_wo_login(self, test_client, celery_worker):
         response = test_client.get("/weskit/v1/runs/test_runId/stderr")
         assert response.status_code == 401
-    
+
     @pytest.mark.integration
     def test_get_run_stdout_wo_login(self, test_client, celery_worker):
         response = test_client.get("/weskit/v1/runs/test_runId/stdout")
@@ -134,12 +133,11 @@ class TestWithHeaderToken:
     """
 
     @pytest.mark.integration
-    def test_accept_run_workflow_header(
-            self,
-            test_client,
-            runStorage,
-            OIDC_credentials,
-            celery_worker):
+    def test_accept_run_workflow_header(self,
+                                        test_client,
+                                        runStorage,
+                                        OIDC_credentials,
+                                        celery_worker):
 
         data = get_workflow_data(
             snakefile="tests/wf1/Snakefile",
@@ -156,10 +154,8 @@ class TestWithHeaderToken:
         while not success:
 
             time.sleep(1)
-            status = test_client.get(
-                "/ga4gh/wes/v1/runs/{}/status".format(run_id),
-                headers=OIDC_credentials.headerToken
-            )
+            status = test_client.get("/ga4gh/wes/v1/runs/{}/status".format(run_id),
+                                     headers=OIDC_credentials.headerToken)
 
             success = get_run_success(status.json, start_time)
 
@@ -172,23 +168,37 @@ class TestWithHeaderToken:
         assert response.status_code == 200
 
     @pytest.mark.integration
-    def test_list_runs_extended_with_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+    def test_list_runs_extended_with_header(self,
+                                            test_client,
+                                            runStorage,
+                                            OIDC_credentials,
+                                            celery_worker):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
 
     @pytest.mark.integration
-    def test_get_run_stderr_with_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+    def test_get_run_stderr_with_header(self,
+                                        test_client,
+                                        runStorage,
+                                        OIDC_credentials,
+                                        celery_worker):
         run_id = runStorage.runid
-        response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr", headers=OIDC_credentials.headerToken)
-        assert type(response.json) == type(dict())
+        response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
+                                   headers=OIDC_credentials.headerToken)
+        assert isinstance(response.json, dict)
         assert "content" in response.json
         assert response.status_code == 200
 
     @pytest.mark.integration
-    def test_get_run_stdout_with_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+    def test_get_run_stdout_with_header(self,
+                                        test_client,
+                                        runStorage,
+                                        OIDC_credentials,
+                                        celery_worker):
         run_id = runStorage.runid
-        response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout", headers=OIDC_credentials.headerToken)
-        assert type(response.json) == type(dict())
+        response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
+                                   headers=OIDC_credentials.headerToken)
+        assert isinstance(response.json, dict)
         assert "content" in response.json
         assert response.status_code == 200
