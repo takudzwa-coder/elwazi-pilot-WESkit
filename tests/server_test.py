@@ -98,11 +98,22 @@ class TestWithoutLogin:
     """
     @pytest.mark.integration
     def test_list_runs_wo_login(self, test_client, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
-        data = get_workflow_data(
-            snakefile=snakefile,
-            config="tests/wf1/config.yaml")
-        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
+        response = test_client.get("/ga4gh/wes/v1/runs")
+        assert response.status_code == 401
+
+    @pytest.mark.integration
+    def test_list_runs_extended_wo_login(self, test_client, celery_worker):
+        response = test_client.get("/weskit/v1/runs")
+        assert response.status_code == 401
+
+    @pytest.mark.integration
+    def test_get_run_stderr_wo_login(self, test_client, celery_worker):
+        response = test_client.get("/weskit/v1/runs/test_runId/stderr")
+        assert response.status_code == 401
+    
+    @pytest.mark.integration
+    def test_get_run_stdout_wo_login(self, test_client, celery_worker):
+        response = test_client.get("/weskit/v1/runs/test_runId/stdout")
         assert response.status_code == 401
 
     @pytest.mark.integration
@@ -158,4 +169,26 @@ class TestWithHeaderToken:
     def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
+        assert response.status_code == 200
+
+    @pytest.mark.integration
+    def test_list_runs_extended_with_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+        response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
+        assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
+        assert response.status_code == 200
+
+    @pytest.mark.integration
+    def test_get_run_stderr_with_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+        run_id = runStorage.runid
+        response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr", headers=OIDC_credentials.headerToken)
+        assert type(response.json) == type(dict())
+        assert "content" in response.json
+        assert response.status_code == 200
+
+    @pytest.mark.integration
+    def test_get_run_stdout_with_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+        run_id = runStorage.runid
+        response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout", headers=OIDC_credentials.headerToken)
+        assert type(response.json) == type(dict())
+        assert "content" in response.json
         assert response.status_code == 200
