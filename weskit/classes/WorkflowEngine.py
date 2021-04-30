@@ -6,8 +6,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Dict
 
 from weskit.utils import get_current_timestamp
-from weskit.utils import get_absolute_file_paths
-from weskit.utils import to_uri
+from weskit.utils import get_relative_file_paths
 from dataclasses import dataclass
 
 
@@ -60,7 +59,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                   format(get_current_timestamp(), result.returncode),
                   file=commandOut, flush=True)
 
-        outputs = to_uri(get_absolute_file_paths(workdir))
+        outputs = get_relative_file_paths(workdir)
         return outputs
 
     @abstractmethod

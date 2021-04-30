@@ -2,7 +2,6 @@ import time
 import os
 
 import pytest
-from flask import current_app
 
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
@@ -60,9 +59,8 @@ def test_snakemake_prepare_execution(manager):
 
 
 @pytest.mark.integration
-def test_execute_snakemake(test_client,
+def test_execute_snakemake(manager,
                            celery_worker):
-    manager = current_app.manager
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="snakemake")
     run = manager.prepare_execution(run, files=[])
@@ -86,9 +84,8 @@ def test_execute_snakemake(test_client,
 
 
 @pytest.mark.integration
-def test_execute_nextflow(test_client,
+def test_execute_nextflow(manager,
                           celery_worker):
-    manager = current_app.manager
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
                        workflow_type="nextflow")
     run = manager.prepare_execution(run, files=[])
@@ -130,9 +127,8 @@ def test_execute_nextflow(test_client,
 
 
 @pytest.mark.integration
-def test_update_all_runs(test_client,
+def test_update_all_runs(manager,
                          celery_worker):
-    manager = current_app.manager
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="snakemake")
     manager.database.insert_run(run)
