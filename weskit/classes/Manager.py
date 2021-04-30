@@ -197,7 +197,7 @@ class Manager:
             os.makedirs(run_dir)
 
         with open(run_dir + "/config.yaml", "w") as ff:
-            yaml.dump(json.loads(run.request["workflow_params"]), ff)
+            yaml.dump(run.request["workflow_params"], ff)
         run.execution_path = run_dir
 
         # get workflow path from workflow_url

@@ -2,7 +2,7 @@
 run_request:
   workflow_params:
     required: true
-    type: string     # Type: JSON string
+    type: dict     # Type: JSON string
   workflow_type:
     required: true
     type: string

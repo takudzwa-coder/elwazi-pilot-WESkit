@@ -12,7 +12,7 @@ def get_mock_run(workflow_url, workflow_type, tags=None):
         "request": {
             "workflow_url": workflow_url,
             "workflow_type": workflow_type,
-            "workflow_params": '{"text":"hello_world"}',
+            "workflow_params": {"text":"hello_world"},
         },
         "execution_path": [],
         "run_log": {},

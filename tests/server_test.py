@@ -69,7 +69,7 @@ def login_fixture():
 
 def get_workflow_data(snakefile, config):
     with open(config) as file:
-        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
+        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
 
     data = {
         "workflow_params": workflow_params,
@@ -102,7 +102,7 @@ class TestWithoutLogin:
         data = get_workflow_data(
             snakefile=snakefile,
             config="tests/wf1/config.yaml")
-        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
+        response = test_client.post("/ga4gh/wes/v1/runs", json=data)
         assert response.status_code == 401
 
     @pytest.mark.integration
@@ -111,7 +111,7 @@ class TestWithoutLogin:
         data = get_workflow_data(
             snakefile=snakefile,
             config="tests/wf1/config.yaml")
-        response = test_client.post("/ga4gh/wes/v1/runs", data=data)
+        response = test_client.post("/ga4gh/wes/v1/runs", json=data)
         assert response.status_code == 401
 
 
@@ -135,7 +135,7 @@ class TestWithHeaderToken:
             config="tests/wf1/config.yaml")
 
         response = test_client.post(
-            "/ga4gh/wes/v1/runs", data=data, headers=OIDC_credentials.headerToken)
+            "/ga4gh/wes/v1/runs", json=data, headers=OIDC_credentials.headerToken)
 
         run_id = response.json["run_id"]
 
