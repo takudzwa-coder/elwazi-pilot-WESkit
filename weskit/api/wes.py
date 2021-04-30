@@ -162,13 +162,7 @@ def ListRunsExtended(*args, **kwargs):
 
         # filter for runs for this user
         response = [run for run in response if run["user_id"] == user_id]
-        
-        # workaround for propper JSON format
-        try:
-            for run in response:
-                run["request"]["workflow_params"] = json.loads(run["request"]["workflow_params"])
-        except:
-            pass
+
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
