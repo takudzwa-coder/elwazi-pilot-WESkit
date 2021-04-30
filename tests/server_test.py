@@ -154,6 +154,13 @@ class TestWithHeaderToken:
 
         assert response.status_code == 200
 
+        # test that outputs are relative
+        run = test_client.get(
+            "/ga4gh/wes/v1/runs/{}".format(run_id),
+            headers=OIDC_credentials.headerToken).json
+        for output in run["outputs"]["Workflow"]:
+            assert not os.path.isabs(output)
+
     @pytest.mark.integration
     def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
