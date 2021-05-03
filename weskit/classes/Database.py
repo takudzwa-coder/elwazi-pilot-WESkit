@@ -80,3 +80,13 @@ class Database:
         return self._db_runs() \
             .delete_one({"run_id": run.run_id}) \
             .acknowledged
+
+    def list_run_ids_and_states_and_times(self) -> list:
+        return list(self._db_runs().find(
+            projection={"_id": False,
+                        "run_id": True,
+                        "run_status": True,
+                        "start_time": True,
+                        "user_id": True,
+                        "request": True
+                        }))

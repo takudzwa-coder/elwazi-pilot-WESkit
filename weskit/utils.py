@@ -1,23 +1,15 @@
 import os
-import pathlib
 import traceback
 from urllib.parse import urlparse
 from datetime import datetime
 
 
-def get_absolute_file_paths(directory):
+def get_relative_file_paths(directory):
     files = []
     for dir_path, _, filenames in os.walk(directory):
         for f in filenames:
-            files.append(os.path.abspath(os.path.join(dir_path, f)))
+            files.append(os.path.relpath(os.path.join(dir_path, f), directory))
     return files
-
-
-def to_uri(paths):
-    uri_paths = []
-    for path in paths:
-        uri_paths.append(pathlib.Path(path).as_uri())
-    return uri_paths
 
 
 def to_filename(uris):
