@@ -101,7 +101,7 @@ class Manager:
 
         if run.run_status == RunStatus.COMPLETE:
             running_task = self._run_task.AsyncResult(run.celery_task_id)
-            run.outputs["Workflow"] = running_task.get()
+            run.outputs["Workflow"] = running_task.get()["output_files"]
         return run
 
     def update_run(self, run: Run) -> Run:

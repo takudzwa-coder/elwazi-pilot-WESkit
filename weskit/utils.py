@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from datetime import datetime
 
 
-def get_relative_file_paths(directory):
+def collect_relative_paths_from(directory):
     files = []
     for dir_path, _, filenames in os.walk(directory):
         for f in filenames:

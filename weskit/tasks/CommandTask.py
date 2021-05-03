@@ -1,40 +1,62 @@
+import json
 import logging
 import os
 import pathlib
 import subprocess
-from typing import List
+from typing import List, Optional
 
-from weskit.utils import get_current_timestamp, get_relative_file_paths
+from weskit.utils import get_current_timestamp, collect_relative_paths_from
 
 logger = logging.getLogger(__name__)
 
 
 def run_command(command: List[str],
-                workdir: str):
+                workdir: str,
+                log_base: str = ".weskit"):
     """
-    Run a command in a working directory. The workflow_type parameter is only used for logging.
-    """
-    timestamp = get_current_timestamp()
+    Run a command in a working directory.
 
+    Write log files into a timestamp sub-directory of `workdir/log_base`. There will be `stderr`
+    and `stdout` files for the respective output of the command and `command.json` with general
+    runtime information, including the "command", "start_time", "end_time", and the "exit_code".
+
+    Returns a dict with fields "stdout_file", "stderr_file", "command_file" for the three log
+    files, and "output_files" for all files created by the process, but not the three log-files.
+    """
+    start_time = get_current_timestamp()
+    log_dir = os.path.join(workdir, log_base, start_time)
     logger.info("Running command in {}: {}".format(workdir, command))
-
-    with open(os.path.join(workdir, "command"), "a") as commandOut:
-        print("{}: {}, workddir={}".format(timestamp, command, workdir),
-              file=commandOut, flush=True)
-
-        with open(os.path.join(workdir, "stderr"), "a") as stderr:
-            print(timestamp, file=stderr, flush=True)
-
-            with open(os.path.join(workdir, "stdout"), "a") as stdout:
-                print(timestamp, file=stdout, flush=True)
+    stderr_file = os.path.join(log_dir, "stderr")
+    stdout_file = os.path.join(log_dir, "stdout")
+    command_file = os.path.join(log_dir, "command.json")
+    result: Optional[subprocess.CompletedProcess] = None
+    try:
+        os.makedirs(log_dir)
+        with open(stderr_file, "a") as stderr:
+            with open(stdout_file, "a") as stdout:
                 result = \
                     subprocess.run(command,
                                    cwd=str(pathlib.PurePath(workdir)),
                                    stdout=stdout,
                                    stderr=stderr)
-        print("{}: exit code = {}".
-              format(get_current_timestamp(), result.returncode),
-              file=commandOut, flush=True)
+    finally:
+        with open(command_file, "w") as fh:
+            json.dump({
+                "start_time": start_time,
+                "command": command,
+                "workdir": workdir,
+                "end_time": get_current_timestamp(),
+                "exit_code": result.returncode if result is not None else -1
+            }, fh)
 
-    outputs = get_relative_file_paths(workdir)
-    return outputs
+    outputs = list(filter(
+        lambda fn: fn not in list(
+            map(lambda logfile: os.path.relpath(logfile, workdir),
+                [stdout_file, stderr_file, command_file])),
+        collect_relative_paths_from(workdir)))
+    return {
+        "stdout_file": stdout_file,
+        "stderr_file": stderr_file,
+        "command_file": command_file,
+        "output_files": outputs
+    }
