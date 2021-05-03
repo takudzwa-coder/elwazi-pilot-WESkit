@@ -8,7 +8,7 @@ import pytest
 from weskit.tasks.CommandTask import run_command
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def temporary_dir():
     tmpdir = mkdtemp(prefix=__name__)
     yield tmpdir
