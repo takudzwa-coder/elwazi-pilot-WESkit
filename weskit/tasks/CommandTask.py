@@ -40,23 +40,23 @@ def run_command(command: List[str],
                                    stdout=stdout,
                                    stderr=stderr)
     finally:
+        outputs = list(filter(
+            lambda fn: fn not in list(
+                map(lambda logfile: os.path.relpath(logfile, workdir),
+                    [stdout_file, stderr_file, command_file])),
+            collect_relative_paths_from(workdir)))
+        run_log = {
+            "start_time": start_time,
+            "cmd": command,
+            "workdir": workdir,
+            "end_time": get_current_timestamp(),
+            "exit_code": result.returncode if result is not None else -1,
+            "stdout_file": stdout_file,
+            "stderr_file": stderr_file,
+            "command_file": command_file,
+            "output_files": outputs
+        }
         with open(command_file, "w") as fh:
-            json.dump({
-                "start_time": start_time,
-                "command": command,
-                "workdir": workdir,
-                "end_time": get_current_timestamp(),
-                "exit_code": result.returncode if result is not None else -1
-            }, fh)
+            json.dump(run_log, fh)
 
-    outputs = list(filter(
-        lambda fn: fn not in list(
-            map(lambda logfile: os.path.relpath(logfile, workdir),
-                [stdout_file, stderr_file, command_file])),
-        collect_relative_paths_from(workdir)))
-    return {
-        "stdout_file": stdout_file,
-        "stderr_file": stderr_file,
-        "command_file": command_file,
-        "output_files": outputs
-    }
+    return run_log

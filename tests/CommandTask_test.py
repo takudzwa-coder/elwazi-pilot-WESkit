@@ -23,7 +23,7 @@ def test_run_command(temporary_dir):
         assert f.readlines() == ["hello world\n"]
     with open(result["command_file"], "r") as f:
         command_result = json.load(f)
-        assert command_result["command"] == command
+        assert command_result["cmd"] == command
         assert command_result["exit_code"] == 0
         assert command_result["workdir"] == temporary_dir
         assert command_result["start_time"]

@@ -179,11 +179,7 @@ def GetRunStderr(run_id):
         access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
 
         if access_denied_response is None:
-            path = run.execution_path
-            with open(f"{path}/stderr", "r") as f:
-                content = f.read()
-            print(content)
-            return jsonify({"content": content}), 200
+            return jsonify({"content": run.run_log["stderr"]}), 200
         else:
             return access_denied_response
 
@@ -202,10 +198,7 @@ def GetRunStdout(run_id):
         access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
 
         if access_denied_response is None:
-            path = run.execution_path
-            with open(f"{path}/stdout", "r") as f:
-                content = f.read()
-            return jsonify({"content": content}), 200
+            return jsonify({"content": run.run_log["stdout"]}), 200
         else:
             return access_denied_response
 

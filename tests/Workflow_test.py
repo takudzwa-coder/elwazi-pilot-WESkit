@@ -75,7 +75,6 @@ def test_execute_snakemake(manager,
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
-            manager.database.update_run(run)
             continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
@@ -100,7 +99,6 @@ def test_execute_nextflow(manager,
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
-            manager.database.update_run(run)
             continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
