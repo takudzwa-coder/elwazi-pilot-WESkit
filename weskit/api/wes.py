@@ -123,7 +123,7 @@ def ListRuns(*args, **kwargs):
 @login_required
 def RunWorkflow():
     try:
-        data = request.form
+        data = request.json
         logger.info("RunWorkflow")
         validator = current_app.request_validators["run_request"]
         validation_errors = validator.validate(
