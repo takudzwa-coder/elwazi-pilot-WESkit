@@ -5,11 +5,10 @@ from urllib.parse import urlparse
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
-
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from weskit.tasks.WorkflowTask import run_workflow
+from weskit.tasks.CommandTask import run_command
 from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
 from typing import Optional, List
@@ -54,11 +53,12 @@ class Manager:
         self.database = database
         self.workflows_base_dir = workflows_base_dir
         self.require_workdir_tag = require_workdir_tag
-        # Register the relevant tasks with fully qualified name.
-        self.celery_app.task(run_workflow)
+        # Register the relevant tasks with fully qualified name. The function needs to be static.
+        self.celery_app.task(run_command)
 
-    def _get_run_task(self) -> Task:
-        return self.celery_app.tasks["weskit.tasks.WorkflowTask.run_workflow"]
+    @property
+    def _run_task(self) -> Task:
+        return self.celery_app.tasks["weskit.tasks.CommandTask.run_command"]
 
     def cancel(self, run: Run) -> Run:
         """See https://docs.celeryproject.org/en/latest/userguide/workers.html
@@ -85,7 +85,7 @@ class Manager:
            run.run_status == RunStatus.INITIALIZING or \
            run.run_status == RunStatus.CANCELING:
             if run.celery_task_id is not None:
-                running_task = self._get_run_task().\
+                running_task = self._run_task.\
                     AsyncResult(run.celery_task_id)
                 if ((run.run_status != RunStatus.CANCELING) or
                     (run.run_status == RunStatus.CANCELING and
@@ -99,8 +99,8 @@ class Manager:
     def update_outputs(self, run: Run) -> Run:
 
         if run.run_status == RunStatus.COMPLETE:
-            running_task = self._get_run_task().AsyncResult(run.celery_task_id)
-            run.outputs["Workflow"] = running_task.get()
+            running_task = self._run_task.AsyncResult(run.celery_task_id)
+            run.outputs["Workflow"] = running_task.get()["output_files"]
         return run
 
     def update_run(self, run: Run) -> Run:
@@ -211,7 +211,6 @@ class Manager:
             run.workflow_path = workflow_path
         except Exception as e:
             logger.warning(e, stack_info=True, exc_info=True)
-
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
@@ -228,27 +227,28 @@ class Manager:
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
-            raise Exception("Workflow type:'" +
-                            run.request["workflow_type"] +
-                            "' is not known. Know " +
-                            ", ".join(self.workflow_engines.keys()))
+            raise ValueError("Workflow type:'" +
+                             run.request["workflow_type"] +
+                             "' is not known. Know " +
+                             ", ".join(self.workflow_engines.keys()))
 
         # execute run
         run_kwargs = {
-            "workflow_type": workflow_type,
             "workflow_path": run.workflow_path,
             "workdir": run.execution_path,
             "config_files": [os.path.join(run.execution_path, "config.yaml")],
             "workflow_engine_params": []
         }
         run.start_time = get_current_timestamp()
-        run.run_log["cmd"] = ", ".join(
-            "{}={}".format(key, run_kwargs[key]) for key in run_kwargs.keys()
-        )
+        command: List[str] = self.workflow_engines[workflow_type].command(**run_kwargs)
+        run.run_log["cmd"] = command
         if run.run_status == RunStatus.INITIALIZING:
-            task = self._get_run_task().apply_async(
-                    args=[],
-                    kwargs={**run_kwargs})
+            task = self._run_task.apply_async(
+                args=[],
+                kwargs={
+                    "command": command,
+                    "workdir": run.execution_path
+                })
             run.celery_task_id = task.id
 
         return run

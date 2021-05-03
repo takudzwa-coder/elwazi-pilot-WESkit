@@ -1,3 +1,4 @@
+import logging
 import os
 import pytest
 import yaml
@@ -13,22 +14,18 @@ from weskit import create_app, Manager, WorkflowEngineFactory
 from weskit import create_database
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_redis_url(redis_container):
     url = "redis://{}:{}".format(
         redis_container.get_container_host_ip(),
         redis_container.get_exposed_port(6379)
     )
-
     return url
 
 
-"""
-KeyCloak Containers
-
-"""
-
-
-def getContainerProperties(container, port):
+def get_keycloak_container_properties(container, port):
     return (
         {
             "ExternalHostname": container.get_container_host_ip(),
@@ -40,16 +37,14 @@ def getContainerProperties(container, port):
 
 
 @pytest.fixture(scope="session")
-def MySQL_keycloak_container():
+def mysql_keycloak_container():
     preDB = MySqlContainer('mysql:latest',
                            MYSQL_USER="keycloak",
                            MYSQL_PASSWORD="secret_password",
                            MYSQL_DATABASE="keycloak",
                            MYSQL_ROOT_PASSWORD="secret_root_password"
                            )
-
     configfile = os.path.abspath("tests/keycloak/keycloak_schema.sql")
-
     preDB.with_volume_mapping(configfile, "/docker-entrypoint-initdb.d/test.sql")
     with preDB as mysql:
         yield mysql
@@ -67,11 +62,11 @@ def test_client(celery_session_app,
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
-    keycloakContainerProperties = getContainerProperties(keycloak_container, '8080')
+    keycloak_container_properties = get_keycloak_container_properties(keycloak_container, '8080')
 
     os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
-        keycloakContainerProperties["ExternalHostname"],
-        keycloakContainerProperties["ExposedPorts"],
+        keycloak_container_properties["ExternalHostname"],
+        keycloak_container_properties["ExposedPorts"],
     )
 
     # Define Variables that would be defined in the docker stack file
@@ -85,14 +80,13 @@ def test_client(celery_session_app,
 
     with app.test_client() as testing_client:
         with app.app_context():
-
-            # This sets `current_app` for accessing the Flask app in the tests.
+            # This sets `current_app` and `current_user` for the tests.
             yield testing_client
 
 
 @pytest.fixture(scope="session")
-def keycloak_container(MySQL_keycloak_container):
-    mysql_ip = getContainerProperties(MySQL_keycloak_container, '3306')["InternalIP"]
+def keycloak_container(mysql_keycloak_container):
+    mysql_ip = get_keycloak_container_properties(mysql_keycloak_container, '3306')["InternalIP"]
 
     kc_container = DockerContainer("jboss/keycloak")
     kc_container.with_exposed_ports('8080')
@@ -116,9 +110,7 @@ def keycloak_container(MySQL_keycloak_container):
             try:
                 requests.get("http://" + kc_host + ":" + kc_port)
                 kc_running = True
-
                 break
-
             except Exception:
                 time.sleep(waitingSeconds)
 
