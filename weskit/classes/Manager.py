@@ -96,21 +96,32 @@ class Manager:
                 run.run_status = RunStatus.SYSTEM_ERROR
         return run
 
-    def update_outputs(self, run: Run) -> Run:
-
+    def update_run_results(self, run: Run) -> Run:
         if run.run_status == RunStatus.COMPLETE:
             running_task = self._run_task.AsyncResult(run.celery_task_id)
-            run.outputs["Workflow"] = running_task.get()["output_files"]
+            result = running_task.get()
+            run.outputs["Workflow"] = result["output_files"]
+            run.run_log = {
+                "name": "string",
+                "cmd": result["cmd"],
+                "start_time": result["start_time"],
+                "end_time": result["end_time"],
+                "exit_code": result["exit_code"]
+            }
+            with open(result["stdout_file"], "r") as f:
+                run.run_log["stdout"] = f.readlines()
+            with open(result["stderr_file"], "r") as f:
+                run.run_log["stderr"] = f.readlines()
         return run
 
-    def update_run(self, run: Run) -> Run:
-        return self.update_outputs(self.update_state(run))
+    def update_run(self, run) -> Run:
+        updated_run = self.update_run_results(self.update_state(run))
+        self.database.update_run(updated_run)
+        return updated_run
 
-    def update_runs(self, query) -> None:
+    def update_runs(self, query) -> List[Run]:
         runs = self.database.get_runs(query)
-        for run in runs:
-            run = self.update_run(run)
-            self.database.update_run(run)
+        return list(map(self.update_run, runs))
 
     def create_and_insert_run(self, request, user)\
             -> Optional[Run]:
