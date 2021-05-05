@@ -24,7 +24,7 @@ dependencies:
   - uwsgi=2.0.19.1
   - pymysql=1.0.2
   - bioconda::nextflow=20.10.0
-
+  - mccabe=0.6.1
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1
