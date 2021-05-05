@@ -11,8 +11,6 @@
 services:
   - docker:dind
 
-image: continuumio/miniconda3:latest
-
 cache:
   key: cache-for-all-branches
   paths:
@@ -25,8 +23,15 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   PIP_CACHE_DIR: "/opt/cache/pip"
+  CONTAINER_UID: "35671"
+  CONTAINER_USER: weskit
+  CONTAINER_GID: "35671"
+  CONTAINER_GROUP: weskit
+  CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api
+  REGISTRY: registry.gitlab.com
 
 .conda:
+  image: continuumio/miniconda3:latest
   before_script:
     - python -V              # For debugging
     - conda init bash
@@ -51,3 +56,48 @@ code_style:
   script:
     - flake8
 
+# The CI_BUILD_TOKEN content is set in Settings -> CI/CD -> Variables
+# See
+# https://docs.gitlab.com/ee/user/project/deploy_tokens/index.html
+# https://docs.gitlab.com/ee/user/packages/container_registry/#authenticate-with-the-container-registry  # noqa
+# https://gitlab.com/one-touch-pipeline/weskit/api/-/settings/repository/deploy_token
+#
+# Use this hidden job to `extend` deployment to registry and container tests jobs.
+.gitlab-registry:
+  image: docker:stable
+  before_script:
+    - docker info
+    - docker login -u "$CI_DEPLOY_USER" -p "$CI_DEPLOY_PASSWORD" "$REGISTRY"
+
+.build_image:
+  extends: .gitlab-registry
+  # Only build images, if the QA jobs succeeded.
+  # needs: [code_style, test]
+  script:
+    - |
+      docker build \
+        --build-arg USER_ID="$CONTAINER_UID" \
+        --build-arg USER="$CONTAINER_USER" \
+        --build-arg GROUP_ID="$CONTAINER_GID" \
+        --build-arg GROUP="$CONTAINER_GROUP" \
+        -t "$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG" .
+    - docker push "$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG"
+
+# Only the latest images from the master branch are permanently kept.
+build_latest_image:
+  stage: deploy
+  extends: .build_image
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "gitlab-container-registry"'
+  variables:
+    VERSION_TAG: latest
+
+# # For all other branches, build images tagged by branch-names. These are configured to be
+# # garbage collected after a week.
+# build_branch_image:
+#   stage: build
+#   extends: .build_image
+#   rules:
+#     - if: '"$CI_COMMIT_BRANCH" != "master"'
+#   variables:
+#     VERSION_TAG: $CI_COMMIT_BRANCH
