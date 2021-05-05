@@ -22,6 +22,9 @@ from weskit.classes.ServiceInfo import ServiceInfo
 from weskit.classes.ErrorCodes import ErrorCodes
 
 
+logger = logging.getLogger(__name__)
+
+
 class WESApp(Flask):
     """We make a subclass of Flask that takes the important app-global
     (~thread local) resources.
@@ -110,7 +113,6 @@ def create_app(celery: Celery, database: Database) -> Flask:
     with open(default_log_config, "r") as yaml_file:
         log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
         dictConfig(log_config)
-        logger = logging.getLogger("default")
         logger.info("Read log config from " + default_log_config)
 
     with open(default_config, "r") as yaml_file:
