@@ -2,8 +2,9 @@ import logging
 
 from flask import current_app, jsonify, request
 from flask import Blueprint
-from weskit.oidc.Decorators import login_required
 from flask_jwt_extended import current_user
+
+from weskit.oidc.Decorators import login_required
 from weskit.api import utils as u
 
 bp = Blueprint("wes", __name__)

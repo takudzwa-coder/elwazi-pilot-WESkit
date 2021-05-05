@@ -16,9 +16,6 @@ from weskit import create_database
 logger = logging.getLogger(__name__)
 
 
-logger = logging.getLogger(__name__)
-
-
 def get_redis_url(redis_container):
     url = "redis://{}:{}".format(
         redis_container.get_container_host_ip(),
@@ -66,17 +63,6 @@ def test_client(celery_session_app,
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
 
-    # TODO Remove this!
-    keycloak_container_properties = get_container_properties(keycloak_container, '8080')
-    os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (
-            keycloak_container_properties["ExternalHostname"],
-            keycloak_container_properties["ExposedPorts"],
-        )
-    # Define Variables that would be defined in the docker stack file
-    os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
-    os.environ["OIDC_REALM"] = "WESkit"
-    os.environ["OIDC_CLIENTID"] = "WESkit"
-
     app = create_app(celery=celery_session_app,
                      database=test_database)
     app.testing = True
@@ -102,7 +88,6 @@ def keycloak_container(mysql_keycloak_container):
     kc_container.with_env("DB_USER", "keycloak")
     kc_container.with_env("DB_PASSWORD", "secret_password")
 
-    # kc_container.start()
     with kc_container as keycloak:
         time.sleep(5)
 
@@ -123,12 +108,11 @@ def keycloak_container(mysql_keycloak_container):
 
         assert kc_running
 
-        # TODO Uncomment
-        # # Define Variables that would be defined in the docker stack file
-        # os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (kc_host, kc_port)
-        # os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
-        # os.environ["OIDC_REALM"] = "WESkit"
-        # os.environ["OIDC_CLIENTID"] = "WESkit"
+        # Define Variables that would be defined in the docker stack file
+        os.environ["OIDC_ISSUER_URL"] = "http://%s:%s/auth/realms/WESkit" % (kc_host, kc_port)
+        os.environ["OIDC_CLIENT_SECRET"] = "a8086bcc-44f3-40f9-9e15-fd5c3c98ab24"
+        os.environ["OIDC_REALM"] = "WESkit"
+        os.environ["OIDC_CLIENTID"] = "WESkit"
 
         yield keycloak
 

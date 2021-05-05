@@ -70,12 +70,15 @@ def setup(app: Flask, config: dict) -> None:
     jwt_manager = JWTManager(app)
 
     # A a Login object to allow access to some information from the login_required decorator.
-    app.oidc_login = Login(client_id, client_secret, realm, oidc_config)
+    app.oidc_login = Login(client_id=client_id,
+                           client_secret=client_secret,
+                           realm=realm,
+                           oidc_config=oidc_config)
 
     @jwt_manager.user_loader_callback_loader
     def user_loader_callback(identity: str) -> User:
         """
-        This function returns a User Object if the flask_jwt_extended current_user is called
+        This function returns a User object if the flask_jwt_extended current_user is called
         :param identity: unused, since data of access token will be used here but its required
         :return: User
         """
