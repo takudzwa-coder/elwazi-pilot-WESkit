@@ -33,7 +33,7 @@ test:
   stage: test
   extends: .conda
   script:
-    - python -m pytest -v
+    - python -m pytest -vvv --cov=weskit/
 
 code_style:
   stage: test
