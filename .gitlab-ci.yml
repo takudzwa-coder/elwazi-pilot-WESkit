@@ -18,24 +18,28 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   PIP_CACHE_DIR: "/opt/cache/pip"
 
-before_script:
-  - python -V              # For debugging
-  - conda init bash
-  - source /root/.bashrc
-  - conda info             # For debugging
-  - conda config --show    # For debugging
-  - conda install mamba -n base -c conda-forge   # To speed up env creation
-  - mamba env create -n weskit -f environment.yaml
-  - conda activate weskit
+.conda:
+  before_script:
+    - python -V              # For debugging
+    - conda init bash
+    - source /root/.bashrc
+    - conda info             # For debugging
+    - conda config --show    # For debugging
+    - conda install mamba -n base -c conda-forge   # To speed up env creation
+    - mamba env create -n weskit -f environment.yaml
+    - conda activate weskit
 
 test:
   stage: test
+  extends: .conda
   script:
-    - python -m pytest -v
-
+    - python -m pytest -vvv --cov=weskit/
 
 code_style:
   stage: test
+  image: python:latest
+  before_script:
+    - pip install flake8 mccabe
   script:
-    - flake8 
+    - flake8
 
