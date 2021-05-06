@@ -1,3 +1,11 @@
+#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+#
+#  Distributed under the MIT License. Full text at
+#
+#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
+#
+#  Authors: The WESkit Team
+
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
 services:

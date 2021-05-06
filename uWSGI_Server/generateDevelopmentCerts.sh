@@ -1,4 +1,15 @@
 #!/bin/bash
+
+#
+# Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+#
+# Distributed under the MIT License. Full text at
+#
+#     https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
+#
+# Authors: The WESkit Team
+#
+
 # This script generates self signed development certificates.
 # Per default the certificates will be stored in the certs sub-folder.
 # The path can be changed by setting command line arg 1
