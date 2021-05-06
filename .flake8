@@ -17,4 +17,5 @@ exclude =
     *.json,
     *.tar.gz,
     .editorconfig,
-    uWSGI_Server/certs
+    uWSGI_Server/certs,
+    .coverage
