@@ -102,13 +102,15 @@ build_latest_image:
   variables:
     VERSION_TAG: latest
 
-# Build images for tagged commits on the master. Commit tags with the pattern \d+\.\d+\.\d+
-# are not garbage collected.
+# Build images for tagged commits. Commit tags with the pattern \d+\.\d+\.\d+
+# are not garbage collected. Note that CI_COMMIT_BRANCH is set to null for tag-pipelines,
+# and the other way around. Therefore, allow building containers only for tags on master
+# seems not to be possible.
 build_tagged_image:
   stage: deploy
   extends: .build_image
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG != ""'
+    - if: '$CI_COMMIT_TAG'
   variables:
     VERSION_TAG: $CI_COMMIT_TAG
 
