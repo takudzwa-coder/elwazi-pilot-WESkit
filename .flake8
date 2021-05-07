@@ -18,4 +18,5 @@ exclude =
     *.tar.gz,
     .editorconfig,
     uWSGI_Server/certs,
-    .coverage
+    .coverage,
+    testfile

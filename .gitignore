@@ -19,3 +19,4 @@ data/
 test-data/
 *.gz
 .coverage
+testfile
