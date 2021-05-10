@@ -8,8 +8,11 @@
 
 import os
 import traceback
+from typing import Optional
 from urllib.parse import urlparse
 from datetime import datetime
+
+from cerberus import Validator
 
 
 def collect_relative_paths_from(directory):
@@ -39,3 +42,16 @@ def all_subclasses(cls):
 
 def get_traceback(e: Exception) -> str:
     return ''.join(traceback.format_exception(None, e, e.__traceback__))
+
+
+def create_validator(schema):
+    """Return a validator function that can be provided a data structure to
+    be validated. The validator is returned as second argument."""
+    def _validate(target) -> Optional[str]:
+        validator = Validator()
+        result = validator.validate(target, schema)
+        if result:
+            return None
+        else:
+            return validator.errors
+    return _validate

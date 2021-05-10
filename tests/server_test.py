@@ -14,7 +14,7 @@ import requests
 import pytest
 from flask import current_app
 
-from tests.test_utils import get_run_success
+from tests.utils_test import get_run_success
 
 
 logger = logging.getLogger(__name__)
