@@ -21,3 +21,4 @@ __pycache__
 uWSGI_Server/certs/weskit.*
 .editorconfig
 .coverage
+testfile
