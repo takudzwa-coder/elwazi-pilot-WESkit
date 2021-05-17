@@ -14,7 +14,7 @@ import pytest
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
-from test_utils import get_mock_run
+from utils_test import get_mock_run
 from weskit.classes.RunStatus import RunStatus
 
 

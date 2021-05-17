@@ -11,7 +11,7 @@ import pytest
 
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from test_utils import get_mock_run
+from utils_test import get_mock_run
 
 
 @pytest.mark.integration

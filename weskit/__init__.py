@@ -16,10 +16,10 @@ import logging
 import os
 
 from celery import Celery
-from cerberus import Validator
 from pymongo import MongoClient
 from logging.config import dictConfig
 from flask import Flask
+from weskit.utils import create_validator
 
 from weskit.oidc.Login import Login
 from weskit.oidc import Factory as OIDCFactory
@@ -87,20 +87,8 @@ def create_database(database_url=None):
     return Database(MongoClient(database_url), "WES")
 
 
-def create_validator(schema):
-    """Return a validator function that can be provided a data structure to
-    be validated. The validator is returned as second argument."""
-    def _validate(target) -> Optional[str]:
-        validator = Validator()
-        result = validator.validate(target, schema)
-        if result:
-            return None
-        else:
-            return validator.errors
-    return _validate
-
-
-def create_app(celery: Celery, database: Database) -> Flask:
+def create_app(celery: Celery,
+               database: Database) -> Flask:
     default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
