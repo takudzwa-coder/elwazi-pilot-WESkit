@@ -20,6 +20,7 @@ bp = Blueprint("wes", __name__)
 
 logger = logging.getLogger(__name__)
 
+
 def _get_current_user_id():
     if current_user is not None:
         return current_user.id
@@ -148,7 +149,8 @@ def RunWorkflow():
               "status_code": 400
             }, 400
         else:
-            run = current_app.manager.create_and_insert_run(request=data, user=_get_current_user_id())
+            run = current_app.manager.create_and_insert_run(request=data,
+                                                            user=_get_current_user_id())
 
             logger.info("Prepare execution")
             run = current_app.manager.\
