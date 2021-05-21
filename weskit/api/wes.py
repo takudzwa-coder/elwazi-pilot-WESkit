@@ -21,6 +21,13 @@ bp = Blueprint("wes", __name__)
 logger = logging.getLogger(__name__)
 
 
+def _get_current_user_id():
+    if current_user is not None:
+        return current_user.id
+    else:
+        return "default"
+
+
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
 @login_required
 def GetRunLog(run_id):
@@ -28,7 +35,7 @@ def GetRunLog(run_id):
         logger.info("GetRun")
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             return run.get_run_log(), 200
@@ -46,7 +53,7 @@ def CancelRun(run_id):
     try:
         logger.info("CancelRun")
         run = current_app.manager.database.get_run(run_id)
-        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             run = current_app.manager.cancel(run)
@@ -66,7 +73,7 @@ def GetRunStatus(run_id):
     try:
         logger.info("GetRunStatus")
         run = current_app.manager.get_run(run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             return jsonify(run.run_status.name), 200
@@ -116,7 +123,7 @@ def ListRuns(*args, **kwargs):
     try:
         logger.info("ListRuns")
         current_app.manager.update_runs(query={})
-        user_id = current_user.id
+        user_id = _get_current_user_id()
         response = current_app.manager.database.list_run_ids_and_states()
         # filter for runs for this user
         response = [run for run in response if run["user_id"] == user_id]
@@ -142,7 +149,8 @@ def RunWorkflow():
               "status_code": 400
             }, 400
         else:
-            run = current_app.manager.create_and_insert_run(request=data, user=current_user.id)
+            run = current_app.manager.create_and_insert_run(request=data,
+                                                            user=_get_current_user_id())
 
             logger.info("Prepare execution")
             run = current_app.manager.\
@@ -165,7 +173,7 @@ def ListRunsExtended(*args, **kwargs):
     try:
         logger.info("ListRunsExtended")
         current_app.manager.update_runs(query={})
-        user_id = current_user.id
+        user_id = _get_current_user_id()
         response = current_app.manager.database.list_run_ids_and_states_and_times()
 
         # filter for runs for this user
@@ -184,7 +192,7 @@ def GetRunStderr(run_id):
         logger.info("GetStderr")
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             return jsonify({"content": run.run_log["stderr"]}), 200
@@ -203,7 +211,7 @@ def GetRunStdout(run_id):
         logger.info("GetStdout")
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, current_user.id, run)
+        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             return jsonify({"content": run.run_log["stdout"]}), 200
