@@ -73,7 +73,7 @@ class Database:
     def insert_run(self, run: Run) -> bool:
         if self.get_run(run.run_id) is None:
             return self._db_runs() \
-                .insert_one(run.get_data()) \
+                .insert_one(dict(run)) \
                 .acknowledged
         else:
             return False
@@ -81,7 +81,7 @@ class Database:
     def update_run(self, run: Run) -> bool:
         return self._db_runs() \
             .update_one({"run_id": run.run_id},
-                        {"$set": run.get_data()}
+                        {"$set": dict(run)}
                         ).acknowledged
 
     def delete_run(self, run: Run) -> bool:

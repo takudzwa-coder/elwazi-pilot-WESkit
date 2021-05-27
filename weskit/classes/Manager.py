@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
+
+from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
@@ -88,7 +90,9 @@ class Manager:
         return run
 
     def update_state(self, run: Run) -> Run:
-        # check if task is running, initializing or canceling and update state
+        """
+        Check whether task is running, initializing or canceling and update state.
+        """
         if run.run_status in running_states or \
            run.run_status == RunStatus.INITIALIZING or \
            run.run_status == RunStatus.CANCELING:
@@ -105,21 +109,18 @@ class Manager:
         return run
 
     def update_run_results(self, run: Run) -> Run:
+        """
+        For a run in COMPLETED state, update the Run with information from the Celery task.
+        """
         if run.run_status == RunStatus.COMPLETE:
             running_task = self._run_task.AsyncResult(run.celery_task_id)
             result = running_task.get()
-            run.outputs["Workflow"] = result["output_files"]
-            run.run_log = {
-                "name": "string",
-                "cmd": result["cmd"],
-                "start_time": result["start_time"],
-                "end_time": result["end_time"],
-                "exit_code": result["exit_code"]
-            }
+            run.outputs["workflow"] = result["output_files"]
+            run.execution_log = result
             with open(result["stdout_file"], "r") as f:
-                run.run_log["stdout"] = f.readlines()
+                run.stdout = f.readlines()
             with open(result["stderr_file"], "r") as f:
-                run.run_log["stderr"] = f.readlines()
+                run.stderr = f.readlines()
         return run
 
     def update_run(self, run) -> Run:
@@ -259,13 +260,15 @@ class Manager:
             "workflow_engine_params": []
         }
         run.start_time = get_current_timestamp()
-        command: List[str] = self.workflow_engines[workflow_type].command(**run_kwargs)
-        run.run_log["cmd"] = command
+        command: ShellCommand = self.workflow_engines[workflow_type].command(**run_kwargs)
+        run.execution_log["cmd"] = command.command
+        run.execution_log["env"] = command.environment
         if run.run_status == RunStatus.INITIALIZING:
             task = self._run_task.apply_async(
                 args=[],
                 kwargs={
-                    "command": command,
+                    "command": command.command,
+                    "env": command.environment,
                     "workdir": run.execution_path
                 })
             run.celery_task_id = task.id

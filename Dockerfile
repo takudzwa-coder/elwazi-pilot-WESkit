@@ -14,7 +14,9 @@ EXPOSE 5000
 ARG HTTP_PROXY=""
 ARG http_proxy=""
 ARG HTTPS_PROXY=""
-ARG http_proxy=""
+ARG https_proxy=""
+ARG NO_PROXY=""
+ARG no_proxy="$NO_PROXY"
 
 # Use (likely) unused user and group IDs by default.
 ARG USER=weskit

@@ -14,17 +14,8 @@ import pytest
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
-from utils_test import get_mock_run
+from utils import get_mock_run, is_within_timout, assert_status_is_not_failed
 from weskit.classes.RunStatus import RunStatus
-
-
-test_failed_status = [
-       RunStatus.UNKNOWN,
-       RunStatus.EXECUTOR_ERROR,
-       RunStatus.SYSTEM_ERROR,
-       RunStatus.CANCELED,
-       RunStatus.CANCELING
-    ]
 
 
 @pytest.mark.integration
@@ -76,18 +67,19 @@ def test_execute_snakemake(manager,
     start_time = time.time()
     success = False
     while not success:
-        assert (time.time() - start_time) <= 30, "Test timed out"
+        assert is_within_timout(start_time), "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
-            assert status not in test_failed_status
+            assert_status_is_not_failed(status)
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
-            continue
-        assert os.path.isfile(
-            os.path.join(run.execution_path, "hello_world.txt"))
-        assert "hello_world.txt" in to_filename(run.outputs["Workflow"])
-        success = True
+        else:
+            success = True
+
+    assert os.path.isfile(
+        os.path.join(run.execution_path, "hello_world.txt"))
+    assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
 
 @pytest.mark.integration
@@ -100,17 +92,17 @@ def test_execute_nextflow(manager,
     start_time = time.time()
     success = False
     while not success:
-        assert (time.time() - start_time) <= 30, "Test timed out"
+        assert is_within_timout(start_time), "Test timed out"
         status = run.run_status
         if status != RunStatus.COMPLETE:
-            assert status not in test_failed_status
+            assert_status_is_not_failed(status)
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
             continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
-        assert "hello_world.txt" in to_filename(run.outputs["Workflow"])
+        assert "hello_world.txt" in to_filename(run.outputs["workflow"])
         success = True
 
 
@@ -144,11 +136,11 @@ def test_update_all_runs(manager,
     start_time = time.time()
     success = False
     while not success:
-        assert (time.time() - start_time) <= 30, "Test timed out"
+        assert is_within_timout(start_time), "Test timed out"
         status = run.run_status
         print("Waiting ... (status=%s)" % status.name)
         if status != RunStatus.COMPLETE:
-            assert status not in test_failed_status
+            assert_status_is_not_failed(status)
             time.sleep(1)
             run = manager.update_state(run)
             continue

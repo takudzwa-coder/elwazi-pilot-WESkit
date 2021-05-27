@@ -11,7 +11,7 @@ import logging
 import os
 import pathlib
 import subprocess
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
 
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 def run_command(command: List[str],
                 workdir: str,
+                env: Dict[str, str] = {},
                 log_base: str = ".weskit"):
     """
     Run a command in a working directory.
@@ -53,9 +54,10 @@ def run_command(command: List[str],
                 map(lambda logfile: os.path.relpath(logfile, workdir),
                     [stdout_file, stderr_file, command_file])),
             collect_relative_paths_from(workdir)))
-        run_log = {
+        execution_log = {
             "start_time": start_time,
             "cmd": command,
+            "env": env,
             "workdir": workdir,
             "end_time": get_current_timestamp(),
             "exit_code": result.returncode if result is not None else -1,
@@ -65,6 +67,6 @@ def run_command(command: List[str],
             "output_files": outputs
         }
         with open(command_file, "w") as fh:
-            json.dump(run_log, fh)
+            json.dump(execution_log, fh)
 
-    return run_log
+    return execution_log

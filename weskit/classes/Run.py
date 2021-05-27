@@ -6,7 +6,7 @@
 #
 #  Authors: The WESkit Team
 
-from typing import Optional
+from typing import Optional, Dict, List
 
 from weskit.classes.RunStatus import RunStatus
 
@@ -15,51 +15,50 @@ class Run:
     """ This is a Run."""
 
     def __eq__(self, other):
-        return self.get_data() == other.get_data()
+        return dict(self) == dict(other)
 
     def __init__(self, data: dict) -> None:
 
+        # Mandatory fields.
         self.__run_id = data["run_id"]
         self.__request_time = data["request_time"]
         self.__request = data["request"]
         self.__user_id = data["user_id"]
 
+        # Optional fields.
         self.celery_task_id = data.get("celery_task_id", None)
-        self.execution_path = data.get("execution_path", [])
+        self.execution_path = data.get("execution_path", None)
         self.workflow_path = data.get("workflow_path", None)
         self.outputs = data.get("outputs", {})
-        self.run_log = data.get("run_log", {})
+        self.execution_log = data.get("execution_log", {})
         self.run_status = RunStatus.\
             from_string(data.get("run_status", "INITIALIZING"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])
+        self.stdout = data.get("stdout", None)
+        self.stderr = data.get("stderr", None)
 
-    def get_data(self) -> dict:
-        return {
+    def __iter__(self):
+        """
+        This allows casting dict(run).
+        """
+        for (k, v) in {
+            "run_id": self.__run_id,
+            "request_time": self.__request_time,
+            "request": self.__request,
+            "user_id": self.__user_id,
             "celery_task_id": self.celery_task_id,
             "execution_path": self.execution_path,
             "workflow_path": self.workflow_path,
-            "request": self.__request,
-            "request_time": self.__request_time,
-            "run_id": self.__run_id,
-            "run_log": self.run_log,
-            "run_status": self.run_status.name,
             "outputs": self.outputs,
+            "execution_log": self.execution_log,
+            "run_status": self.run_status.name,
             "start_time": self.start_time,
             "task_logs": self.task_logs,
-            "user_id": self.__user_id
-        }
-
-    def get_run_log(self) -> dict:
-        return {
-            "run_id": self.__run_id,
-            "request": self.__request,
-            "state": self.run_status.name,
-            "run_log": self.run_log,
-            "task_logs": self.task_logs,
-            "outputs": self.outputs,
-            "user_id": self.__user_id
-        }
+            "stdout": self.stdout,
+            "stderr": self.stderr
+        }.items():
+            yield k, v
 
     @property
     def celery_task_id(self):
@@ -94,12 +93,12 @@ class Run:
         return self.__run_id
 
     @property
-    def run_log(self):
-        return self.__run_log
+    def execution_log(self) -> Dict[str, str]:
+        return self.__execution_log
 
-    @run_log.setter
-    def run_log(self, run_log: str):
-        self.__run_log = run_log
+    @execution_log.setter
+    def execution_log(self, execution_log: Dict[str, str]):
+        self.__execution_log = execution_log
 
     @property
     def run_status(self) -> RunStatus:
@@ -128,3 +127,19 @@ class Run:
     @property
     def user_id(self):
         return self.__user_id
+
+    @property
+    def stdout(self) -> Optional[str]:
+        return self.__stdout
+
+    @stdout.setter
+    def stdout(self, lines: List[str]):
+        self.__stdout = lines
+
+    @property
+    def stderr(self) -> Optional[str]:
+        return self.__stderr
+
+    @stderr.setter
+    def stderr(self, lines: List[str]):
+        self.__stderr = lines
