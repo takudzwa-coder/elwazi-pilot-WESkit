@@ -8,13 +8,12 @@
 
 import logging
 import time
-import yaml
 import os
 import requests
 import pytest
 from flask import current_app
 
-from tests.utils_test import get_run_success
+from tests.utils_test import get_run_success, get_workflow_data
 
 
 logger = logging.getLogger(__name__)
@@ -74,19 +73,6 @@ def login_fixture():
             self.headerToken = {'Authorization': 'Bearer %s' % self.access_token}
 
     return LoginClass()
-
-
-def get_workflow_data(snakefile, config):
-    with open(config) as file:
-        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
-
-    data = {
-        "workflow_params": workflow_params,
-        "workflow_type": "snakemake",
-        "workflow_type_version": "5.8.2",
-        "workflow_url": "file:tests/wf1/Snakefile"
-    }
-    return data
 
 
 class TestOpenEndpoint:

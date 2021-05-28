@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 def _get_current_user_id():
-    if current_user is not None:
+    if current_app.is_login_enabled:
         return current_user.id
     else:
-        return "default"
+        return "not-logged-in-user"
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
