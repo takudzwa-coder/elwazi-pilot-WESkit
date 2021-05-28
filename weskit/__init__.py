@@ -151,7 +151,8 @@ def create_app(celery: Celery,
     # the input.
     request_validators = {
         "run_request": RunRequestValidator(create_validator(
-            request_validation["run_request"]))
+            request_validation["run_request"]),
+            service_info.workflow_engine_versions())
     }
 
     app = WESApp(manager,

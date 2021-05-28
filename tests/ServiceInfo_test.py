@@ -8,6 +8,13 @@
 import datetime
 from unittest import TestCase
 
+from weskit import create_validator
+
+
+def test_validate_config(test_validation, test_config):
+    config_errors = create_validator(test_validation)(test_config)
+    assert not config_errors, config_errors
+
 
 def test_get_id(service_info):
     assert service_info.id() == "weskit.api"
@@ -61,8 +68,8 @@ def test_version(service_info):
 
 def test_get_workflow_type_versions(service_info):
     assert service_info.workflow_type_versions() == {
-        "snakemake": {"workflow_type_version": ["5"]},
-        "nextflow": {"workflow_type_version": ["20"]}
+        "snakemake": {"workflow_type_version": ["5.8.2"]},
+        "nextflow": {"workflow_type_version": ["20.10.0"]}
     }
 
 
@@ -76,8 +83,8 @@ def test_get_supported_filesystem_protocols(service_info):
 
 def test_get_workflow_engine_versions(service_info):
     assert service_info.workflow_engine_versions() == {
-        "snakemake": "5.8.2",
-        "nextflow": "20.10.0"
+        "snakemake": ["5.8.2"],
+        "nextflow": ["20.10.0"]
     }
 
 
@@ -85,15 +92,32 @@ def test_get_default_workflow_engine_parameters(service_info):
     default = service_info.default_workflow_engine_parameters()
     TestCase().assertDictEqual(default, {
         "snakemake": {
-            "cores": {
-                "type": "int",
-                "default_value": "1"
+            "5.8.2": {
+                "env": {
+                    "SOME_VAR": "with value"
+                },
+                "command": [
+                    {
+                        "name": "cores",
+                        "value": 1
+                    }
+                ]
             }
         },
         "nextflow": {
-            "cores": {
-                "type": "int",
-                "default_value": "1"
+            "20.10.0": {
+                "env": {
+                    "NXF_OPTS": "-Xmx256m"
+                },
+                "command": [
+                    {"name": "Djava.io.tmpdir=/tmp"}
+                ],
+                "run": [
+                    {"name": "with-trace"},
+                    {"name": "with-timeline"},
+                    {"name": "with-dag"},
+                    {"name": "with-report"}
+                ]
             }
         }})
 

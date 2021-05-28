@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def run_command(command: List[str],
                 workdir: str,
-                env: Dict[str, str] = {},
+                environment: Dict[str, str] = {},
                 log_base: str = ".weskit"):
     """
     Run a command in a working directory.
@@ -39,6 +39,8 @@ def run_command(command: List[str],
     stdout_file = os.path.join(log_dir, "stdout")
     command_file = os.path.join(log_dir, "command.json")
     result: Optional[subprocess.CompletedProcess] = None
+    # Let this explicitly inherit the task environment for the moment, e.g. for conda.
+    env = {**dict(os.environ), **environment}
     try:
         os.makedirs(log_dir)
         with open(stderr_file, "a") as stderr:
@@ -47,7 +49,8 @@ def run_command(command: List[str],
                     subprocess.run(command,
                                    cwd=str(pathlib.PurePath(workdir)),
                                    stdout=stdout,
-                                   stderr=stderr)
+                                   stderr=stderr,
+                                   env=env)
     finally:
         outputs = list(filter(
             lambda fn: fn not in list(
@@ -57,10 +60,11 @@ def run_command(command: List[str],
         execution_log = {
             "start_time": start_time,
             "cmd": command,
-            "env": env,
+            "env": environment,
             "workdir": workdir,
             "end_time": get_current_timestamp(),
             "exit_code": result.returncode if result is not None else -1,
+            "log_dir": log_dir,
             "stdout_file": stdout_file,
             "stderr_file": stderr_file,
             "command_file": command_file,

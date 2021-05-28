@@ -88,7 +88,7 @@ def test_client(celery_session_app,
 
     with app.test_client() as testing_client:
         with app.app_context():
-            # This sets `current_app` and `current_user` for the tests.
+            # The app_context() sets `current_app` and `current_user` for the tests.
             yield testing_client
 
 
@@ -152,6 +152,16 @@ def keycloak_container(mysql_keycloak_container):
         os.environ["OIDC_CLIENTID"] = "WESkit"
 
         yield keycloak
+
+
+@pytest.fixture(scope="session")
+def test_validation():
+    default_validation_config = "config/validation.yaml"
+    with open(default_validation_config, "r") as yaml_file:
+        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        logger.debug("Read validation specification from " +
+                     default_validation_config)
+    yield validation
 
 
 @pytest.fixture(scope="session")

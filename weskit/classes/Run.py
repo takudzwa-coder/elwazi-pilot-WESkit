@@ -6,7 +6,7 @@
 #
 #  Authors: The WESkit Team
 
-from typing import Optional, Dict, List
+from typing import Optional, List
 
 from weskit.classes.RunStatus import RunStatus
 
@@ -93,11 +93,11 @@ class Run:
         return self.__run_id
 
     @property
-    def execution_log(self) -> Dict[str, str]:
+    def execution_log(self) -> dict:
         return self.__execution_log
 
     @execution_log.setter
-    def execution_log(self, execution_log: Dict[str, str]):
+    def execution_log(self, execution_log: dict):
         self.__execution_log = execution_log
 
     @property

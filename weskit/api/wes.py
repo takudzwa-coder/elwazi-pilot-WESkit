@@ -12,6 +12,7 @@ from flask import current_app, jsonify, request
 from flask import Blueprint
 from rfc3339 import rfc3339
 
+from weskit.ClientError import ClientError
 from weskit.api.utils import get_log_response, get_access_denied_response, _get_current_user_id
 from weskit.oidc.Decorators import login_required
 
@@ -43,6 +44,10 @@ def GetRunLog(run_id):
         else:
             return access_denied_response
 
+    except ClientError as e:
+        logger.error(e, exc_info=True)
+        return jsonify({"msg": e.message, "status_code": 0}, 500)
+
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -63,6 +68,10 @@ def CancelRun(run_id):
         else:
             return access_denied_response
 
+    except ClientError as e:
+        logger.error(e, exc_info=True)
+        return jsonify({"msg": e.message, "status_code": 0}, 500)
+
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -80,6 +89,10 @@ def GetRunStatus(run_id):
             return jsonify(run.run_status.name), 200
         else:
             return access_denied_response
+
+    except ClientError as e:
+        logger.error(e, exc_info=True)
+        return jsonify({"msg": e.message, "status_code": 0}, 500)
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -179,6 +192,11 @@ def RunWorkflow():
             current_app.manager.database.update_run(run)
 
             return jsonify({"run_id": run.run_id}), 200
+
+    except ClientError as e:
+        logger.error(e, exc_info=True)
+        return jsonify({"msg": e.message, "status_code": 0}, 500)
+
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
