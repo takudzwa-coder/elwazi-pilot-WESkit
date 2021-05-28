@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_current_user_id():
-    if current_user is not None:
+    if current_app.is_login_enabled:
         return current_user.id
     else:
         return "default"

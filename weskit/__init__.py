@@ -166,5 +166,8 @@ def create_app(celery: Celery,
 
     if OIDCFactory.is_login_enabled(config):
         OIDCFactory.setup(app, config)
+        app.is_login_enabled = True
+    else:
+        app.is_login_enabled = False
 
     return app
