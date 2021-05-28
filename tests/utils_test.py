@@ -9,6 +9,7 @@
 import uuid
 from weskit.classes.Run import Run
 import time
+import yaml
 
 
 def get_mock_run(workflow_url, workflow_type, tags=None):
@@ -45,3 +46,15 @@ def get_run_success(status, start_time):
         return True
 
     return False
+
+def get_workflow_data(snakefile, config):
+    with open(config) as file:
+        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
+
+    data = {
+        "workflow_params": workflow_params,
+        "workflow_type": "snakemake",
+        "workflow_type_version": "5.8.2",
+        "workflow_url": "file:tests/wf1/Snakefile"
+    }
+    return data
