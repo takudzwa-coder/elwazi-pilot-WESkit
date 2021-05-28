@@ -82,6 +82,27 @@ def test_client(celery_session_app,
 
 
 @pytest.fixture(scope="session")
+def test_client_nologin(celery_session_app,
+                test_database,
+                redis_container,
+                keycloak_container):
+
+    os.environ["BROKER_URL"] = get_redis_url(redis_container)
+    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    os.environ["WESKIT_CONFIG"] = "tests/weskit_nologin.yaml"
+    os.environ["WESKIT_DATA"] = "test-data/"
+    os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
+
+    app = create_app(celery=celery_session_app,
+                     database=test_database)
+    app.testing = True
+
+    with app.test_client() as testing_client:
+        with app.app_context():
+            # This sets `current_app` and `current_user` for the tests.
+            yield testing_client
+
+@pytest.fixture(scope="session")
 def keycloak_container(mysql_keycloak_container):
     mysql_ip = get_container_properties(mysql_keycloak_container, '3306')["InternalIP"]
     kc_container = DockerContainer("jboss/keycloak")
