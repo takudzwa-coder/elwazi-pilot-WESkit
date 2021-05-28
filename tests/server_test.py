@@ -11,27 +11,14 @@ import time
 import os
 import requests
 import pytest
-import yaml
 from flask import current_app
 
 from weskit.classes.RunStatus import RunStatus
-from tests.utils import assert_within_timeout, is_within_timout, assert_status_is_not_failed
+from tests.utils import \
+    assert_within_timeout, is_within_timout, assert_status_is_not_failed, get_workflow_data
 from weskit.utils import to_filename
 
 logger = logging.getLogger(__name__)
-
-
-def get_workflow_data(snakefile, config):
-    with open(config) as file:
-        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
-
-    data = {
-        "workflow_params": workflow_params,
-        "workflow_type": "snakemake",
-        "workflow_type_version": "5.8.2",
-        "workflow_url": "file:tests/wf1/Snakefile"
-    }
-    return data
 
 
 @pytest.fixture(scope="module")
@@ -191,8 +178,8 @@ class TestWithHeaderToken:
                                             test_run,
                                             OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
-        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
         assert response.status_code == 200
+        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
 
     @pytest.mark.integration
     def test_get_run_stderr_with_header(self,
@@ -208,7 +195,6 @@ class TestWithHeaderToken:
             time.sleep(1)
             response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                        headers=OIDC_credentials.headerToken)
-            assert response.status_code != 200
 
         assert response.status_code == 200
         assert isinstance(response.json, dict)
@@ -228,7 +214,6 @@ class TestWithHeaderToken:
             time.sleep(1)
             response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                        headers=OIDC_credentials.headerToken)
-            assert response.status_code != 200
 
         assert response.status_code == 200
         assert isinstance(response.json, dict)

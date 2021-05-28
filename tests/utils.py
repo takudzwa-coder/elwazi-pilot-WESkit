@@ -8,6 +8,8 @@
 
 import uuid
 
+import yaml
+
 from weskit.classes.RunStatus import RunStatus
 from weskit.classes.Run import Run
 import time
@@ -52,6 +54,19 @@ def is_run_failed(status: RunStatus) -> bool:
         RunStatus.CANCELED,
         RunStatus.CANCELING
     ]
+
+
+def get_workflow_data(snakefile, config):
+    with open(config) as file:
+        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
+
+    data = {
+        "workflow_params": workflow_params,
+        "workflow_type": "snakemake",
+        "workflow_type_version": "5.8.2",
+        "workflow_url": "file:tests/wf1/Snakefile"
+    }
+    return data
 
 
 def assert_status_is_not_failed(status: RunStatus):

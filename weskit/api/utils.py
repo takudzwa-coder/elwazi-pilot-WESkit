@@ -18,6 +18,13 @@ from weskit.classes.Run import Run
 logger = logging.getLogger(__name__)
 
 
+def _get_current_user_id():
+    if current_app.is_login_enabled:
+        return current_user.id
+    else:
+        return "not-logged-in-user"
+
+
 def get_access_denied_response(run_id: str,
                                user_id: str,
                                run: Run = None):
@@ -43,7 +50,7 @@ def get_log_response(run_id: str, log_name: str):
     try:
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = get_access_denied_response(run_id, current_user.id, run)
+        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             if run.run_status is not RunStatus.COMPLETE:

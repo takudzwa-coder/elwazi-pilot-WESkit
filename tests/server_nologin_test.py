@@ -10,7 +10,7 @@ import logging
 import os
 import pytest
 
-from tests.utils_test import get_workflow_data
+from tests.utils import get_workflow_data
 
 
 logger = logging.getLogger(__name__)
