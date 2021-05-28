@@ -83,9 +83,9 @@ def test_client(celery_session_app,
 
 @pytest.fixture(scope="session")
 def test_client_nologin(celery_session_app,
-                test_database,
-                redis_container,
-                keycloak_container):
+                        test_database,
+                        redis_container,
+                        keycloak_container):
 
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
@@ -101,6 +101,7 @@ def test_client_nologin(celery_session_app,
         with app.app_context():
             # This sets `current_app` and `current_user` for the tests.
             yield testing_client
+
 
 @pytest.fixture(scope="session")
 def keycloak_container(mysql_keycloak_container):

@@ -47,6 +47,7 @@ def get_run_success(status, start_time):
 
     return False
 
+
 def get_workflow_data(snakefile, config):
     with open(config) as file:
         workflow_params = yaml.load(file, Loader=yaml.FullLoader)

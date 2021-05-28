@@ -7,12 +7,8 @@
 #  Authors: The WESkit Team
 
 import logging
-import time
-import yaml
 import os
-import requests
 import pytest
-from flask import current_app
 
 from tests.utils_test import get_workflow_data
 
@@ -33,7 +29,8 @@ class TestOpenEndpoint:
 
 class TestWithoutLogin:
     """
-    The TestWithoutLogin class tests that endpoints are accessible without login and when login is deactivated.
+    The TestWithoutLogin class tests that endpoints are accessible without login
+    and when login is deactivated.
     """
     @pytest.mark.integration
     def test_list_runs_wo_login(self, test_client_nologin, celery_worker):

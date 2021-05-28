@@ -8,7 +8,6 @@
 
 import logging
 import time
-import yaml
 import os
 import requests
 import pytest
@@ -74,9 +73,6 @@ def login_fixture():
             self.headerToken = {'Authorization': 'Bearer %s' % self.access_token}
 
     return LoginClass()
-
-
-
 
 
 class TestOpenEndpoint:
