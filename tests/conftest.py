@@ -58,6 +58,7 @@ def mysql_keycloak_container():
     with container as mysql:
         yield mysql
 
+
 def _setup_test_client_app(redis_container,
                            celery_session_app,
                            test_database,
@@ -71,6 +72,7 @@ def _setup_test_client_app(redis_container,
                      database=test_database)
     app.testing = True
     return app
+
 
 @pytest.fixture(scope="session")
 def test_client(celery_session_app,
