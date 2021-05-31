@@ -46,7 +46,7 @@ def GetRunLog(run_id):
 
     except ClientError as e:
         logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 0}, 500)
+        return jsonify({"msg": e.message, "status_code": 500}, 500)
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -70,7 +70,7 @@ def CancelRun(run_id):
 
     except ClientError as e:
         logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 0}, 500)
+        return jsonify({"msg": e.message, "status_code": 500}, 500)
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -92,7 +92,7 @@ def GetRunStatus(run_id):
 
     except ClientError as e:
         logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 0}, 500)
+        return jsonify({"msg": e.message, "status_code": 500}, 500)
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -130,7 +130,12 @@ def GetServiceInfo(*args, **kwargs):
             "supported_filesystem_protocols":
                 current_app.service_info.supported_filesystem_protocols(),
             "workflow_engine_versions":
-                current_app.service_info.workflow_engine_versions(),
+                # Specs says this should be Dict[str, str], but it should better be
+                # Dict[str, List[str]]. Let's return the multiple versions as string, but of
+                # a comma-separated list. For some time we anyway will only have a single version
+                # of each workflow engine.
+                dict(map(lambda kv: (kv[0], ",".join(kv[1])),
+                         current_app.service_info.workflow_engine_versions())),
             "default_workflow_engine_parameters":
                 current_app.service_info.
                 default_workflow_engine_parameters(),
@@ -195,7 +200,7 @@ def RunWorkflow():
 
     except ClientError as e:
         logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 0}, 500)
+        return jsonify({"msg": e.message, "status_code": 500}, 500)
 
     except Exception as e:
         logger.error(e, exc_info=True)

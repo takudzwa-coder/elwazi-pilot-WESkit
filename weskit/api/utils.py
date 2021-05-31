@@ -31,13 +31,13 @@ def get_access_denied_response(run_id: str,
     if run is None:
         logger.error("Could not find '%s'" % run_id)
         return {"msg": "Could not find '%s'" % run_id,
-                "status_code": 0
+                "status_code": 404
                 }, 404     # NOT FOUND
 
     if user_id != run.user_id:
         logger.error("User not allowed to perform this action on '%s'" % run_id)
         return {"msg": "User not allowed to perform this action on '%s'" % run_id,
-                "status_code": 0
+                "status_code": 403
                 }, 403     # FORBIDDEN
 
     return None
@@ -55,7 +55,7 @@ def get_log_response(run_id: str, log_name: str):
         if access_denied_response is None:
             if run.run_status is not RunStatus.COMPLETE:
                 return {"msg": "Run '%s' is not in COMPLETED state" % run_id,
-                        "status_code": 0
+                        "status_code": 409
                         }, 409     # CONFLICT (with current resource state)
             else:
                 return jsonify({"content": getattr(run, log_name)}), 200
