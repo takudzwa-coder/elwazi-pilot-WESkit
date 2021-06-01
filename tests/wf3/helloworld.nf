@@ -8,6 +8,8 @@
  * Authors: The WESkit Team
  */
 
+params.text = "Ups! No 'hello'!"
+
 process sayHello {
     publishDir "./", mode: "rellink"
 
@@ -16,7 +18,7 @@ process sayHello {
 
 	script:
 	"""
-	echo 'hello world' > hello_world.txt
+	echo '$params.text' > hello_world.txt
 	"""
 }
 

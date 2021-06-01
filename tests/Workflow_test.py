@@ -122,7 +122,11 @@ def test_execute_nextflow(manager,
             continue
         assert os.path.isfile(
             os.path.join(run.execution_path, "hello_world.txt"))
-        assert "hello_world.txt" in to_filename(run.outputs["workflow"])
+        hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
+                                        run.outputs["workflow"]))
+        assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
+        with open(os.path.join(run.execution_path, hello_world_files[0]), "r") as fh:
+            assert fh.readlines() == ["hello_world\n"]
         success = True
 
     assert run.execution_log["env"] == {"NXF_OPTS": "-Xmx256m"}

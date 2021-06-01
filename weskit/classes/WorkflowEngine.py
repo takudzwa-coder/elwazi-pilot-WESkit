@@ -177,5 +177,6 @@ class WorkflowEngineFactory:
         # The semantics of workflow_type and workflow_engine_parameters is not completely defined
         # yet. There is also a proposal for a workflow_engine_name parameter.
         # Compare https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91
+        # See also https://github.com/ga4gh/workflow-execution-service-schemas/issues/171
 
         return workflow_engines
