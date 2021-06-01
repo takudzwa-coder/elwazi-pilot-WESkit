@@ -10,6 +10,8 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import List, Dict
 
+from weskit.classes.ShellCommand import ShellCommand
+
 
 @dataclass()
 class WorkflowEngineParam(object):
@@ -32,7 +34,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                 config_files: List[str],
                 workflow_engine_params: List[WorkflowEngineParam],
                 **workflow_kwargs)\
-            -> List[str]:
+            -> ShellCommand:
         """
         Use the instance variables and run parameters to compose a command to be executed
         by the run method.
@@ -72,11 +74,12 @@ class Snakemake(WorkflowEngine):
                 config_files: list,
                 workflow_engine_params: list,
                 **workflow_kwargs)\
-            -> List[str]:
+            -> ShellCommand:
         command = ["snakemake", "--snakefile", workflow_path, "--cores", "1"]
         if config_files:
             command += ["--configfile"] + config_files
-        return command
+        return ShellCommand(command=command,
+                            workdir=workdir)
 
 
 class Nextflow(WorkflowEngine):
@@ -93,8 +96,9 @@ class Nextflow(WorkflowEngine):
                 config_files: list,
                 workflow_engine_params: list,
                 **workflow_kwargs)\
-            -> List[str]:
-        return ["nextflow", "run", workflow_path]
+            -> ShellCommand:
+        return ShellCommand(command=["nextflow", "run", workflow_path],
+                            workdir=workdir)
 
 
 class WorkflowEngineFactory:

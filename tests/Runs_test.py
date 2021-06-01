@@ -31,12 +31,12 @@ def test_create_and_load_run(database_container):
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
     collection = db["test_runs"]
-    collection.insert_one(new_run.get_data())
+    collection.insert_one(dict(new_run))
     data = collection.find()
     for x in data:
         load_run = Run(x)
         if load_run.run_id == new_run.run_id:
-            assert load_run.get_data() == new_run.get_data()
+            assert dict(load_run) == dict(new_run)
 
 
 def test_create_run_fails():

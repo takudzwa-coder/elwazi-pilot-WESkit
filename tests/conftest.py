@@ -106,7 +106,7 @@ def test_client_nologin(celery_session_app,
 
     with app.test_client() as testing_client:
         with app.app_context():
-            # This sets `current_app` and `current_user` for the tests.
+            # The app_context() sets `current_app` and `current_user` for the tests.
             yield testing_client
 
 

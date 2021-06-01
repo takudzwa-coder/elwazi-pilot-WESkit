@@ -10,22 +10,14 @@ import logging
 
 from flask import current_app, jsonify, request
 from flask import Blueprint
-from flask_jwt_extended import current_user
 
+from weskit.api.utils import get_log_response, get_access_denied_response, _get_current_user_id
 from weskit.oidc.Decorators import login_required
-from weskit.api import utils as u
 
 bp = Blueprint("wes", __name__)
 
 
 logger = logging.getLogger(__name__)
-
-
-def _get_current_user_id():
-    if current_app.is_login_enabled:
-        return current_user.id
-    else:
-        return "not-logged-in-user"
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
@@ -35,10 +27,18 @@ def GetRunLog(run_id):
         logger.info("GetRun")
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
+        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
-            return run.get_run_log(), 200
+            return {
+                "run_id": run.run_id,
+                "request": run.request,
+                "state": run.run_status.name,
+                "run_log": run.execution_log,
+                "task_logs": run.task_logs,
+                "outputs": run.outputs,
+                "user_id": run.user_id
+            }, 200
         else:
             return access_denied_response
 
@@ -53,7 +53,7 @@ def CancelRun(run_id):
     try:
         logger.info("CancelRun")
         run = current_app.manager.database.get_run(run_id)
-        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
+        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             run = current_app.manager.cancel(run)
@@ -73,7 +73,7 @@ def GetRunStatus(run_id):
     try:
         logger.info("GetRunStatus")
         run = current_app.manager.get_run(run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
+        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
             return jsonify(run.run_status.name), 200
@@ -188,36 +188,20 @@ def ListRunsExtended(*args, **kwargs):
 @bp.route("/weskit/v1/runs/<string:run_id>/stderr", methods=["GET"])
 @login_required
 def GetRunStderr(run_id):
-    try:
-        logger.info("GetStderr")
-        run = current_app.manager.get_run(
-            run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
-
-        if access_denied_response is None:
-            return jsonify({"content": run.run_log["stderr"]}), 200
-        else:
-            return access_denied_response
-
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        raise e
+    """
+    Return a dictionary with a "content" field that contains the standard error of the requested
+    run.
+    """
+    logger.info("GetStderr")
+    return get_log_response(run_id, "stderr")
 
 
 @bp.route("/weskit/v1/runs/<string:run_id>/stdout", methods=["GET"])
 @login_required
 def GetRunStdout(run_id):
-    try:
-        logger.info("GetStdout")
-        run = current_app.manager.get_run(
-            run_id=run_id, update=True)
-        access_denied_response = u.get_access_denied_response(run_id, _get_current_user_id(), run)
-
-        if access_denied_response is None:
-            return jsonify({"content": run.run_log["stdout"]}), 200
-        else:
-            return access_denied_response
-
-    except Exception as e:
-        logger.error(e, exc_info=True)
-        raise e
+    """
+    Return a dictionary with a "content" field that contains the standard output of the requested
+    run.
+    """
+    logger.info("GetStdout")
+    return get_log_response(run_id, "stdout")

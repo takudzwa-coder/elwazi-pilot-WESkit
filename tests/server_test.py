@@ -13,27 +13,48 @@ import requests
 import pytest
 from flask import current_app
 
-from tests.utils_test import get_run_success, get_workflow_data
-
+from weskit.classes.RunStatus import RunStatus
+from tests.utils import \
+    assert_within_timeout, is_within_timout, assert_status_is_not_failed, get_workflow_data
+from weskit.utils import to_filename
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(name="runStorage", scope="class")
-def runid_fixture():
+@pytest.fixture(scope="module")
+def test_run(test_client,
+             celery_session_worker):
     """
-    This fixture returns a class that stores the run ID as variable within a Test Class.
-    This makes it possible to exchange variables between tests of a class without using
-    global variables
-
-    accessible via "runStorage.runid" if runStorage is declared in the call of the testfunction
+    This fixture creates a mock runs as working state for accessing workflow results via the API.
+    The tests will use the REST interface, but to circumvent authentication issues here, the
+    run is created manually and the user_id is fixed to the value from the test keycloak DB.
     """
-
-    class RunID:
-        def __init__(self):
-            self.runid = ""
-
-    return RunID()
+    manager = current_app.manager
+    snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
+    request = get_workflow_data(
+        snakefile=snakefile,
+        config="tests/wf1/config.yaml")
+    run = manager.create_and_insert_run(request=request,
+                                        user="6bd12400-6fc4-402c-9180-83bddbc30526")
+    run = manager.prepare_execution(run)
+    manager.database.update_run(run)
+    run = manager.execute(run)
+    manager.database.update_run(run)
+    success = False
+    start_time = time.time()
+    while not success:
+        assert_within_timeout(start_time)
+        status = run.run_status
+        if status != RunStatus.COMPLETE:
+            assert_status_is_not_failed(status)
+            print("Waiting ... (status=%s)" % status.name)
+            time.sleep(1)
+            run = current_app.manager.update_run(run)
+            continue
+        success = True
+    assert os.path.isfile(os.path.join(run.execution_path, "hello_world.txt"))
+    assert "hello_world.txt" in to_filename(run.outputs["workflow"])
+    yield run
 
 
 @pytest.fixture(name="OIDC_credentials", scope="session")
@@ -92,32 +113,27 @@ class TestWithoutLogin:
     credentials.
     """
     @pytest.mark.integration
-    def test_list_runs_wo_login(self, test_client, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
-        data = get_workflow_data(
-            snakefile=snakefile,
-            config="tests/wf1/config.yaml")
-        response = test_client.post("/ga4gh/wes/v1/runs", json=data)
+    def test_list_runs_wo_login(self, test_client):
         response = test_client.get("/ga4gh/wes/v1/runs")
         assert response.status_code == 401
 
     @pytest.mark.integration
-    def test_list_runs_extended_wo_login(self, test_client, celery_worker):
+    def test_list_runs_extended_wo_login(self, test_client):
         response = test_client.get("/weskit/v1/runs")
         assert response.status_code == 401
 
     @pytest.mark.integration
-    def test_get_run_stderr_wo_login(self, test_client, celery_worker):
+    def test_get_run_stderr_wo_login(self, test_client):
         response = test_client.get("/weskit/v1/runs/test_runId/stderr")
         assert response.status_code == 401
 
     @pytest.mark.integration
-    def test_get_run_stdout_wo_login(self, test_client, celery_worker):
+    def test_get_run_stdout_wo_login(self, test_client):
         response = test_client.get("/weskit/v1/runs/test_runId/stdout")
         assert response.status_code == 401
 
     @pytest.mark.integration
-    def test_submit_workflow_wo_login(self, test_client, celery_worker):
+    def test_submit_workflow_wo_login(self, test_client):
         snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
             snakefile=snakefile,
@@ -136,78 +152,69 @@ class TestWithHeaderToken:
     @pytest.mark.integration
     def test_accept_run_workflow_header(self,
                                         test_client,
-                                        runStorage,
-                                        OIDC_credentials,
-                                        celery_worker):
-
-        data = get_workflow_data(
-            snakefile="tests/wf1/Snakefile",
-            config="tests/wf1/config.yaml")
-
-        response = test_client.post(
-            "/ga4gh/wes/v1/runs", json=data, headers=OIDC_credentials.headerToken)
-
-        assert response.status_code == 200
-
-        run_id = response.json["run_id"]
-
-        runStorage.runid = run_id
-        success = False
-        start_time = time.time()
-        while not success:
-            time.sleep(1)
-            status = test_client.get("/ga4gh/wes/v1/runs/{}/status".format(run_id),
-                                     headers=OIDC_credentials.headerToken)
-
-            success = get_run_success(status.json, start_time)
-
-        assert response.status_code == 200
+                                        test_run,
+                                        OIDC_credentials):
 
         # test that outputs are relative
-        run = test_client.get(
-            "/ga4gh/wes/v1/runs/{}".format(run_id),
-            headers=OIDC_credentials.headerToken).json
-        for output in run["outputs"]["Workflow"]:
+        response = test_client.get(
+            "/ga4gh/wes/v1/runs/{}".format(test_run.run_id),
+            headers=OIDC_credentials.headerToken)
+        assert response.status_code == 200
+        for output in response.json["outputs"]["workflow"]:
             assert not os.path.isabs(output)
 
     @pytest.mark.integration
-    def test_accept_get_runs_header(self, test_client, runStorage, OIDC_credentials, celery_worker):
+    def test_accept_get_runs_header(self,
+                                    test_client,
+                                    test_run,
+                                    OIDC_credentials):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200
-        assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
+        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
 
     @pytest.mark.integration
     def test_list_runs_extended_with_header(self,
                                             test_client,
-                                            runStorage,
-                                            OIDC_credentials,
-                                            celery_worker):
+                                            test_run,
+                                            OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
-        assert len([x for x in response.json if x['run_id'] == runStorage.runid]) == 1
         assert response.status_code == 200
+        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
 
     @pytest.mark.integration
     def test_get_run_stderr_with_header(self,
                                         test_client,
-                                        runStorage,
-                                        OIDC_credentials,
-                                        celery_worker):
-        run_id = runStorage.runid
+                                        test_run,
+                                        OIDC_credentials):
+        run_id = test_run.run_id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                    headers=OIDC_credentials.headerToken)
+        start_time = time.time()
+        while response.status_code == 409:   # workflow still running
+            assert is_within_timout(start_time, 20), "Timeout requesting stderr"
+            time.sleep(1)
+            response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
+                                       headers=OIDC_credentials.headerToken)
+
+        assert response.status_code == 200
         assert isinstance(response.json, dict)
         assert "content" in response.json
-        assert response.status_code == 200
 
     @pytest.mark.integration
     def test_get_run_stdout_with_header(self,
                                         test_client,
-                                        runStorage,
-                                        OIDC_credentials,
-                                        celery_worker):
-        run_id = runStorage.runid
+                                        test_run,
+                                        OIDC_credentials):
+        run_id = test_run.run_id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                    headers=OIDC_credentials.headerToken)
+        start_time = time.time()
+        while response.status_code == 409:    # workflow still running
+            assert is_within_timout(start_time, 20), "Timeout requesting stdout"
+            time.sleep(1)
+            response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
+                                       headers=OIDC_credentials.headerToken)
+
+        assert response.status_code == 200
         assert isinstance(response.json, dict)
         assert "content" in response.json
-        assert response.status_code == 200
