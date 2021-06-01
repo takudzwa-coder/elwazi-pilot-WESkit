@@ -5,7 +5,6 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import time
 import os
 
@@ -120,14 +119,15 @@ def test_execute_nextflow(manager,
             time.sleep(1)
             run = manager.update_run(run)
             continue
-        assert os.path.isfile(
-            os.path.join(run.execution_path, "hello_world.txt"))
-        hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
-                                        run.outputs["workflow"]))
-        assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
-        with open(os.path.join(run.execution_path, hello_world_files[0]), "r") as fh:
-            assert fh.readlines() == ["hello_world\n"]
         success = True
+
+    assert os.path.isfile(
+        os.path.join(run.execution_path, "hello_world.txt"))
+    hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
+                                    run.outputs["workflow"]))
+    assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
+    with open(os.path.join(run.execution_path, hello_world_files[0]), "r") as fh:
+        assert fh.readlines() == ["hello_world\n"]
 
     assert run.execution_log["env"] == {"NXF_OPTS": "-Xmx256m"}
     assert run.execution_log["cmd"] == [

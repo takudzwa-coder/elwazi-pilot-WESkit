@@ -93,8 +93,8 @@ static_service_info:
     default_workflow_engine_parameters:
       nextflow:
         "20.10.0":
-          # Environment variables for the workflow manager execution. Just key/value pairs.
-          env: {}
+          # Environment variables for the workflow manager execution.
+          env: []
           # Single-dash parameters before the target. See `nextflow help`.
           # Do not include the dash. E.g. use "C" for the "-C" parameter or "D" for java options.
           command: []
@@ -104,8 +104,8 @@ static_service_info:
 
       snakemake:
         "5.8.2":
-          # Environment variables for the workflow manager execution. Just key/value pairs.
-          env: {}
+          # Environment variables for the workflow manager execution.
+          env: []
           # Parameters to be used before the target. See `snakemake --help`.
           # Do not include double-dashs, e.g. use "max-jobs-per-second" rather than
           # "--max-jobs-per-second".

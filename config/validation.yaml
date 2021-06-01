@@ -109,12 +109,7 @@ static_service_info:
             type: dict
             required: true
             schema:
-              env: &envType            # environment variables
-                type: dict
-                default: {}
-                valuesrules:
-                  type: string
-              command: &parameterType     # see `nextflow help`
+              env: &parameterType     # environment variables
                 type: list
                 default: []
                 valuesrules:
@@ -126,6 +121,7 @@ static_service_info:
                     value:
                       required: false
                       type: string
+              command: *parameterType     # see `nextflow help`
               run:  *parameterType        # see `nextflow help run`
 
         snakemake:
@@ -135,7 +131,7 @@ static_service_info:
             type: dict
             required: true
             schema:
-              env: *envType             # environment variables
+              env: *parameterType       # environment variables
               command: *parameterType   # snakemake command arguments
 
     auth_instructions_url:

@@ -174,7 +174,7 @@ def test_config():
 
 @pytest.fixture(scope="session")
 def database_container():
-    MONGODB_CONTAINER = "mongo:4.2.3"
+    MONGODB_CONTAINER = "mongo:4.4.6"
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
 
@@ -196,7 +196,7 @@ def test_database(database_container):
 
 @pytest.fixture(scope="session")
 def redis_container():
-    redis_container = RedisContainer("redis:6.0.1-alpine")
+    redis_container = RedisContainer("redis:6.2.3-alpine")
     with redis_container as rc:
         os.environ["BROKER_URL"] = get_redis_url(rc)
         os.environ["RESULT_BACKEND"] = get_redis_url(rc)

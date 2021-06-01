@@ -33,7 +33,8 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         Get a dictionary of environment parameters.
         """
-        return self.default_params.get("env", {})
+        return dict(map(lambda param: (param.name, param.value),
+                        self.default_params.get("env", [])))
 
     @staticmethod
     def _workflow_engine_cli_param(prefix: str, param: WorkflowEngineParam) -> List[str]:
@@ -139,14 +140,9 @@ class WorkflowEngineFactory:
 
     @staticmethod
     def _process_list_param_group(kv):
-        group = kv[0]
-        values = kv[1]
-        if group == "env":
-            result_values = values
-        else:
-            result_values = list(map(lambda v: WorkflowEngineParam(name=v["name"],
-                                                                   value=v.get("value", None)),
-                                     values))
+        result_values = list(map(lambda v: WorkflowEngineParam(name=v["name"],
+                                                               value=v.get("value", None)),
+                                 kv[1]))
         return kv[0], result_values
 
     @staticmethod

@@ -93,9 +93,9 @@ def test_get_default_workflow_engine_parameters(service_info):
     TestCase().assertDictEqual(default, {
         "snakemake": {
             "5.8.2": {
-                "env": {
-                    "SOME_VAR": "with value"
-                },
+                "env": [
+                    {"name": "SOME_VAR", "value": "with value"}
+                ],
                 "command": [
                     {
                         "name": "cores",
@@ -106,9 +106,9 @@ def test_get_default_workflow_engine_parameters(service_info):
         },
         "nextflow": {
             "20.10.0": {
-                "env": {
-                    "NXF_OPTS": "-Xmx256m"
-                },
+                "env": [
+                    {"name": "NXF_OPTS", "value": "-Xmx256m"}
+                ],
                 "command": [
                     {"name": "Djava.io.tmpdir=/tmp"}
                 ],
