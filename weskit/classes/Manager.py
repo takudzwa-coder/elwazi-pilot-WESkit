@@ -178,8 +178,8 @@ class Manager:
         workflow_path = None
         if workflow_url.scheme in ["file", '']:
             if os.path.isabs(workflow_url.path):
-                raise ValueError("Absolute workflow_url forbidden " +
-                                 "(should be validated already): '%s'" % url)
+                raise ClientError("Absolute workflow_url forbidden " +
+                                  "(should be validated already): '%s'" % url)
             elif workflow_url.path in attachment_filenames:
                 # File has already been extracted to work-dir.
                 workflow_path = os.path.join(
@@ -243,19 +243,19 @@ class Manager:
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
-            raise ValueError("Workflow type '" +
-                             run.request["workflow_type"] +
-                             "' is not known. Know " +
-                             ", ".join(self.workflow_engines.keys()))
+            raise ClientError("Workflow type '" +
+                              run.request["workflow_type"] +
+                              "' is not known. Know " +
+                              ", ".join(self.workflow_engines.keys()))
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
-            raise ValueError("Workflow type version '" +
-                             run.request["workflow_type_version"] +
-                             "' is not known. Know " +
-                             ", ".join(self.workflow_engines[workflow_type].keys()))
+            raise ClientError("Workflow type version '" +
+                              run.request["workflow_type_version"] +
+                              "' is not known. Know " +
+                              ", ".join(self.workflow_engines[workflow_type].keys()))
 
         # execute run
         run_kwargs = {
