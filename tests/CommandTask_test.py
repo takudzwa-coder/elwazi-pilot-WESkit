@@ -29,7 +29,7 @@ def test_run_command(temporary_dir):
     assert result["output_files"] == ["x"]
     with open(os.path.join(temporary_dir, "x"), "r") as f:
         assert f.readlines() == ["hello world\n"]
-    with open(result["command_file"], "r") as f:
+    with open(result["log_file"], "r") as f:
         command_result = json.load(f)
         assert command_result["cmd"] == command
         assert command_result["exit_code"] == 0
