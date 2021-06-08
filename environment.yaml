@@ -30,4 +30,5 @@ dependencies:
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1
+     - rfc3339==6.2
 
