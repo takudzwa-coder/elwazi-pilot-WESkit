@@ -18,15 +18,21 @@ from weskit.classes.ShellCommand import ShellCommand
 class WorkflowEngineParam(object):
     name: str
     value: Optional[str]   # Optional values are for CLI parameters that don't take values.
+    tags: List[str]
 
 
 class WorkflowEngine(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self,
-                 default_params: Dict[str, dict],
+                 default_params: List[WorkflowEngineParam],
                  command_param_prefix: str):
-        self.default_params = default_params
+        self.default_environment_params = \
+            list(filter(lambda p: "environment-variable" in p.tags,
+                        default_params))
+        self.default_command_params = \
+            list(filter(lambda p: "command-parameter" in p.tags,
+                        default_params))
         self._command_param_prefix = command_param_prefix
 
     def _environment(self) -> Dict[str, str]:
@@ -34,7 +40,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         Get a dictionary of environment parameters.
         """
         return dict(map(lambda param: (param.name, param.value),
-                        self.default_params.get("env", [])))
+                        self.default_environment_params))
 
     @staticmethod
     def _workflow_engine_cli_param(prefix: str, param: WorkflowEngineParam) -> List[str]:
@@ -53,11 +59,10 @@ class WorkflowEngine(metaclass=ABCMeta):
 
     def _command_params(self) -> List[str]:
         """
-        Get a list of command-line parameters to be inserted after `nextflow` and before `run`
-        into the nextflow command.
+        Get a list of command-line parameters to be inserted into the command-line.
         """
         return self._workflow_engine_cli_params(self._command_param_prefix,
-                                                self.default_params.get("command", []))
+                                                self.default_command_params)
 
     @abstractmethod
     def command(self,
@@ -80,7 +85,7 @@ class WorkflowEngine(metaclass=ABCMeta):
 
 class Snakemake(WorkflowEngine):
 
-    def __init__(self, default_params: Dict[str, dict]):
+    def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params, "--")
 
     @staticmethod
@@ -103,8 +108,11 @@ class Snakemake(WorkflowEngine):
 
 class Nextflow(WorkflowEngine):
 
-    def __init__(self, default_params: Dict[str, dict]):
+    def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params, "-")
+        self.default_run_params = \
+            list(filter(lambda p: "run-parameter" in p.tags,
+                        default_params))
 
     @staticmethod
     def name():
@@ -115,7 +123,7 @@ class Nextflow(WorkflowEngine):
         An additional parameter slot for `nextflow run`.
         """
         return WorkflowEngine._workflow_engine_cli_params(self._command_param_prefix,
-                                                          self.default_params.get("run", []))
+                                                          self.default_run_params)
 
     def command(self,
                 workflow_path: str,
@@ -139,20 +147,22 @@ class Nextflow(WorkflowEngine):
 class WorkflowEngineFactory:
 
     @staticmethod
-    def _process_list_param_group(kv):
-        result_values = list(map(lambda v: WorkflowEngineParam(name=v["name"],
-                                                               value=v.get("value", None)),
-                                 kv[1]))
-        return kv[0], result_values
+    def _process_params_list(params: List[Dict[str, str]]) -> List[WorkflowEngineParam]:
+        return list(map(lambda param: WorkflowEngineParam(name=param["name"],
+                                                          value=param.get("value", None),
+                                                          tags=param.get("tags", [])),
+                        params))
 
     @staticmethod
-    def _process_param_groups(groups: dict):
-        return dict(map(WorkflowEngineFactory._process_list_param_group, groups.items()))
-
-    @staticmethod
-    def _process_versions(cls, engine_params: Dict[str, dict]) -> Dict[str, dict]:
-        return dict(map(lambda kv: (kv[0],
-                                    cls(WorkflowEngineFactory._process_param_groups(kv[1]))),
+    def _process_versions(cls, engine_params: Dict[str, dict]) -> Dict[str, WorkflowEngineParam]:
+        """
+        :param cls: WorkflowEngine class
+        :param engine_params: Version name -> List of dictionaries, one for each parameter.
+        :return:
+        """
+        return dict(map(lambda by_version: (by_version[0],
+                                            cls(WorkflowEngineFactory.
+                                                _process_params_list(by_version[1]))),
                         engine_params.items()))
 
     @staticmethod

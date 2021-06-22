@@ -102,37 +102,25 @@ static_service_info:
       required: false
       schema:              # workflow engine names
 
-        nextflow:
+        nextflow: &default_workflow_engine_parameters
           type: dict       # engine version tags
           required: true
           valuesrules:
-            type: dict
-            required: true
-            schema:
-              env: &parameterType     # environment variables
-                type: list
-                default: []
-                valuesrules:
-                  type: dict
-                  schema:
-                    name:
-                      required: true
-                      type: string
-                    value:
-                      required: false
-                      type: string
-              command: *parameterType     # see `nextflow help`
-              run:  *parameterType        # see `nextflow help run`
-
-        snakemake:
-          type: dict       # engine version tags
-          required: true
-          valuesrules:
-            type: dict
-            required: true
-            schema:
-              env: *parameterType       # environment variables
-              command: *parameterType   # snakemake command arguments
+            type: list
+            default: []
+            valuesrules:   # engine parameter
+              type: dict
+              schema:
+                name:
+                  required: true
+                  type: string
+                value:
+                  required: false
+                  type: string
+                tags:
+                  type: list
+                  default: []
+        snakemake: *default_workflow_engine_parameters
 
     auth_instructions_url:
       type: string

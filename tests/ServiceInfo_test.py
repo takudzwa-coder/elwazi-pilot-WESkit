@@ -92,33 +92,47 @@ def test_get_default_workflow_engine_parameters(service_info):
     default = service_info.default_workflow_engine_parameters()
     TestCase().assertDictEqual(default, {
         "snakemake": {
-            "5.8.2": {
-                "env": [
-                    {"name": "SOME_VAR", "value": "with value"}
-                ],
-                "command": [
-                    {
-                        "name": "cores",
-                        "value": 1
-                    }
-                ]
-            }
+            "5.8.2": [
+                {
+                    "name": "SOME_VAR",
+                    "value": "with value",
+                    "tags": ["environment-variable"]
+                },
+                {
+                    "name": "cores",
+                    "value": 1,
+                    "tags": ["command-parameter"]
+                }
+            ]
         },
         "nextflow": {
-            "20.10.0": {
-                "env": [
-                    {"name": "NXF_OPTS", "value": "-Xmx256m"}
-                ],
-                "command": [
-                    {"name": "Djava.io.tmpdir=/tmp"}
-                ],
-                "run": [
-                    {"name": "with-trace"},
-                    {"name": "with-timeline"},
-                    {"name": "with-dag"},
-                    {"name": "with-report"}
-                ]
-            }
+            "20.10.0": [
+                {
+                    "name": "NXF_OPTS",
+                    "value": "-Xmx256m",
+                    "tags": ["environment-variable"]
+                },
+                {
+                    "name": "Djava.io.tmpdir=/tmp",
+                    "tags": ["command-parameter"]
+                },
+                {
+                    "name": "with-trace",
+                    "tags": ["run-parameter"]
+                },
+                {
+                    "name": "with-timeline",
+                    "tags": ["run-parameter"]
+                },
+                {
+                    "name": "with-dag",
+                    "tags": ["run-parameter"]
+                },
+                {
+                    "name": "with-report",
+                    "tags": ["run-parameter"]
+                }
+            ]
         }})
 
 
