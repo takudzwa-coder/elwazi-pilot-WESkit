@@ -16,6 +16,62 @@ static_service_info:
   type: dict
   required: true
   schema:
+    id:
+      type: string
+      required: true
+    name:
+      type: string
+      required: true
+    type:
+      type: dict
+      required: true
+      schema:
+        group:
+          type: string
+          required: true
+        artifact:
+          type: string
+          required: true
+        version:
+          type: string
+          required: true
+    description:
+      type: string
+      required: false
+      default: ""
+    organization:
+      type: dict
+      required: true
+      schema:
+        name:
+          type: string
+          required: true
+        url:
+          type: string
+          required: true
+    contact_url:
+      type: string
+      required: false
+      default: "mailto:unknown"
+    documentation_url:
+      type: string
+      required: false
+      default: "https://gitlab.com/one-touch-pipeline/weskit/documentation/-/wikis/home"
+    created_at:
+      type: datetime
+      required: false
+      default: 2021-01-01
+    updated_at:
+      type: datetime
+      required: false
+      default: 2021-01-01
+    environment:
+      type: string
+      required: false
+      default: unknown
+    version:
+      type: string
+      required: true
     workflow_type_versions:
       type: dict
       required: true
@@ -61,9 +117,6 @@ static_service_info:
               type: string
               required: true
     auth_instructions_url:
-      type: string
-      required: true
-    contact_info_url:
       type: string
       required: true
     tags:

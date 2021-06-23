@@ -10,6 +10,7 @@ import logging
 
 from flask import current_app, jsonify, request
 from flask import Blueprint
+from rfc3339 import rfc3339
 
 from weskit.api.utils import get_log_response, get_access_denied_response, _get_current_user_id
 from weskit.oidc.Decorators import login_required
@@ -91,25 +92,41 @@ def GetServiceInfo(*args, **kwargs):
         logger.info("GetServiceInfo")
         current_app.manager.update_runs(query={})
         response = {
+            "id":
+                current_app.service_info.id(),
+            "name":
+                current_app.service_info.name(),
+            "type":
+                current_app.service_info.type(),
+            "description":
+                current_app.service_info.description(),
+            "organization":
+                current_app.service_info.organization(),
+            "documentationUrl":
+                current_app.service_info.documentation_url(),
+            "contactUrl":
+                current_app.service_info.contact_url(),
+            "createdAt":
+                rfc3339(current_app.service_info.created_at()),
+            "updatedAt":
+                rfc3339(current_app.service_info.updated_at()),
             "workflow_type_versions":
-                current_app.service_info.get_workflow_type_versions(),
+                current_app.service_info.workflow_type_versions(),
             "supported_wes_versions":
-                current_app.service_info.get_supported_wes_versions(),
+                current_app.service_info.supported_wes_versions(),
             "supported_filesystem_protocols":
-                current_app.service_info.get_supported_filesystem_protocols(),
+                current_app.service_info.supported_filesystem_protocols(),
             "workflow_engine_versions":
-                current_app.service_info.get_workflow_engine_versions(),
+                current_app.service_info.workflow_engine_versions(),
             "default_workflow_engine_parameters":
                 current_app.service_info.
-                get_default_workflow_engine_parameters(),
+                default_workflow_engine_parameters(),
             "system_state_counts":
-                current_app.manager.database.count_states(),
+                current_app.service_info.system_state_counts(),
             "auth_instructions_url":
-                current_app.service_info.get_auth_instructions_url(),
-            "contact_info_url":
-                current_app.service_info.get_contact_info_url(),
+                current_app.service_info.auth_instructions_url(),
             "tags":
-                current_app.service_info.get_tags()
+                current_app.service_info.tags()
         }
         return response, 200
     except Exception as e:

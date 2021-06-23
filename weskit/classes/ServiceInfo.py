@@ -5,6 +5,8 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+import datetime
+from typing import Dict, List
 
 from weskit.classes.Database import Database
 
@@ -18,26 +20,59 @@ class ServiceInfo:
         self._db = database
         self._swagger = swagger
 
-    def get_workflow_type_versions(self):
+    def id(self) -> str:
+        return self._static_service_info["id"]
+
+    def name(self) -> str:
+        return self._static_service_info["name"]
+
+    def type(self) -> Dict[str, str]:
+        return self._static_service_info["type"]
+
+    def description(self) -> str:
+        return self._static_service_info["description"]
+
+    def organization(self) -> Dict[str, str]:
+        return self._static_service_info["organization"]
+
+    def contact_url(self) -> str:
+        return self._static_service_info["contact_url"]
+
+    def documentation_url(self) -> str:
+        return self._static_service_info["documentation_url"]
+
+    def created_at(self) -> datetime.datetime:
+        return self._static_service_info["created_at"]
+
+    def updated_at(self) -> datetime.datetime:
+        return self._static_service_info["updated_at"]
+
+    def environment(self) -> str:
+        return self._static_service_info["environment"]
+
+    def version(self) -> str:
+        return self._static_service_info["version"]
+
+    def workflow_type_versions(self) -> Dict[str, Dict[str, List[str]]]:
         return self._static_service_info["workflow_type_versions"]
 
-    def get_supported_wes_versions(self):
+    def supported_wes_versions(self) -> List[str]:
         return [self._swagger["info"]["version"]]
 
-    def get_supported_filesystem_protocols(self):
+    def supported_filesystem_protocols(self) -> List[str]:
         return self._static_service_info["supported_filesystem_protocols"]
 
-    def get_workflow_engine_versions(self):
+    def workflow_engine_versions(self) -> Dict[str, str]:
         return self._static_service_info["workflow_engine_versions"]
 
-    def get_default_workflow_engine_parameters(self):
+    def default_workflow_engine_parameters(self):
         return self._static_service_info["default_workflow_engine_parameters"]
 
-    def get_auth_instructions_url(self):
+    def system_state_counts(self) -> Dict[str, int]:
+        return self._db.count_states()
+
+    def auth_instructions_url(self) -> str:
         return self._static_service_info["auth_instructions_url"]
 
-    def get_contact_info_url(self):
-        return self._static_service_info["contact_info_url"]
-
-    def get_tags(self):
+    def tags(self) -> Dict[str, str]:
         return self._static_service_info["tags"]
