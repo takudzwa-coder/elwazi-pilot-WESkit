@@ -100,22 +100,28 @@ static_service_info:
     default_workflow_engine_parameters:
       type: dict
       required: false
-      keysrules:
-        allowed:
-          - snakemake
-          - nextflow
-      valuesrules:
-        type: dict
-        required: true
-        valuesrules:
-          type: dict
-          schema:
-            type:
-              type: string
-              required: true
-            default_value:
-              type: string
-              required: true
+      schema:              # workflow engine names
+
+        nextflow: &default_workflow_engine_parameters
+          type: dict       # engine version tags
+          required: true
+          valuesrules:
+            type: list
+            default: []
+            valuesrules:   # engine parameter
+              type: dict
+              schema:
+                name:
+                  required: true
+                  type: string
+                value:
+                  required: false
+                  type: string
+                tags:
+                  type: list
+                  default: []
+        snakemake: *default_workflow_engine_parameters
+
     auth_instructions_url:
       type: string
       required: true

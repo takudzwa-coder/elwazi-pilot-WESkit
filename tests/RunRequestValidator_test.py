@@ -24,8 +24,9 @@ def request_validation():
 
 
 @pytest.fixture(scope="session")
-def run_request_validator(request_validation):
-    return RunRequestValidator(create_validator(request_validation["run_request"]))
+def run_request_validator(request_validation, service_info):
+    return RunRequestValidator(create_validator(request_validation["run_request"]),
+                               service_info.workflow_engine_versions())
 
 
 def request(**kwargs):
@@ -79,12 +80,17 @@ def test_validate_run_dir_tag(run_request_validator):
 
 
 def test_workflow_type(run_request_validator):
-    assert run_request_validator.validate(request(workflow_type="snakemake"), False) == \
+    assert run_request_validator.validate(request(workflow_type="snakemake",
+                                                  workflow_type_version="5.8.2"), False) == \
         []
-    assert run_request_validator.validate(request(workflow_type="nextflow"), False) == \
+    assert run_request_validator.validate(request(workflow_type="nextflow",
+                                                  workflow_type_version="20.10.0"), False) == \
         []
     assert run_request_validator.validate(request(workflow_type="blabla"), False) == \
         ["Unknown workflow_type 'blabla'. Know nextflow, snakemake"]
+    assert run_request_validator.validate(request(workflow_type="nextflow",
+                                                  workflow_type_version="blabla"), False) == \
+        ["Unknown workflow_type_version 'blabla'. Know 20.10.0"]
 
 
 def test_workflow_type_version(run_request_validator):

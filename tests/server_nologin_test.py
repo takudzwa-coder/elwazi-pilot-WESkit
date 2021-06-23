@@ -7,7 +7,6 @@
 #  Authors: The WESkit Team
 
 import logging
-import os
 import pytest
 
 from tests.utils import get_workflow_data
@@ -24,7 +23,7 @@ class TestOpenEndpoint:
     @pytest.mark.integration
     def test_get_service_info(self, test_client_nologin):
         response = test_client_nologin.get("/ga4gh/wes/v1/service-info")
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
 
 
 class TestWithoutLogin:
@@ -34,24 +33,23 @@ class TestWithoutLogin:
     """
     @pytest.mark.integration
     def test_list_runs_wo_login(self, test_client_nologin, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
         response = test_client_nologin.post("/ga4gh/wes/v1/runs", json=data)
+        assert response.status_code == 200, response.json
         response = test_client_nologin.get("/ga4gh/wes/v1/runs")
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
 
     @pytest.mark.integration
     def test_list_runs_extended_wo_login(self, test_client_nologin, celery_worker):
         response = test_client_nologin.get("/weskit/v1/runs")
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
 
     @pytest.mark.integration
     def test_submit_workflow_wo_login(self, test_client_nologin, celery_worker):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
         response = test_client_nologin.post("/ga4gh/wes/v1/runs", json=data)
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json

@@ -27,6 +27,7 @@ dependencies:
   - uwsgi=2.0.19.1
   - pymysql=1.0.2
   - bioconda::nextflow=20.10.0
+  - procps-ng=3.3.17             # for nextflow default_workflow_engine_parameters test
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1

@@ -62,8 +62,9 @@ class ServiceInfo:
     def supported_filesystem_protocols(self) -> List[str]:
         return self._static_service_info["supported_filesystem_protocols"]
 
-    def workflow_engine_versions(self) -> Dict[str, str]:
-        return self._static_service_info["workflow_engine_versions"]
+    def workflow_engine_versions(self) -> Dict[str, List[str]]:
+        return dict(map(lambda kv: (kv[0], list(kv[1].keys())),
+                        self.default_workflow_engine_parameters().items()))
 
     def default_workflow_engine_parameters(self):
         return self._static_service_info["default_workflow_engine_parameters"]

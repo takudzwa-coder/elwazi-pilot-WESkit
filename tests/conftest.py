@@ -88,7 +88,7 @@ def test_client(celery_session_app,
 
     with app.test_client() as testing_client:
         with app.app_context():
-            # This sets `current_app` and `current_user` for the tests.
+            # The app_context() sets `current_app` and `current_user` for the tests.
             yield testing_client
 
 
@@ -155,6 +155,16 @@ def keycloak_container(mysql_keycloak_container):
 
 
 @pytest.fixture(scope="session")
+def test_validation():
+    default_validation_config = "config/validation.yaml"
+    with open(default_validation_config, "r") as yaml_file:
+        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        logger.debug("Read validation specification from " +
+                     default_validation_config)
+    yield validation
+
+
+@pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.
     with open("tests/weskit.yaml", "r") as ff:
@@ -164,7 +174,7 @@ def test_config():
 
 @pytest.fixture(scope="session")
 def database_container():
-    MONGODB_CONTAINER = "mongo:4.2.3"
+    MONGODB_CONTAINER = "mongo:4.4.6"
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
 
@@ -186,7 +196,7 @@ def test_database(database_container):
 
 @pytest.fixture(scope="session")
 def redis_container():
-    redis_container = RedisContainer("redis:6.0.1-alpine")
+    redis_container = RedisContainer("redis:6.2.3-alpine")
     with redis_container as rc:
         os.environ["BROKER_URL"] = get_redis_url(rc)
         os.environ["RESULT_BACKEND"] = get_redis_url(rc)

@@ -30,9 +30,8 @@ def test_run(test_client,
     run is created manually and the user_id is fixed to the value from the test keycloak DB.
     """
     manager = current_app.manager
-    snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
     request = get_workflow_data(
-        snakefile=snakefile,
+        snakefile="file:tests/wf1/Snakefile",
         config="tests/wf1/config.yaml")
     run = manager.create_and_insert_run(request=request,
                                         user="6bd12400-6fc4-402c-9180-83bddbc30526")
@@ -104,7 +103,7 @@ class TestOpenEndpoint:
     @pytest.mark.integration
     def test_get_service_info(self, test_client):
         response = test_client.get("/ga4gh/wes/v1/service-info")
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
 
 
 class TestWithoutLogin:
@@ -134,9 +133,8 @@ class TestWithoutLogin:
 
     @pytest.mark.integration
     def test_submit_workflow_wo_login(self, test_client):
-        snakefile = os.path.join(os.getcwd(), "tests/wf1/Snakefile")
         data = get_workflow_data(
-            snakefile=snakefile,
+            snakefile="file:tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
         response = test_client.post("/ga4gh/wes/v1/runs", json=data)
         assert response.status_code == 401
@@ -159,7 +157,7 @@ class TestWithHeaderToken:
         response = test_client.get(
             "/ga4gh/wes/v1/runs/{}".format(test_run.run_id),
             headers=OIDC_credentials.headerToken)
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
         for output in response.json["outputs"]["workflow"]:
             assert not os.path.isabs(output)
 
@@ -169,7 +167,7 @@ class TestWithHeaderToken:
                                     test_run,
                                     OIDC_credentials):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
         assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
 
     @pytest.mark.integration
@@ -178,7 +176,7 @@ class TestWithHeaderToken:
                                             test_run,
                                             OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
         assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
 
     @pytest.mark.integration
@@ -196,7 +194,7 @@ class TestWithHeaderToken:
             response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                        headers=OIDC_credentials.headerToken)
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
         assert isinstance(response.json, dict)
         assert "content" in response.json
 
@@ -215,6 +213,6 @@ class TestWithHeaderToken:
             response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                        headers=OIDC_credentials.headerToken)
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json
         assert isinstance(response.json, dict)
         assert "content" in response.json

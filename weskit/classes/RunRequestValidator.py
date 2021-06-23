@@ -7,22 +7,19 @@
 #  Authors: The WESkit Team
 
 import os
-from typing import List, Optional
+from typing import List, Optional, Dict
 from urllib.parse import urlparse
-
-from weskit.utils import all_subclasses
-from weskit.classes.WorkflowEngine import WorkflowEngine
 
 
 class RunRequestValidator(object):
-    known_engine_ids = [engine.name()
-                        for engine in all_subclasses(WorkflowEngine)]
-    known_engine_ids.sort()
 
-    def __init__(self, syntax_validator):
+    def __init__(self,
+                 syntax_validator,
+                 workflow_types_and_versions: Dict[str, List[str]]):
         """The syntax validator is a function that returns a string with
          an error message, if there is an error, or None otherwise."""
         self.syntax_validator = syntax_validator
+        self.workflow_types_and_versions = workflow_types_and_versions
 
     def validate(self,
                  data: dict,
@@ -30,39 +27,41 @@ class RunRequestValidator(object):
         """Validate the overall structure, types and values of the run request
         fields. workflow_params and workflow_engine_parameters are not tested
         semantically but their structure is validated (see schema)."""
-        def apply_if_not_none(value, func):
+        def apply_if_not_none(value, func) -> Optional[str]:
             if value is not None:
                 return func(value)
             else:
                 return None
 
         stx_error = self._validate_syntax(data)
-        wev_error = apply_if_not_none(data.get("workflow_type", None),
-                                      self._validate_workflow_type)
-        wtv_error = apply_if_not_none(data.get("workflow_type_version", None),
-                                      self._validate_workflow_type_version)
+        wtnv_error = self._validate_workflow_type_and_version(
+            data.get("workflow_type", None),
+            data.get("workflow_type_version", None))
         url_error = apply_if_not_none(data.get("workflow_url", None),
                                       self._validate_workflow_url)
         workdir_tag_error = self._validate_workdir_tag(
             data.get("tags", None), require_workdir_tag)
 
         return list(filter(lambda v: v is not None,
-                           [stx_error, wev_error, wtv_error,
+                           [stx_error, wtnv_error,
                             url_error, workdir_tag_error]))
 
     def _validate_syntax(self, data: dict) -> Optional[str]:
         return self.syntax_validator(data)
 
-    def _validate_workflow_type(self, type_version: str) \
+    def _validate_workflow_type_and_version(self, type: str, version: str) \
             -> Optional[str]:
-        if type_version not in RunRequestValidator.known_engine_ids:
-            return "Unknown workflow_type '%s'. Know %s" % \
-                   (type_version,
-                    ", ".join(RunRequestValidator.known_engine_ids))
+        if type is not None:
+            if type not in self.workflow_types_and_versions.keys():
+                return "Unknown workflow_type '%s'. Know %s" % \
+                       (type, ", ".join(self.workflow_types_and_versions.keys()))
+            elif version is not None and version not in self.workflow_types_and_versions[type]:
+                return "Unknown workflow_type_version '%s'. Know %s" % \
+                       (version, ", ".join(self.workflow_types_and_versions[type]))
         else:
             return None
 
-    def _validate_workflow_type_version(self, value: str) \
+    def _validate_workflow_type_version(self, workflow_type: str) \
             -> Optional[str]:
         # TODO The value needs to be an allowed version for the workflow_type
         return None

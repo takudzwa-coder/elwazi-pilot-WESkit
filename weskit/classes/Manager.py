@@ -8,12 +8,14 @@
 
 import logging
 import os
+import traceback
 from urllib.parse import urlparse
 
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
 
+from weskit.ClientError import ClientError
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
@@ -37,13 +39,6 @@ running_states = [
     RunStatus.QUEUED,
     RunStatus.RUNNING
 ]
-
-EXECUTOR_WF_NOT_FOUND = """
-WESkit executor error: the workflow file was not found. Please provide either
-a URL with a workflow file on the server or attach a workflow
-via workflow_attachments."""
-
-EXECUTOR_WORKDIR_MISSING = """Workdir missing."""
 
 logger = logging.getLogger(__name__)
 
@@ -172,18 +167,19 @@ class Manager:
                                url: str,
                                attachment_filenames: List[str]) \
             -> str:
-        """Compose the path to the workflow from a relative "file:" URI or
-        by (cached) downloading an "https://" URI.
+        """
+        Compose the path to the workflow from a relative "file:" URI or by (cached) downloading
+        an "https://" URI. After the function call the workflow file is present in the work_dir.
 
-        Attached files are extracted to the run directory. (TODO Caching?)
-        Relative files are interpreted relative to self.workflow_base_dir.
+        Files in attachment_files are assumed to to have been extracted from attachments before
+        this function. Relative files are interpreted relative to self.workflow_base_dir.
         """
         workflow_url = urlparse(url)
         workflow_path = None
         if workflow_url.scheme in ["file", '']:
             if os.path.isabs(workflow_url.path):
-                raise ValueError("Absolute workflow_url forbidden " +
-                                 "(should be validated already): '%s'" % url)
+                raise ClientError("Absolute workflow_url forbidden " +
+                                  "(should be validated already): '%s'" % url)
             elif workflow_url.path in attachment_filenames:
                 # File has already been extracted to work-dir.
                 workflow_path = os.path.join(
@@ -197,6 +193,9 @@ class Manager:
             # TODO Download the workflow with git clone. Use caching.
             # TODO Copy to run directory?
             raise NotImplementedError("workflow_url in https://")
+
+        if not os.path.exists(workflow_path):
+            raise ClientError("Requested workflow path does not exist: '%s'" % workflow_path)
         return workflow_path
 
     def prepare_execution(self, run, files=[]):
@@ -215,27 +214,24 @@ class Manager:
         if not os.path.exists(run_dir):
             os.makedirs(run_dir)
 
-        with open(run_dir + "/config.yaml", "w") as ff:
-            yaml.dump(run.request["workflow_params"], ff)
         run.execution_path = run_dir
 
-        # get workflow path from workflow_url
+        with open(run_dir + "/config.yaml", "w") as ff:
+            yaml.dump(run.request["workflow_params"], ff)
+
         try:
-            workflow_path = self._prepare_workflow_path(
+            run.workflow_path = self._prepare_workflow_path(
                 run.execution_path,
                 run.request["workflow_url"],
                 self._process_workflow_attachment(run, files))
-            if not os.path.exists(workflow_path):
-                raise IOError("Workflow path does not exist: '%s'" %
-                              workflow_path)
-            run.workflow_path = workflow_path
         except Exception as e:
             logger.warning(e, stack_info=True, exc_info=True)
             run.run_status = RunStatus.SYSTEM_ERROR
             run.outputs["execution"] = self._create_run_executions_logfile(
                 run=run,
-                filename="weskit_run_error.txt",
-                message=EXECUTOR_WF_NOT_FOUND)
+                filename=".weskit.err",   # Solution is not "rerun"-ready!
+                message=traceback.format_exc())
+            raise e
 
         return run
 
@@ -243,14 +239,23 @@ class Manager:
         if not run.run_status == RunStatus.INITIALIZING:
             return run
 
-        # set workflow_type
+        # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
-            raise ValueError("Workflow type:'" +
-                             run.request["workflow_type"] +
-                             "' is not known. Know " +
-                             ", ".join(self.workflow_engines.keys()))
+            raise ClientError("Workflow type '" +
+                              run.request["workflow_type"] +
+                              "' is not known. Know " +
+                              ", ".join(self.workflow_engines.keys()))
+
+        # Set workflow type version
+        if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
+            workflow_type_version = run.request["workflow_type_version"]
+        else:
+            raise ClientError("Workflow type version '" +
+                              run.request["workflow_type_version"] +
+                              "' is not known. Know " +
+                              ", ".join(self.workflow_engines[workflow_type].keys()))
 
         # execute run
         run_kwargs = {
@@ -260,7 +265,8 @@ class Manager:
             "workflow_engine_params": []
         }
         run.start_time = get_current_timestamp()
-        command: ShellCommand = self.workflow_engines[workflow_type].command(**run_kwargs)
+        command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
+            command(**run_kwargs)
         run.execution_log["cmd"] = command.command
         run.execution_log["env"] = command.environment
         if run.run_status == RunStatus.INITIALIZING:
@@ -268,7 +274,7 @@ class Manager:
                 args=[],
                 kwargs={
                     "command": command.command,
-                    "env": command.environment,
+                    "environment": command.environment,
                     "workdir": run.execution_path
                 })
             run.celery_task_id = task.id

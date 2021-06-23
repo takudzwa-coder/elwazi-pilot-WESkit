@@ -5,7 +5,6 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import uuid
 
 import yaml
@@ -15,7 +14,8 @@ from weskit.classes.Run import Run
 import time
 
 
-def get_mock_run(workflow_url, workflow_type, tags=None, user_id="test_id"):
+def get_mock_run(workflow_url, workflow_type, workflow_type_version,
+                 tags=None, user_id="test_id"):
     data = {
         "run_id": str(uuid.uuid4()),
         "run_status": "INITIALIZING",
@@ -24,6 +24,7 @@ def get_mock_run(workflow_url, workflow_type, tags=None, user_id="test_id"):
         "request": {
             "workflow_url": workflow_url,
             "workflow_type": workflow_type,
+            "workflow_type_version": workflow_type_version,
             "workflow_params": {"text": "hello_world"},
         },
         "execution_path": [],
@@ -64,7 +65,7 @@ def get_workflow_data(snakefile, config):
         "workflow_params": workflow_params,
         "workflow_type": "snakemake",
         "workflow_type_version": "5.8.2",
-        "workflow_url": "file:tests/wf1/Snakefile"
+        "workflow_url": snakefile
     }
     return data
 
