@@ -53,7 +53,7 @@ def get_log_response(run_id: str, log_name: str):
         access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
-            if run.run_status is not RunStatus.COMPLETE:
+            if run.status is not RunStatus.COMPLETE:
                 return {"msg": "Run '%s' is not in COMPLETED state" % run_id,
                         "status_code": 409
                         }, 409     # CONFLICT (with current resource state)

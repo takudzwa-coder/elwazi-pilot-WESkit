@@ -33,10 +33,10 @@ def GetRunLog(run_id):
 
         if access_denied_response is None:
             return {
-                "run_id": run.run_id,
+                "run_id": run.id,
                 "request": run.request,
-                "state": run.run_status.name,
-                "run_log": run.execution_log,
+                "state": run.status.name,
+                "run_log": run.log,
                 "task_logs": run.task_logs,
                 "outputs": run.outputs,
                 "user_id": run.user_id
@@ -45,8 +45,8 @@ def GetRunLog(run_id):
             return access_denied_response
 
     except ClientError as e:
-        logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 500}, 500)
+        logger.warning(e, exc_info=True)
+        return {"msg": e.message, "status_code": 500}, 500
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -69,8 +69,8 @@ def CancelRun(run_id):
             return access_denied_response
 
     except ClientError as e:
-        logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 500}, 500)
+        logger.warning(e, exc_info=True)
+        return {"msg": e.message, "status_code": 500}, 500
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -86,13 +86,13 @@ def GetRunStatus(run_id):
         access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
 
         if access_denied_response is None:
-            return jsonify(run.run_status.name), 200
+            return run.status.name, 200
         else:
             return access_denied_response
 
     except ClientError as e:
-        logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 500}, 500)
+        logger.warning(e, exc_info=True)
+        return {"msg": e.message, "status_code": 500}, 500
 
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -163,7 +163,6 @@ def ListRuns(*args, **kwargs):
         # filter for runs for this user
         response = [run for run in response if run["user_id"] == user_id]
         return jsonify(response), 200
-
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e
@@ -196,12 +195,11 @@ def RunWorkflow():
             run = current_app.manager.execute(run)
             current_app.manager.database.update_run(run)
 
-            return jsonify({"run_id": run.run_id}), 200
+            return {"run_id": run.id}, 200
 
     except ClientError as e:
-        logger.error(e, exc_info=True)
-        return jsonify({"msg": e.message, "status_code": 500}, 500)
-
+        logger.warning(e, exc_info=True)
+        return {"msg": e.message, "status_code": 500}, 500
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e

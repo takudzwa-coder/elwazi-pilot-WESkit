@@ -19,58 +19,69 @@ logger = logging.getLogger(__name__)
 
 
 def run_command(command: List[str],
-                workdir: str,
+                base_workdir: str,
+                sub_workdir: str,
                 environment: Dict[str, str] = {},
                 log_base: str = ".weskit"):
     """
-    Run a command in a working directory.
+    Run a command in a working directory. The workdir has to be an relative path, such that
+    base_workdir/sub_workdir is the absolute path in which the command is executed. base_workdir
+    can be absolute or relative.
 
-    Write log files into a timestamp sub-directory of `workdir/log_base`. There will be `stderr`
-    and `stdout` files for the respective output of the command and `command.json` with general
-    runtime information, including the "command", "start_time", "end_time", and the "exit_code".
+    Write log files into a timestamp sub-directory of `sub_workdir/log_base`. There will be
+    `stderr` and `stdout` files for the respective output of the command and `log.json` with
+    general logging information, including the "command", "start_time", "end_time", and the
+    "exit_code". Paths in the execution log are all relative.
 
     Returns a dict with fields "stdout_file", "stderr_file", "log_file" for the three log
     files, and "output_files" for all files created by the process, but not the three log-files.
+
+    "exit_code" is set to -1, if no result could be produced from the command, e.g. if a prior
+    mkdir failed, or similar abnormal situations.
     """
+    workdir_abs = os.path.join(base_workdir, sub_workdir)
+    logger.info("Running command in {}: {}".format(workdir_abs, command))
     start_time = get_current_timestamp()
-    log_dir = os.path.join(workdir, log_base, start_time)
-    logger.info("Running command in {}: {}".format(workdir, command))
-    stderr_file = os.path.join(log_dir, "stderr")
-    stdout_file = os.path.join(log_dir, "stdout")
-    log_file = os.path.join(log_dir, "log.json")
+    log_dir_rel = os.path.join(log_base, start_time)
+    stderr_file_rel = os.path.join(log_dir_rel, "stderr")
+    stdout_file_rel = os.path.join(log_dir_rel, "stdout")
+    execution_log_rel = os.path.join(log_dir_rel, "log.json")
     result: Optional[subprocess.CompletedProcess] = None
     # Let this explicitly inherit the task environment for the moment, e.g. for conda.
     env = {**dict(os.environ), **environment}
     try:
-        os.makedirs(log_dir)
-        with open(stderr_file, "a") as stderr:
-            with open(stdout_file, "a") as stdout:
+        log_dir_abs = os.path.join(workdir_abs, log_dir_rel)
+        stderr_file_abs = os.path.join(workdir_abs, stderr_file_rel)
+        stdout_file_abs = os.path.join(workdir_abs, stdout_file_rel)
+        os.makedirs(log_dir_abs)
+        with open(stderr_file_abs, "a") as stderr:
+            with open(stdout_file_abs, "a") as stdout:
                 result = \
                     subprocess.run(command,
-                                   cwd=str(pathlib.PurePath(workdir)),
+                                   cwd=str(pathlib.PurePath(workdir_abs)),
                                    stdout=stdout,
                                    stderr=stderr,
                                    env=env)
     finally:
-        outputs = list(filter(
-            lambda fn: fn not in list(
-                map(lambda logfile: os.path.relpath(logfile, workdir),
-                    [stdout_file, stderr_file, log_file])),
-            collect_relative_paths_from(workdir)))
+        # Collect files, but ignore those, that are in the .weskit/ directory. They are tracked by
+        # the fields in the execution log (or that of previous runs in this directory).
+        outputs = list(filter(lambda fn: os.path.commonpath([fn, log_base]) != log_base,
+                              collect_relative_paths_from(workdir_abs)))
         execution_log = {
             "start_time": start_time,
             "cmd": command,
             "env": environment,
-            "workdir": workdir,
+            "workdir": sub_workdir,
             "end_time": get_current_timestamp(),
             "exit_code": result.returncode if result is not None else -1,
-            "log_dir": log_dir,
-            "stdout_file": stdout_file,
-            "stderr_file": stderr_file,
-            "log_file": log_file,
+            "stdout_file": stdout_file_rel,
+            "stderr_file": stderr_file_rel,
+            "log_dir": log_dir_rel,
+            "log_file": execution_log_rel,
             "output_files": outputs
         }
-        with open(log_file, "w") as fh:
+        execution_log_abs = os.path.join(workdir_abs, execution_log_rel)
+        with open(execution_log_abs, "w") as fh:
             json.dump(execution_log, fh)
 
     return execution_log

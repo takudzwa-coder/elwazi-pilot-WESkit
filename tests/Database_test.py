@@ -20,7 +20,7 @@ def test_insert_and_load_run(test_database):
                         workflow_type="snakemake",
                         workflow_type_version="5.8.2")
     assert test_database.insert_run(run1)
-    run2 = test_database.get_run(run1.run_id)
+    run2 = test_database.get_run(run1.id)
     assert run1 == run2
     run_id_and_states = test_database.list_run_ids_and_states()
     assert len(run_id_and_states) == 1
@@ -33,10 +33,10 @@ def test_update_run(test_database):
                        workflow_type_version="5.8.2")
     assert test_database.insert_run(run)
     new_run = copy.copy(run)
-    new_run.run_status = RunStatus.RUNNING
+    new_run.status = RunStatus.RUNNING
     test_database.update_run(new_run)
-    assert new_run.run_status == RunStatus.RUNNING
-    assert run.run_status == RunStatus.INITIALIZING
+    assert new_run.status == RunStatus.RUNNING
+    assert run.status == RunStatus.INITIALIZING
 
 
 @pytest.mark.integration
@@ -61,5 +61,5 @@ def test_delete_run(test_database):
                        workflow_type_version="5.8.2")
     assert test_database.insert_run(run)
     assert test_database.delete_run(run)
-    find_run = test_database.get_run(run.run_id)
+    find_run = test_database.get_run(run.id)
     assert find_run is None

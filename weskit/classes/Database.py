@@ -71,7 +71,7 @@ class Database:
         return run_id
 
     def insert_run(self, run: Run) -> bool:
-        if self.get_run(run.run_id) is None:
+        if self.get_run(run.id) is None:
             return self._db_runs() \
                 .insert_one(dict(run)) \
                 .acknowledged
@@ -80,13 +80,13 @@ class Database:
 
     def update_run(self, run: Run) -> bool:
         return self._db_runs() \
-            .update_one({"run_id": run.run_id},
+            .update_one({"run_id": run.id},
                         {"$set": dict(run)}
                         ).acknowledged
 
     def delete_run(self, run: Run) -> bool:
         return self._db_runs() \
-            .delete_one({"run_id": run.run_id}) \
+            .delete_one({"run_id": run.id}) \
             .acknowledged
 
     def list_run_ids_and_states_and_times(self) -> list:

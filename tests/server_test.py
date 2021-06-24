@@ -43,7 +43,7 @@ def test_run(test_client,
     start_time = time.time()
     while not success:
         assert_within_timeout(start_time)
-        status = run.run_status
+        status = run.status
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
             print("Waiting ... (status=%s)" % status.name)
@@ -51,7 +51,7 @@ def test_run(test_client,
             run = current_app.manager.update_run(run)
             continue
         success = True
-    assert os.path.isfile(os.path.join(run.execution_path, "hello_world.txt"))
+    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
     yield run
 
@@ -155,7 +155,7 @@ class TestWithHeaderToken:
 
         # test that outputs are relative
         response = test_client.get(
-            "/ga4gh/wes/v1/runs/{}".format(test_run.run_id),
+            "/ga4gh/wes/v1/runs/{}".format(test_run.id),
             headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         for output in response.json["outputs"]["workflow"]:
@@ -168,7 +168,7 @@ class TestWithHeaderToken:
                                     OIDC_credentials):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
-        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
+        assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
 
     @pytest.mark.integration
     def test_list_runs_extended_with_header(self,
@@ -177,14 +177,14 @@ class TestWithHeaderToken:
                                             OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
-        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
+        assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
 
     @pytest.mark.integration
     def test_get_run_stderr_with_header(self,
                                         test_client,
                                         test_run,
                                         OIDC_credentials):
-        run_id = test_run.run_id
+        run_id = test_run.id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()
@@ -203,7 +203,7 @@ class TestWithHeaderToken:
                                         test_client,
                                         test_run,
                                         OIDC_credentials):
-        run_id = test_run.run_id
+        run_id = test_run.id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()

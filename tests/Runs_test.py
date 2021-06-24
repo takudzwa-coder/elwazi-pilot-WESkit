@@ -27,7 +27,7 @@ mock_run_data = {
 @pytest.mark.integration
 def test_create_and_load_run(database_container):
     new_run = Run(mock_run_data)
-    new_run.run_status = RunStatus.RUNNING
+    new_run.status = RunStatus.RUNNING
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
     collection = db["test_runs"]
@@ -35,7 +35,7 @@ def test_create_and_load_run(database_container):
     data = collection.find()
     for x in data:
         load_run = Run(x)
-        if load_run.run_id == new_run.run_id:
+        if load_run.id == new_run.id:
             assert dict(load_run) == dict(new_run)
 
 

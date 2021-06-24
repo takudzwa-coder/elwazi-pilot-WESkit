@@ -6,7 +6,7 @@
 #
 #  Authors: The WESkit Team
 
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from weskit.classes.RunStatus import RunStatus
 
@@ -27,11 +27,11 @@ class Run:
 
         # Optional fields.
         self.celery_task_id = data.get("celery_task_id", None)
-        self.execution_path = data.get("execution_path", None)
+        self.dir = data.get("run_dir", None)
         self.workflow_path = data.get("workflow_path", None)
         self.outputs = data.get("outputs", {})
-        self.execution_log = data.get("execution_log", {})
-        self.run_status = RunStatus.\
+        self.log = data.get("execution_log", {})
+        self.status = RunStatus.\
             from_string(data.get("run_status", "INITIALIZING"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])
@@ -48,11 +48,11 @@ class Run:
             "request": self.__request,
             "user_id": self.__user_id,
             "celery_task_id": self.celery_task_id,
-            "execution_path": self.execution_path,
+            "run_dir": self.dir,
             "workflow_path": self.workflow_path,
             "outputs": self.outputs,
-            "execution_log": self.execution_log,
-            "run_status": self.run_status.name,
+            "execution_log": self.log,
+            "run_status": self.status.name,
             "start_time": self.start_time,
             "task_logs": self.task_logs,
             "stdout": self.stdout,
@@ -77,36 +77,43 @@ class Run:
         self.__workflow_path = workflow_path
 
     @property
-    def execution_path(self):
-        return self.__execution_path
+    def dir(self):
+        return self.__run_dir
 
-    @execution_path.setter
-    def execution_path(self, execution_path):
-        self.__execution_path = execution_path
+    @dir.setter
+    def dir(self, run_dir):
+        self.__run_dir = run_dir
 
     @property
     def request(self):
         return self.__request
 
     @property
-    def run_id(self):
+    def id(self):
         return self.__run_id
 
     @property
-    def execution_log(self) -> dict:
+    def log(self) -> Dict[str, Any]:
         return self.__execution_log
 
-    @execution_log.setter
-    def execution_log(self, execution_log: dict):
+    @log.setter
+    def log(self, execution_log: Dict[str, Any]):
         self.__execution_log = execution_log
 
     @property
-    def run_status(self) -> RunStatus:
-        return self.__run_status
+    def exit_code(self) -> Optional[Any]:
+        if self.status == RunStatus.COMPLETE:
+            return self.log["exit_code"]
+        else:
+            return None
 
-    @run_status.setter
-    def run_status(self, run_status: RunStatus):
-        self.__run_status = run_status
+    @property
+    def status(self) -> RunStatus:
+        return self.__status
+
+    @status.setter
+    def status(self, run_status: RunStatus):
+        self.__status = run_status
 
     @property
     def outputs(self):
