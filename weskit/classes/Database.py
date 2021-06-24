@@ -41,13 +41,17 @@ class Database:
                 runs.append(Run(run_data))
         return runs
 
-    def list_run_ids_and_states(self) -> list:
+    def list_run_ids_and_states(self, user_id=None) -> list:
+        filter = None
+        if user_id is not None:
+            filter = {"user_id": user_id}
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,
                         "run_status": True,
                         "user_id": True
-                        }))
+                        },
+            filter=filter))
 
     def count_states(self):
         pipeline = [
@@ -89,7 +93,10 @@ class Database:
             .delete_one({"run_id": run.id}) \
             .acknowledged
 
-    def list_run_ids_and_states_and_times(self) -> list:
+    def list_run_ids_and_states_and_times(self, user_id=Optional[str]) -> list:
+        filter = None
+        if user_id is not None:
+            filter = {"user_id": user_id}
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,
@@ -97,4 +104,5 @@ class Database:
                         "start_time": True,
                         "user_id": True,
                         "request": True
-                        }))
+                        },
+            filter=filter))

@@ -10,16 +10,19 @@ import logging
 
 from flask import current_app, jsonify, request
 from flask import Blueprint
+from flask_jwt_extended import current_user
 from rfc3339 import rfc3339
 
 from weskit.ClientError import ClientError
-from weskit.api.utils import get_log_response, get_access_denied_response, _get_current_user_id
+from weskit.api.Helper import Helper
 from weskit.oidc.Decorators import login_required
 
 bp = Blueprint("wes", __name__)
 
 
 logger = logging.getLogger(__name__)
+
+ctx = Helper(current_app, current_user)
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
@@ -29,7 +32,7 @@ def GetRunLog(run_id):
         logger.info("GetRun")
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
-        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
+        access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
             return {
@@ -59,7 +62,7 @@ def CancelRun(run_id):
     try:
         logger.info("CancelRun")
         run = current_app.manager.database.get_run(run_id)
-        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
+        access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
             run = current_app.manager.cancel(run)
@@ -83,7 +86,7 @@ def GetRunStatus(run_id):
     try:
         logger.info("GetRunStatus")
         run = current_app.manager.get_run(run_id=run_id, update=True)
-        access_denied_response = get_access_denied_response(run_id, _get_current_user_id(), run)
+        access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
             return run.status.name, 200
@@ -158,10 +161,8 @@ def ListRuns(*args, **kwargs):
     try:
         logger.info("ListRuns")
         current_app.manager.update_runs(query={})
-        user_id = _get_current_user_id()
-        response = current_app.manager.database.list_run_ids_and_states()
-        # filter for runs for this user
-        response = [run for run in response if run["user_id"] == user_id]
+        user_id = ctx.get_current_user_id()
+        response = current_app.manager.database.list_run_ids_and_states(user_id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -183,8 +184,9 @@ def RunWorkflow():
               "status_code": 400
             }, 400
         else:
-            run = current_app.manager.create_and_insert_run(request=data,
-                                                            user=_get_current_user_id())
+            run = current_app.manager.\
+                create_and_insert_run(request=data,
+                                      user_id=ctx.get_current_user_id())
 
             logger.info("Prepare execution")
             run = current_app.manager.\
@@ -211,12 +213,8 @@ def ListRunsExtended(*args, **kwargs):
     try:
         logger.info("ListRunsExtended")
         current_app.manager.update_runs(query={})
-        user_id = _get_current_user_id()
-        response = current_app.manager.database.list_run_ids_and_states_and_times()
-
-        # filter for runs for this user
-        response = [run for run in response if run["user_id"] == user_id]
-
+        user_id = ctx.get_current_user_id()
+        response = current_app.manager.database.list_run_ids_and_states_and_times(user_id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -231,7 +229,7 @@ def GetRunStderr(run_id):
     run.
     """
     logger.info("GetStderr")
-    return get_log_response(run_id, "stderr")
+    return ctx.get_log_response(run_id, "stderr")
 
 
 @bp.route("/weskit/v1/runs/<string:run_id>/stdout", methods=["GET"])
@@ -242,4 +240,4 @@ def GetRunStdout(run_id):
     run.
     """
     logger.info("GetStdout")
-    return get_log_response(run_id, "stdout")
+    return ctx.get_log_response(run_id, "stdout")

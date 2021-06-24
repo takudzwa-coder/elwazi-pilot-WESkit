@@ -59,10 +59,10 @@ def mysql_keycloak_container():
         yield mysql
 
 
-def _setup_test_client_app(redis_container,
-                           celery_session_app,
-                           test_database,
-                           config):
+def _setup_test_app(redis_container,
+                    celery_session_app,
+                    test_database,
+                    config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = config
@@ -75,37 +75,38 @@ def _setup_test_client_app(redis_container,
 
 
 @pytest.fixture(scope="session")
-def test_client(celery_session_app,
-                test_database,
-                redis_container,
-                keycloak_container):
+def login_app(redis_container,
+              celery_session_app,
+              test_database,
+              keycloak_container):
+    yield _setup_test_app(redis_container,
+                          celery_session_app,
+                          test_database,
+                          config="tests/weskit.yaml")
 
-    app = _setup_test_client_app(
-        redis_container,
-        celery_session_app,
-        test_database,
-        config="tests/weskit.yaml")
 
-    with app.test_client() as testing_client:
-        with app.app_context():
-            # The app_context() sets `current_app` and `current_user` for the tests.
+@pytest.fixture(scope="session")
+def nologin_app(redis_container,
+                celery_session_app,
+                test_database):
+    yield _setup_test_app(redis_container,
+                          celery_session_app,
+                          test_database,
+                          config="tests/weskit_nologin.yaml")
+
+
+@pytest.fixture(scope="session")
+def test_client(login_app):
+    with login_app.test_client() as testing_client:
+        with login_app.app_context():
+            # This sets `current_app` and `current_user` for the tests.
             yield testing_client
 
 
 @pytest.fixture(scope="session")
-def test_client_nologin(celery_session_app,
-                        test_database,
-                        redis_container,
-                        keycloak_container):
-
-    app = _setup_test_client_app(
-        redis_container,
-        celery_session_app,
-        test_database,
-        config="tests/weskit_nologin.yaml")
-
-    with app.test_client() as testing_client:
-        with app.app_context():
+def test_client_nologin(nologin_app):
+    with nologin_app.test_client() as testing_client:
+        with nologin_app.app_context():
             # The app_context() sets `current_app` and `current_user` for the tests.
             yield testing_client
 

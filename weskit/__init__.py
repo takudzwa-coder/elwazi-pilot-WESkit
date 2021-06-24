@@ -88,7 +88,7 @@ def create_database(database_url=None):
 
 
 def create_app(celery: Celery,
-               database: Database) -> Flask:
+               database: Database) -> WESApp:
     default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
