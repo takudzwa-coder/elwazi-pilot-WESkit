@@ -5,8 +5,8 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import uuid
+
 from weskit.classes.Run import Run
 from bson.son import SON
 from weskit.classes.RunStatus import RunStatus
@@ -54,6 +54,9 @@ class Database:
             filter=filter))
 
     def count_states(self):
+        """
+        Returns the statistics of all job-states ever, for all users.
+        """
         pipeline = [
             {"$unwind": "$run_status"},
             {"$group": {"_id": "$run_status", "count": {"$sum": 1}}},

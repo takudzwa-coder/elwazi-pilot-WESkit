@@ -136,7 +136,7 @@ class Run:
         return self.__user_id
 
     @property
-    def stdout(self) -> Optional[str]:
+    def stdout(self) -> Optional[List[str]]:
         return self.__stdout
 
     @stdout.setter
@@ -144,7 +144,7 @@ class Run:
         self.__stdout = lines
 
     @property
-    def stderr(self) -> Optional[str]:
+    def stderr(self) -> Optional[List[str]]:
         return self.__stderr
 
     @stderr.setter

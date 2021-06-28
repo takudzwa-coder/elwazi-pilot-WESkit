@@ -8,7 +8,9 @@
 
 import logging
 
+from weskit.ClientError import ClientError
 from weskit import WESApp
+from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.classes.RunStatus import RunStatus
 from weskit.classes.Run import Run
 
@@ -26,7 +28,8 @@ class Helper:
         self.app = current_app
         self.user = current_user
 
-    def get_current_user_id(self):
+    @property
+    def current_user_id(self):
         if self.app.is_login_enabled:
             return self.user.id
         else:
@@ -35,7 +38,7 @@ class Helper:
     def get_access_denied_response(self,
                                    run_id: str,
                                    run: Run = None):
-        user_id = self.get_current_user_id()
+        user_id = self.user.id
         if run is None:
             logger.error("Could not find '%s'" % run_id)
             return {"msg": "Could not find '%s'" % run_id,
@@ -73,3 +76,13 @@ class Helper:
         except Exception as e:
             logger.error(e, exc_info=True)
             raise e
+
+    def assert_user_id(self, user_id: str):
+        msg = RunRequestValidator.invalid_user_id(user_id)
+        if msg:
+            raise ClientError("Syntactically invalid user ID: '%s'" % user_id)
+
+    def assert_run_id(self, run_id: str):
+        msg = RunRequestValidator.invalid_run_id(run_id)
+        if msg:
+            raise ClientError("Syntactically invalid rur ID: '%s'" % run_id)

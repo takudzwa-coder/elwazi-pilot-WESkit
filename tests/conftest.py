@@ -230,8 +230,8 @@ def swagger():
     yield swagger
 
 
-@pytest.fixture(scope="session")
-def manager(celery_session_app, redis_container, test_config, test_database):
+def create_manager(celery_session_app, redis_container, test_config, test_database,
+                   require_workdir_tag: bool):
     workflows_base_dir = os.path.abspath(os.getcwd())
     os.environ["WESKIT_WORKFLOWS"] = workflows_base_dir
     test_dir = "test-data/"
@@ -246,4 +246,14 @@ def manager(celery_session_app, redis_container, test_config, test_database):
                        ["default_workflow_engine_parameters"]),
                    workflows_base_dir=workflows_base_dir,
                    data_dir=test_dir,
-                   require_workdir_tag=False)
+                   require_workdir_tag=require_workdir_tag)
+
+
+@pytest.fixture(scope="session")
+def manager(celery_session_app, redis_container, test_config, test_database):
+    return create_manager(celery_session_app, redis_container, test_config, test_database, False)
+
+
+@pytest.fixture(scope="session")
+def manager_rundir(celery_session_app, redis_container, test_config, test_database):
+    return create_manager(celery_session_app, redis_container, test_config, test_database, True)

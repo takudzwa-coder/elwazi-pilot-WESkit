@@ -99,6 +99,7 @@ def login_fixture():
 
 class TestHelper:
 
+    # Compare weskit.oidc.User
     class User:
         def __init__(self, user_id: str):
             self.id = user_id
@@ -106,8 +107,8 @@ class TestHelper:
     @pytest.mark.integration
     def test_get_user_id(self, nologin_app: WESApp, login_app: WESApp):
         user = TestHelper.User("testUser")
-        assert Helper(login_app, user).get_current_user_id() == user.id
-        assert Helper(nologin_app, None).get_current_user_id() == "not-logged-in-user"
+        assert Helper(login_app, user).current_user_id == user.id
+        assert Helper(nologin_app, None).current_user_id == "not-logged-in-user"
 
     @pytest.mark.integration
     def test_access_denied_response(self, login_app):

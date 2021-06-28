@@ -29,7 +29,8 @@ ctx = Helper(current_app, current_user)
 @login_required
 def GetRunLog(run_id):
     try:
-        logger.info("GetRun")
+        logger.info("GetRun %s" % run_id)
+        ctx.assert_run_id(run_id)
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
@@ -60,7 +61,8 @@ def GetRunLog(run_id):
 @login_required
 def CancelRun(run_id):
     try:
-        logger.info("CancelRun")
+        logger.info("CancelRun %s" % run_id)
+        ctx.assert_run_id(run_id)
         run = current_app.manager.database.get_run(run_id)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
@@ -84,7 +86,8 @@ def CancelRun(run_id):
 @login_required
 def GetRunStatus(run_id):
     try:
-        logger.info("GetRunStatus")
+        logger.info("GetRunStatus %s" % run_id)
+        ctx.assert_run_id(run_id)
         run = current_app.manager.get_run(run_id=run_id, update=True)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
@@ -161,8 +164,7 @@ def ListRuns(*args, **kwargs):
     try:
         logger.info("ListRuns")
         current_app.manager.update_runs(query={})
-        user_id = ctx.get_current_user_id()
-        response = current_app.manager.database.list_run_ids_and_states(user_id)
+        response = current_app.manager.database.list_run_ids_and_states(ctx.current_user_id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -176,8 +178,7 @@ def RunWorkflow():
         data = request.json
         logger.info("RunWorkflow")
         validator = current_app.request_validators["run_request"]
-        validation_errors = validator.validate(
-            data, require_workdir_tag=current_app.manager.require_workdir_tag)
+        validation_errors = validator.validate(data)
         if len(validation_errors) > 0:
             return {
               "msg": "Malformed request: {}".format(validation_errors),
@@ -186,7 +187,7 @@ def RunWorkflow():
         else:
             run = current_app.manager.\
                 create_and_insert_run(request=data,
-                                      user_id=ctx.get_current_user_id())
+                                      user_id=ctx.current_user_id)
 
             logger.info("Prepare execution")
             run = current_app.manager.\
@@ -213,8 +214,8 @@ def ListRunsExtended(*args, **kwargs):
     try:
         logger.info("ListRunsExtended")
         current_app.manager.update_runs(query={})
-        user_id = ctx.get_current_user_id()
-        response = current_app.manager.database.list_run_ids_and_states_and_times(user_id)
+        response = current_app.manager.database.\
+            list_run_ids_and_states_and_times(ctx.current_user_id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -228,7 +229,8 @@ def GetRunStderr(run_id):
     Return a dictionary with a "content" field that contains the standard error of the requested
     run.
     """
-    logger.info("GetStderr")
+    logger.info("GetStderr %s" % run_id)
+    ctx.assert_run_id(run_id)
     return ctx.get_log_response(run_id, "stderr")
 
 
@@ -239,5 +241,6 @@ def GetRunStdout(run_id):
     Return a dictionary with a "content" field that contains the standard output of the requested
     run.
     """
-    logger.info("GetStdout")
+    logger.info("GetStdout %s" % run_id)
+    ctx.assert_run_id(run_id)
     return ctx.get_log_response(run_id, "stdout")
