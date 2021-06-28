@@ -158,13 +158,6 @@ class Manager:
                 attachment.save(os.path.join(self.data_dir, run.dir, filename))
         return attachment_filenames
 
-    def _create_run_executions_logfile(self, run, message):
-        file_path = os.path.join(self.data_dir, run.dir,
-                                 ".weskit", get_current_timestamp(), "server.log")
-        with open(file_path, "w") as f:
-            f.write("WESkit executor error: {}".format(message))
-        return file_path
-
     def _prepare_workflow_path(self,
                                run_dir: str,
                                url: str,
@@ -220,17 +213,28 @@ class Manager:
         else:
             run.dir = os.path.join(run.id[0:4], run.id)
 
-        run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
-        if not os.path.exists(run_dir_abs):
-            os.makedirs(run_dir_abs)
+        try:
+            run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
+            if not os.path.exists(run_dir_abs):
+                os.makedirs(run_dir_abs, exist_ok=True)
 
-        with open(run_dir_abs + "/config.yaml", "w") as ff:
-            yaml.dump(run.request["workflow_params"], ff)
+            with open(run_dir_abs + "/config.yaml", "w") as ff:
+                yaml.dump(run.request["workflow_params"], ff)
 
-        run.workflow_path = self._prepare_workflow_path(
-            run.dir,
-            run.request["workflow_url"],
-            self._process_workflow_attachment(run, files))
+            run.workflow_path = self._prepare_workflow_path(
+                run.dir,
+                run.request["workflow_url"],
+                self._process_workflow_attachment(run, files))
+        except OSError as e:
+            # This is a serious problem, e.g. RO-filesystem, permission error, etc.
+            run.status = RunStatus.SYSTEM_ERROR
+            self.database.update_run(run)
+            raise e
+        except ClientError as e:
+            run.status = RunStatus.EXECUTOR_ERROR
+            self.database.update_run(run)
+            raise e
+
         return run
 
     def execute(self, run: Run) -> Run:
@@ -241,6 +245,9 @@ class Manager:
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
+            # This should have been found in the validation.
+            run.status = RunStatus.SYSTEM_ERROR
+            self.database.update_run(run)
             raise ClientError("Workflow type '" +
                               run.request["workflow_type"] +
                               "' is not known. Know " +
@@ -250,6 +257,9 @@ class Manager:
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
+            # This should have been found in the validation.
+            run.status = RunStatus.SYSTEM_ERROR
+            self.database.update_run(run)
             raise ClientError("Workflow type version '" +
                               run.request["workflow_type_version"] +
                               "' is not known. Know " +
