@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 from weskit.utils import create_validator
-from weskit.classes.RunRequestValidator import RunRequestValidator
+from weskit.api.RunRequestValidator import RunRequestValidator
 
 
 @pytest.fixture(scope="session")
@@ -24,9 +24,19 @@ def request_validation():
 
 
 @pytest.fixture(scope="session")
+def run_request_validator_rundir(request_validation, service_info):
+    return RunRequestValidator(create_validator(request_validation["run_request"]),
+                               service_info.workflow_engine_versions(),
+                               "test-data",
+                               True)
+
+
+@pytest.fixture(scope="session")
 def run_request_validator(request_validation, service_info):
     return RunRequestValidator(create_validator(request_validation["run_request"]),
-                               service_info.workflow_engine_versions())
+                               service_info.workflow_engine_versions(),
+                               "test-data",
+                               False)
 
 
 def request(**kwargs):
@@ -41,55 +51,55 @@ def request(**kwargs):
 
 def test_validate_success(run_request_validator):
     the_request = request()
-    assert run_request_validator.validate(the_request, False) == []
+    assert run_request_validator.validate(the_request) == []
 
 
 def test_validate_structure(run_request_validator):
-    assert run_request_validator.validate(request(workflow_params=""), False) == \
+    assert run_request_validator.validate(request(workflow_params="")) == \
            [{'workflow_params': ['must be of dict type']}]
 
     request_wo_params = request()
     request_wo_params.pop("workflow_params")
-    assert run_request_validator.validate(request_wo_params, False) == \
+    assert run_request_validator.validate(request_wo_params) == \
            [{'workflow_params': ['required field']}]
 
     request_wo_type = request()
     request_wo_type.pop("workflow_type")
-    assert run_request_validator.validate(request_wo_type, False) == \
+    assert run_request_validator.validate(request_wo_type) == \
            [{'workflow_type': ['required field']}]
 
     request_wo_version = request()
     request_wo_version.pop("workflow_type_version")
-    assert run_request_validator.validate(request_wo_version, False) == \
+    assert run_request_validator.validate(request_wo_version) == \
            [{'workflow_type_version': ['required field']}]
 
     request_wo_url = request()
     request_wo_url.pop("workflow_url")
-    assert run_request_validator.validate(request_wo_url, False) == \
+    assert run_request_validator.validate(request_wo_url) == \
            [{'workflow_url': ['required field']}]
 
 
-def test_validate_run_dir_tag(run_request_validator):
-    assert run_request_validator.validate(request(tags={
+def test_validate_run_dir_tag(run_request_validator_rundir):
+    assert run_request_validator_rundir.validate(request(tags={
         "run_dir": "file:relative/path/to/file"
-    }), True) == []
+    })) == []
 
-    assert run_request_validator.validate(request(tags={
+    assert run_request_validator_rundir.validate(request(tags={
         "run_dir": "file:/absolute/path/to/file"
-    }), True) == ["Not a relative path: 'file:/absolute/path/to/file'"]
+    })) == ["Not a relative path: 'file:/absolute/path/to/file'"]
 
 
 def test_workflow_type(run_request_validator):
     assert run_request_validator.validate(request(workflow_type="snakemake",
-                                                  workflow_type_version="5.8.2"), False) == \
+                                                  workflow_type_version="5.8.2")) == \
         []
     assert run_request_validator.validate(request(workflow_type="nextflow",
-                                                  workflow_type_version="20.10.0"), False) == \
+                                                  workflow_type_version="20.10.0")) == \
         []
-    assert run_request_validator.validate(request(workflow_type="blabla"), False) == \
+    assert run_request_validator.validate(request(workflow_type="blabla")) == \
         ["Unknown workflow_type 'blabla'. Know nextflow, snakemake"]
     assert run_request_validator.validate(request(workflow_type="nextflow",
-                                                  workflow_type_version="blabla"), False) == \
+                                                  workflow_type_version="blabla")) == \
         ["Unknown workflow_type_version 'blabla'. Know 20.10.0"]
 
 
@@ -99,19 +109,30 @@ def test_workflow_type_version(run_request_validator):
 
 
 def test_workflow_url(run_request_validator):
-    assert run_request_validator.validate(request(workflow_url="relative/path"), False) == \
+    assert run_request_validator.validate(request(workflow_url="relative/path")) == \
            []
-    assert run_request_validator.validate(request(workflow_url="file:relative/path"), False) == \
+    assert run_request_validator.validate(request(workflow_url="file:relative/path")) == \
            []
-    assert run_request_validator.validate(request(workflow_url="file:/absolute/path"), False) == \
+    assert run_request_validator.validate(request(workflow_url="file:/absolute/path")) == \
            ["Not a relative path: 'file:/absolute/path'"]
-    assert run_request_validator.validate(request(workflow_url="/absolute/path"), False) == \
+    assert run_request_validator.validate(request(workflow_url="/absolute/path")) == \
            ["Not a relative path: '/absolute/path'"]
+    assert run_request_validator.validate(request(workflow_url="../outside")) == \
+           ["Normalized path points outside allowed root: '../outside'"]
+
+    forbidden_uris = map(lambda c: "this%cforbidden" % c, "'\"(){}[]$")
+    # Note: No scheme ("file") is provided. The error message does not contain them. Whether the
+    #       URI contains the scheme is nothing of particular interest here, and simply considered
+    #       here.
+    # Note: Semicolon ; is not tested, because urlparse splits on ;.
+    for uri in forbidden_uris:
+        assert run_request_validator.validate(request(workflow_url=uri)) == \
+               ["Forbidden characters: '%s'" % uri]
 
 
-def test_multiple_validations(run_request_validator):
-    assert run_request_validator.validate(request(
+def test_multiple_validations(run_request_validator_rundir):
+    assert run_request_validator_rundir.validate(request(
         workflow_url="/absolute/path",
-    ), True) == \
+    )) == \
            ["Not a relative path: '/absolute/path'",
-            "'run_dir' tag is required and tags field is missing"]
+            "'run_dir' tag is required but tags field is missing"]

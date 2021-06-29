@@ -5,8 +5,8 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import uuid
+
 from weskit.classes.Run import Run
 from bson.son import SON
 from weskit.classes.RunStatus import RunStatus
@@ -41,15 +41,22 @@ class Database:
                 runs.append(Run(run_data))
         return runs
 
-    def list_run_ids_and_states(self) -> list:
+    def list_run_ids_and_states(self, user_id=None) -> list:
+        filter = None
+        if user_id is not None:
+            filter = {"user_id": user_id}
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,
                         "run_status": True,
                         "user_id": True
-                        }))
+                        },
+            filter=filter))
 
     def count_states(self):
+        """
+        Returns the statistics of all job-states ever, for all users.
+        """
         pipeline = [
             {"$unwind": "$run_status"},
             {"$group": {"_id": "$run_status", "count": {"$sum": 1}}},
@@ -89,7 +96,10 @@ class Database:
             .delete_one({"run_id": run.id}) \
             .acknowledged
 
-    def list_run_ids_and_states_and_times(self) -> list:
+    def list_run_ids_and_states_and_times(self, user_id=Optional[str]) -> list:
+        filter = None
+        if user_id is not None:
+            filter = {"user_id": user_id}
         return list(self._db_runs().find(
             projection={"_id": False,
                         "run_id": True,
@@ -97,4 +107,5 @@ class Database:
                         "start_time": True,
                         "user_id": True,
                         "request": True
-                        }))
+                        },
+            filter=filter))

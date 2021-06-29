@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import pathlib
-import subprocess
+import subprocess          # nosec B404
 from typing import List, Optional, Dict
 
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
@@ -57,11 +57,14 @@ def run_command(command: List[str],
         with open(stderr_file_abs, "a") as stderr:
             with open(stdout_file_abs, "a") as stdout:
                 result = \
-                    subprocess.run(command,
+                    subprocess.run(command,             # nosec B603
                                    cwd=str(pathlib.PurePath(workdir_abs)),
                                    stdout=stdout,
                                    stderr=stderr,
                                    env=env)
+                # Note that shell=False (default) to ensure that no shell injection can be done.
+                # The turned-off security warning for bandit is unavoidable, because we need to
+                # execute an external command, here.
     finally:
         # Collect files, but ignore those, that are in the .weskit/ directory. They are tracked by
         # the fields in the execution log (or that of previous runs in this directory).

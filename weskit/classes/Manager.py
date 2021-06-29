@@ -129,13 +129,13 @@ class Manager:
         runs = self.database.get_runs(query)
         return list(map(self.update_run, runs))
 
-    def create_and_insert_run(self, request, user)\
+    def create_and_insert_run(self, request, user_id)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
                         "request": request,
-                        "user_id": user})
+                        "user_id": user_id})
         if self.database.insert_run(run):
             return run
         else:
@@ -143,8 +143,9 @@ class Manager:
 
     def get_run(self, run_id, update) -> Run:
         if update:
-            self.update_runs(query={"run_id": run_id})
-        return self.database.get_run(run_id)
+            return self.update_runs(query={"run_id": run_id})[0]
+        else:
+            return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
     def _process_workflow_attachment(self, run, files):
@@ -185,7 +186,7 @@ class Manager:
             elif workflow_url.path in attachment_filenames:
                 # File has already been extracted to work-dir. The command is executed in the
                 # work-dir as the current work-dir, so we take it as it is.
-                workflow_path_rel = workflow_url.path
+                workflow_path_rel = secure_filename(workflow_url.path)
             else:
                 workflow_path_rel = os.path.join(
                     os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
@@ -248,10 +249,9 @@ class Manager:
             # This should have been found in the validation.
             run.status = RunStatus.SYSTEM_ERROR
             self.database.update_run(run)
-            raise ClientError("Workflow type '" +
-                              run.request["workflow_type"] +
-                              "' is not known. Know " +
-                              ", ".join(self.workflow_engines.keys()))
+            raise ClientError("Workflow type '%s' is not known. Know %s" %
+                              (run.request["workflow_type"],
+                               ", ".join(self.workflow_engines.keys())))
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
@@ -260,10 +260,9 @@ class Manager:
             # This should have been found in the validation.
             run.status = RunStatus.SYSTEM_ERROR
             self.database.update_run(run)
-            raise ClientError("Workflow type version '" +
-                              run.request["workflow_type_version"] +
-                              "' is not known. Know " +
-                              ", ".join(self.workflow_engines[workflow_type].keys()))
+            raise ClientError("Workflow type version '%s' is not known. Know %s" %
+                              (run.request["workflow_type_version"],
+                               ", ".join(self.workflow_engines[workflow_type].keys())))
 
         # Execute run
         run_kwargs = {

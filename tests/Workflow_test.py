@@ -19,7 +19,7 @@ from weskit.classes.RunStatus import RunStatus
 
 
 @pytest.mark.integration
-def test_snakemake_prepare_execution(manager):
+def test_snakemake_prepare_execution(manager, manager_rundir):
 
     # 1.) use workflow on server
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -51,15 +51,13 @@ def test_snakemake_prepare_execution(manager):
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, wf_url))
 
     # 4.) set custom workdir
-    manager.require_workdir_tag = True
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake",
                        workflow_type_version="5.8.2",
                        tags={"run_dir": "sample1/my_workdir"})
-    run = manager.prepare_execution(run, files=[])
+    run = manager_rundir.prepare_execution(run, files=[])
     assert run.status == RunStatus.INITIALIZING
     assert run.dir == "sample1/my_workdir"
-    manager.require_workdir_tag = False
 
 
 @pytest.mark.integration

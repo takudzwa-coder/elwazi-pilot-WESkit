@@ -56,6 +56,14 @@ code_style:
   script:
     - flake8
 
+security:
+  stage: test
+  image: python:latest
+  before_script:
+    - pip install bandit
+  script:
+    - bandit -r weskit/ uWSGI_Server/
+
 # See
 # https://docs.gitlab.com/ee/user/project/deploy_tokens/index.html
 # https://docs.gitlab.com/ee/user/packages/container_registry/#authenticate-with-the-container-registry
