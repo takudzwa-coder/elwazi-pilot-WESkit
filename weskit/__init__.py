@@ -24,7 +24,7 @@ from weskit.utils import create_validator
 from weskit.oidc.Login import Login
 from weskit.oidc import Factory as OIDCFactory
 from weskit.classes.Database import Database
-from weskit.classes.RunRequestValidator import RunRequestValidator
+from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.classes.WorkflowEngine import WorkflowEngineFactory
 from weskit.classes.Manager import Manager
 from weskit.classes.ServiceInfo import ServiceInfo
@@ -76,7 +76,7 @@ def read_swagger():
     # code needs to be changed.
     swagger_file = "weskit/api/workflow_execution_service_1.0.0.yaml"
     with open(swagger_file, "r") as yaml_file:
-        swagger = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        swagger = yaml.safe_load(yaml_file)
 
     return swagger
 
@@ -88,7 +88,7 @@ def create_database(database_url=None):
 
 
 def create_app(celery: Celery,
-               database: Database) -> Flask:
+               database: Database) -> WESApp:
     default_config = os.getenv("WESKIT_CONFIG", None)
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
@@ -108,21 +108,21 @@ def create_app(celery: Celery,
         os.path.join("config", "request-validation.yaml")
 
     with open(default_log_config, "r") as yaml_file:
-        log_config = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        log_config = yaml.safe_load(yaml_file)
         dictConfig(log_config)
         logger.info("Read log config from " + default_log_config)
 
     with open(default_config, "r") as yaml_file:
-        config = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        config = yaml.safe_load(yaml_file)
         logger.info("Read config from " + default_config)
 
     with open(default_validation_config, "r") as yaml_file:
-        validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        validation = yaml.safe_load(yaml_file)
         logger.debug("Read validation specification from " +
                      default_validation_config)
 
     with open(request_validation_config, "r") as yaml_file:
-        request_validation = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        request_validation = yaml.safe_load(yaml_file)
 
     # Validate configuration YAML.
     config_errors = create_validator(validation)(config)
@@ -152,7 +152,9 @@ def create_app(celery: Celery,
     request_validators = {
         "run_request": RunRequestValidator(create_validator(
             request_validation["run_request"]),
-            service_info.workflow_engine_versions())
+            service_info.workflow_engine_versions(),
+            data_dir=weskit_data,
+            require_workdir_tag=manager.require_workdir_tag)
     }
 
     app = WESApp(manager,

@@ -19,25 +19,24 @@ from weskit.classes.RunStatus import RunStatus
 
 
 @pytest.mark.integration
-def test_snakemake_prepare_execution(manager):
+def test_snakemake_prepare_execution(manager, manager_rundir):
 
     # 1.) use workflow on server
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake",
                        workflow_type_version="5.8.2")
     run = manager.prepare_execution(run, files=[])
-    assert run.run_status == RunStatus.INITIALIZING
+    assert run.status == RunStatus.INITIALIZING
 
     # 2.) workflow does neither exist on server nor in attachment
     #     -> error message outputs execution
     run = get_mock_run(workflow_url="tests/wf1/Filesnake",
                        workflow_type="snakemake",
                        workflow_type_version="5.8.2")
-    with pytest.raises(ClientError):
-        run = manager.prepare_execution(run, files=[])
-
-    assert run.run_status == RunStatus.SYSTEM_ERROR
-    assert os.path.isfile(run.outputs["execution"])
+    try:
+        manager.prepare_execution(run, files=[])
+    except ClientError as e:
+        assert e.message == "Derived workflow path does not exist: '../../../tests/wf1/Filesnake'"
 
     # 3.) copy attached workflow to workdir
     wf_url = "wf_1.smk"
@@ -48,19 +47,17 @@ def test_snakemake_prepare_execution(manager):
                            workflow_type="snakemake",
                            workflow_type_version="5.8.2")
         run = manager.prepare_execution(run, files)
-    assert run.run_status == RunStatus.INITIALIZING
-    assert os.path.isfile(os.path.join(run.execution_path, wf_url))
+    assert run.status == RunStatus.INITIALIZING
+    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, wf_url))
 
     # 4.) set custom workdir
-    manager.require_workdir_tag = True
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="snakemake",
                        workflow_type_version="5.8.2",
                        tags={"run_dir": "sample1/my_workdir"})
-    run = manager.prepare_execution(run, files=[])
-    assert run.run_status == RunStatus.INITIALIZING
-    assert run.execution_path.endswith("sample1/my_workdir")
-    manager.require_workdir_tag = False
+    run = manager_rundir.prepare_execution(run, files=[])
+    assert run.status == RunStatus.INITIALIZING
+    assert run.dir == "sample1/my_workdir"
 
 
 @pytest.mark.integration
@@ -75,7 +72,7 @@ def test_execute_snakemake(manager,
     success = False
     while not success:
         assert is_within_timout(start_time), "Test timed out"
-        status = run.run_status
+        status = run.status
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
             print("Waiting ... (status=%s)" % status.name)
@@ -84,19 +81,18 @@ def test_execute_snakemake(manager,
         else:
             success = True
 
-    assert os.path.isfile(
-        os.path.join(run.execution_path, "hello_world.txt"))
+    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
-    assert run.execution_log["env"] == {"SOME_VAR": "with value"}
-    assert run.execution_log["cmd"] == [
+    assert run.log["env"] == {"SOME_VAR": "with value"}
+    assert run.log["cmd"] == [
         "snakemake",
         "--snakefile",
         run.workflow_path,
         "--cores",
         "1",
         "--configfile",
-        "%s/config.yaml" % run.execution_path
+        "config.yaml"
     ]
 
 
@@ -112,31 +108,30 @@ def test_execute_nextflow(manager,
     success = False
     while not success:
         assert is_within_timout(start_time), "Test timed out"
-        status = run.run_status
+        status = run.status
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
             print("Waiting ... (status=%s)" % status.name)
             time.sleep(1)
             run = manager.update_run(run)
-            continue
-        success = True
+        else:
+            success = True
 
-    assert os.path.isfile(
-        os.path.join(run.execution_path, "hello_world.txt"))
+    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
                                     run.outputs["workflow"]))
     assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
-    with open(os.path.join(run.execution_path, hello_world_files[0]), "r") as fh:
+    with open(os.path.join(manager.data_dir, run.dir, hello_world_files[0]), "r") as fh:
         assert fh.readlines() == ["hello_world\n"]
 
-    assert run.execution_log["env"] == {"NXF_OPTS": "-Xmx256m"}
-    assert run.execution_log["cmd"] == [
+    assert run.log["env"] == {"NXF_OPTS": "-Xmx256m"}
+    assert run.log["cmd"] == [
         "nextflow",
         "-Djava.io.tmpdir=/tmp",
         "run",
         run.workflow_path,
         "-params-file",
-        "%s/config.yaml" % run.execution_path,
+        "config.yaml",
         "-with-trace",
         "-with-timeline",
         "-with-dag",
@@ -176,7 +171,7 @@ def test_update_all_runs(manager,
     success = False
     while not success:
         assert is_within_timout(start_time), "Test timed out"
-        status = run.run_status
+        status = run.status
         print("Waiting ... (status=%s)" % status.name)
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
@@ -184,6 +179,6 @@ def test_update_all_runs(manager,
             run = manager.update_state(run)
             continue
         manager.update_runs(query={})
-        db_run = manager.database.get_run(run_id=run.run_id)
-        assert db_run.run_status == RunStatus.COMPLETE
+        db_run = manager.database.get_run(run_id=run.id)
+        assert db_run.status == RunStatus.COMPLETE
         success = True

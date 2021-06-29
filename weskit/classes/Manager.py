@@ -8,7 +8,6 @@
 
 import logging
 import os
-import traceback
 from urllib.parse import urlparse
 
 import yaml
@@ -69,8 +68,8 @@ class Manager:
         """See https://docs.celeryproject.org/en/latest/userguide/workers.html
         TODO Consider persistent revokes.
         """
-        if run.run_status in running_states:
-            run.run_status = RunStatus.CANCELING
+        if run.status in running_states:
+            run.status = RunStatus.CANCELING
             # This is a quickfix for executing the tests.
             # This might be a bad solution for multithreaded use-cases,
             # because the current working directory is touched.
@@ -80,42 +79,45 @@ class Manager:
                        terminate=True,
                        signal='SIGKILL')
             os.chdir(cwd)
-        elif run.run_status is RunStatus.INITIALIZING:
-            run.run_status = RunStatus.SYSTEM_ERROR
+        elif run.status is RunStatus.INITIALIZING:
+            run.status = RunStatus.SYSTEM_ERROR
         return run
 
     def update_state(self, run: Run) -> Run:
         """
         Check whether task is running, initializing or canceling and update state.
         """
-        if run.run_status in running_states or \
-           run.run_status == RunStatus.INITIALIZING or \
-           run.run_status == RunStatus.CANCELING:
+        if run.status in running_states or \
+           run.status == RunStatus.INITIALIZING or \
+           run.status == RunStatus.CANCELING:
             if run.celery_task_id is not None:
                 running_task = self._run_task.\
                     AsyncResult(run.celery_task_id)
-                if ((run.run_status != RunStatus.CANCELING) or
-                    (run.run_status == RunStatus.CANCELING and
+                if ((run.status != RunStatus.CANCELING) or
+                    (run.status == RunStatus.CANCELING and
                      running_task.state == "REVOKED")):
-                    run.run_status = celery_to_wes_state[running_task.state]
-            elif (run.run_status in running_states or
-                  run.run_status == RunStatus.CANCELING):
-                run.run_status = RunStatus.SYSTEM_ERROR
+                    run.status = celery_to_wes_state[running_task.state]
+            elif (run.status in running_states or
+                  run.status == RunStatus.CANCELING):
+                run.status = RunStatus.SYSTEM_ERROR
         return run
 
     def update_run_results(self, run: Run) -> Run:
         """
         For a run in COMPLETED state, update the Run with information from the Celery task.
         """
-        if run.run_status == RunStatus.COMPLETE:
+        if run.status == RunStatus.COMPLETE:   # Celery job succeeded
             running_task = self._run_task.AsyncResult(run.celery_task_id)
             result = running_task.get()
             run.outputs["workflow"] = result["output_files"]
-            run.execution_log = result
-            with open(result["stdout_file"], "r") as f:
-                run.stdout = f.readlines()
-            with open(result["stderr_file"], "r") as f:
-                run.stderr = f.readlines()
+            run.log = result
+
+            run_dir_abs = os.path.join(self.data_dir, result["workdir"])
+            if run.exit_code != -1:            # Command (in Celery job) was executed (maybe error)
+                with open(os.path.join(run_dir_abs, result["stdout_file"]), "r") as f:
+                    run.stdout = f.readlines()
+                with open(os.path.join(run_dir_abs, result["stderr_file"]), "r") as f:
+                    run.stderr = f.readlines()
         return run
 
     def update_run(self, run) -> Run:
@@ -127,13 +129,13 @@ class Manager:
         runs = self.database.get_runs(query)
         return list(map(self.update_run, runs))
 
-    def create_and_insert_run(self, request, user)\
+    def create_and_insert_run(self, request, user_id)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": "INITIALIZING",
                         "request_time": get_current_timestamp(),
                         "request": request,
-                        "user_id": user})
+                        "user_id": user_id})
         if self.database.insert_run(run):
             return run
         else:
@@ -141,8 +143,9 @@ class Manager:
 
     def get_run(self, run_id, update) -> Run:
         if update:
-            self.update_runs(query={"run_id": run_id})
-        return self.database.get_run(run_id)
+            return self.update_runs(query={"run_id": run_id})[0]
+        else:
+            return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
     def _process_workflow_attachment(self, run, files):
@@ -153,17 +156,11 @@ class Manager:
                 filename = secure_filename(attachment.filename)
                 # TODO could implement checks here
                 attachment_filenames.append(filename)
-                attachment.save(os.path.join(run.execution_path, filename))
+                attachment.save(os.path.join(self.data_dir, run.dir, filename))
         return attachment_filenames
 
-    def _create_run_executions_logfile(self, run, filename, message):
-        file_path = os.path.join(run.execution_path, filename)
-        with open(file_path, "w") as f:
-            f.write("WESkit executor error: {}".format(message))
-        return file_path
-
     def _prepare_workflow_path(self,
-                               work_dir: str,
+                               run_dir: str,
                                url: str,
                                attachment_filenames: List[str]) \
             -> str:
@@ -171,111 +168,122 @@ class Manager:
         Compose the path to the workflow from a relative "file:" URI or by (cached) downloading
         an "https://" URI. After the function call the workflow file is present in the work_dir.
 
-        Files in attachment_files are assumed to to have been extracted from attachments before
-        this function. Relative files are interpreted relative to self.workflow_base_dir.
+        Attached files are extracted to the run directory. (TODO Caching?)
+
+        * Absolute input file://-paths are forbidden (raises ValueError).
+        * Relative input file://-paths are interpreted relative the run's work-dir, both, if they
+          are found in the attachment and if they refer to a path in the system-wide
+          workflows_base_dir.
+
+        https://- and s3://- paths are not yet implemented.
         """
         workflow_url = urlparse(url)
-        workflow_path = None
+        workflow_path_rel = None
         if workflow_url.scheme in ["file", '']:
             if os.path.isabs(workflow_url.path):
                 raise ClientError("Absolute workflow_url forbidden " +
                                   "(should be validated already): '%s'" % url)
             elif workflow_url.path in attachment_filenames:
-                # File has already been extracted to work-dir.
-                workflow_path = os.path.join(
-                    work_dir,
-                    workflow_url.path)
+                # File has already been extracted to work-dir. The command is executed in the
+                # work-dir as the current work-dir, so we take it as it is.
+                workflow_path_rel = secure_filename(workflow_url.path)
             else:
-                workflow_path = os.path.join(
-                    self.workflows_base_dir,
+                workflow_path_rel = os.path.join(
+                    os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
                     workflow_url.path)
         elif workflow_url.scheme == "https":
             # TODO Download the workflow with git clone. Use caching.
             # TODO Copy to run directory?
-            raise NotImplementedError("workflow_url in https://")
+            raise ClientError("https:// workflow_url is not implemented")
 
-        if not os.path.exists(workflow_path):
-            raise ClientError("Requested workflow path does not exist: '%s'" % workflow_path)
-        return workflow_path
+        workflow_path_abs = os.path.join(self.data_dir, run_dir, workflow_path_rel)
+        if not os.path.exists(workflow_path_abs):
+            # Report only the relative path. Everything else is implementation detail.
+            raise ClientError("Derived workflow path does not exist: '%s'" % workflow_path_rel)
+
+        return workflow_path_rel
 
     def prepare_execution(self, run, files=[]):
 
-        if not run.run_status == RunStatus.INITIALIZING:
+        if not run.status == RunStatus.INITIALIZING:
             return run
 
-        # prepare run directory
+        # Prepare run directory
         if self.require_workdir_tag:
-            run_dir = os.path.abspath(os.path.join(
-                self.data_dir, run.request["tags"]["run_dir"]))
+            run.dir = run.request["tags"]["run_dir"]
         else:
-            run_dir = os.path.abspath(
-                os.path.join(self.data_dir, run.run_id[0:4], run.run_id))
-
-        if not os.path.exists(run_dir):
-            os.makedirs(run_dir)
-
-        run.execution_path = run_dir
-
-        with open(run_dir + "/config.yaml", "w") as ff:
-            yaml.dump(run.request["workflow_params"], ff)
+            run.dir = os.path.join(run.id[0:4], run.id)
 
         try:
+            run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
+            if not os.path.exists(run_dir_abs):
+                os.makedirs(run_dir_abs, exist_ok=True)
+
+            with open(run_dir_abs + "/config.yaml", "w") as ff:
+                yaml.dump(run.request["workflow_params"], ff)
+
             run.workflow_path = self._prepare_workflow_path(
-                run.execution_path,
+                run.dir,
                 run.request["workflow_url"],
                 self._process_workflow_attachment(run, files))
-        except Exception as e:
-            logger.warning(e, stack_info=True, exc_info=True)
-            run.run_status = RunStatus.SYSTEM_ERROR
-            run.outputs["execution"] = self._create_run_executions_logfile(
-                run=run,
-                filename=".weskit.err",   # Solution is not "rerun"-ready!
-                message=traceback.format_exc())
+        except OSError as e:
+            # This is a serious problem, e.g. RO-filesystem, permission error, etc.
+            run.status = RunStatus.SYSTEM_ERROR
+            self.database.update_run(run)
+            raise e
+        except ClientError as e:
+            run.status = RunStatus.EXECUTOR_ERROR
+            self.database.update_run(run)
             raise e
 
         return run
 
     def execute(self, run: Run) -> Run:
-        if not run.run_status == RunStatus.INITIALIZING:
+        if not run.status == RunStatus.INITIALIZING:
             return run
 
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
-            raise ClientError("Workflow type '" +
-                              run.request["workflow_type"] +
-                              "' is not known. Know " +
-                              ", ".join(self.workflow_engines.keys()))
+            # This should have been found in the validation.
+            run.status = RunStatus.SYSTEM_ERROR
+            self.database.update_run(run)
+            raise ClientError("Workflow type '%s' is not known. Know %s" %
+                              (run.request["workflow_type"],
+                               ", ".join(self.workflow_engines.keys())))
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
-            raise ClientError("Workflow type version '" +
-                              run.request["workflow_type_version"] +
-                              "' is not known. Know " +
-                              ", ".join(self.workflow_engines[workflow_type].keys()))
+            # This should have been found in the validation.
+            run.status = RunStatus.SYSTEM_ERROR
+            self.database.update_run(run)
+            raise ClientError("Workflow type version '%s' is not known. Know %s" %
+                              (run.request["workflow_type_version"],
+                               ", ".join(self.workflow_engines[workflow_type].keys())))
 
-        # execute run
+        # Execute run
         run_kwargs = {
             "workflow_path": run.workflow_path,
-            "workdir": run.execution_path,
-            "config_files": [os.path.join(run.execution_path, "config.yaml")],
+            "workdir": os.path.join(self.data_dir, run.dir),
+            "config_files": ["config.yaml"],
             "workflow_engine_params": []
         }
         run.start_time = get_current_timestamp()
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
             command(**run_kwargs)
-        run.execution_log["cmd"] = command.command
-        run.execution_log["env"] = command.environment
-        if run.run_status == RunStatus.INITIALIZING:
+        run.log["cmd"] = command.command
+        run.log["env"] = command.environment
+        if run.status == RunStatus.INITIALIZING:
             task = self._run_task.apply_async(
                 args=[],
                 kwargs={
                     "command": command.command,
                     "environment": command.environment,
-                    "workdir": run.execution_path
+                    "base_workdir": self.data_dir,
+                    "sub_workdir": run.dir
                 })
             run.celery_task_id = task.id
 

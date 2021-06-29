@@ -80,7 +80,7 @@ def online_validation(app) -> bool:
     return j.get('active', False)
 
 
-def get_token(token_type: str = "access") -> Optional[str]:
+def get_token(token_type: str = "access") -> Optional[str]:   # nosec B107, token_type no problem
     """
     This function returns the encoded access_token from different sources.
     Its basically identical to a function from jwt_extended but has different
@@ -89,6 +89,7 @@ def get_token(token_type: str = "access") -> Optional[str]:
 
     try:
         encoded_token, csrf_token = _decode_jwt_from_headers()
+        # Maybe _decode_jwt_from_request(token_type)?
     except Exception:  # TODO Check: Can this be InvalidHeaderError?
         # If Token is not in header
         encoded_token = None

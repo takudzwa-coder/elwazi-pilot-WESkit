@@ -13,6 +13,8 @@ import requests
 import pytest
 from flask import current_app
 
+from weskit.api.Helper import Helper
+from weskit import WESApp
 from weskit.classes.RunStatus import RunStatus
 from tests.utils import \
     assert_within_timeout, is_within_timout, assert_status_is_not_failed, get_workflow_data
@@ -34,7 +36,7 @@ def test_run(test_client,
         snakefile="file:tests/wf1/Snakefile",
         config="tests/wf1/config.yaml")
     run = manager.create_and_insert_run(request=request,
-                                        user="6bd12400-6fc4-402c-9180-83bddbc30526")
+                                        user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run = manager.prepare_execution(run)
     manager.database.update_run(run)
     run = manager.execute(run)
@@ -43,7 +45,7 @@ def test_run(test_client,
     start_time = time.time()
     while not success:
         assert_within_timeout(start_time)
-        status = run.run_status
+        status = run.status
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
             print("Waiting ... (status=%s)" % status.name)
@@ -51,7 +53,7 @@ def test_run(test_client,
             run = current_app.manager.update_run(run)
             continue
         success = True
-    assert os.path.isfile(os.path.join(run.execution_path, "hello_world.txt"))
+    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
     yield run
 
@@ -95,9 +97,54 @@ def login_fixture():
     return LoginClass()
 
 
+class TestHelper:
+
+    # Compare weskit.oidc.User
+    class User:
+        def __init__(self, user_id: str):
+            self.id = user_id
+
+    @pytest.mark.integration
+    def test_get_user_id(self, nologin_app: WESApp, login_app: WESApp):
+        user = TestHelper.User("testUser")
+        assert Helper(login_app, user).current_user_id == user.id
+        assert Helper(nologin_app, None).current_user_id == "not-logged-in-user"
+
+    @pytest.mark.integration
+    def test_access_denied_response(self, login_app):
+        user = TestHelper.User("testUser")
+        helper = Helper(login_app, user)
+        assert helper.get_access_denied_response("runId", None) == \
+               ({"msg": "Could not find 'runId'",
+                 "status_code": 404
+                 }, 404)
+
+        class Run:
+            @property
+            def user_id(self):
+                return "Whatever"
+
+        assert helper.get_access_denied_response("runId", Run()) == \
+               ({"msg": "User 'testUser' not allowed to access 'runId'",
+                 "status_code": 403
+                 }, 403)
+
+    @pytest.mark.integration
+    def test_log_response(self, test_run, login_app):
+        helper = Helper(login_app, TestHelper.User(test_run.user_id))
+
+        stderr, stderr_code = helper.get_log_response(test_run.id, "stderr")
+        assert stderr_code == 200
+        assert stderr["content"][0] == 'Building DAG of jobs...\n'
+
+        stdout, stdout_code = helper.get_log_response(test_run.id, "stdout")
+        assert stdout_code == 200
+        assert len(stdout["content"]) == 0
+
+
 class TestOpenEndpoint:
     """
-    The TestOpenEndpoint class ensures that all endpoint that should be accessible without
+    The TestOpenEndpoint class ensures that all endpoints that should be accessible without
     login are accessible.
     """
     @pytest.mark.integration
@@ -155,7 +202,7 @@ class TestWithHeaderToken:
 
         # test that outputs are relative
         response = test_client.get(
-            "/ga4gh/wes/v1/runs/{}".format(test_run.run_id),
+            "/ga4gh/wes/v1/runs/{}".format(test_run.id),
             headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         for output in response.json["outputs"]["workflow"]:
@@ -168,7 +215,7 @@ class TestWithHeaderToken:
                                     OIDC_credentials):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
-        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
+        assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
 
     @pytest.mark.integration
     def test_list_runs_extended_with_header(self,
@@ -177,14 +224,14 @@ class TestWithHeaderToken:
                                             OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
-        assert len([x for x in response.json if x['run_id'] == test_run.run_id]) == 1
+        assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
 
     @pytest.mark.integration
     def test_get_run_stderr_with_header(self,
                                         test_client,
                                         test_run,
                                         OIDC_credentials):
-        run_id = test_run.run_id
+        run_id = test_run.id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()
@@ -203,7 +250,7 @@ class TestWithHeaderToken:
                                         test_client,
                                         test_run,
                                         OIDC_credentials):
-        run_id = test_run.run_id
+        run_id = test_run.id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()
