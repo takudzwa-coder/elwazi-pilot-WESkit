@@ -22,12 +22,11 @@ bp = Blueprint("wes", __name__)
 
 logger = logging.getLogger(__name__)
 
-ctx = Helper(current_app, current_user)
-
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
 @login_required
 def GetRunLog(run_id):
+    ctx = Helper(current_app, current_user)
     try:
         logger.info("GetRun %s" % run_id)
         ctx.assert_run_id(run_id)
@@ -60,6 +59,7 @@ def GetRunLog(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
 @login_required
 def CancelRun(run_id):
+    ctx = Helper(current_app, current_user)
     try:
         logger.info("CancelRun %s" % run_id)
         ctx.assert_run_id(run_id)
@@ -85,6 +85,7 @@ def CancelRun(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
 @login_required
 def GetRunStatus(run_id):
+    ctx = Helper(current_app, current_user)
     try:
         logger.info("GetRunStatus %s" % run_id)
         ctx.assert_run_id(run_id)
@@ -161,10 +162,11 @@ def GetServiceInfo(*args, **kwargs):
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
 @login_required
 def ListRuns(*args, **kwargs):
+    ctx = Helper(current_app, current_user)
     try:
         logger.info("ListRuns")
         current_app.manager.update_runs(query={})
-        response = current_app.manager.database.list_run_ids_and_states(ctx.current_user_id)
+        response = current_app.manager.database.list_run_ids_and_states(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -174,6 +176,7 @@ def ListRuns(*args, **kwargs):
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
 @login_required
 def RunWorkflow():
+    ctx = Helper(current_app, current_user)
     try:
         data = request.json
         logger.info("RunWorkflow")
@@ -187,7 +190,7 @@ def RunWorkflow():
         else:
             run = current_app.manager.\
                 create_and_insert_run(request=data,
-                                      user_id=ctx.current_user_id)
+                                      user_id=ctx.user.id)
 
             logger.info("Prepare execution")
             run = current_app.manager.\
@@ -211,11 +214,12 @@ def RunWorkflow():
 @bp.route("/weskit/v1/runs", methods=["GET"])
 @login_required
 def ListRunsExtended(*args, **kwargs):
+    ctx = Helper(current_app, current_user)
     try:
         logger.info("ListRunsExtended")
         current_app.manager.update_runs(query={})
         response = current_app.manager.database.\
-            list_run_ids_and_states_and_times(ctx.current_user_id)
+            list_run_ids_and_states_and_times(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)
@@ -229,6 +233,7 @@ def GetRunStderr(run_id):
     Return a dictionary with a "content" field that contains the standard error of the requested
     run.
     """
+    ctx = Helper(current_app, current_user)
     logger.info("GetStderr %s" % run_id)
     ctx.assert_run_id(run_id)
     return ctx.get_log_response(run_id, "stderr")
@@ -241,6 +246,7 @@ def GetRunStdout(run_id):
     Return a dictionary with a "content" field that contains the standard output of the requested
     run.
     """
+    ctx = Helper(current_app, current_user)
     logger.info("GetStdout %s" % run_id)
     ctx.assert_run_id(run_id)
     return ctx.get_log_response(run_id, "stdout")

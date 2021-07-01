@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def test_run(test_client,
              celery_session_worker):
     """
-    This fixture creates a mock runs as working state for accessing workflow results via the API.
+    This fixture creates a mock run as working state for accessing workflow results via the API.
     The tests will use the REST interface, but to circumvent authentication issues here, the
     run is created manually and the user_id is fixed to the value from the test keycloak DB.
     """
@@ -107,8 +107,8 @@ class TestHelper:
     @pytest.mark.integration
     def test_get_user_id(self, nologin_app: WESApp, login_app: WESApp):
         user = TestHelper.User("testUser")
-        assert Helper(login_app, user).current_user_id == user.id
-        assert Helper(nologin_app, None).current_user_id == "not-logged-in-user"
+        assert Helper(login_app, user).user.id == user.id
+        assert Helper(nologin_app, None).user.id == "not-logged-in-user"
 
     @pytest.mark.integration
     def test_access_denied_response(self, login_app):
@@ -120,6 +120,10 @@ class TestHelper:
                  }, 404)
 
         class Run:
+            @property
+            def id(self):
+                return "runId"
+
             @property
             def user_id(self):
                 return "Whatever"
@@ -159,6 +163,11 @@ class TestWithoutLogin:
     credentials.
     """
     @pytest.mark.integration
+    def test_get_run_status(self, test_client):
+        response = test_client.get("/weskit/v1/runs/test_runId/status")
+        assert response.status_code == 404
+
+    @pytest.mark.integration
     def test_list_runs_wo_login(self, test_client):
         response = test_client.get("/ga4gh/wes/v1/runs")
         assert response.status_code == 401
@@ -193,7 +202,6 @@ class TestWithHeaderToken:
     submitting an access token in the request header in the format
     "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
-
     @pytest.mark.integration
     def test_accept_run_workflow_header(self,
                                         test_client,
@@ -225,6 +233,14 @@ class TestWithHeaderToken:
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
+
+    @pytest.mark.integration
+    def test_get_run_status(self,
+                            test_client,
+                            OIDC_credentials):
+        response = test_client.get("/weskit/v1/runs/nonExistingRun/status",
+                                   headers=OIDC_credentials.headerToken)
+        assert response.status_code == 404
 
     @pytest.mark.integration
     def test_get_run_stderr_with_header(self,

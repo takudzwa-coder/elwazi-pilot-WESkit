@@ -53,3 +53,9 @@ class TestWithoutLogin:
             config="tests/wf1/config.yaml")
         response = test_client_nologin.post("/ga4gh/wes/v1/runs", json=data)
         assert response.status_code == 200, response.json
+
+    @pytest.mark.integration
+    def test_get_run_status(self,
+                            test_client_nologin):
+        response = test_client_nologin.get("/weskit/v1/runs/nonExistingRun/status")
+        assert response.status_code == 404, response.json

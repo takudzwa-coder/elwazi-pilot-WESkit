@@ -7,7 +7,9 @@
 #  Authors: The WESkit Team
 
 import logging
+from typing import Optional
 
+from weskit.oidc.User import User
 from weskit.ClientError import ClientError
 from weskit import WESApp
 from weskit.api.RunRequestValidator import RunRequestValidator
@@ -24,31 +26,29 @@ class Helper:
     allows for better testing.
     """
 
-    def __init__(self, current_app: WESApp, current_user):
+    def __init__(self, current_app: WESApp, current_user: Optional[User]):
         self.app = current_app
-        self.user = current_user
 
-    @property
-    def current_user_id(self):
-        if self.app.is_login_enabled:
-            return self.user.id
+        if current_user is None or current_user == None:   # noqa E711
+            # Python sucks. current_user can be (some) None, but still
+            # `current_user is None == False`.
+            self.user = User()
         else:
-            return "not-logged-in-user"
+            self.user = current_user
 
     def get_access_denied_response(self,
                                    run_id: str,
                                    run: Run = None):
-        user_id = self.user.id
         if run is None:
             logger.error("Could not find '%s'" % run_id)
             return {"msg": "Could not find '%s'" % run_id,
                     "status_code": 404
                     }, 404     # NOT FOUND
 
-        if user_id != run.user_id:
-            logger.error("User '%s' not allowed to access '%s' owned by '%s'" %
-                         (user_id, run_id, run.user_id))
-            return {"msg": "User '%s' not allowed to access '%s'" % (user_id, run_id),
+        if self.user.id != run.user_id:
+            logger.error("User '%s' not allowed to access '%s'" %
+                         (self.user.id, run_id))
+            return {"msg": "User '%s' not allowed to access '%s'" % (self.user.id, run_id),
                     "status_code": 403
                     }, 403     # FORBIDDEN
 

@@ -13,10 +13,13 @@ class User:
     """
     This class makes the content of the jwt easily accessible.
     """
+
+    not_logged_in_user_id = "not-logged-in-user"
+
     def __init__(self):
         token_data = utils.get_raw_jwt()
-        self.id = token_data.get('sub', None)
-        self.username = token_data.get('name', "not-logged-in-user")
+        self.id = token_data.get('sub', User.not_logged_in_user_id)
+        self.username = token_data.get('name', None)
         self.email_verified = token_data.get('email_verified', None)
         self.preferred_username = token_data.get('preferred_username', None)
         self.email = token_data.get('email', None)
