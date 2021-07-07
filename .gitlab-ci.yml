@@ -46,7 +46,7 @@ test:
   stage: test
   extends: .conda
   script:
-    - python -m pytest -vvv --cov=weskit/
+    - python -m pytest -vvv --cov=weskit/ -m "not slow"
 
 code_style:
   stage: test

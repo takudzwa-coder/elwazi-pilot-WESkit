@@ -1,0 +1,13 @@
+rule all:
+    input:
+        file="version.txt"
+
+rule step1:
+    output:
+        file="version.txt"
+    conda:
+        "env.yaml"
+    shell:
+        """
+        sleep 100; echo $(python --version)  > {output.file}
+        """
