@@ -97,6 +97,43 @@ def test_execute_snakemake(manager,
 
 
 @pytest.mark.integration
+@pytest.mark.slow
+def test_execute_snakemake_conda_para(manager_conda_para, celery_worker):
+    run = get_mock_run(workflow_url="file:tests/wf4/Snakefile",
+                       workflow_type="snakemake",
+                       workflow_type_version="5.8.2"
+                       )
+    run = manager_conda_para.prepare_execution(run, files=[])
+    run = manager_conda_para.execute(run)
+    success = False
+    while not success:
+        status = run.status
+        if status != RunStatus.COMPLETE:
+            assert_status_is_not_failed(status)
+            print("Waiting ... (status=%s)" % status.name)
+            time.sleep(1)
+            run = manager_conda_para.update_run(run)
+            continue
+        filename = os.path.join(manager_conda_para.data_dir, run.dir, "version.txt")
+        assert os.path.isfile(filename)
+        with open(filename, "r") as fh:
+            assert fh.readlines() == ["Python 3.9.4\n"]
+        success = True
+
+    assert run.log["env"] == {"SOME_VAR": "with value"}
+    assert run.log["cmd"] == [
+        "snakemake",
+        "--snakefile",
+        run.workflow_path,
+        "--cores",
+        "1",
+        "--use-conda",
+        "--configfile",
+        "config.yaml"
+    ]
+
+
+@pytest.mark.integration
 def test_execute_nextflow(manager,
                           celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",

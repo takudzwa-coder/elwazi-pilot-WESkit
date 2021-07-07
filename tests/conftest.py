@@ -174,6 +174,14 @@ def test_config():
 
 
 @pytest.fixture(scope="session")
+def test_config_conda_parameters():
+    # This uses a dedicated test configuration YAML.
+    with open("tests/weskit_conda_para.yaml", "r") as ff:
+        test_config = yaml.load(ff, Loader=yaml.FullLoader)
+    yield test_config
+
+
+@pytest.fixture(scope="session")
 def database_container():
     MONGODB_CONTAINER = "mongo:4.4.6"
 
@@ -257,3 +265,10 @@ def manager(celery_session_app, redis_container, test_config, test_database):
 @pytest.fixture(scope="session")
 def manager_rundir(celery_session_app, redis_container, test_config, test_database):
     return create_manager(celery_session_app, redis_container, test_config, test_database, True)
+
+
+@pytest.fixture(scope="session")
+def manager_conda_para(celery_session_app, redis_container, test_config_conda_parameters,
+                       test_database):
+    return create_manager(celery_session_app, redis_container, test_config_conda_parameters,
+                          test_database, False)
