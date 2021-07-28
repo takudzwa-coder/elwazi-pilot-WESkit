@@ -84,7 +84,10 @@ def read_swagger():
 def create_database(database_url=None):
     if database_url is None:
         database_url = os.getenv("WESKIT_DATABASE_URL")
-    return Database(MongoClient(database_url), "WES")
+    logger.info("Connecting to %s" % database_url)
+    # The connect=False postpones the creation of a connection object until the uwsgi server
+    # has forked.
+    return Database(MongoClient(database_url, connect=False), "WES")
 
 
 def create_app(celery: Celery,

@@ -84,7 +84,7 @@ def tryApiEndpoints(loginType, cookie=None, header=None):
 
     print("****************************************")
     print(
-        "%s - GET-Requst to '/ga4gh/wes/v1/runs/%s/status'" %
+        "%s - GET-Request to '/ga4gh/wes/v1/runs/%s/status'" %
         (loginType, response2.json()['run_id']))
 
     response4 = requests.get(

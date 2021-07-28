@@ -45,7 +45,7 @@ def test_get_organization(service_info):
 
 def test_documentation_url(service_info):
     assert service_info.documentation_url() == \
-        "https://gitlab.com/one-touch-pipeline/weskit/documentation/-/wikis/home"
+        "https://gitlab.com/one-touch-pipeline/weskit/documentation/"
 
 
 def test_created_at(service_info):

@@ -5,10 +5,12 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
+import logging
 from typing import Optional, List, Dict, Any
 
 from weskit.classes.RunStatus import RunStatus
+
+logger = logging.getLogger(__name__)
 
 
 class Run:
@@ -31,7 +33,7 @@ class Run:
         self.workflow_path = data.get("workflow_path", None)
         self.outputs = data.get("outputs", {})
         self.log = data.get("execution_log", {})
-        self.status = RunStatus.\
+        self.__status = RunStatus.\
             from_string(data.get("run_status", "INITIALIZING"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])
@@ -113,6 +115,8 @@ class Run:
 
     @status.setter
     def status(self, run_status: RunStatus):
+        logger.info("Updating state of %s: %s -> %s" %
+                    (self.id, self.__status.name, run_status.name))
         self.__status = run_status
 
     @property

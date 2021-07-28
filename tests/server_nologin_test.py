@@ -5,7 +5,6 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import logging
 import pytest
 
@@ -24,6 +23,10 @@ class TestOpenEndpoint:
     def test_get_service_info(self, test_client_nologin):
         response = test_client_nologin.get("/ga4gh/wes/v1/service-info")
         assert response.status_code == 200, response.json
+        assert response.json["workflow_engine_versions"] == {
+            "nextflow": "20.10.0",
+            "snakemake": "5.8.2"
+        }
 
 
 class TestWithoutLogin:

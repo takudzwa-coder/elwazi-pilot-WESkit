@@ -55,7 +55,7 @@ static_service_info:
     # how to use your service, including any specifics required to access data, e.g.
     # authentication.
     documentation_url:
-      https://gitlab.com/one-touch-pipeline/weskit/documentation/-/wikis/home
+      https://gitlab.com/one-touch-pipeline/weskit/documentation/
 
     # Timestamp describing when the service was first deployed and available (RFC 3339 format).
     # Example: 2019-06-04T12:58:19Z
