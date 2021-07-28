@@ -110,7 +110,7 @@ def GetRunStatus(run_id):
 def GetServiceInfo(*args, **kwargs):
     try:
         logger.info("GetServiceInfo")
-        current_app.manager.update_runs(query={})
+        current_app.manager.update_runs()
         response = {
             "id":
                 current_app.service_info.id(),
@@ -142,7 +142,7 @@ def GetServiceInfo(*args, **kwargs):
                 # a comma-separated list. For some time we anyway will only have a single version
                 # of each workflow engine.
                 dict(map(lambda kv: (kv[0], ",".join(kv[1])),
-                         current_app.service_info.workflow_engine_versions())),
+                         current_app.service_info.workflow_engine_versions().items())),
             "default_workflow_engine_parameters":
                 current_app.service_info.
                 default_workflow_engine_parameters(),
@@ -165,7 +165,7 @@ def ListRuns(*args, **kwargs):
     ctx = Helper(current_app, current_user)
     try:
         logger.info("ListRuns")
-        current_app.manager.update_runs(query={})
+        current_app.manager.update_runs()
         response = current_app.manager.database.list_run_ids_and_states(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
@@ -192,12 +192,12 @@ def RunWorkflow():
                 create_and_insert_run(request=data,
                                       user_id=ctx.user.id)
 
-            logger.info("Prepare execution")
+            logger.info("Prepare execution %s" % run.id)
             run = current_app.manager.\
                 prepare_execution(run, files=request.files)
             current_app.manager.database.update_run(run)
 
-            logger.info("Execute Workflow")
+            logger.info("Execute Workflow %s" % run.id)
             run = current_app.manager.execute(run)
             current_app.manager.database.update_run(run)
 
@@ -217,7 +217,7 @@ def ListRunsExtended(*args, **kwargs):
     ctx = Helper(current_app, current_user)
     try:
         logger.info("ListRunsExtended")
-        current_app.manager.update_runs(query={})
+        current_app.manager.update_runs()
         response = current_app.manager.database.\
             list_run_ids_and_states_and_times(ctx.user.id)
         return jsonify(response), 200

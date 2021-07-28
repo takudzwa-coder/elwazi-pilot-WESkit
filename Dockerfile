@@ -12,9 +12,9 @@ EXPOSE 5000
 
 # Capitalized versions for many tools. Minuscle version at least for apt.
 ARG HTTP_PROXY=""
-ARG http_proxy=""
+ARG http_proxy="$HTTP_PROXY"
 ARG HTTPS_PROXY=""
-ARG https_proxy=""
+ARG https_proxy="$HTTPS_PROXY"
 ARG NO_PROXY=""
 ARG no_proxy="$NO_PROXY"
 

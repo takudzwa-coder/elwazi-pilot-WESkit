@@ -121,11 +121,28 @@ class Manager:
         return run
 
     def update_run(self, run) -> Run:
-        updated_run = self.update_run_results(self.update_state(run))
+        try:
+            updated_run = self.update_run_results(self.update_state(run))
+        except FileNotFoundError as e:
+            # This may happen, if the open()s fail, e.g. because the run directory was manually
+            # deleted.
+            logger.error("SYSTEM_ERROR during run %s status update!" % run.id)
+            logger.error(e, exc_info=True)
+            updated_run = run
+            updated_run.status = RunStatus.SYSTEM_ERROR
         self.database.update_run(updated_run)
         return updated_run
 
-    def update_runs(self, query) -> List[Run]:
+    def update_runs(self,
+                    query: Optional[dict] = None) -> List[Run]:
+        if query is None:
+            # Generally updating finished runs does not make much sense and creates problems with
+            # deleted runs. On the long run, with increasing numbers of runs there will also be
+            # a performance problem when updating accumulating finished runs.
+            query = {"run_status": {"$not": {"$in": [RunStatus.COMPLETE.name,
+                                                     RunStatus.SYSTEM_ERROR.name,
+                                                     RunStatus.EXECUTOR_ERROR.name,
+                                                     RunStatus.CANCELED.name]}}}
         runs = self.database.get_runs(query)
         return list(map(self.update_run, runs))
 

@@ -17,7 +17,7 @@ from flask import Flask
 from flask_jwt_extended import JWTManager
 from jwt.algorithms import RSAAlgorithm
 
-from weskit import Login
+from weskit.oidc.Login import Login
 from weskit.oidc.User import User
 
 logger = logging.getLogger(__name__)
@@ -39,14 +39,10 @@ def is_login_enabled(config: dict) -> bool:
 
     else:
         logger.warning("Login System Disabled")
-        logger.warning(
-            """login:{}
-            enabled:{}
-            jwt:{}""".format(
-                "login" in config,
-                config['login'].get("enabled", False),
-                "jwt" in config['login'])
-        )
+        logger.warning("has login block: {}, login is enabled: {}, has jwt: {}".
+                       format("login" in config,
+                              config['login'].get("enabled", False),
+                              "jwt" in config['login']))
         return False
 
 
