@@ -20,4 +20,4 @@ test-data/
 *.gz
 .coverage
 testfile
-uwsgi_server
+uWSGI_Server/certs

@@ -16,7 +16,7 @@ from weskit.ClientError import ClientError
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
-from utils import get_mock_run, is_within_timout, assert_status_is_not_failed
+from test_utils import get_mock_run, is_within_timout, assert_status_is_not_failed
 from weskit.classes.RunStatus import RunStatus
 
 

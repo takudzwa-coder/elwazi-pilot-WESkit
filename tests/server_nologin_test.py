@@ -8,7 +8,7 @@
 import logging
 import pytest
 
-from tests.utils import get_workflow_data
+from tests.test_utils import get_workflow_data
 
 
 logger = logging.getLogger(__name__)

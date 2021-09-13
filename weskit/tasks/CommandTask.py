@@ -9,10 +9,12 @@
 import json
 import logging
 import os
-import pathlib
-import subprocess          # nosec B404
-from typing import List, Optional, Dict
+from pathlib import PurePath
+from typing import List, Dict
 
+from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.command_executor.Executor import CommandResult
+from weskit.classes.command_executor.LocalExecutor import LocalExecutor
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
 
 logger = logging.getLogger(__name__)
@@ -21,11 +23,11 @@ logger = logging.getLogger(__name__)
 def run_command(command: List[str],
                 base_workdir: str,
                 sub_workdir: str,
-                environment: Dict[str, str] = {},
+                environment: Dict[str, str] = None,
                 log_base: str = ".weskit"):
     """
     Run a command in a working directory. The workdir has to be an relative path, such that
-    base_workdir/sub_workdir is the absolute path in which the command is executed. base_workdir
+    `base_workdir/sub_workdir` is the absolute path in which the command is executed. base_workdir
     can be absolute or relative.
 
     Write log files into a timestamp sub-directory of `sub_workdir/log_base`. There will be
@@ -38,52 +40,65 @@ def run_command(command: List[str],
 
     "exit_code" is set to -1, if no result could be produced from the command, e.g. if a prior
     mkdir failed, or similar abnormal situations.
+
+    Note: The interface is not based on ShellCommand because that would have required a means of
+          (de)serializing ShellCommand for transfor from the REST-server to the Celery worker.
     """
-    workdir_abs = os.path.join(base_workdir, sub_workdir)
+    if environment is None:
+        environment = {}
+    base_workdir = PurePath(base_workdir)
+    sub_workdir = PurePath(sub_workdir)
+    log_base = PurePath(log_base)
+
+    workdir_abs = base_workdir / sub_workdir
     logger.info("Running command in {}: {}".format(workdir_abs, command))
+
+    shell_command = ShellCommand(command=command,
+                                 workdir=workdir_abs,
+                                 # Let this explicitly inherit the task environment for the moment,
+                                 # e.g. for conda.
+                                 environment={**dict(os.environ), **environment})
     start_time = get_current_timestamp()
-    log_dir_rel = os.path.join(log_base, start_time)
-    stderr_file_rel = os.path.join(log_dir_rel, "stderr")
-    stdout_file_rel = os.path.join(log_dir_rel, "stdout")
-    execution_log_rel = os.path.join(log_dir_rel, "log.json")
-    result: Optional[subprocess.CompletedProcess] = None
-    # Let this explicitly inherit the task environment for the moment, e.g. for conda.
-    env = {**dict(os.environ), **environment}
+    log_dir_rel = log_base / start_time
+    stderr_file_rel = log_dir_rel / "stderr"
+    stdout_file_rel = log_dir_rel / "stdout"
+    execution_log_rel = log_dir_rel / "log.json"
+
+    result: CommandResult
     try:
-        log_dir_abs = os.path.join(workdir_abs, log_dir_rel)
-        stderr_file_abs = os.path.join(workdir_abs, stderr_file_rel)
-        stdout_file_abs = os.path.join(workdir_abs, stdout_file_rel)
+        stderr_file_abs = workdir_abs / stderr_file_rel
+        stdout_file_abs = workdir_abs / stdout_file_rel
+        log_dir_abs = workdir_abs / log_dir_rel
         os.makedirs(log_dir_abs)
-        with open(stderr_file_abs, "a") as stderr:
-            with open(stdout_file_abs, "a") as stdout:
-                result = \
-                    subprocess.run(command,             # nosec B603
-                                   cwd=str(pathlib.PurePath(workdir_abs)),
-                                   stdout=stdout,
-                                   stderr=stderr,
-                                   env=env)
-                # Note that shell=False (default) to ensure that no shell injection can be done.
-                # The turned-off security warning for bandit is unavoidable, because we need to
-                # execute an external command, here.
+        executor = LocalExecutor()
+        process = executor.submit(shell_command, stdout_file_abs, stderr_file_abs)
+        result = executor.wait_for(process)
     finally:
         # Collect files, but ignore those, that are in the .weskit/ directory. They are tracked by
         # the fields in the execution log (or that of previous runs in this directory).
-        outputs = list(filter(lambda fn: os.path.commonpath([fn, log_base]) != log_base,
+        outputs = list(filter(lambda fn: os.path.commonpath([fn, str(log_base)]) != str(log_base),
                               collect_relative_paths_from(workdir_abs)))
+        if result is None:
+            # result may be None, if the execution failed because the command does not exist
+            exit_code = -1
+        else:
+            # result.status should not be None, unless the process did not finish, which would be
+            # a bug at this place.
+            exit_code = result.status.value
         execution_log = {
             "start_time": start_time,
             "cmd": command,
             "env": environment,
-            "workdir": sub_workdir,
+            "workdir": str(sub_workdir),
             "end_time": get_current_timestamp(),
-            "exit_code": result.returncode if result is not None else -1,
-            "stdout_file": stdout_file_rel,
-            "stderr_file": stderr_file_rel,
-            "log_dir": log_dir_rel,
-            "log_file": execution_log_rel,
+            "exit_code": exit_code,
+            "stdout_file": str(stdout_file_rel),
+            "stderr_file": str(stderr_file_rel),
+            "log_dir": str(log_dir_rel),
+            "log_file": str(execution_log_rel),
             "output_files": outputs
         }
-        execution_log_abs = os.path.join(workdir_abs, execution_log_rel)
+        execution_log_abs = workdir_abs / execution_log_rel
         with open(execution_log_abs, "w") as fh:
             json.dump(execution_log, fh)
 

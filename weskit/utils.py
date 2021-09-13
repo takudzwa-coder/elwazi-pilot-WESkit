@@ -30,8 +30,12 @@ def to_filename(uris):
     return filenames
 
 
+def format_timestamp(time) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def get_current_timestamp() -> str:
-    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    return format_timestamp(datetime.now())
 
 
 def all_subclasses(cls):

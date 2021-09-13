@@ -8,19 +8,8 @@
 
 import json
 import os.path
-import shutil
-from tempfile import mkdtemp
-
-import pytest
 
 from weskit.tasks.CommandTask import run_command
-
-
-@pytest.fixture(scope="function")
-def temporary_dir():
-    tmpdir = mkdtemp(prefix=__name__)
-    yield tmpdir
-    shutil.rmtree(tmpdir)
 
 
 def test_run_command(temporary_dir):

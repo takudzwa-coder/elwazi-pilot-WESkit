@@ -8,20 +8,30 @@
 
 import logging
 import os
-import pytest
-import yaml
-import requests
+import shutil
 import time
+from tempfile import mkdtemp
 
-from weskit.classes.ServiceInfo import ServiceInfo
-from testcontainers.mongodb import MongoDbContainer
-from testcontainers.redis import RedisContainer
-from testcontainers.mysql import MySqlContainer
+import pytest
+import requests
+import yaml
 from testcontainers.core.container import DockerContainer
+from testcontainers.mongodb import MongoDbContainer
+from testcontainers.mysql import MySqlContainer
+from testcontainers.redis import RedisContainer
+
 from weskit import create_app, Manager, WorkflowEngineFactory
 from weskit import create_database
+from weskit.classes.ServiceInfo import ServiceInfo
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="function")
+def temporary_dir():
+    tmpdir = mkdtemp(prefix=__name__)
+    yield tmpdir
+    shutil.rmtree(tmpdir)
 
 
 def get_redis_url(redis_container):
@@ -82,7 +92,7 @@ def login_app(redis_container,
     yield _setup_test_app(redis_container,
                           celery_session_app,
                           test_database,
-                          config="tests/weskit.yaml")
+                          config="config/weskit.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -168,7 +178,7 @@ def test_validation():
 @pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.
-    with open("tests/weskit.yaml", "r") as ff:
+    with open("config/weskit.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
 

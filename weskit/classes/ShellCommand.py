@@ -5,17 +5,24 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from builtins import property, str
+
 from typing import Dict, List
+
+from os import PathLike
 
 
 class ShellCommand:
 
     def __init__(self,
                  command: List[str],
-                 workdir: str,
-                 environment: Dict[str, str] = {}):
+                 workdir: PathLike,
+                 environment: Dict[str, str] = None):
         self.command = command
-        self.environment = environment
+        if environment is None:
+            self.environment = {}
+        else:
+            self.environment = environment
         self.workdir = workdir
 
     @property
@@ -35,7 +42,7 @@ class ShellCommand:
         self.__environment = environment
 
     @property
-    def workdir(self) -> str:
+    def workdir(self) -> PathLike:
         return self.__workdir
 
     @workdir.setter
