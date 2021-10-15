@@ -64,7 +64,7 @@ def _setup_test_app(redis_container,
                     test_database,
                     config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
-    os.environ["RESULT_BACKEND"] = get_redis_url(redis_container)
+    os.environ["CELERY_RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_CONFIG"] = config
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
@@ -208,7 +208,7 @@ def redis_container():
     redis_container = RedisContainer("redis:6.2.3-alpine")
     with redis_container as rc:
         os.environ["BROKER_URL"] = get_redis_url(rc)
-        os.environ["RESULT_BACKEND"] = get_redis_url(rc)
+        os.environ["CELERY_RESULT_BACKEND"] = get_redis_url(rc)
         yield rc
 
 

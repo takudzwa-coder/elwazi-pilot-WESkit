@@ -156,3 +156,14 @@ login:
     JWT_IDENTITY_CLAIM: "sub"
     JWT_ACCESS_COOKIE_PATH: "/"
     JWT_REFRESH_COOKIE_PATH: "/"
+
+# Celery configuration. Use keys and values according to
+# https://docs.celeryproject.org/en/stable/userguide/configuration.html#configuration
+#
+# Note that CELERY_RESULT_BACKEND/RESULT_BACKEND, and BROKER_URL have *lower* priority.
+celery:
+  # If True, the task will report their status as ‘started’ when the task is executed by a worker.
+  task_track_started: true
+
+  # Set the result expiration time to 7 days (default = 86400 sec = 1 d)
+  result_expires: 604800

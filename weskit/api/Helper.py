@@ -85,4 +85,4 @@ class Helper:
     def assert_run_id(self, run_id: str):
         msg = RunRequestValidator.invalid_run_id(run_id)
         if msg:
-            raise ClientError("Syntactically invalid rur ID: '%s'" % run_id)
+            raise ClientError("Syntactically invalid run ID: '%s'" % run_id)

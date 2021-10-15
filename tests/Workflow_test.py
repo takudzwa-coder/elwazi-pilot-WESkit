@@ -5,6 +5,8 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+import re
+
 import time
 import os
 
@@ -36,7 +38,10 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     try:
         manager.prepare_execution(run, files=[])
     except ClientError as e:
-        assert e.message == "Derived workflow path does not exist: '../../../tests/wf1/Filesnake'"
+        regex = re.compile("Derived workflow path is not accessible: '" +
+                           manager.data_dir +
+                           "[0-9a-zA-Z-]+/[0-9a-zA-Z-]+/../../../tests/wf1/Filesnake'")
+        assert re.match(regex, e.message) is not None
 
     # 3.) copy attached workflow to workdir
     wf_url = "wf_1.smk"

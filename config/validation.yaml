@@ -165,3 +165,13 @@ login:
         JWT_REFRESH_COOKIE_PATH:
           type: string
           required: true
+
+# Celery configuration. Use keys and values according to
+# https://docs.celeryproject.org/en/stable/userguide/configuration.html#configuration
+#
+# WARNING: You can override values that are supposed to be set via environment variables, such
+#          as CELERY_RESULT_BACKEND/RESULT_BACKEND and BROKER_URL.
+celery:
+  type: dict
+  default: {}
+  required: true

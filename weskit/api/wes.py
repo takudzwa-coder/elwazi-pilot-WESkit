@@ -175,33 +175,39 @@ def ListRuns(*args, **kwargs):
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
 @login_required
-def RunWorkflow():
+def RunWorkflow(*args, **kwargs):
     ctx = Helper(current_app, current_user)
     try:
         data = request.json
-        logger.info("RunWorkflow")
-        validator = current_app.request_validators["run_request"]
-        validation_errors = validator.validate(data)
-        if len(validation_errors) > 0:
+        if data is None:
             return {
-              "msg": "Malformed request: {}".format(validation_errors),
-              "status_code": 400
+                "msg": "Malformed request: No JSON data",
+                "status_code": 400
             }, 400
         else:
-            run = current_app.manager.\
-                create_and_insert_run(request=data,
-                                      user_id=ctx.user.id)
+            logger.info("RunWorkflow")
+            validator = current_app.request_validators["run_request"]
+            validation_errors = validator.validate(data)
+            if len(validation_errors) > 0:
+                return {
+                  "msg": "Malformed request: {}".format(validation_errors),
+                  "status_code": 400
+                }, 400
+            else:
+                run = current_app.manager.\
+                    create_and_insert_run(request=data,
+                                          user_id=ctx.user.id)
 
-            logger.info("Prepare execution %s" % run.id)
-            run = current_app.manager.\
-                prepare_execution(run, files=request.files)
-            current_app.manager.database.update_run(run)
+                logger.info("Prepare execution %s" % run.id)
+                run = current_app.manager.\
+                    prepare_execution(run, files=request.files)
+                current_app.manager.database.update_run(run)
 
-            logger.info("Execute Workflow %s" % run.id)
-            run = current_app.manager.execute(run)
-            current_app.manager.database.update_run(run)
+                logger.info("Execute Workflow %s" % run.id)
+                run = current_app.manager.execute(run)
+                current_app.manager.database.update_run(run)
 
-            return {"run_id": run.id}, 200
+                return {"run_id": run.id}, 200
 
     except ClientError as e:
         logger.warning(e, exc_info=True)
