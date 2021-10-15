@@ -215,8 +215,7 @@ class Manager:
 
         workflow_path_abs = os.path.join(self.data_dir, run_dir, workflow_path_rel)
         if not os.path.exists(workflow_path_abs):
-            # Report only the relative path. Everything else is implementation detail.
-            raise ClientError("Derived workflow path does not exist: '%s'" % workflow_path_rel)
+            raise ClientError("Derived workflow path is not accessible: '%s'" % (workflow_path_abs))
 
         return workflow_path_rel
 

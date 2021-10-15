@@ -52,22 +52,15 @@ class WESApp(Flask):
         setattr(self, 'oidc_login', oidc_login)
 
 
-def create_celery(broker_url=None,
-                  backend_url=None):
-    if broker_url is None:
-        broker_url = os.environ.get("BROKER_URL")
-    if backend_url is None:
-        backend_url = os.environ.get("RESULT_BACKEND")
-    celery = Celery(
+def create_celery():
+    broker_url = os.environ.get("BROKER_URL")
+    # Provide RESULT_BACKEND as lower-priority variable than the native CELERY_RESULT_BACKEND.
+    backend_url = os.environ.get("CELERY_RESULT_BACKEND",
+                                 os.environ.get("RESULT_BACKEND"))
+    return Celery(
         app="WESkit",
         broker=broker_url,
-        backend=backend_url
-    )
-    celery_config = dict()
-    celery_config["broker_url"] = broker_url
-    celery_config["result_backend"] = backend_url
-    celery.conf.update(celery_config)
-    return celery
+        backend=backend_url)
 
 
 def read_swagger():
@@ -92,7 +85,7 @@ def create_database(database_url=None):
 
 def create_app(celery: Celery,
                database: Database) -> WESApp:
-    default_config = os.getenv("WESKIT_CONFIG", None)
+    default_config = os.getenv("WESKIT_CONFIG")
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
         os.path.join("config", "log-config.yaml"))
@@ -133,6 +126,9 @@ def create_app(celery: Celery,
         logger.error("Could not validate config.yaml: {}".
                      format(config_errors))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
+
+    # Insert the "celery" section from the configuration file into the Celery config.
+    celery.conf.update(**config.get("celery", {}))
 
     manager = \
         Manager(celery_app=celery,
