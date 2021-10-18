@@ -16,7 +16,7 @@ from flask import current_app
 from weskit.api.Helper import Helper
 from weskit import WESApp
 from weskit.classes.RunStatus import RunStatus
-from tests.utils import \
+from tests.test_utils import \
     assert_within_timeout, is_within_timout, assert_status_is_not_failed, get_workflow_data
 from weskit.utils import to_filename
 
