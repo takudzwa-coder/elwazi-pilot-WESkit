@@ -48,8 +48,7 @@ else:
 # You can select the tests to execute on the commandline.
 executors = {
     "local": pytest.param(LocalExecutor(),
-                          marks=[pytest.mark.slow,
-                                 pytest.mark.integration]),
+                          marks=[pytest.mark.integration]),
     "ssh": pytest.param(ssh_executor,
                         marks=[pytest.mark.slow,
                                pytest.mark.integration,
