@@ -7,7 +7,7 @@
 #  Authors: The WESkit Team
 from builtins import property, str
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from os import PathLike
 
@@ -18,7 +18,7 @@ class ShellCommand:
 
     def __init__(self,
                  command: List[str],
-                 workdir: PathLike,
+                 workdir: Optional[PathLike] = None,
                  environment: Dict[str, str] = None):
         self.command = command
         if environment is None:
@@ -44,7 +44,7 @@ class ShellCommand:
         self.__environment = environment
 
     @property
-    def workdir(self) -> PathLike:
+    def workdir(self) -> Optional[PathLike]:
         return self.__workdir
 
     @workdir.setter
@@ -52,7 +52,9 @@ class ShellCommand:
         self.__workdir = workdir
 
     def __repr__(self) -> str:
-        return str(self.__dict__)
+        return " ,".join([f"ShellCommand(command={str(self.command)}",
+                          f"env={self.environment}",
+                          f"workdir={self.workdir}"])
 
     @property
     def executables(self) -> List[PathLike]:

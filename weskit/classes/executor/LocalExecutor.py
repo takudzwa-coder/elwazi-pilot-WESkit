@@ -16,8 +16,8 @@ from typing import Optional
 from builtins import int, super, open, property
 
 import weskit.classes.executor.Executor as base
-from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.executor.ExecutorException import ExecutorException
 
 logger = logging.getLogger(__name__)
 
@@ -83,26 +83,29 @@ class LocalExecutor(base.Executor):
 
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[PathLike] = None,
-                stderr_file: Optional[PathLike] = None,
-                stdin_file: Optional[PathLike] = None,
-                settings: Optional[base.ExecutionSettings] = None) \
+                stdout_file: Optional[base.FileRepr] = None,
+                stderr_file: Optional[base.FileRepr] = None,
+                stdin_file: Optional[base.FileRepr] = None,
+                settings: Optional[base.ExecutionSettings] = None,
+                **kwargs) \
             -> base.ExecutedProcess:
         """
         Execute the process in the background and return the process ID.
+
+        Note, the LocalExecutor supports processing of IOBase objects as stderr, stdout, stdin.
         """
-        if stdin_file is not None:
+        if isinstance(stdin_file, PathLike):
             stdin = open(stdin_file, "r")
         else:
-            stdin = None
-        if stderr_file is not None:
+            stdin = stdin_file
+        if isinstance(stderr_file, PathLike):
             stderr = open(stderr_file, "a")
         else:
-            stderr = None
-        if stdout_file is not None:
+            stderr = stdin_file
+        if isinstance(stdout_file, PathLike):
             stdout = open(stdout_file, "a")
         else:
-            stdout = None
+            stdout = stdout_file
 
         start_time = datetime.now()
 
@@ -118,14 +121,15 @@ class LocalExecutor(base.Executor):
                                    stderr=stderr,
                                    stdin=stdin,
                                    env=command.environment,
-                                   shell=False)
+                                   shell=False,
+                                   **kwargs)
             logger.debug(f"Started process {process.pid}: {command.command}")
 
-            return base.ExecutedProcess(command=command,
-                                        executor=self,
+            return base.ExecutedProcess(executor=self,
                                         process_handle=process,
                                         pre_result=base.
-                                        CommandResult(id=base.ProcessId(process.pid),
+                                        CommandResult(command=command,
+                                                      id=base.ProcessId(process.pid),
                                                       stdout_file=stdout_file,
                                                       stderr_file=stderr_file,
                                                       stdin_file=stdin_file,

@@ -84,7 +84,7 @@ def run_command(command: List[str],
         else:
             # result.status should not be None, unless the process did not finish, which would be
             # a bug at this place.
-            exit_code = result.status.value
+            exit_code = result.status.code
         execution_log = {
             "start_time": start_time,
             "cmd": command,

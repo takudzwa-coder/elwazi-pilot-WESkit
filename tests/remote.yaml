@@ -1,0 +1,18 @@
+---
+#ssh:
+#  username: user
+#  hostname: localhost
+#  port: 22
+#  knownhosts_file: ~/.ssh/known_hosts
+#  keyfile: ~/.ssh/id_rsa
+#  keyfile_passphrase:
+
+#lsf_submission_host:
+#  remote_workdir: /home/user
+#  ssh:
+#    username: user
+#    hostname: odcf-worker01
+#    port: 22
+#    knownhosts_file: ~/.ssh/known_hosts
+#    keyfile: ~/.ssh/id_rsa
+#    keyfile_passphrase:
