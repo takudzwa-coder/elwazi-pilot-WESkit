@@ -75,6 +75,7 @@ def _setup_test_app(redis_container,
                     config):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["CELERY_RESULT_BACKEND"] = get_redis_url(redis_container)
+    os.environ["WESKIT_LOG_CONFIG"] = os.path.join("config", "devel-log-config.yaml")
     os.environ["WESKIT_CONFIG"] = config
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
@@ -92,7 +93,7 @@ def login_app(redis_container,
     yield _setup_test_app(redis_container,
                           celery_session_app,
                           test_database,
-                          config="config/weskit.yaml")
+                          config="tests/weskit.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -178,7 +179,7 @@ def test_validation():
 @pytest.fixture(scope="session")
 def test_config():
     # This uses a dedicated test configuration YAML.
-    with open("config/weskit.yaml", "r") as ff:
+    with open("tests/weskit.yaml", "r") as ff:
         test_config = yaml.load(ff, Loader=yaml.FullLoader)
     yield test_config
 

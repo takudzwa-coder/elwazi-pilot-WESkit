@@ -20,6 +20,8 @@ from builtins import property, bool, str
 from os import PathLike
 from typing import Optional
 
+from datetime import datetime
+
 from weskit.classes.ShellCommand import ShellCommand
 
 
@@ -35,8 +37,11 @@ class ValueClass(metaclass=abc.ABCMeta):
     def value(self):
         return self._value
 
+    def __str__(self) -> str:
+        return str(self.value)
 
-class ExecutorProcessId(ValueClass, metaclass=abc.ABCMeta):
+
+class ProcessId(ValueClass, metaclass=abc.ABCMeta):
     """
     This is for the process ID on the executor. I.e. if the process is not run directly, but e.g.
     on a different compute node as a cluster job, then the ExecutorProcessId shall be the cluster
@@ -45,35 +50,43 @@ class ExecutorProcessId(ValueClass, metaclass=abc.ABCMeta):
     pass
 
 
-class RunStatus(ValueClass, metaclass=abc.ABCMeta):
+class NoProcessId(ProcessId):
+    """
+    Sometimes no process ID is available or useful (ROI) to implement.
+    """
+    def __init__(self):
+        super().__init__(None)
+
+
+class RunStatus(ValueClass):
     """
     The RunStatus is the status of the command execution on the execution infrastructure, e.g.
     the job status in the cluster.
     """
 
+    def __init__(self, value: Optional[int] = None):
+        super().__init__(value)
+
     @property
-    @abc.abstractmethod
     def finished(self) -> bool:
         """
         Return whether the process is in a finished state (successful or not).
         """
-        pass
+        return self.value is not None
 
     @property
-    @abc.abstractmethod
     def success(self) -> bool:
         """
         Return whether the command is an success state.
         """
-        pass
+        return self.value is not None and self.value == 0
 
     @property
-    @abc.abstractmethod
     def failed(self) -> bool:
         """
         Return whether the command is in failed state.
         """
-        pass
+        return self.value is not None and self.value != 0
 
 
 class CommandResult:
@@ -84,21 +97,23 @@ class CommandResult:
     """
 
     def __init__(self,
-                 id: ExecutorProcessId,
+                 id: ProcessId,
                  stdout_file: PathLike,
                  stderr_file: PathLike,
+                 stdin_file: PathLike,
                  run_status: RunStatus,
-                 start_time: str,
-                 end_time: Optional[str] = None):
+                 start_time: datetime,
+                 end_time: Optional[datetime] = None):
         self._process_id = id
         self._run_status = run_status
         self._stdout_file = stdout_file
         self._stderr_file = stderr_file
+        self._stdin_file = stdin_file
         self._start_time = start_time
         self._end_time = end_time
 
     @property
-    def id(self) -> ExecutorProcessId:
+    def id(self) -> ProcessId:
         return self._process_id
 
     @property
@@ -110,7 +125,7 @@ class CommandResult:
         return self._stderr_file
 
     @property
-    def start_time(self) -> str:
+    def start_time(self) -> datetime:
         return self._start_time
 
     @property
@@ -122,7 +137,7 @@ class CommandResult:
         self._run_status = value
 
     @property
-    def end_time(self) -> Optional[str]:
+    def end_time(self) -> Optional[datetime]:
         return self._end_time
 
     @end_time.setter
@@ -160,22 +175,24 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
         self._result = pre_result
 
     @property
+    def handle(self):
+        """
+        Only for access from Executor.
+        """
+        return self._process_handle
+
+    @property
     def command(self) -> ShellCommand:
         return self._command
 
     @property
-    def handle(self):
-        return self._process_handle
-
-    @property
-    @abc.abstractmethod
-    def process_id(self) -> ExecutorProcessId:
+    def id(self) -> ProcessId:
         """
         Note that the process ID can be the one used by the underlying execution infrastructure,
         but could also be implemented in the subclass including some process management. It
         primarily serves to address the process in the Executor.
         """
-        pass
+        return self._result.id
 
     def update_result(self) -> ExecutedProcess:
         """
@@ -206,11 +223,12 @@ class Executor(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def submit(self,
-               command: ShellCommand,
-               stdout_file: PathLike,
-               stderr_file: PathLike,
-               settings: Optional[ExecutionSettings] = None) \
+    def execute(self,
+                command: ShellCommand,
+                stdout_file: Optional[PathLike] = None,
+                stderr_file: Optional[PathLike] = None,
+                stdin_file: Optional[PathLike] = None,
+                settings: Optional[ExecutionSettings] = None) \
             -> ExecutedProcess:
         """
         Submit a command to the execution infrastructure.
@@ -225,6 +243,7 @@ class Executor(metaclass=abc.ABCMeta):
                             This can be a file-pattern, e.g. for LSF /path/to/file.o%J
         :param stderr_file: A path to a file into which the standard error shall be written.
                             This can be a file-pattern, e.g. for LSF /path/to/file.e%J
+        :param stdin_file: A path to a file from which to take the process standard input.
         :param settings: Execution parameters on the execution infrastructure.
         :return: A representation of the executed command.
         """
@@ -251,14 +270,14 @@ class Executor(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def kill(self, process: ExecutedProcess) -> bool:
+    def kill(self, process: ExecutedProcess):
         """
         Cancel the the process named by the process_id. Note that the killing operation may fail.
         Furthermore, note that if the process cannot be killed because it does not exist (anymore)
         no exception is thrown. This is to reduce unnecessary exceptions in the common case where
-        a process ends between the last status check and the killing command. Returns true if the
-        process is not running after the killing command, otherwise false. The killing of a process
-        may take time on some infrastructures. Consequently, this function may block.
+        a process ends between the last status check and the killing command. The killing of a
+        process may take time on some infrastructures or may take time to be send remotely.
+        Consequently, this function may block.
         """
         pass
 

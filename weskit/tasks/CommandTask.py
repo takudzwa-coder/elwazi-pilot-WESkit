@@ -13,8 +13,8 @@ from pathlib import PurePath
 from typing import List, Dict
 
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.command_executor.Executor import CommandResult
-from weskit.classes.command_executor.LocalExecutor import LocalExecutor
+from weskit.classes.executor.Executor import CommandResult
+from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ def run_command(command: List[str],
         log_dir_abs = workdir_abs / log_dir_rel
         os.makedirs(log_dir_abs)
         executor = LocalExecutor()
-        process = executor.submit(shell_command, stdout_file_abs, stderr_file_abs)
+        process = executor.execute(shell_command, stdout_file_abs, stderr_file_abs)
         result = executor.wait_for(process)
     finally:
         # Collect files, but ignore those, that are in the .weskit/ directory. They are tracked by

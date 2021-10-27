@@ -5,3 +5,6 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+
+class ExecutorException(Exception):
+    pass

@@ -5,53 +5,21 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-import subprocess   # nosec B603
-from builtins import int, super, open, property, bool
+from __future__ import annotations
+
+import logging
+import subprocess  # nosec B603
+from datetime import datetime
 from os import PathLike
 from typing import Optional
 
-import weskit.classes.command_executor.Executor as base
+from builtins import int, super, open, property
+
+import weskit.classes.executor.Executor as base
+from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.utils import get_current_timestamp
 
-
-class LocalProcessId(base.ExecutorProcessId):
-    """
-    Unix process IDs are integers in the range (0, 65535).
-    """
-    def __init__(self, value: int):
-        super().__init__(value)
-
-
-class ExecutedProcess(base.ExecutedProcess):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    @property
-    def handle(self) -> subprocess.Popen:
-        return super().handle
-
-    def process_id(self) -> LocalProcessId:
-        return LocalProcessId(self._process_handle.pid)
-
-
-class RunStatus(base.RunStatus):
-
-    def __init__(self, value: Optional[int] = None):
-        super().__init__(value)
-
-    @property
-    def finished(self) -> bool:
-        return self.value is not None
-
-    @property
-    def success(self) -> bool:
-        return self.value is not None and self.value == 0
-
-    @property
-    def failed(self) -> bool:
-        return self.value is not None and self.value != 0
+logger = logging.getLogger(__name__)
 
 
 class ClosingPopen(subprocess.Popen):
@@ -113,64 +81,82 @@ class LocalExecutor(base.Executor):
     def __init__(self):
         pass
 
-    def submit(self,
-               command: ShellCommand,
-               stdout_file: PathLike,
-               stderr_file: PathLike,
-               settings: Optional[base.ExecutionSettings] = None) \
+    def execute(self,
+                command: ShellCommand,
+                stdout_file: Optional[PathLike] = None,
+                stderr_file: Optional[PathLike] = None,
+                stdin_file: Optional[PathLike] = None,
+                settings: Optional[base.ExecutionSettings] = None) \
             -> base.ExecutedProcess:
         """
         Execute the process in the background and return the process ID.
         """
-        stderr = open(stderr_file, "a")
-        stdout = open(stdout_file, "a")
+        if stdin_file is not None:
+            stdin = open(stdin_file, "r")
+        else:
+            stdin = None
+        if stderr_file is not None:
+            stderr = open(stderr_file, "a")
+        else:
+            stderr = None
+        if stdout_file is not None:
+            stdout = open(stdout_file, "a")
+        else:
+            stdout = None
 
-        start_time = get_current_timestamp()
+        start_time = datetime.now()
 
         # Note that shell=False (default) to ensure that no shell injection can be done.
         # The turned-off security warning for bandit is unavoidable, because we need to
         # execute an external command, here.
         # Note : ClosingPopen ensures that in most situations the stderr and stdin are closed,
         #        as soon as Popen.returncode is not None.
-        process = ClosingPopen(command.command,
-                               cwd=command.workdir,
-                               stdout=stdout,
-                               stderr=stderr,
-                               env=command.environment,
-                               shell=False)
+        try:
+            process = ClosingPopen(command.command,
+                                   cwd=command.workdir,
+                                   stdout=stdout,
+                                   stderr=stderr,
+                                   stdin=stdin,
+                                   env=command.environment,
+                                   shell=False)
+            logger.debug(f"Started process {process.pid}: {command.command}")
 
-        return ExecutedProcess(command=command,
-                               executor=self,
-                               process_handle=process,
-                               pre_result=base.CommandResult(id=LocalProcessId(process.pid),
-                                                             stdout_file=stdout_file,
-                                                             stderr_file=stderr_file,
-                                                             run_status=RunStatus(),
-                                                             start_time=start_time))
+            return base.ExecutedProcess(command=command,
+                                        executor=self,
+                                        process_handle=process,
+                                        pre_result=base.
+                                        CommandResult(id=base.ProcessId(process.pid),
+                                                      stdout_file=stdout_file,
+                                                      stderr_file=stderr_file,
+                                                      stdin_file=stdin_file,
+                                                      run_status=base.RunStatus(),
+                                                      start_time=start_time))
+        except FileNotFoundError as e:
+            raise ExecutorException(f"Invalid working directory '{command.workdir}", e)
 
-    def get_status(self, process: ExecutedProcess) -> RunStatus:
-        return RunStatus(process.handle.poll())
+    def get_status(self, process: base.ExecutedProcess) -> base.RunStatus:
+        return base.RunStatus(process.handle.poll())
 
-    def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
+    def update_process(self, process: base.ExecutedProcess) -> base.ExecutedProcess:
         """
         Update the the executed process, if possible.
         """
         result = process.result
         return_code = process.handle.poll()
         if return_code is not None:
-            result.status = RunStatus(return_code)
-            result.end_time = get_current_timestamp()
-        process.result = result
+            result.status = base.RunStatus(return_code)
+            result.end_time = datetime.now()
+            process.result = result
         return process
 
-    def kill(self, process: ExecutedProcess) -> bool:
+    def kill(self, process: base.ExecutedProcess):
         process.handle.terminate()
         # TODO The API says little. The code says it uses os.kill for Unix. More recherche needed.
-        return True
 
-    def wait_for(self, process: ExecutedProcess, timeout: Optional[float] = None)\
+    def wait_for(self, process: base.ExecutedProcess, timeout: Optional[float] = None)\
             -> base.CommandResult:
         status = self.get_status(process)
         if not status.finished:
+            logger.debug(f"Waiting for process {process.id}")
             process.handle.wait(timeout)
         return self.update_process(process).result
