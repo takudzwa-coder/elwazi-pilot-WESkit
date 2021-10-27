@@ -29,6 +29,7 @@ dependencies:
   - bioconda::nextflow=20.10.0
   - procps-ng=3.3.17             # for nextflow default_workflow_engine_parameters test
   - bandit=1.7.0
+  - asyncssh=2.7.2
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1

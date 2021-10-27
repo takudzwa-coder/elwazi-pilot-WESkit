@@ -11,6 +11,8 @@ from typing import Dict, List
 
 from os import PathLike
 
+from pathlib import PurePath
+
 
 class ShellCommand:
 
@@ -51,3 +53,12 @@ class ShellCommand:
 
     def __repr__(self) -> str:
         return str(self.__dict__)
+
+    @property
+    def executables(self) -> List[PathLike]:
+        """
+        Return a list of executables. For simplicities sake this is just the first element of the
+        `command` list. You may want to implement an explicit setting of executables if you want
+        to run, e.g. pipes of multiple commands.
+        """
+        return [PurePath(self.command[0])]
