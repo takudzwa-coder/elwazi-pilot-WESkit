@@ -6,9 +6,8 @@
 #
 #  Authors: The WESkit Team
 import shlex
-from pathlib import PurePath
-
 from datetime import timedelta
+from pathlib import PurePath
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -22,7 +21,7 @@ def test_lsf_submit_minimal_command():
                settings=ExecutionSettings())
     assert command == [
         'bsub',
-        '-env', 'none',
+        '-env', 'LSB_EXIT_IF_CWD_NOTEXIST=Y',
         '-oo', '/dev/null',
         '-R', "span[hosts=1]",
         "echo 'Hello, World'"]
@@ -50,7 +49,9 @@ def test_lsf_submit_full_command():
                                           cores=10))
     print(" ".join(list(map(shlex.quote, command))))
     assert command == [
-        'bsub', '-env', 'someVar=someVal, someOtherVar=\'containing, a, comma\'',
+        'bsub',
+        '-env',
+        'LSB_EXIT_IF_CWD_NOTEXIST=Y, someVar=someVal, someOtherVar=\'containing, a, comma\'',
         '-cwd', '/some/dir',
         '-oo', '/path/to/stdout',
         '-eo', "/another/pa   th/to/stderr",

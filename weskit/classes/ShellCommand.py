@@ -5,13 +5,10 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-from builtins import property, str
-
+from os import PathLike
 from typing import Dict, List, Optional
 
-from os import PathLike
-
-from pathlib import PurePath
+from builtins import property, str
 
 
 class ShellCommand:
@@ -55,12 +52,3 @@ class ShellCommand:
         return " ,".join([f"ShellCommand(command={str(self.command)}",
                           f"env={self.environment}",
                           f"workdir={self.workdir}"])
-
-    @property
-    def executables(self) -> List[PathLike]:
-        """
-        Return a list of executables. For simplicities sake this is just the first element of the
-        `command` list. You may want to implement an explicit setting of executables if you want
-        to run, e.g. pipes of multiple commands.
-        """
-        return [PurePath(self.command[0])]

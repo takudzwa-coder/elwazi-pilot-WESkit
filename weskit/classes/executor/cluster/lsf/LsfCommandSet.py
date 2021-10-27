@@ -33,11 +33,12 @@ class LsfCommandSet:
             else:
                 return variable_value
 
-        if len(environment) == 0:
-            environment_string = "none"
-        else:
+        # We want jobs to exit, if the chosen remote workdir does not exist. No explicit "none"
+        # is necessary because it is implicit, if there is at least as single variable set.
+        environment_string = "LSB_EXIT_IF_CWD_NOTEXIST=Y"
+        if len(environment) > 0:
             # Note: The space after the comma is needed.
-            environment_string = ", ".join(
+            environment_string += ", " + ", ".join(
                 [f"{it[0]}={quote_comma_value(it[1])}" for it in environment.items()]
             )
         return ["-env", environment_string]
@@ -97,6 +98,7 @@ class LsfCommandSet:
 
         will evaluate to `echo "Hello, World"`
         """
+        # Ensure the job exits, if the working directory does not exist.
         result = ["bsub"]
         result += self._environment_parameters(command.environment)
         result += ["-cwd", str(command.workdir)] \

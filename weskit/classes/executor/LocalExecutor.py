@@ -5,8 +5,6 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-from __future__ import annotations
-
 import logging
 import subprocess  # nosec B603
 from datetime import datetime
@@ -17,7 +15,6 @@ from builtins import int, super, open, property
 
 import weskit.classes.executor.Executor as base
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.ExecutorException import ExecutorException
 
 logger = logging.getLogger(__name__)
 
@@ -136,25 +133,53 @@ class LocalExecutor(base.Executor):
                                                       run_status=base.RunStatus(),
                                                       start_time=start_time))
         except FileNotFoundError as e:
-            raise ExecutorException(f"Invalid working directory '{command.workdir}", e)
+            # The other executors recognize inaccessible working directories or missing commands
+            # only after the wait_for(). We emulate this behaviour here such that all executors
+            # behave identically with respect to these problems.
+            if e.strerror == f"No such file or directory: {command.workdir.__repr__()}":
+                # cd /dir/does/not/exist: exit code 1
+                exit_code = 1
+            else:
+                # Command not executable: exit code 127
+                exit_code = 127
+
+            return base.ExecutedProcess(executor=self,
+                                        process_handle=None,
+                                        pre_result=base.
+                                        CommandResult(command=command,
+                                                      id=base.ProcessId(None),
+                                                      stdout_file=stdout_file,
+                                                      stderr_file=stderr_file,
+                                                      stdin_file=stdin_file,
+                                                      run_status=base.RunStatus(
+                                                          exit_code, message=e.strerror),
+                                                      start_time=start_time))
 
     def get_status(self, process: base.ExecutedProcess) -> base.RunStatus:
-        return base.RunStatus(process.handle.poll())
+        if process.handle is None:
+            return process.result.status
+        else:
+            return base.RunStatus(process.handle.poll())
 
     def update_process(self, process: base.ExecutedProcess) -> base.ExecutedProcess:
         """
         Update the the executed process, if possible.
         """
-        result = process.result
-        return_code = process.handle.poll()
-        if return_code is not None:
-            result.status = base.RunStatus(return_code)
-            result.end_time = datetime.now()
-            process.result = result
-        return process
+        if process.handle is None:
+            # There is no process handle. We cannot update the result.
+            return process
+        else:
+            result = process.result
+            return_code = process.handle.poll()
+            if return_code is not None:
+                result.status = base.RunStatus(return_code)
+                result.end_time = datetime.now()
+                process.result = result
+            return process
 
     def kill(self, process: base.ExecutedProcess):
-        process.handle.terminate()
+        if process.handle is not None:
+            process.handle.terminate()
         # TODO The API says little. The code says it uses os.kill for Unix. More recherche needed.
 
     def wait_for(self, process: base.ExecutedProcess, timeout: Optional[float] = None)\

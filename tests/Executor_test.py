@@ -17,7 +17,6 @@ import yaml
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, Executor
-from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.classes.executor.SshExecutor import SshExecutor
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
@@ -66,6 +65,7 @@ def test_submit_failing_command(executor):
                            workdir=PurePath("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
+                                   job_name="weskit_test_submit_failing_command",
                                    walltime=timedelta(minutes=5.0),
                                    total_memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
@@ -79,16 +79,27 @@ def test_submit_failing_command(executor):
 def test_submit_nonexisting_command(executor):
     command = ShellCommand(["nonexistingcommand"],
                            workdir=PurePath("./"))
-    with pytest.raises(ExecutorException):
-        executor.execute(command)
+    process = executor.execute(command,
+                               settings=ExecutionSettings(
+                                   job_name="weskit_test_submit_nonexisting_command",
+                                   walltime=timedelta(minutes=5.0),
+                                   total_memory=Memory(100, Unit.MEGA)))
+    result = executor.wait_for(process)
+    assert result.status.code == 127
 
 
 @pytest.mark.parametrize("executor", executors.values())
 def test_inacessible_workdir(executor):
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=PurePath("/this/path/does/not/exist"))
-    with pytest.raises(ExecutorException):
-        executor.execute(command)
+    process = executor.execute(command,
+                               settings=ExecutionSettings(
+                                   job_name="weskit_test_inaccessible_workdir",
+                                   walltime=timedelta(minutes=5.0),
+                                   total_memory=Memory(100, Unit.MEGA)))
+    result = executor.wait_for(process)
+    # Note: LSF exits with code 2 with LSB_EXIT_IF_CWD_NOTEXIST=Y, but at least it fails.
+    assert result.status.code in [1, 2], result.status
 
 
 class ExecuteProcess(metaclass=ABCMeta):
@@ -115,6 +126,7 @@ class ExecuteProcess(metaclass=ABCMeta):
                                         stdout_file=stdout_file,
                                         stderr_file=stderr_file,
                                         settings=ExecutionSettings(
+                                            job_name="weskit_test_execute",
                                             walltime=timedelta(minutes=5.0),
                                             total_memory=Memory(100, Unit.MEGA)))
         return self.executor.wait_for(process)
@@ -266,10 +278,7 @@ def test_std_fds_are_closed(executor, temporary_dir):
                            workdir=workdir)
     process = executor.execute(command,
                                stdout_file=workdir / "stdout",
-                               stderr_file=workdir / "stderr",
-                               settings=ExecutionSettings(
-                                   walltime=timedelta(minutes=5.0),
-                                   total_memory=Memory(100, Unit.MEGA)))
+                               stderr_file=workdir / "stderr")
     executor.wait_for(process)
     assert process.handle.stdout_fd.closed
     assert process.handle.stderr_fd.closed
@@ -277,10 +286,11 @@ def test_std_fds_are_closed(executor, temporary_dir):
 
 @pytest.mark.parametrize("executor", executors.values())
 def test_get_status(executor):
-    command = ShellCommand(["sleep", "1"],
+    command = ShellCommand(["sleep", "20" if isinstance(executor, LsfExecutor) else "1"],
                            workdir=PurePath("/"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
+                                   job_name="weskit_test_get_status",
                                    walltime=timedelta(minutes=5.0),
                                    total_memory=Memory(100, Unit.MEGA)))
     status = executor.get_status(process)
@@ -295,11 +305,15 @@ def test_get_status(executor):
     assert not result.status.failed
 
 
-@pytest.mark.parametrize("executor", [executors["local"]])
+@pytest.mark.parametrize("executor", [executors["local"], executors["ssh_lsf"]])
 def test_update_process(executor):
-    command = ShellCommand(["sleep", "1"],
+    command = ShellCommand(["sleep", "20" if isinstance(executor, LsfExecutor) else "2"],
                            workdir=PurePath("/"))
-    process = executor.execute(command)
+    process = executor.execute(command,
+                               settings=ExecutionSettings(
+                                   job_name="weskit_test_update_process",
+                                   walltime=timedelta(minutes=5.0),
+                                   total_memory=Memory(100, Unit.MEGA)))
     executor.update_process(process)
     result = process.result
     assert result.status.code is None
@@ -318,7 +332,7 @@ def test_update_process(executor):
     assert not result.status.failed
 
 
-@pytest.mark.parametrize("executor", executors)
+@pytest.mark.parametrize("executor", executors.values())
 def test_kill_process(executor):
     # TODO Killing is not implemented yet.
     assert True

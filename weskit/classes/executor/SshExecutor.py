@@ -11,7 +11,7 @@ import os
 import shlex
 import tempfile
 import uuid
-from asyncio.subprocess import PIPE, DEVNULL
+from asyncio.subprocess import PIPE
 from datetime import datetime
 from os import PathLike
 from pathlib import PurePath
@@ -20,7 +20,6 @@ from typing import Optional, List
 import asyncssh
 from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, ChannelOpenError, \
     ProcessError, SSHCompletedProcess
-from itertools import compress
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor \
@@ -129,17 +128,6 @@ class SshExecutor(Executor):
     async def copy_from_remote(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
         await asyncssh.scp(srcpaths=(self._connection, srcpath), dstpath=dstpath, **kwargs)
 
-    async def _check_working_directory(self, workdir: Optional[PathLike]):
-        if workdir is not None:
-            process: SSHClientProcess = await self._connection. \
-                           run(command=f"cd {shlex.quote(str(workdir))}",
-                               stdin=DEVNULL, stdout=PIPE, stderr=DEVNULL)
-            if process.returncode != 0:
-                # This is raising an exception, just like subprocess.Popen raises an exception,
-                # if the working directory is not accessible.
-                raise ExecutorException(f"Couldn't change to working directory '{str(workdir)}'" +
-                                        f" ({self._remote_name})")
-
     def _process_directory(self, process_id: uuid.UUID) -> PurePath:
         return PurePath("/tmp/weskit/ssh") / str(self._executor_id) / str(process_id)  # nosec: B108
 
@@ -147,8 +135,17 @@ class SshExecutor(Executor):
         return self._process_directory(process_id) / "wrapper.sh"
 
     async def _create_setup_script(self, command: ShellCommand) -> PurePath:
+        """
+        We assume Bash is used on the remote side. Detection of the shell is tricky, if at all
+        possible. Therefore, if you want to support other shells, make this configurable via a
+        WESkit variable.
+        """
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             if command.workdir is not None:
+                # Whatever command is executed later, make sure to catch all errors. This is also
+                # important for the `cd`, which may fail if the working directory is not
+                # accessible.
+                print("set -o pipefail -ue", file=file)
                 print(f"cd {shlex.quote(str(command.workdir))}", file=file)
             for export in [f"export {it[0]}={shlex.quote(it[1])}"
                            for it in command.environment.items()]:
@@ -170,7 +167,7 @@ class SshExecutor(Executor):
         try:
             remote_dir = self._process_directory(process_id)
             await self._connection.\
-                run(f"umask 0077; mkdir -p {shlex.quote(str(remote_dir))}", check=True)
+                run(f"set -ue; umask 0077; mkdir -p {shlex.quote(str(remote_dir))}", check=True)
 
             # We use run() rather than sftp, because sftp is not turned on all SSH servers.
             await asyncssh.scp(local_script_file,
@@ -188,16 +185,6 @@ class SshExecutor(Executor):
         result: SSHCompletedProcess = \
             await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
-
-    async def _check_executables(self, paths: List[PathLike]):
-        is_executable: List[bool] = await asyncio.gather(*list(map(self._is_executable, paths)),
-                                                         return_exceptions=True)
-        if not all(list(is_executable)):
-            non_executable_paths = \
-                list(compress(map(str, paths),
-                              map(lambda p: not p, is_executable)))
-            raise ExecutorException(f"Not executable on {self._remote_name}: " +
-                                    str(non_executable_paths))
 
     async def _execute(self,
                        command: ShellCommand,
@@ -233,18 +220,6 @@ class SshExecutor(Executor):
         start_time = datetime.now()
         try:
             process_id = uuid.uuid4()
-            logger.debug(f"Executing SSH process {str(process_id)}")
-
-            # SSH happens always into the user's home-directory, which may not be the selected
-            # working directory. To ensure a similar protocol as LocalExecutor and because the
-            # convolution of a working directory test and business code is complex, we first make
-            # the test.
-            await self._check_working_directory(command.workdir)
-
-            # If LocalExecutor tries to run an non-executable binary, it raises an exception.
-            # We make an explicit pre-check here to simulate that behaviour.
-            await self._check_executables(command.executables)
-
             # Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
             # the server, environment variables to be set for the target process cannot be used
             # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
@@ -262,7 +237,7 @@ class SshExecutor(Executor):
                 list(map(shlex.quote, command.command))
 
             final_command_str = " ".join(effective_command)
-            logger.debug(f"Executed command: {final_command_str}")
+            logger.debug(f"Executed command ({process_id}): {final_command_str}")
             process: SSHClientProcess = await self._connection.\
                 create_process(command=final_command_str,
                                stdin=PIPE if stdin_file is None else stdin_file,

@@ -18,14 +18,14 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from io import IOBase
 from os import PathLike
 from typing import Optional, Any, Union
 
 from builtins import property, bool, str
-from io import IOBase
 
-from weskit.memory_units import Memory
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.memory_units import Memory
 
 
 class ProcessId:
@@ -53,9 +53,12 @@ class RunStatus:
     cluster system.
     """
 
-    def __init__(self, code: Optional[int] = None, name: Optional[str] = None):
+    def __init__(self, code: Optional[int] = None,
+                 name: Optional[str] = None,
+                 message: Optional[str] = None):
         self._code = code
         self._name = name
+        self._message = message
 
     @property
     def code(self) -> Optional[int]:
@@ -64,6 +67,10 @@ class RunStatus:
     @property
     def name(self) -> Optional[str]:
         return self._name
+
+    @property
+    def message(self) -> Optional[str]:
+        return self._message
 
     @property
     def finished(self) -> bool:
@@ -87,7 +94,9 @@ class RunStatus:
         return self.code is not None and self.code != 0
 
     def __str__(self) -> str:
-        return f"{self.code} ({self.name})"
+        return f"code={self.code}" + \
+               f", name={self.name}" if self.name is not None else "" +\
+               f", message={self.message}" if self.message is not None else ""
 
 
 # Some executors support using streams, filedescriptors, etc. so more general file representations
@@ -287,7 +296,8 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_status(self, process: ExecutedProcess) -> RunStatus:
         """
-        Get the status of the process in the execution infrastructure.
+        Get the status of the process in the execution infrastructure. The `process.result` is not
+        modified.
         """
         pass
 

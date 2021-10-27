@@ -13,6 +13,10 @@ from pathlib import PurePath
 from tempfile import NamedTemporaryFile
 from typing import Optional, List
 
+from io import IOBase
+
+from contextlib import contextmanager
+
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, RunStatus, CommandResult, ProcessId
@@ -21,6 +25,29 @@ from weskit.classes.executor.cluster.ExecutionSettings import ClusterExecutionSe
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def execute(executor: Executor,
+            command: ShellCommand,
+            encoding="utf-8",
+            **kwargs) \
+        -> (CommandResult, IOBase, IOBase):
+    """
+    Convenience syntax for executing a ShellCommand with temporary locally buffered stdout and
+    stderr. This is mostly a workaround for dysfunctional data streaming if IOBase objects, in
+    particular StringIO or ByteIO, are used. The context will create temporary files and delete
+    them on exiting the context. The context executes the command synchronously (i.e. it calls
+    `executor.wait_for(process)`.
+    """
+    with NamedTemporaryFile(encoding=encoding, mode="r") as stdout:
+        with NamedTemporaryFile(encoding=encoding, mode="r") as stderr:
+            proc = executor.execute(command,
+                                    stdout_file=PurePath(stdout.name),
+                                    stderr_file=PurePath(stderr.name),
+                                    **kwargs)
+            result = executor.wait_for(proc)
+            yield result, stdout, stderr
 
 
 class LsfExecutor(Executor):
@@ -63,6 +90,10 @@ class LsfExecutor(Executor):
                 settings: Optional[ClusterExecutionSettings] = None) -> ExecutedProcess:
         """
         stdout, stderr, and stdin files are *remote files on the cluster nodes*.
+
+        WARNING: Do not set too many environment variables in `command.environment`. The
+                 implementation uses `bsub -env` and too many variables may result in a too long
+                 command-line.
         """
 
         if stdin_file is not None:
@@ -77,30 +108,20 @@ class LsfExecutor(Executor):
         # result and then use the cluster job ID returned from the submission command, as process
         # ID to query the cluster job status later.
 
-        # Note: Unfortunately, the StringIO behavior is odd (loss of getvalue() after close!)
-        #       and even if that is fixed, asyncssh.create_process, used in the SshExecutor,
-        #       does no produce the output in the StringIO for stdout. So, let's use temporary
-        #       files.
-        with NamedTemporaryFile(encoding="utf-8", mode="r") as subm_stdout:
-            with NamedTemporaryFile(encoding="utf-8", mode="r") as subm_stderr:
-                # We open the tempfiles "r" and use just their names for writing to them in the
-                # executor.
-                process = self._executor.execute(submission_command,
-                                                 stdout_file=PurePath(subm_stdout.name),
-                                                 stderr_file=PurePath(subm_stderr.name),
-                                                 encoding="utf-8")
-                submission_result = self._executor.wait_for(process)
-                stdout = subm_stdout.readlines()
-                stderr = subm_stderr.readlines()
-        start_time = datetime.now()
-        if submission_result.status.failed:
-            raise ExecutorException(f"Failed to submit cluster job: {submission_result}" +
-                                    f"stdout={stdout}, " +
-                                    f"stderr={stderr}")
-        else:
-            cluster_job_id = ProcessId(self._parse_submission_stdout(stdout))
+        with execute(self._executor, submission_command) as (result, stdout, stderr):
+            stdout_lines = stdout.readlines()
+            stderr_lines = stderr.readlines()
+            start_time = datetime.now()
+            if result.status.failed:
+                raise ExecutorException(f"Failed to submit cluster job: {result}" +
+                                        f"stdout={stdout_lines}, " +
+                                        f"stderr={stderr_lines}")
+            else:
+                cluster_job_id = ProcessId(self._parse_submission_stdout(stdout_lines))
 
-        # NOTE: We could here created an additional `bwait` process that waits for the cluster job
+        logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
+
+        # NOTE: We could now created an additional `bwait` process that waits for the cluster job
         #       ID. However, we postpone the creation of this to a later stage. The process handle
         #       is just the cluster job ID.
         return ExecutedProcess(executor=self,
@@ -114,40 +135,34 @@ class LsfExecutor(Executor):
                                                         start_time=start_time))
 
     def get_status(self, process: ExecutedProcess) -> RunStatus:
-        # The same trick as in execute: Create readable tempfiles, but provide them to asyncssh
-        # by name, such that the open readably filehandle remains open and can be used.
-        with NamedTemporaryFile(encoding="utf-8", mode="r") as stdout:
-            with NamedTemporaryFile(encoding="utf-8", mode="r") as stderr:
-                status_command = ShellCommand(self._command_set.get_status([process.id.value]))
-                proc = self._executor.execute(status_command,
-                                              stdout_file=PurePath(stdout.name),
-                                              stderr_file=PurePath(stderr.name),
-                                              encoding="utf-8")
-                # Ensure the bjobs command succeeded.
-                result = self._executor.wait_for(proc)
-                stdout_lines = stdout.readlines()
-                stderr_lines = stderr.readlines()
-                if result.status.failed or len(stdout_lines) != 1:
-                    raise ExecutorException(f"Failure status request: {str(result)}, " +
-                                            f"stdout={stdout_lines}, " +
-                                            f"stderr={stderr_lines}")
+        status_command = ShellCommand(self._command_set.get_status([process.id.value]))
+        with execute(self._executor, status_command) as (result, stdout, stderr):
+            stdout_lines = stdout.readlines()
+            stderr_lines = stderr.readlines()
+            if result.status.failed or len(stdout_lines) != 1:
+                raise ExecutorException(f"Failure status request: {str(result)}, " +
+                                        f"stdout={stdout_lines}, " +
+                                        f"stderr={stderr_lines}")
 
-                # Now get the information about the job executed on the cluster.
-                job_id, status_name, reported_exit_code = \
-                    re.split(r"\s+", stdout_lines[0].rstrip())
-                if job_id != str(process.id.value):
-                    raise ExecutorException(f"Error in bjobs output of {str(status_command)}, " +
-                                            f"stdout={stdout_lines}, " +
-                                            f"stderr={stderr_lines}")
+            # Now get the information about the job executed on the cluster.
+            job_id, status_name, reported_exit_code = \
+                re.split(r"\s+", stdout_lines[0].rstrip())
+            if job_id != str(process.id.value):
+                raise ExecutorException(f"Error in bjobs output of {str(status_command)}, " +
+                                        f"stdout={stdout_lines}, " +
+                                        f"stderr={stderr_lines}")
 
-                # The reported exit code is '-' if the job is still running, or if the job
-                # is done with return value 0.
-                exit_code = reported_exit_code
-                if reported_exit_code == "-":
-                    if status_name == "DONE":
-                        exit_code = 0
+            # The reported exit code is '-' if the job is still running, or if the job
+            # is done with return value 0.
+            if reported_exit_code == "-":
+                if status_name == "DONE":
+                    exit_code = 0
+                else:
+                    exit_code = None
+            else:
+                exit_code = int(reported_exit_code)
 
-                return RunStatus(exit_code, status_name)
+            return RunStatus(exit_code, status_name)
 
     def kill(self, process: ExecutedProcess):
         kill_command = ShellCommand(self._command_set.kill(process.id.value))
@@ -166,7 +181,16 @@ class LsfExecutor(Executor):
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
         wait_command = ShellCommand(self._command_set.wait_for(process.id.value))
-        wait_result = self._executor.wait_for(self._executor.execute(wait_command))
-        if wait_result.status.failed:
-            raise ExecutorException(f"Waiting failed: {str(wait_result)}")
+        with execute(self._executor, wait_command) as (result, stdout, stderr):
+            if result.status.code == 2:
+                error_message = stderr.readlines()
+                if error_message != \
+                        [f"done({process.id.value}): Wait condition is never satisfied\n"]:
+                    raise ExecutorException(f"Wait failed: {str(result)}, " +
+                                            f"stderr={error_message}, " +
+                                            f"stdout={stdout.readlines()}")
+            elif result.status.failed:
+                raise ExecutorException(f"Wait failed: {str(result)}, " +
+                                        f"stderr={stdout.readlines()}, " +
+                                        f"stdout={stdout.readlines()}")
         return self.update_process(process).result
