@@ -68,7 +68,7 @@ class LsfExecutor(Executor):
     def executor(self) -> Executor:
         return self._executor
 
-    def _parse_submission_stdout(self, stdout: List[str]) -> str:
+    def extract_jobid_from_bsub(self, stdout: List[str]) -> str:
         if len(stdout) == 0:
             raise ExecutorException("No parsable output during job submission")
         # Sometimes job submission may be delayed, because the LSF cluster is overloaded.
@@ -117,7 +117,7 @@ class LsfExecutor(Executor):
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
             else:
-                cluster_job_id = ProcessId(self._parse_submission_stdout(stdout_lines))
+                cluster_job_id = ProcessId(self.extract_jobid_from_bsub(stdout_lines))
 
         logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
 

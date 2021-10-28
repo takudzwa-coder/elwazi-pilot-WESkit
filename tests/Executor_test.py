@@ -7,20 +7,23 @@
 #  Authors: The WESkit Team
 
 import asyncio
+import re
 import time
 import uuid
 from abc import abstractmethod, ABCMeta
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pathlib import PurePath
+from typing import Optional
 
 import pytest
 import yaml
 
+from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, RunStatus, ProcessId
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, Executor
 from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.classes.executor.SshExecutor import SshExecutor
-from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
+from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.memory_units import Memory, Unit
 
 with open("tests/remote.yaml", "r") as f:
@@ -58,6 +61,29 @@ executors = {
                                    pytest.mark.integration,
                                    pytest.mark.ssh_lsf])
 }
+
+
+def test_runstatus():
+    success_result = RunStatus(0)
+    assert not success_result.failed
+    assert success_result.finished
+    assert success_result.success
+    assert success_result.name is None
+    assert success_result.message is None
+
+    failed_result = RunStatus(1)
+    assert failed_result.failed
+    assert failed_result.finished
+    assert not failed_result.success
+
+    unfinished_result = RunStatus()
+    assert not unfinished_result.finished
+    assert not unfinished_result.success
+    assert not unfinished_result.failed
+
+    full_result = RunStatus(1, "name", "message")
+    assert full_result.name == "name"
+    assert full_result.message == "message"
 
 
 @pytest.mark.parametrize("executor", executors.values())
@@ -359,3 +385,74 @@ def test_update_process(executor):
 def test_kill_process(executor):
     # TODO Killing is not implemented yet.
     assert True
+
+
+def test_executor_context_manager():
+    class MockExecutor(Executor):
+
+        def __init__(self, target_runstatus):
+            self.update_process_called_with = None
+            self.get_status_called_with = None
+            self.wait_for_called_with = None
+            self._target_runstatus = target_runstatus
+
+        def get_status(self, process: ExecutedProcess) -> RunStatus:
+            self.get_status_called_with = process
+            return process.result.status
+
+        def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
+            return process
+
+        def kill(self, process: ExecutedProcess):
+            pass
+
+        def wait_for(self, process: ExecutedProcess) -> CommandResult:
+            self.wait_for_called_with = process
+            process.result.status = RunStatus(self._target_runstatus)
+            return process.result
+
+        def execute(self, command: ShellCommand,
+                    stdout_file: Optional[FileRepr] = None,
+                    stderr_file: Optional[FileRepr] = None,
+                    stdin_file: Optional[FileRepr] = None,
+                    settings: Optional[ExecutionSettings] = None,
+                    **kwargs) -> ExecutedProcess:
+            with open(stdout_file, "w") as f:
+                print("stdout", file=f)
+            with open(stderr_file, "w") as f:
+                print("stderr", file=f)
+            return ExecutedProcess(process_handle=None,
+                                   executor=self,
+                                   pre_result=CommandResult(command=command,
+                                                            id=ProcessId(12234),
+                                                            run_status=RunStatus(),
+                                                            stderr_file=stderr_file,
+                                                            stdout_file=stdout_file,
+                                                            stdin_file=stdin_file,
+                                                            start_time=datetime.now()))
+
+    command = ShellCommand(["echo", "something"])
+    executor = MockExecutor(target_runstatus=0)
+    with execute(executor, command) as (result, stdout, stderr):
+        assert executor.wait_for_called_with.id.value == 12234
+        assert result.status.code == 0
+        assert stderr.readlines() == ["stderr\n"]
+        assert stdout.readlines() == ["stdout\n"]
+        assert result.stdout_file == PurePath(stdout.name)
+        assert result.stderr_file == PurePath(stderr.name)
+        assert re.match(r"/tmp/\S+", stderr.name)
+        assert re.match(r"/tmp/\S+", stdout.name)
+
+
+def test_extract_job_stdout():
+    executor = LsfExecutor(executor=LocalExecutor())
+    bsub_output = ["Job <12345> is submitted to default queue <short>.\n"]
+    assert executor.extract_jobid_from_bsub(bsub_output) == "12345"
+
+    delayed_bsub_output = [
+        "don't remember exactly how this waiting line looks like",
+        "nor this",
+        "Job <54321> is submitted to default queue <short>.\n",
+        "and this line should not occur, right"
+    ]
+    assert executor.extract_jobid_from_bsub(delayed_bsub_output) == "54321"
