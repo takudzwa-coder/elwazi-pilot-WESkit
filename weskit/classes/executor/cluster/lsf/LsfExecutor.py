@@ -165,6 +165,8 @@ class LsfExecutor(Executor):
             return RunStatus(exit_code, status_name)
 
     def kill(self, process: ExecutedProcess):
+        # Not tested therefore
+        raise NotImplementedError("kill on LsfExecutor is not tested")
         kill_command = ShellCommand(self._command_set.kill(process.id.value))
         self._executor.wait_for(self._executor.execute(kill_command))
 
