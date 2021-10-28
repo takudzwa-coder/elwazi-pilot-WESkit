@@ -7,12 +7,13 @@
 #  Authors: The WESkit Team
 
 import asyncio
+import time
+import uuid
 from abc import abstractmethod, ABCMeta
 from datetime import timedelta
 from pathlib import PurePath
 
 import pytest
-import time
 import yaml
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -33,8 +34,8 @@ else:
 
 
 if remote_config is not None and "lsf_submission_host" in remote_config.keys():
-    ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']["ssh"])))
-    remote_workdir = remote_config['lsf_submission_host']["remote_workdir"]
+    ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']['ssh'])))
+    shared_workdir = remote_config['lsf_submission_host']["shared_workdir"]
 else:
     ssh_lsf_executor = None
 
@@ -182,21 +183,31 @@ class ExecuteProcessViaSsh(ExecuteProcess):
 
     @property
     @abstractmethod
-    def copy_to_local(self, remote, local):
+    def ssh_executor(self) -> SshExecutor:
         pass
 
+    def move_to_local(self, remote, local):
+        """
+        This removes the file on the remote side.
+        """
+        asyncio.get_event_loop().run_until_complete(
+            self.ssh_executor.get(remote, local))
+        asyncio.get_event_loop().run_until_complete(
+            self.ssh_executor.remote_rm(remote))
+
     def run_execute_test(self, temporary_dir):
-        # We don't create a remote directory. Use /tmp as it is guaranteed to be present and
-        # we don't have to care about cleanup.
-        stderr_file = self.workdir / "stderr"
-        stdout_file = self.workdir / "stdout"
+        prefix = uuid.uuid4()
+        stderr_file = self.workdir / f"{prefix}.stderr"
+        stdout_file = self.workdir / f"{prefix}.stdout"
 
         result = self.execute(stdout_file, stderr_file)
 
         local_temp = PurePath(temporary_dir)
-        self.copy_to_local(stdout_file, local_temp / "stdout")
+        self.move_to_local(stdout_file, local_temp / f"{prefix}.stdout")
+        self.move_to_local(stderr_file, local_temp / f"{prefix}.stderr")
 
-        self.check_execution_result(result, stdout_file, stderr_file, local_temp / "stdout")
+        self.check_execution_result(result, stdout_file, stderr_file,
+                                    local_temp / f"{prefix}.stdout")
 
 
 @pytest.mark.slow
@@ -209,16 +220,16 @@ class TestSubmitSshProcess(ExecuteProcessViaSsh):
         return ssh_executor
 
     @property
+    def ssh_executor(self) -> SshExecutor:
+        return ssh_executor
+
+    @property
     def remote(self) -> str:
         return self.executor.hostname
 
     @property
     def workdir(self) -> PurePath:
         return PurePath("/tmp")
-
-    def copy_to_local(self, remote, local):
-        asyncio.get_event_loop().run_until_complete(
-            self.executor.copy_from_remote(remote, local))
 
     def test_execute(self, temporary_dir):
         self.run_execute_test(temporary_dir)
@@ -234,16 +245,18 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
         return ssh_lsf_executor
 
     @property
+    def ssh_executor(self) -> SshExecutor:
+        return ssh_lsf_executor.executor
+
+    @property
     def remote(self) -> str:
         return self.executor.executor.hostname
 
     @property
     def workdir(self) -> PurePath:
-        return PurePath(remote_workdir)
-
-    def copy_to_local(self, remote, local):
-        asyncio.get_event_loop().run_until_complete(
-            self.executor.executor.copy_from_remote(remote, local))
+        # Note: For this test, the workdir needs to be accessibly from the submission/ssh host
+        #       and the compute nodes. Therefore, choose a location on a shared filesystem.
+        return PurePath(shared_workdir)
 
     def _assert_stdout(self, observed, expected):
         """
@@ -258,12 +271,10 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
         indexed = next(filter(lambda l: l[1] == "The output (if any) follows:\n",
                               zip(range(0, len(observed) - 1), observed)),
                        None)
-        print(indexed)
         if indexed is None:
             assert False, f"Invalid standard output: {observed}"
         fromIdx = indexed[0] + 2
         toIdx = len(observed) - 6
-        print(observed[fromIdx:toIdx])
         assert observed[fromIdx:toIdx] == expected, f"Could not validate stdout: {observed}"
 
     def test_execute(self, temporary_dir):
@@ -305,9 +316,21 @@ def test_get_status(executor):
     assert not result.status.failed
 
 
+# I didn't get the SshExecutor to succeed in this test (see comment below). As the usage-pattern
+# of the Executor does (currently) not rely on update_process() but only wait_for(), it's probably
+# acceptible to keep the SshExecutor out in this test.
 @pytest.mark.parametrize("executor", [executors["local"], executors["ssh_lsf"]])
 def test_update_process(executor):
-    command = ShellCommand(["sleep", "20" if isinstance(executor, LsfExecutor) else "2"],
+    if isinstance(executor, LocalExecutor):
+        sleep_duration = 1
+    elif isinstance(executor, SshExecutor):
+        sleep_duration = 5
+    elif isinstance(executor, LsfExecutor):
+        sleep_duration = 30
+    else:
+        sleep_duration = 10
+
+    command = ShellCommand(["sleep", str(sleep_duration)],
                            workdir=PurePath("/"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
@@ -320,10 +343,10 @@ def test_update_process(executor):
     assert not result.status.finished
     assert not result.status.success
     assert not result.status.failed
-    # The following test fails for the SSHExecutor, maybe because stream-flushing issues. If the
+    # The following test fails for the SshExecutor, maybe because of stream-flushing issues. If the
     # sleep is substituted by SshExecutor.wait_for() then in works.
     # executor.wait_for(process)
-    time.sleep(5)
+    time.sleep(2*sleep_duration)
     executor.update_process(process)
     result = process.result
     assert result.status.code == 0

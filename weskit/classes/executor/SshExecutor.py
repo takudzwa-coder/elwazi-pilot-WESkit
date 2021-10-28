@@ -122,11 +122,14 @@ class SshExecutor(Executor):
         except asyncio.TimeoutError as e:
             raise ExecutorException("Connection error (timeout)", e)
 
-    async def copy_to_remote(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
+    async def put(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
         await asyncssh.scp(srcpaths=srcpath, dstpath=(self._connection, dstpath), **kwargs)
 
-    async def copy_from_remote(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
+    async def get(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
         await asyncssh.scp(srcpaths=(self._connection, srcpath), dstpath=dstpath, **kwargs)
+
+    async def remote_rm(self, path: PathLike):
+        await self._connection.run(f"rm {shlex.quote(str(path))}")
 
     def _process_directory(self, process_id: uuid.UUID) -> PurePath:
         return PurePath("/tmp/weskit/ssh") / str(self._executor_id) / str(process_id)  # nosec: B108
