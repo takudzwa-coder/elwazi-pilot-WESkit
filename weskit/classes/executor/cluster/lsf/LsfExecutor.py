@@ -7,21 +7,18 @@
 #  Authors: The WESkit Team
 import logging
 import re
+from contextlib import contextmanager
 from datetime import datetime
+from io import IOBase
 from os import PathLike
 from pathlib import PurePath
 from tempfile import NamedTemporaryFile
 from typing import Optional, List
 
-from io import IOBase
-
-from contextlib import contextmanager
-
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, ExecutedProcess, RunStatus, CommandResult, ProcessId
+    Executor, ExecutedProcess, RunStatus, CommandResult, ProcessId, ExecutionSettings
 from weskit.classes.executor.ExecutorException import ExecutorException
-from weskit.classes.executor.cluster.ExecutionSettings import ClusterExecutionSettings
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
 
 logger = logging.getLogger(__name__)
@@ -87,7 +84,7 @@ class LsfExecutor(Executor):
                 stdout_file: Optional[PathLike] = None,
                 stderr_file: Optional[PathLike] = None,
                 stdin_file: Optional[PathLike] = None,
-                settings: Optional[ClusterExecutionSettings] = None) -> ExecutedProcess:
+                settings: Optional[ExecutionSettings] = None) -> ExecutedProcess:
         """
         stdout, stderr, and stdin files are *remote files on the cluster nodes*.
 
@@ -157,7 +154,8 @@ class LsfExecutor(Executor):
             job_id, status_name, reported_exit_code = \
                 match_lines[0][1], match_lines[0][2], match_lines[0][3]
             if job_id != str(process.id.value):
-                raise ExecutorException(f"Error in bjobs output for {process.result.id}: " +
+                raise ExecutorException("Job ID in parsed bjobs didn't match " +
+                                        f"{process.result.id}: " +
                                         f"{str(status_command)}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
