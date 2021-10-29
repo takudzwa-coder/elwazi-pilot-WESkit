@@ -12,12 +12,14 @@ import time
 import uuid
 from abc import abstractmethod, ABCMeta
 from datetime import timedelta, datetime
+from os import PathLike
 from pathlib import PurePath
 from typing import Optional
 
 import pytest
 import yaml
 
+from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, RunStatus, ProcessId
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, Executor
@@ -444,7 +446,7 @@ def test_executor_context_manager():
         assert re.match(r"/tmp/\S+", stdout.name)
 
 
-def test_extract_job_stdout():
+def test_lsf_extract_jobid():
     executor = LsfExecutor(executor=LocalExecutor())
     bsub_output = ["Job <12345> is submitted to default queue <short>.\n"]
     assert executor.extract_jobid_from_bsub(bsub_output) == "12345"
@@ -456,3 +458,96 @@ def test_extract_job_stdout():
         "and this line should not occur, right"
     ]
     assert executor.extract_jobid_from_bsub(delayed_bsub_output) == "54321"
+
+
+class TestLsfGetStatus:
+
+    def make_process(self, cluster_job_id, bjobs_stdout, bjobs_stderr):
+
+        class MockInnerExecutor(Executor):
+            """
+            This should emulate a successful bjobs execution producing the specified output.
+            """
+
+            def execute(self, command: ShellCommand, stdout_file: Optional[FileRepr] = None,
+                        stderr_file: Optional[FileRepr] =
+                        None, stdin_file: Optional[FileRepr] = None,
+                        settings: Optional[ExecutionSettings] = None, **kwargs) -> ExecutedProcess:
+                assert isinstance(stdout_file, PathLike)
+                with open(stdout_file, "w") as f:
+                    f.writelines(bjobs_stdout)
+                    f.flush()
+                assert isinstance(stderr_file, PathLike)
+                with open(stderr_file, "w") as f:
+                    f.writelines(bjobs_stderr)
+                    f.flush()
+                return ExecutedProcess(self, None,
+                                       CommandResult(command, ProcessId(5432),
+                                                     stdout_file, stderr_file, stdin_file,
+                                                     RunStatus(None),
+                                                     start_time=datetime.now()))
+
+            def get_status(self, process: ExecutedProcess) -> RunStatus:
+                return RunStatus(0)
+
+            def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
+                process.result.status = self.get_status(process)
+                process.result.end_time = datetime.now()
+                return process
+
+            def kill(self, process: ExecutedProcess):
+                pass
+
+            def wait_for(self, process: ExecutedProcess) -> CommandResult:
+                self.update_process(process)
+                return process.result
+
+        executor = LsfExecutor(MockInnerExecutor())
+        process = ExecutedProcess(executor=executor,
+                                  process_handle=None,
+                                  pre_result=CommandResult(ShellCommand([]),
+                                                           id=ProcessId(cluster_job_id),
+                                                           run_status=RunStatus(),
+                                                           stdin_file=None,
+                                                           stdout_file=None,
+                                                           stderr_file=None,
+                                                           start_time=datetime.now()))
+        return executor, process
+
+    def run_test(self, *args, **kwargs):
+        executor, process = self.make_process(*args, **kwargs)
+        return executor.get_status(process)
+
+    def test_job_success(self):
+        status = self.run_test("6789", ["6789 DONE -\n"], [])
+        assert status.code == 0
+        assert status.name == "DONE"
+
+    def test_job_failed(self):
+        status = self.run_test("6789", ["6789 EXIT 1"], [])
+        assert status.code == 1
+        assert status.name == "EXIT"
+
+    def test_job_running(self):
+        status = self.run_test("6789", ["6789 SOMESTATE -"], [])
+        assert status.code is None
+        assert status.name == "SOMESTATE"
+        assert not status.finished
+
+    def test_job_state_query_delayed(self):
+        status = self.run_test("123", ["bli bla blu\n",
+                                       "ignore me\n",
+                                       "123 TheRealStatus -\n",
+                                       "another line to ignore\n"], [])
+        assert status.code is None
+        assert not status.finished
+        assert status.name == "TheRealStatus"
+
+    def test_job_state_multiple_match_error(self):
+        with pytest.raises(ExecutorException) as e:
+            self.run_test("123", ["bli bla blu\n",
+                                  "ignore me\n",
+                                  "123 TheRealStatus -\n",
+                                  "another line to ignore\n",
+                                  "123 DoneAnyway;-P 1"], [])
+        assert bool(re.match(r".+No unique match of status.+", str(e)))

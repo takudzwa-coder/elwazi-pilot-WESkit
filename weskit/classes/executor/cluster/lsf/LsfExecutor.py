@@ -139,16 +139,26 @@ class LsfExecutor(Executor):
         with execute(self._executor, status_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
-            if result.status.failed or len(stdout_lines) != 1:
-                raise ExecutorException(f"Failure status request: {str(result)}, " +
+
+            # bjobs may produce multiple lines output, if it has to wait for the LSF server
+            # to answer. We assume that we are only interested in those lines matching the
+            # regular expression
+            match_lines = list(filter(lambda m: bool(m),
+                                      map(lambda line: re.match(r"(\d+)\s+(\S+)\s+(-|\d+)",
+                                                                line.rstrip()),
+                                          stdout_lines)))
+            if len(match_lines) != 1:
+                raise ExecutorException(f"No unique match of status for {process.result.id}: " +
+                                        f"{str(result)}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
 
             # Now get the information about the job executed on the cluster.
             job_id, status_name, reported_exit_code = \
-                re.split(r"\s+", stdout_lines[0].rstrip())
+                match_lines[0][1], match_lines[0][2], match_lines[0][3]
             if job_id != str(process.id.value):
-                raise ExecutorException(f"Error in bjobs output of {str(status_command)}, " +
+                raise ExecutorException(f"Error in bjobs output for {process.result.id}: " +
+                                        f"{str(status_command)}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
 
