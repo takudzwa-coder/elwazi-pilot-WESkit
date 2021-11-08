@@ -11,6 +11,7 @@ from functools import wraps
 from typing import Callable, Optional
 
 import requests
+import json
 from flask import current_app
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended.view_decorators import _decode_jwt_from_headers
@@ -76,8 +77,13 @@ def online_validation(app) -> bool:
         logger.exception("Could not reach OIDC provider for online validation")
         logger.exception(e)
         return False
+    if j.get('active', False):
+        return true
+    else:
+        logger.info("User validation at %s failed.".format(app.oidc_login.introspection_endpoint))
+        logger.info(json.dumps(j))
 
-    return j.get('active', False)
+
 
 
 def get_token(token_type: str = "access") -> Optional[str]:   # nosec B107, token_type no problem
