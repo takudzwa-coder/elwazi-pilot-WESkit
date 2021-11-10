@@ -42,7 +42,7 @@ def run_request_validator(request_validation, service_info):
 def request(**kwargs):
     default = {
         "workflow_params": {},
-        "workflow_type": "snakemake",
+        "workflow_type": "SMK",
         "workflow_type_version": "5.8.2",
         "workflow_url": "file:tests/wf/Snakefile"
     }
@@ -78,6 +78,9 @@ def test_validate_structure(run_request_validator):
     assert run_request_validator.validate(request_wo_url) == \
            [{'workflow_url': ['required field']}]
 
+    request_with_trs = request(workflow_url="trs://some-server/ga4gh/trs/v2/wfid/wfvers/wftype")
+    assert run_request_validator.validate(request_with_trs) == []
+
 
 def test_validate_run_dir_tag(run_request_validator_rundir):
     assert run_request_validator_rundir.validate(request(tags={
@@ -90,15 +93,15 @@ def test_validate_run_dir_tag(run_request_validator_rundir):
 
 
 def test_workflow_type(run_request_validator):
-    assert run_request_validator.validate(request(workflow_type="snakemake",
+    assert run_request_validator.validate(request(workflow_type="SMK",
                                                   workflow_type_version="5.8.2")) == \
         []
-    assert run_request_validator.validate(request(workflow_type="nextflow",
+    assert run_request_validator.validate(request(workflow_type="NFL",
                                                   workflow_type_version="20.10.0")) == \
         []
     assert run_request_validator.validate(request(workflow_type="blabla")) == \
-        ["Unknown workflow_type 'blabla'. Know nextflow, snakemake"]
-    assert run_request_validator.validate(request(workflow_type="nextflow",
+        ["Unknown workflow_type 'blabla'. Know NFL, SMK"]
+    assert run_request_validator.validate(request(workflow_type="NFL",
                                                   workflow_type_version="blabla")) == \
         ["Unknown workflow_type_version 'blabla'. Know 20.10.0"]
 

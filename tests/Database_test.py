@@ -17,7 +17,7 @@ from test_utils import get_mock_run
 @pytest.mark.integration
 def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
-                        workflow_type="snakemake",
+                        workflow_type="SMK",
                         workflow_type_version="5.8.2")
     assert test_database.insert_run(run1)
     run2 = test_database.get_run(run1.id)
@@ -29,7 +29,7 @@ def test_insert_and_load_run(test_database):
 @pytest.mark.integration
 def test_update_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
-                       workflow_type="snakemake",
+                       workflow_type="SMK",
                        workflow_type_version="5.8.2")
     assert test_database.insert_run(run)
     new_run = copy.copy(run)
@@ -57,7 +57,7 @@ def test_count_states(test_database):
 @pytest.mark.integration
 def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
-                       workflow_type="snakemake",
+                       workflow_type="SMK",
                        workflow_type_version="5.8.2")
     assert test_database.insert_run(run)
     assert test_database.delete_run(run)

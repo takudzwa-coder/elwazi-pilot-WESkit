@@ -90,7 +90,7 @@ class Snakemake(WorkflowEngine):
 
     @staticmethod
     def name():
-        return "snakemake"
+        return "SMK"
 
     def command(self,
                 workflow_path: str,
@@ -116,7 +116,7 @@ class Nextflow(WorkflowEngine):
 
     @staticmethod
     def name():
-        return "nextflow"
+        return "NFL"
 
     def _run_command_params(self) -> List[str]:
         """

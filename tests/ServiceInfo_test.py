@@ -68,8 +68,8 @@ def test_version(service_info):
 
 def test_get_workflow_type_versions(service_info):
     assert service_info.workflow_type_versions() == {
-        "snakemake": {"workflow_type_version": ["5.8.2"]},
-        "nextflow": {"workflow_type_version": ["20.10.0"]}
+        "SMK": {"workflow_type_version": ["5.8.2"]},
+        "NFL": {"workflow_type_version": ["20.10.0"]}
     }
 
 
@@ -83,15 +83,15 @@ def test_get_supported_filesystem_protocols(service_info):
 
 def test_get_workflow_engine_versions(service_info):
     assert service_info.workflow_engine_versions() == {
-        "snakemake": ["5.8.2"],
-        "nextflow": ["20.10.0"]
+        "SMK": ["5.8.2"],
+        "NFL": ["20.10.0"]
     }
 
 
 def test_get_default_workflow_engine_parameters(service_info):
     default = service_info.default_workflow_engine_parameters()
     TestCase().assertDictEqual(default, {
-        "snakemake": {
+        "SMK": {
             "5.8.2": [
                 {
                     "name": "SOME_VAR",
@@ -105,7 +105,7 @@ def test_get_default_workflow_engine_parameters(service_info):
                 }
             ]
         },
-        "nextflow": {
+        "NFL": {
             "20.10.0": [
                 {
                     "name": "NXF_OPTS",
