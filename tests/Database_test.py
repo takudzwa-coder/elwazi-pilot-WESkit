@@ -18,7 +18,7 @@ from test_utils import get_mock_run
 def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
                         workflow_type="SMK",
-                        workflow_type_version="5.8.2")
+                        workflow_type_version="6.10.0")
     assert test_database.insert_run(run1)
     run2 = test_database.get_run(run1.id)
     assert run1 == run2
@@ -30,7 +30,7 @@ def test_insert_and_load_run(test_database):
 def test_update_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2")
+                       workflow_type_version="6.10.0")
     assert test_database.insert_run(run)
     new_run = copy.copy(run)
     new_run.status = RunStatus.RUNNING
@@ -58,7 +58,7 @@ def test_count_states(test_database):
 def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2")
+                       workflow_type_version="6.10.0")
     assert test_database.insert_run(run)
     assert test_database.delete_run(run)
     find_run = test_database.get_run(run.id)

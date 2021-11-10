@@ -43,7 +43,7 @@ def request(**kwargs):
     default = {
         "workflow_params": {},
         "workflow_type": "SMK",
-        "workflow_type_version": "5.8.2",
+        "workflow_type_version": "6.10.0",
         "workflow_url": "file:tests/wf/Snakefile"
     }
     return {**default, **kwargs}
@@ -94,16 +94,16 @@ def test_validate_run_dir_tag(run_request_validator_rundir):
 
 def test_workflow_type(run_request_validator):
     assert run_request_validator.validate(request(workflow_type="SMK",
-                                                  workflow_type_version="5.8.2")) == \
+                                                  workflow_type_version="6.10.0")) == \
         []
     assert run_request_validator.validate(request(workflow_type="NFL",
-                                                  workflow_type_version="20.10.0")) == \
+                                                  workflow_type_version="21.04.0")) == \
         []
     assert run_request_validator.validate(request(workflow_type="blabla")) == \
         ["Unknown workflow_type 'blabla'. Know NFL, SMK"]
     assert run_request_validator.validate(request(workflow_type="NFL",
                                                   workflow_type_version="blabla")) == \
-        ["Unknown workflow_type_version 'blabla'. Know 20.10.0"]
+        ["Unknown workflow_type_version 'blabla'. Know 21.04.0"]
 
 
 def test_workflow_type_version(run_request_validator):

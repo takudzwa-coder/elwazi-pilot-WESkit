@@ -26,7 +26,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     # 1.) use workflow on server
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2")
+                       workflow_type_version="6.10.0")
     run = manager.prepare_execution(run, files=[])
     assert run.status == RunStatus.INITIALIZING
 
@@ -34,7 +34,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     #     -> error message outputs execution
     run = get_mock_run(workflow_url="tests/wf1/Filesnake",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2")
+                       workflow_type_version="6.10.0")
     try:
         manager.prepare_execution(run, files=[])
     except ClientError as e:
@@ -50,7 +50,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
         files = ImmutableMultiDict({"workflow_attachment": [wf_file]})
         run = get_mock_run(workflow_url=wf_url,
                            workflow_type="SMK",
-                           workflow_type_version="5.8.2")
+                           workflow_type_version="6.10.0")
         run = manager.prepare_execution(run, files)
     assert run.status == RunStatus.INITIALIZING
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, wf_url))
@@ -58,7 +58,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     # 4.) set custom workdir
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2",
+                       workflow_type_version="6.10.0",
                        tags={"run_dir": "sample1/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
     assert run.status == RunStatus.INITIALIZING
@@ -70,7 +70,7 @@ def test_execute_snakemake(manager,
                            celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2")
+                       workflow_type_version="6.10.0")
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
     start_time = time.time()
@@ -106,7 +106,7 @@ def test_execute_snakemake(manager,
 def test_execute_snakemake_conda_para(manager_conda_para, celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf4/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2"
+                       workflow_type_version="6.10.0"
                        )
     run = manager_conda_para.prepare_execution(run, files=[])
     run = manager_conda_para.execute(run)
@@ -143,7 +143,7 @@ def test_execute_nextflow(manager,
                           celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
                        workflow_type="NFL",
-                       workflow_type_version="20.10.0")
+                       workflow_type_version="21.04.0")
     run = manager.prepare_execution(run, files=[])
     manager.execute(run)
     start_time = time.time()
@@ -204,7 +204,7 @@ def test_update_all_runs(manager,
                          celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="5.8.2")
+                       workflow_type_version="6.10.0")
     manager.database.insert_run(run)
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)

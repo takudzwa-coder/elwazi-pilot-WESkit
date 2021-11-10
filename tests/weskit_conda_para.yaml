@@ -85,14 +85,14 @@ static_service_info:
     # respectively. Only these identifiers (Workflow.name) can be used here.
     # These are also the versions-strings that WESkit accepts via its REST-API.
     workflow_engine_versions:
-        SMK: "5.8.2"
-        NFL: "20.10.0"
+        SMK: "6.10.0"
+        NFL: "21.04.0"
 
     # The first two levels of keys are the workflow_type and the workflow_type_version.
     # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
     default_workflow_engine_parameters:
       NFL:
-        "20.10.0":
+        "21.04.0":
           # Environment variables for the workflow manager execution.
           - name: "NXF_OPTS"
             value: "-Xmx256m"
@@ -113,7 +113,7 @@ static_service_info:
             tags: ["run-parameter"]
 
       SMK:
-        "5.8.2":
+        "6.10.0":
           # Environment variables for the workflow manager execution.
           - name: "SOME_VAR"
             value: "with value"
@@ -132,10 +132,10 @@ static_service_info:
     workflow_type_versions:
       SMK:
         workflow_type_version:
-          - "5.8.2"
+          - "6.10.0"
       NFL:
         workflow_type_version:
-          - "20.10.0"
+          - "21.04.0"
 
     # A web page URL with human-readable instructions on how to get an authorization token for use
     # with a specific WES endpoint.

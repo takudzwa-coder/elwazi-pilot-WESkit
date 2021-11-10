@@ -85,14 +85,14 @@ static_service_info:
     # respectively. Only these identifiers (Workflow.name) can be used here.
     # These are also the versions-strings that WESkit accepts via its REST-API.
     workflow_engine_versions:
-        SMK: "5.8.2"
-        NFL: "20.10.0"
+        SMK: "6.10.0"
+        NFL: "21.04.0"
 
   # The first two levels of keys are the workflow_type and the workflow_type_version.
   # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
     default_workflow_engine_parameters:
       NFL:
-        "20.10.0": []
+        "21.04.0": []
           # Environment variables for the workflow manager execution.
 
           # Single-dash parameters before the target. See `nextflow help`.
@@ -103,7 +103,7 @@ static_service_info:
 
 
       SMK:
-        "5.8.2":
+        "6.10.0":
           # Environment variables for the workflow manager execution.
 
           # Parameters to be used before the target. See `snakemake --help`.
