@@ -222,9 +222,11 @@ class Manager:
             workflow_info = WorkflowInfo.from_uri_string(url)
 
             workflow_meta: WorkflowMetadata = installer.install(workflow_info)
-            workflow_path_rel = os.path.join(
-                os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
-                workflow_meta.primary_file)
+            workflow_path_rel = os.path.relpath(
+                os.path.join(self.workflows_base_dir,
+                             workflow_meta.workflow_dir,
+                             workflow_meta.primary_file),
+                os.path.join(self.data_dir, run_dir))
 
         else:
             raise ClientError(f"Unknown scheme in workflow_url: '{url}'")

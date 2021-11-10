@@ -5,6 +5,7 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+import os.path
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,21 +17,47 @@ from trs_cli.models import FileType
 
 from weskit.ClientError import ClientError
 
+# Map the TRS types to WES workflow_types.
+trs_type_to_workflow_type = {
+    "SMK": "SMK",
+    "NFL": "NFL",
+    "PLAIN_SMK": "SMK",
+    "PLAIN_NFL": "NFL"
+}
+
 T = TypeVar('T', bound='WorkflowInfo')
 
 
 @dataclass
 class WorkflowInfo:
+    """
+    Use factory method `WorkflowInfo.from_uri_string(uri)`
+
+    name, version, type are the values extracted from the trs:// URI.
+    workflow_type is the workflow type identifier as used by WES.
+    primary_file is the relative path to the primary workflow file (main.nf, etc.) extracted from
+    the URI.
+    """
     name: str
     version: str
     type: str
+    primary_file: Path
+    workflow_type: str
 
     @staticmethod
     def from_uri_string(uri: str, base_path: str = "ga4gh/trs/v2") -> T:
         """
-        Take a TRS URI of the form trs://<server>:<port>/<base_path>/<id>/<version>/<type> and
-        extract the individual components. This information uniquely identifies the workflow to be
-        downloaded ind installed.
+        Take a TRS URI of the form
+
+        trs://<server>:<port>/<base_path>/<id>/<version>/<type>/<primary_rel_path>
+
+        and extract the individual components. This information uniquely identifies the workflow
+        to be downloaded ind installed and essentially is mapped by the TRS to an HTTP request
+
+        http://<server>:<port>/<base_path>/tools/<id>/versions/<version>/<type>/<primary_rel_path>
+
+        The primary_rel_path is the path to the primary workflow file that will be used to execute
+        the workflow. This may be, e.g. "main.nf" or "Snakefile".
         """
         parsed_uri = urlparse(uri)
         if parsed_uri.scheme != "trs":
@@ -41,24 +68,55 @@ class WorkflowInfo:
         if len(rest) != 3:
             raise ClientError("Invalid TRS URI. Remaining path components should be " +
                               f"id/version/type: '{uri}'")
-        name, version, type = rest
+        name, version, type, primary = rest
 
         # TRS-cli currently only supports non-plain types. Unfortunately, workflows may contain
         # binary data (FASTQs), which cannot be put directly into JSON responses from the TRS. This
         # means, for now we will only support workflows that contain only text files.
-        if type not in ["SMK", "NXF"]:
-            raise ClientError("Only 'SMK' and 'NFL' TRS workflow types are supported")
+        if type not in trs_type_to_workflow_type.keys():
+            raise ClientError(f"Unsupported workflow type '{type}'. Should be one of " +
+                              ", ".join(trs_type_to_workflow_type.keys()))
 
-        return WorkflowInfo(name, version, type)
+        return WorkflowInfo(name, version, type, Path(*primary),
+                            workflow_type=trs_type_to_workflow_type[type])
 
 
-@dataclass
 class WorkflowMetadata:
     """
     All information necessary to execute the workflow.
     """
-    workflow_base: Path            # path to the workflow installation base directory
-    primary_file: Path             # Absolute path to Snakefile, main.nf, etc.
+
+    def __init__(self, workflow_dir: Path, workflow_info: WorkflowInfo):
+        """
+        :param workflow_dir: Path to the workflow directory relative to the workflow base dir.
+        :param workflow_info: WorkflowInfo object.
+        """
+        self._workflow_dir = workflow_dir
+        self._workflow_info = workflow_info
+
+    @property
+    def workflow_dir(self):
+        return self._workflow_dir
+
+    @property
+    def primary_file(self):
+        return self._workflow_info.primary_file
+
+    @property
+    def name(self):
+        return self._workflow_info.name
+
+    @property
+    def version(self):
+        return self._workflow_info.version
+
+    @property
+    def trs_type(self):
+        return self._workflow_info.type
+
+    @property
+    def wes_workflow_type(self):
+        return self._workflow_info.workflow_type
 
 
 class WorkflowInstallationStrategy(metaclass=ABCMeta):
@@ -74,7 +132,7 @@ class WorkflowInstallationStrategy(metaclass=ABCMeta):
         return self._workflow_base_dir / \
                workflow_info.name / \
                workflow_info.version / \
-               workflow_info.type
+               workflow_info.workflow_type
 
     def workflow_is_installed(self, workflow_info: WorkflowInfo) -> bool:
         # TODO This does not tell anything about whether a workflow installation is currently
@@ -120,29 +178,37 @@ class TrsWorkflowInstaller(WorkflowInstallationStrategy):
         super(self).__init__(workflow_base_dir)
         self._trs_client = trs_client
 
-    def _create_workflow_directory(self, workflow_info: WorkflowInfo):
+    def _create_workflow_directory(self, workflow_info: WorkflowInfo) -> Path:
         # TODO This will raise an error, if e.g. two workflow installations run in parallel, but
         #      at least thus it will prevent installation over an existing installation and
-        #      corruption.
-        self.get_workflow_directory(workflow_info).mkdir(exist_ok=False)
+        #      the resulting corruption.
+        workflow_dir = self.get_workflow_directory(workflow_info)
+        workflow_dir.mkdir(exist_ok=False)
+        return workflow_dir
 
     def _install_workflow(self, workflow_info: WorkflowInfo):
-        self._create_workflow_directory(workflow_info)
+        workflow_dir = self._create_workflow_directory(workflow_info)
         files_by_type = self._trs_client.retrieve_files(
-            out_dir=self.get_workflow_directory(workflow_info),
+            out_dir=workflow_dir,
             type=workflow_info.type,
             id=workflow_info.name,
             version_id=workflow_info.version,
             is_encoded=False)   # TODO What should be here?
+
         if FileType.PRIMARY_DESCRIPTOR.value in files_by_type.keys():
             # TODO Check whether TRS allows e.g. Conda envs for the Snakemake process, or whatever
-            #      to define e.g. the workflow manager version. For, new the primary file is
+            #      to define e.g. the workflow manager version. For now the primary file is
             #      sufficient.
             primary_files = files_by_type[FileType.PRIMARY_DESCRIPTOR.value]
             if len(primary_files) != 1:
                 raise NotImplementedError(
                     "Cannot process workflows with more than one primary file yet")
-            return WorkflowMetadata(primary_file=Path(primary_files[0]))
+
+            primary_file_abs = workflow_dir / primary_files[0]
+            if not os.path.exists(primary_file_abs):
+                # Installation time check, that the primary file really was downloaded.
+                raise RuntimeError(f"Primary workflow file does not exist: '{primary_file_abs}")
+
         elif FileType.CONTAINERFILE in files_by_type.keys():
             # TODO Pull the containers as singularity container into the workflow directory.
             # TODO How is the workflow actually started, if a container is pulled?
@@ -157,10 +223,10 @@ class TrsWorkflowInstaller(WorkflowInstallationStrategy):
         """
         if not self.workflow_is_installed(workflow_info):
             self._install_workflow(workflow_info)
-        relative_path_to_primary = \
-            self.get_workflow_directory().relative_to(self._workflow_base_dir)
-        return WorkflowMetadata(workflow_base=self._workflow_base_dir,
-                                primary_file=relative_path_to_primary)
+
+        workflow_dir_rel = self.get_workflow_directory().relative_to(self._workflow_base_dir)
+        return WorkflowMetadata(workflow_dir=workflow_dir_rel,
+                                workflow_info=workflow_info)
 
 # TODO Tool aliases (check that the given URI is not just the same workflow but requested as alias
 # TODO Maybe, run the tests for the tool after installation
