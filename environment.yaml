@@ -30,8 +30,10 @@ dependencies:
   - procps-ng=3.3.17             # for nextflow default_workflow_engine_parameters test
   - bandit=1.7.0
   - asyncssh=2.7.2
+  - singularity=3.7.1
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1
      - rfc3339==6.2
+     - trs-cli=0.5.0
 

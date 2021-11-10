@@ -8,22 +8,23 @@
 
 import logging
 import os
+from typing import Optional, List
 from urllib.parse import urlparse
 
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
+from werkzeug.utils import secure_filename
 
+from weskit.classes.WorkflowInstallationStrategy\
+    import TrsWorkflowInstaller, WorkflowInfo, WorkflowMetadata
 from weskit.ClientError import ClientError
-from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ShellCommand import ShellCommand
 from weskit.tasks.CommandTask import run_command
-from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
-from typing import Optional, List
-
 
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
@@ -182,8 +183,11 @@ class Manager:
                                attachment_filenames: List[str]) \
             -> str:
         """
-        Compose the path to the workflow from a relative "file:" URI or by (cached) downloading
-        an "https://" URI. After the function call the workflow file is present in the work_dir.
+        After the call either the workflow is accessible via the returned path relative to the
+        run directory (could go outside the WESKIT_DATA base directory, e.g. for centrally
+        installed workflows, or an exception is raised.
+
+        The call may install the workflow. TODO This may block. Make workflow installation async.
 
         Attached files are extracted to the run directory. (TODO Caching?)
 
@@ -191,31 +195,45 @@ class Manager:
         * Relative input file://-paths are interpreted relative the run's work-dir, both, if they
           are found in the attachment and if they refer to a path in the system-wide
           workflows_base_dir.
+        * Absolute trs://-URIs
 
-        https://- and s3://- paths are not yet implemented.
         """
         workflow_url = urlparse(url)
-        workflow_path_rel = None
         if workflow_url.scheme in ["file", '']:
             if os.path.isabs(workflow_url.path):
                 raise ClientError("Absolute workflow_url forbidden " +
                                   "(should be validated already): '%s'" % url)
             elif workflow_url.path in attachment_filenames:
-                # File has already been extracted to work-dir. The command is executed in the
+                # File should already be extracted to work-dir. The command is executed in the
                 # work-dir as the current work-dir, so we take it as it is.
                 workflow_path_rel = secure_filename(workflow_url.path)
+
             else:
+                # The file refers to an already installed workflow.
                 workflow_path_rel = os.path.join(
                     os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
                     workflow_url.path)
+
         elif workflow_url.scheme == "https":
-            # TODO Download the workflow with git clone. Use caching.
-            # TODO Copy to run directory?
             raise ClientError("https:// workflow_url is not implemented")
 
+        elif workflow_url.scheme == "trs":
+            installer = TrsWorkflowInstaller(self.workflows_base_dir)
+            workflow_info = WorkflowInfo.from_uri_string(url)
+
+            workflow_meta: WorkflowMetadata = installer.install(workflow_info)
+            workflow_path_rel = os.path.join(
+                os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
+                workflow_meta.primary_file)
+
+        else:
+            raise ClientError(f"Unknown scheme in workflow_url: '{url}'")
+
+        # workflow_path_rel is always relative to the run_dir, even when referring to a centrally
+        # installed workflow.
         workflow_path_abs = os.path.join(self.data_dir, run_dir, workflow_path_rel)
         if not os.path.exists(workflow_path_abs):
-            raise ClientError("Derived workflow path is not accessible: '%s'" % (workflow_path_abs))
+            raise ClientError("Derived workflow path is not accessible: '%s'" % workflow_path_abs)
 
         return workflow_path_rel
 
