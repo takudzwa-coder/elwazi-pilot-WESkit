@@ -14,9 +14,10 @@ from urllib.parse import urlparse
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
+from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
-from weskit.classes.WorkflowInstallationStrategy\
+from weskit.classes.WorkflowInstallation.WorkflowInstallationStrategy \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowMetadata
 from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
@@ -166,12 +167,13 @@ class Manager:
             return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
-    def _process_workflow_attachment(self, run, files):
+    def _process_workflow_attachment(self, run, files: "ImmutableMultiDict[str, FileStorage]"):
         attachment_filenames = []
         if "workflow_attachment" in files:
             workflow_attachment_files = files.getlist("workflow_attachment")
             for attachment in workflow_attachment_files:
                 filename = secure_filename(attachment.filename)
+                logger.error(f"Staging '{filename}'")
                 # TODO could implement checks here
                 attachment_filenames.append(filename)
                 attachment.save(os.path.join(self.data_dir, run.dir, filename))
@@ -180,7 +182,7 @@ class Manager:
     def _prepare_workflow_path(self,
                                run_dir: str,
                                url: str,
-                               attachment_filenames: List[str]) \
+                               attachment_filenames:  List[str]) \
             -> str:
         """
         After the call either the workflow is accessible via the returned path relative to the
@@ -239,7 +241,10 @@ class Manager:
 
         return workflow_path_rel
 
-    def prepare_execution(self, run, files=[]):
+    def prepare_execution(self, run,
+                          files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None):
+        if files is None:
+            files = []
 
         if not run.status == RunStatus.INITIALIZING:
             return run

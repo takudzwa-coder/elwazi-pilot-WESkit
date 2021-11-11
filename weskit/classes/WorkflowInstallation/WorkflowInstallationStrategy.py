@@ -169,6 +169,13 @@ class ManualWorkflowInstallation(WorkflowInstallationStrategy):
             raise RuntimeError(f"Workflow is not installed: '{workflow_info}")
 
 
+class AttachedWorkflowInstaller(WorkflowInstallationStrategy):
+    """
+    Unpack the workflow from the file attached to the WES runs POST request.
+    """
+    pass
+
+
 class TrsWorkflowInstaller(WorkflowInstallationStrategy):
     """
     Retrieve the workflow from a trusted tool repository service (TRS).
