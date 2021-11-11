@@ -82,6 +82,7 @@ def online_validation(app) -> bool:
     else:
         logger.info("User validation at {} failed.".format(app.oidc_login.introspection_endpoint))
         logger.info(json.dumps(j))
+        logger.info(access_token)
         return False
 
 
