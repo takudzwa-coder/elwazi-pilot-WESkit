@@ -31,6 +31,7 @@ dependencies:
   - bandit=1.7.0
   - asyncssh=2.7.2
   - singularity=3.7.1
+  - flufl.lock=6.0
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1
