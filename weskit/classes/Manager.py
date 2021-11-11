@@ -8,16 +8,18 @@
 
 import logging
 import os
+from pathlib import Path
 from typing import Optional, List
 from urllib.parse import urlparse
 
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
+from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
-from weskit.classes.WorkflowInstallation.WorkflowInstallationStrategy \
+from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowMetadata
 from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
@@ -189,9 +191,9 @@ class Manager:
         run directory (could go outside the WESKIT_DATA base directory, e.g. for centrally
         installed workflows, or an exception is raised.
 
-        The call may install the workflow. TODO This may block. Make workflow installation async.
+        The call may install the workflow. TODO This may block. Make workflow installation async?
 
-        Attached files are extracted to the run directory. (TODO Caching?)
+        Attached files are extracted to the run directory.
 
         * Absolute input file://-paths are forbidden (raises ValueError).
         * Relative input file://-paths are interpreted relative the run's work-dir, both, if they
@@ -202,6 +204,7 @@ class Manager:
         """
         workflow_url = urlparse(url)
         if workflow_url.scheme in ["file", '']:
+            # TODO Should we enforce the name/version/type structure also for manual workflows?
             if os.path.isabs(workflow_url.path):
                 raise ClientError("Absolute workflow_url forbidden " +
                                   "(should be validated already): '%s'" % url)
@@ -220,10 +223,14 @@ class Manager:
             raise ClientError("https:// workflow_url is not implemented")
 
         elif workflow_url.scheme == "trs":
-            installer = TrsWorkflowInstaller(self.workflows_base_dir)
             workflow_info = WorkflowInfo.from_uri_string(url)
+            installer = TrsWorkflowInstaller(
+                trs_client=TRSClient(uri=f"trs://{workflow_url.hostname}",
+                                     port=workflow_url.port),
+                workflow_base_dir=Path(self.workflows_base_dir))
 
             workflow_meta: WorkflowMetadata = installer.install(workflow_info)
+            # TODO Is this what we want, installing TRS workflows centrally, for all users?
             workflow_path_rel = os.path.relpath(
                 os.path.join(self.workflows_base_dir,
                              workflow_meta.workflow_dir,
