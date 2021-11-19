@@ -53,10 +53,11 @@ class LsfCommandSet:
         specify that the output file should contain the cluster job ID.
         """
         result = []
-        if stdout_file is not None or stderr_file is not None:
+        if stdout_file is not None:
             result += ["-oo", str(stdout_file)]
+        if stderr_file is not None:
             result += ["-eo", str(stderr_file)]
-        else:
+        if stdout_file is None and stderr_file is None:
             # If no logging is set then by default the logs go out via email. This prevents this.
             result += ["-oo", "/dev/null"]
         return result
