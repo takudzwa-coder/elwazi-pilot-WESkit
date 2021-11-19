@@ -16,77 +16,92 @@
 from __future__ import annotations
 
 import abc
-from builtins import property, bool, str
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from io import IOBase
 from os import PathLike
-from typing import Optional
+from typing import Optional, Any, Union
 
-from datetime import datetime
+from builtins import property, bool, str
 
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.memory_units import Memory
 
 
-class ValueClass(metaclass=abc.ABCMeta):
+class ProcessId:
     """
-    Multiple classes have a value property, but should be distinct types.
+    This is for the process ID on the executor. I.e. if the process is not run directly, but e.g.
+    on a different compute node as a cluster job, then the ExecutorProcessId shall be the cluster
+    job ID.
     """
-
-    def __init__(self, value):
+    def __init__(self, value: Optional[Any]):
         self._value = value
 
     @property
     def value(self):
         return self._value
 
-    def __str__(self) -> str:
-        return str(self.value)
+    def __repr__(self) -> str:
+        return f"ProcessId({self.value})"
 
 
-class ProcessId(ValueClass, metaclass=abc.ABCMeta):
+class RunStatus:
     """
-    This is for the process ID on the executor. I.e. if the process is not run directly, but e.g.
-    on a different compute node as a cluster job, then the ExecutorProcessId shall be the cluster
-    job ID.
-    """
-    pass
-
-
-class NoProcessId(ProcessId):
-    """
-    Sometimes no process ID is available or useful (ROI) to implement.
-    """
-    def __init__(self):
-        super().__init__(None)
-
-
-class RunStatus(ValueClass):
-    """
-    The RunStatus is the status of the command execution on the execution infrastructure, e.g.
-    the job status in the cluster.
+    The RunStatus is the status of the command execution on the execution infrastructure.
+    Usually, this is just an integer, which is available, if the process is still running.
+    In a cluster, there can also be a status name, e.g. PENDING or similar, as issued by the
+    cluster system.
     """
 
-    def __init__(self, value: Optional[int] = None):
-        super().__init__(value)
+    def __init__(self, code: Optional[int] = None,
+                 name: Optional[str] = None,
+                 message: Optional[str] = None):
+        self._code = code
+        self._name = name
+        self._message = message
+
+    @property
+    def code(self) -> Optional[int]:
+        return self._code
+
+    @property
+    def name(self) -> Optional[str]:
+        return self._name
+
+    @property
+    def message(self) -> Optional[str]:
+        return self._message
 
     @property
     def finished(self) -> bool:
         """
         Return whether the process is in a finished state (successful or not).
         """
-        return self.value is not None
+        return self.code is not None
 
     @property
     def success(self) -> bool:
         """
         Return whether the command is an success state.
         """
-        return self.value is not None and self.value == 0
+        return self.code is not None and self.code == 0
 
     @property
     def failed(self) -> bool:
         """
         Return whether the command is in failed state.
         """
-        return self.value is not None and self.value != 0
+        return self.code is not None and self.code != 0
+
+    def __str__(self) -> str:
+        return f"code={self.code}" + \
+               f", name={self.name}" if self.name is not None else "" +\
+               f", message={self.message}" if self.message is not None else ""
+
+
+# Some executors support using streams, filedescriptors, etc. so more general file representations
+# as parameters for stdout and stderr. We declare the type here.
+FileRepr = Union[PathLike, IOBase]
 
 
 class CommandResult:
@@ -97,13 +112,15 @@ class CommandResult:
     """
 
     def __init__(self,
+                 command: ShellCommand,
                  id: ProcessId,
-                 stdout_file: PathLike,
-                 stderr_file: PathLike,
-                 stdin_file: PathLike,
+                 stdout_file: Optional[FileRepr],
+                 stderr_file: Optional[FileRepr],
+                 stdin_file: Optional[FileRepr],
                  run_status: RunStatus,
                  start_time: datetime,
                  end_time: Optional[datetime] = None):
+        self._command = command
         self._process_id = id
         self._run_status = run_status
         self._stdout_file = stdout_file
@@ -113,16 +130,24 @@ class CommandResult:
         self._end_time = end_time
 
     @property
+    def command(self) -> ShellCommand:
+        return self._command
+
+    @property
     def id(self) -> ProcessId:
         return self._process_id
 
     @property
-    def stdout_file(self) -> PathLike:
+    def stdout_file(self) -> Optional[FileRepr]:
         return self._stdout_file
 
     @property
-    def stderr_file(self) -> PathLike:
+    def stderr_file(self) -> Optional[FileRepr]:
         return self._stderr_file
+
+    @property
+    def stdin_file(self) -> Optional[FileRepr]:
+        return self._stdin_file
 
     @property
     def start_time(self) -> datetime:
@@ -144,13 +169,24 @@ class CommandResult:
     def end_time(self, value: str):
         self._end_time = value
 
+    def __repr__(self):
+        return f"CommandResult(command={self.command}, id={self.id}, status={self.status})"
 
-class ExecutionSettings(metaclass=abc.ABCMeta):
+
+@dataclass
+class ExecutionSettings:
     """
     Any information that is needed for executing the command on the execution infrastructure.
-    Examples are hard/soft memory requirements, CPU usage, and walltime.
+    All information is optional and it is the responsibility of the Executor to decide, which of
+    the information to use, or what to do if information is missing.
     """
-    pass
+    job_name: Optional[str] = None
+    accounting_name: Optional[str] = None
+    group: Optional[str] = None
+    walltime: timedelta = None
+    total_memory: Memory = None
+    queue: Optional[str] = None
+    cores: Optional[int] = None
 
 
 class ExecutedProcess(metaclass=abc.ABCMeta):
@@ -165,11 +201,9 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
     # `from __future__ import annotation` or make the forward reference a string by quoting,
     # i.e. 'Executor'.
     def __init__(self,
-                 command: ShellCommand,
                  executor: Executor,
                  process_handle,
                  pre_result: CommandResult):
-        self._command = command
         self._executor = executor
         self._process_handle = process_handle
         self._result = pre_result
@@ -183,7 +217,7 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
 
     @property
     def command(self) -> ShellCommand:
-        return self._command
+        return self._result.command
 
     @property
     def id(self) -> ProcessId:
@@ -225,10 +259,11 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[PathLike] = None,
-                stderr_file: Optional[PathLike] = None,
-                stdin_file: Optional[PathLike] = None,
-                settings: Optional[ExecutionSettings] = None) \
+                stdout_file: Optional[FileRepr] = None,
+                stderr_file: Optional[FileRepr] = None,
+                stdin_file: Optional[FileRepr] = None,
+                settings: Optional[ExecutionSettings] = None,
+                **kwargs) \
             -> ExecutedProcess:
         """
         Submit a command to the execution infrastructure.
@@ -237,6 +272,11 @@ class Executor(metaclass=abc.ABCMeta):
         submission command (or REST call) that is then executed for the submission.
 
         The return value is a representation of the executed process.
+
+        References to environment variables in the command-line will not be evaluated. If you want
+        these variables to be evaluated, you need to wrap the command in a shell, e.g.
+
+           command = ["bash", "-c", "echo $someVar"]
 
         :param command: The command to be executed.
         :param stdout_file: A path to a file into which the standard output shall be written.
@@ -256,7 +296,8 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_status(self, process: ExecutedProcess) -> RunStatus:
         """
-        Get the status of the process in the execution infrastructure.
+        Get the status of the process in the execution infrastructure. The `process.result` is not
+        modified.
         """
         pass
 

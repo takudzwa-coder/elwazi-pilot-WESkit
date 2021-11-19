@@ -1,4 +1,4 @@
-# Licence: Unlicensed
+# Licence: Unlicense
 # Author: Michael Hall (https://github.com/mbhall88)
 # Repository: https://github.com/mbhall88/MemoryUnits
 
