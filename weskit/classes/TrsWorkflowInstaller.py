@@ -6,17 +6,18 @@
 #
 #  Authors: The WESkit Team
 import logging
-import os
 import random
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from typing import TypeVar, Optional
 from urllib.parse import urlparse
+from zipfile import ZipFile
 
 from flufl.lock import Lock
+from requests import Response
 from trs_cli.client import TRSClient
-from trs_cli.models import FileType
+from trs_cli.errors import InvalidResponseError
 
 from weskit.ClientError import ClientError
 
@@ -79,11 +80,10 @@ class WorkflowInfo:
         if len(rest) > 3:
             primary = Path(*rest[3:])
         else:
-            primary = None
+            raise ClientError(
+                "Please suffix your TRS URI with the relative path to the primary file")
+            # primary = None
 
-        # TRS-cli currently only supports non-plain types. Unfortunately, workflows may contain
-        # binary data (FASTQs), which cannot be put directly into JSON responses from the TRS. This
-        # means, for now we will only support workflows that contain only text files.
         if type not in trs_type_to_workflow_type.keys():
             raise ClientError(f"Unsupported workflow type '{type}'. Should be one of " +
                               ", ".join(trs_type_to_workflow_type.keys()))
@@ -134,7 +134,9 @@ class WorkflowMetadata:
 
 class TrsWorkflowInstaller:
     """
-    Retrieve the workflow from a trusted tool repository service (TRS).
+    Retrieve the workflow from a trusted tool repository service (TRS). Workflows are downloaded
+    with the TRSClient (which is preconfigured with server and port) and stored into
+    `workflow_base_dir`.
     """
 
     def __init__(self,
@@ -145,8 +147,13 @@ class TrsWorkflowInstaller:
         self._trs_client = trs_client
         self._max_lock_time: timedelta = max_lock_time
 
-    def _lockfile_name(self, workflow_dir: Path) -> Path:
-        return workflow_dir.parent / (workflow_dir.name + ".lock")
+    def _tempzip_name(self, workflow_info: WorkflowInfo) -> Path:
+        return self._workflow_base_dir / \
+               f"{workflow_info.name}.{workflow_info.version}.{workflow_info.workflow_type}.zip"
+
+    def _lockfile_name(self, workflow_info: WorkflowInfo) -> Path:
+        return self._workflow_base_dir / \
+               f"{workflow_info.name}.{workflow_info.version}.{workflow_info.workflow_type}.lock"
 
     def _get_workflow_directory(self, workflow_info: WorkflowInfo) -> Path:
         return self._workflow_base_dir / \
@@ -158,53 +165,51 @@ class TrsWorkflowInstaller:
         return self._get_workflow_directory(workflow_info).exists()
 
     def _install_workflow(self, workflow_info: WorkflowInfo):
+        zip_file = self._tempzip_name(workflow_info)
         try:
+            response = self._trs_client.get_files(type=workflow_info.type,
+                                                  id=workflow_info.name,
+                                                  version_id=workflow_info.version,
+                                                  format="zip",
+                                                  outfile=zip_file)
+            if isinstance(response, Response):
+                raise ClientError(f"Invalid response from {workflow_info.full_uri}")
+
             workflow_dir = self._get_workflow_directory(workflow_info)
             workflow_dir.mkdir(parents=True, exist_ok=False)
-            files_by_type = self._trs_client.retrieve_files(
-                out_dir=workflow_dir,
-                type=workflow_info.type,
-                id=workflow_info.name,
-                version_id=workflow_info.version,
-                is_encoded=False)   # TODO To decode or not to decode, that's the question!
-
-            if FileType.PRIMARY_DESCRIPTOR.value in files_by_type.keys():
-                primary_files = files_by_type[FileType.PRIMARY_DESCRIPTOR.value]
-                if len(primary_files) != 1:
-                    raise ClientError(f"Multiple primary files in '{workflow_info.full_uri}'. " +
-                                      "Choose one of %s" % ", ".join(primary_files))
-                elif workflow_info.primary_file is not None:
-                    primary_file_rel = workflow_info.primary_file
-                else:
-                    primary_file_rel = primary_files[0]
-
-                primary_file_abs = workflow_dir / primary_file_rel
-                if not os.access(primary_file_abs):
-                    # Installation-time check, that the primary file really was downloaded.
-                    # It's more likely a client error than an NFS error, therefore report is as
-                    # such.
-                    raise ClientError("Could not access primary workflow file: " +
-                                      f"'{primary_file_abs}'")
-
-            elif FileType.CONTAINERFILE in files_by_type.keys():
-                raise NotImplementedError(
-                    "Cannot process container-based TRS workflows yet")
-        except OSError as ex:
-            message = f"Failed installing TRS workflow from '{workflow_info.full_uri}'"
-            logger.warning(message, exc_info=ex)
+            with ZipFile(zip_file, 'r') as f:
+                if str(workflow_info.primary_file) not in f.namelist():
+                    logger.error(f"Checking {workflow_info.primary_file} in {f.namelist()}")
+                    raise ClientError(f"Primary file {workflow_info.primary_file} not in " +
+                                      workflow_info.full_uri)
+                f.extractall(workflow_dir)
+        except ConnectionError as ex:
+            message = f"Could not connect to TRS server {workflow_info.full_uri}"
+            logger.error(message, exc_info=ex)
             raise ClientError(message)
+        except InvalidResponseError as ex:
+            message = "Could not validate TRS response. Server probably not supported."
+            logger.warning(message, exc_info=ex)
+            ClientError(message)
+        except IOError as ex:
+            logger.error(f"Could not write zip '{self._tempzip_name(workflow_info)}", exc_info=ex)
+            raise
+        finally:
+            zip_file.unlink()
 
     def install(self, workflow_info: WorkflowInfo) -> WorkflowMetadata:
         """
         Get the information needed by the workflow management system to run the workflow. E.g.
         path to workflow main file (e.g. main.nf, Snakefile), conda environment for the workflow
         (e.g. for supplementary libraries), workflow manager version, etc.
+
+        Note that the method is blocking.
         """
         workflow_dir_abs = self._get_workflow_directory(workflow_info)
         try:
-            with Lock(lockfile=str(self._lockfile_name(workflow_dir_abs)),
+            with Lock(lockfile=str(self._lockfile_name(workflow_info)),
                       lifetime=self._max_lock_time,
-                      timeout=self._max_lock_time +
+                      default_timeout=self._max_lock_time +
                       timedelta(seconds=random.randint(1, 30))):  # nosec b311
                 # We always acquire a lock, when a workflow is requested. If it is already
                 # installed, the lock will directly be released. Otherwise, one process acquires
@@ -216,6 +221,7 @@ class TrsWorkflowInstaller:
                 # The random timeout offset is to give the processes time to check whether the
                 # directory exists.
                 if not self._workflow_is_installed(workflow_info):
+                    logger.warning(f"Trying install from '{workflow_info.full_uri}")
                     self._install_workflow(workflow_info)
         except TimeoutError:
             message = "Timed out when waiting for concurrent TRS workflow installations of " + \
