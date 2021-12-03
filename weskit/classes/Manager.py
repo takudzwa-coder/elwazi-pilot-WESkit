@@ -20,7 +20,7 @@ from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
 from weskit.classes.TrsWorkflowInstaller \
-    import TrsWorkflowInstaller, WorkflowInfo, WorkflowMetadata
+    import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
@@ -229,7 +229,7 @@ class Manager:
                                      port=workflow_url.port),
                 workflow_base_dir=Path(self.workflows_base_dir))
 
-            workflow_meta: WorkflowMetadata = installer.install(workflow_info)
+            workflow_meta: WorkflowInstallationMetadata = installer.install(workflow_info)
             # TODO Is this what we want, installing TRS workflows centrally, for all users?
             workflow_path_rel = os.path.relpath(
                 os.path.join(self.workflows_base_dir,
