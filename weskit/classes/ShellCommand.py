@@ -6,12 +6,9 @@
 #
 #  Authors: The WESkit Team
 from builtins import property, str
-
-from typing import Dict, List
-
 from os import PathLike
-
-from pathlib import PurePath
+from pathlib import Path
+from typing import Dict, List
 
 
 class ShellCommand:
@@ -57,8 +54,8 @@ class ShellCommand:
     @property
     def executables(self) -> List[PathLike]:
         """
-        Return a list of executables. For simplicities sake this is just the first element of the
+        Return a list of executables. For simplicity's sake this is just the first element of the
         `command` list. You may want to implement an explicit setting of executables if you want
         to run, e.g. pipes of multiple commands.
         """
-        return [PurePath(self.command[0])]
+        return [Path(self.command[0])]

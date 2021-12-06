@@ -19,6 +19,7 @@ from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
+from weskit.classes.WorkflowEngine import WorkflowEngineParams
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.ClientError import ClientError
@@ -321,7 +322,7 @@ class Manager:
 
         # Execute run
         workflow_engine_params: List[Dict[str, str]] = []
-        run_kwargs: Dict[str, Union[str, List[str], List[Dict[str, str]]]] = {
+        run_kwargs: Dict[str, Union[str, List[str], List[WorkflowEngineParams]]] = {
             "workflow_path": run.workflow_path,
             "workdir": os.path.join(self.data_dir, run.dir),
             "config_files": ["config.yaml"],
