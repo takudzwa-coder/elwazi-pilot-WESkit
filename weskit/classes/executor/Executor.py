@@ -17,10 +17,9 @@ from __future__ import annotations
 
 import abc
 from builtins import property, bool, str
+from datetime import datetime
 from os import PathLike
 from typing import Optional
-
-from datetime import datetime
 
 from weskit.classes.ShellCommand import ShellCommand
 
@@ -141,7 +140,7 @@ class CommandResult:
         return self._end_time
 
     @end_time.setter
-    def end_time(self, value: str):
+    def end_time(self, value: Optional[datetime]):
         self._end_time = value
 
 

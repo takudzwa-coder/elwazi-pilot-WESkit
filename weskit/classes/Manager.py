@@ -9,7 +9,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Union
 from urllib.parse import urlparse
 
 import yaml
@@ -162,23 +162,27 @@ class Manager:
         else:
             return None
 
-    def get_run(self, run_id, update) -> Run:
+    def get_run(self, run_id, update) -> Optional[Run]:
         if update:
             return self.update_runs(query={"run_id": run_id})[0]
         else:
             return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
-    def _process_workflow_attachment(self, run, files: "ImmutableMultiDict[str, FileStorage]"):
+    def _process_workflow_attachment(self, run,
+                                     files: "Optional[ImmutableMultiDict[str, FileStorage]]"):
         attachment_filenames = []
-        if "workflow_attachment" in files:
+        if files is not None and "workflow_attachment" in files:
             workflow_attachment_files = files.getlist("workflow_attachment")
             for attachment in workflow_attachment_files:
-                filename = secure_filename(attachment.filename)
-                logger.error(f"Staging '{filename}'")
-                # TODO could implement checks here
-                attachment_filenames.append(filename)
-                attachment.save(os.path.join(self.data_dir, run.dir, filename))
+                if attachment.filename is None:
+                    raise ClientError("Attachment file without name")
+                else:
+                    filename = secure_filename(attachment.filename)
+                    logger.error(f"Staging '{filename}'")
+                    # TODO could implement checks here
+                    attachment_filenames.append(filename)
+                    attachment.save(os.path.join(self.data_dir, run.dir, filename))
         return attachment_filenames
 
     def _prepare_workflow_path(self,
@@ -234,7 +238,7 @@ class Manager:
             workflow_path_rel = os.path.relpath(
                 os.path.join(self.workflows_base_dir,
                              workflow_meta.workflow_dir,
-                             workflow_meta.primary_file),
+                             workflow_meta.workflow_file),
                 os.path.join(self.data_dir, run_dir))
 
         else:
@@ -251,7 +255,7 @@ class Manager:
     def prepare_execution(self, run,
                           files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None):
         if files is None:
-            files = []
+            files = ImmutableMultiDict()
 
         if not run.status == RunStatus.INITIALIZING:
             return run
@@ -312,12 +316,16 @@ class Manager:
                               (run.request["workflow_type_version"],
                                ", ".join(self.workflow_engines[workflow_type].keys())))
 
+        if run.workflow_path is None:
+            raise RuntimeError(f"Workflow path of run is None: {run.id}")
+
         # Execute run
-        run_kwargs = {
+        workflow_engine_params: List[Dict[str, str]] = []
+        run_kwargs: Dict[str, Union[str, List[str], List[Dict[str, str]]]] = {
             "workflow_path": run.workflow_path,
             "workdir": os.path.join(self.data_dir, run.dir),
             "config_files": ["config.yaml"],
-            "workflow_engine_params": []
+            "workflow_engine_params": workflow_engine_params
         }
         run.start_time = get_current_timestamp()
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\

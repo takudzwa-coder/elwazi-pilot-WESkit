@@ -6,11 +6,9 @@
 #
 #  Authors: The WESkit Team
 
+from __future__ import annotations
+
 import enum
-from typing import TypeVar
-
-
-T = TypeVar('T', bound='RunStatus')
 
 
 class RunStatus(enum.Enum):
@@ -29,5 +27,5 @@ class RunStatus(enum.Enum):
         return self.name
 
     @staticmethod
-    def from_string(name: str) -> T:
+    def from_string(name: str) -> RunStatus:
         return RunStatus[name]

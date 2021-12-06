@@ -9,6 +9,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from functools import reduce
+from os import PathLike
 from typing import List, Dict, Optional
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -35,7 +36,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                         default_params))
         self._command_param_prefix = command_param_prefix
 
-    def _environment(self) -> Dict[str, str]:
+    def _environment(self) -> Dict[str, Optional[str]]:
         """
         Get a dictionary of environment parameters.
         """
@@ -66,9 +67,9 @@ class WorkflowEngine(metaclass=ABCMeta):
 
     @abstractmethod
     def command(self,
-                workflow_path: str,
-                workdir: str,
-                config_files: List[str],
+                workflow_path: PathLike,
+                workdir: PathLike,
+                config_files: List[PathLike],
                 workflow_engine_params: List[WorkflowEngineParams])\
             -> ShellCommand:
         """
@@ -93,14 +94,14 @@ class Snakemake(WorkflowEngine):
         return "SMK"
 
     def command(self,
-                workflow_path: str,
-                workdir: str,
-                config_files: List[str],
+                workflow_path: PathLike,
+                workdir: PathLike,
+                config_files: List[PathLike],
                 workflow_engine_params: List[WorkflowEngineParams])\
             -> ShellCommand:
         command = ["snakemake", "--snakefile", workflow_path] + self._command_params()
         if config_files:
-            command += ["--configfile"] + config_files
+            command += ["--configfile"] + list(map(lambda p: str(p), config_files))
         return ShellCommand(command=command,
                             workdir=workdir,
                             environment=self._environment())

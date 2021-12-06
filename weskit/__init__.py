@@ -85,7 +85,11 @@ def create_database(database_url=None):
 
 def create_app(celery: Celery,
                database: Database) -> WESApp:
-    default_config = os.getenv("WESKIT_CONFIG")
+    if os.getenv("WESKIT_CONFIG") is not None:
+        default_config = os.getenv("WESKIT_CONFIG", "")
+    else:
+        raise RuntimeError("WESKIT_CONFIG is undefined")
+
     default_log_config = os.getenv(
         "WESKIT_LOG_CONFIG",
         os.path.join("config", "log-config.yaml"))

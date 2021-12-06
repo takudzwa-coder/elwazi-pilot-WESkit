@@ -5,12 +5,14 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from __future__ import annotations
+
 import logging
 import random
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
-from typing import TypeVar, Optional, List
+from typing import Optional, List
 from urllib.parse import urlparse
 from zipfile import ZipFile, BadZipFile
 
@@ -31,8 +33,6 @@ trs_type_to_workflow_engine_id = {
     "PLAIN_NFL": "NFL"
 }
 
-T = TypeVar('T', bound='WorkflowInfo')
-
 
 @dataclass
 class WorkflowInfo:
@@ -48,8 +48,8 @@ class WorkflowInfo:
     primary_file is the relative path to the primary workflow file (main.nf, etc.) extracted from
     the URI.
     """
-    server: str
-    port: int
+    server: Optional[str]
+    port: Optional[int]
     name: str
     version: str
     type: str
@@ -58,7 +58,7 @@ class WorkflowInfo:
     primary_file: Path
 
     @staticmethod
-    def from_uri_string(uri: str) -> T:
+    def from_uri_string(uri: str) -> WorkflowInfo:
         """
         Take a TRS URI of the form
 

@@ -9,7 +9,7 @@
 import json
 import logging
 import os
-from pathlib import PurePath
+from pathlib import Path
 from typing import List, Dict
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -46,11 +46,11 @@ def run_command(command: List[str],
     """
     if environment is None:
         environment = {}
-    base_workdir = PurePath(base_workdir)
-    sub_workdir = PurePath(sub_workdir)
-    log_base = PurePath(log_base)
+    base_workdir_path = Path(base_workdir)
+    sub_workdir_path = Path(sub_workdir)
+    log_base_path = Path(log_base)
 
-    workdir_abs = base_workdir / sub_workdir
+    workdir_abs = base_workdir_path / sub_workdir_path
     logger.info("Running command in {}: {}".format(workdir_abs, command))
 
     shell_command = ShellCommand(command=command,
@@ -59,7 +59,7 @@ def run_command(command: List[str],
                                  # e.g. for conda.
                                  environment={**dict(os.environ), **environment})
     start_time = get_current_timestamp()
-    log_dir_rel = log_base / start_time
+    log_dir_rel = log_base_path / start_time
     stderr_file_rel = log_dir_rel / "stderr"
     stdout_file_rel = log_dir_rel / "stdout"
     execution_log_rel = log_dir_rel / "log.json"
@@ -76,8 +76,9 @@ def run_command(command: List[str],
     finally:
         # Collect files, but ignore those, that are in the .weskit/ directory. They are tracked by
         # the fields in the execution log (or that of previous runs in this directory).
-        outputs = list(filter(lambda fn: os.path.commonpath([fn, str(log_base)]) != str(log_base),
-                              collect_relative_paths_from(workdir_abs)))
+        outputs = list(filter(
+            lambda fn: os.path.commonpath([fn, str(log_base_path)]) != str(log_base_path),
+            collect_relative_paths_from(workdir_abs)))
         if result is None:
             # result may be None, if the execution failed because the command does not exist
             exit_code = -1
@@ -89,7 +90,7 @@ def run_command(command: List[str],
             "start_time": start_time,
             "cmd": command,
             "env": environment,
-            "workdir": str(sub_workdir),
+            "workdir": str(sub_workdir_path),
             "end_time": get_current_timestamp(),
             "exit_code": exit_code,
             "stdout_file": str(stdout_file_rel),
