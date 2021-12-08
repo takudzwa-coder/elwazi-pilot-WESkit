@@ -16,7 +16,7 @@ from weskit.classes.ShellCommand import ShellCommand
 
 
 @dataclass()
-class WorkflowEngineParams(object):
+class WorkflowEngineParam(object):
     name: str
     value: Optional[str]   # Optional values are for CLI parameters that don't take values.
     tags: List[str]
@@ -26,7 +26,7 @@ class WorkflowEngine(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self,
-                 default_params: List[WorkflowEngineParams],
+                 default_params: List[WorkflowEngineParam],
                  command_param_prefix: str):
         self.default_environment_params = \
             list(filter(lambda p: "environment-variable" in p.tags,
@@ -44,14 +44,14 @@ class WorkflowEngine(metaclass=ABCMeta):
                         self.default_environment_params))
 
     @staticmethod
-    def _workflow_engine_cli_param(prefix: str, param: WorkflowEngineParams) -> List[str]:
+    def _workflow_engine_cli_param(prefix: str, param: WorkflowEngineParam) -> List[str]:
         result = [prefix + param.name]
         if param.value is not None:
             result += [str(param.value)]
         return result
 
     @staticmethod
-    def _workflow_engine_cli_params(prefix: str, params: List[WorkflowEngineParams]) -> List[str]:
+    def _workflow_engine_cli_params(prefix: str, params: List[WorkflowEngineParam]) -> List[str]:
         return reduce(
             lambda acc, v: acc + v,
             map(lambda wep: WorkflowEngine._workflow_engine_cli_param(prefix, wep),
@@ -70,7 +70,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                 workflow_path: str,
                 workdir: str,
                 config_files: List[str],
-                workflow_engine_params: List[WorkflowEngineParams])\
+                workflow_engine_params: List[WorkflowEngineParam])\
             -> ShellCommand:
         """
         Use the instance variables and run parameters to compose a command to be executed
@@ -86,7 +86,7 @@ class WorkflowEngine(metaclass=ABCMeta):
 
 class Snakemake(WorkflowEngine):
 
-    def __init__(self, default_params: List[WorkflowEngineParams]):
+    def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params, "--")
 
     @staticmethod
@@ -97,7 +97,7 @@ class Snakemake(WorkflowEngine):
                 workflow_path: str,
                 workdir: str,
                 config_files: List[str],
-                workflow_engine_params: List[WorkflowEngineParams])\
+                workflow_engine_params: List[WorkflowEngineParam])\
             -> ShellCommand:
         command = ["snakemake", "--snakefile", workflow_path] + self._command_params()
         if config_files:
@@ -109,7 +109,7 @@ class Snakemake(WorkflowEngine):
 
 class Nextflow(WorkflowEngine):
 
-    def __init__(self, default_params: List[WorkflowEngineParams]):
+    def __init__(self, default_params: List[WorkflowEngineParam]):
         super().__init__(default_params, "-")
         self.default_run_params = \
             list(filter(lambda p: "run-parameter" in p.tags,
@@ -130,7 +130,7 @@ class Nextflow(WorkflowEngine):
                 workflow_path: str,
                 workdir: str,
                 config_files: List[str],
-                workflow_engine_params: List[WorkflowEngineParams])\
+                workflow_engine_params: List[WorkflowEngineParam])\
             -> ShellCommand:
         command = ["nextflow"] +\
                   self._command_params() +\
@@ -148,14 +148,14 @@ class Nextflow(WorkflowEngine):
 class WorkflowEngineFactory:
 
     @staticmethod
-    def _process_params_list(params: List[Dict[str, str]]) -> List[WorkflowEngineParams]:
-        return list(map(lambda param: WorkflowEngineParams(name=param["name"],
-                                                           value=param.get("value", None),
-                                                           tags=param.get("tags", [])),
+    def _process_params_list(params: List[Dict[str, str]]) -> List[WorkflowEngineParam]:
+        return list(map(lambda param: WorkflowEngineParam(name=param["name"],
+                                                          value=param.get("value", None),
+                                                          tags=param.get("tags", [])),
                         params))
 
     @staticmethod
-    def _process_versions(cls, engine_params: Dict[str, dict]) -> Dict[str, WorkflowEngineParams]:
+    def _process_versions(cls, engine_params: Dict[str, dict]) -> Dict[str, WorkflowEngineParam]:
         """
         :param cls: WorkflowEngine class
         :param engine_params: Version name -> List of dictionaries, one for each parameter.
