@@ -60,14 +60,17 @@ class WorkflowInfo:
     @staticmethod
     def from_uri_string(uri: str) -> WorkflowInfo:
         """
+        TODO: Remove the type from here. We should get the type from the run parameters. #183
+        TODO: Make the workflow_path optional. Retrieved default from the server. #179
+
         Take a TRS URI of the form
 
-        trs://<server>:<port>/<id>/<version>/<type>/<primary_rel_path>
+        trs://<server>:<port>/<id>/<version>/<type>/<workflow_path>
 
         and extract the individual components. This information uniquely identifies the workflow
         to be downloaded ind installed and essentially is mapped by the TRS to an HTTP request
 
-        https://<server>:<port>/<base_path>/tools/<id>/versions/<version>/<type>/<primary_rel_path>
+        https://<server>:<port>/<base_path>/tools/<id>/versions/<version>/<type>/<workflow_path>
 
         The primary_rel_path is the path to the primary workflow file that will be used to execute
         the workflow. This may be, e.g. "main.nf" or "Snakefile".
@@ -79,7 +82,7 @@ class WorkflowInfo:
         rest = list(filter(lambda v: len(v) > 0, parsed_uri.path.split("/")))
         if len(rest) < 3:
             raise ClientError("Invalid TRS URI. Scheme is " +
-                              f"trs://host[:port]/id/version/type/[primary_path]: '{uri}'")
+                              f"trs://host[:port]/id/version/type/[workflow_path]: '{uri}'")
         name, version, type = rest[0:3]
 
         if len(rest) > 3:
