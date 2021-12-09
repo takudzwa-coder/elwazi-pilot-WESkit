@@ -5,11 +5,13 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
+import logging
 import os
 import re
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
+
+logger = logging.Logger(__file__)
 
 
 class RunRequestValidator(object):
@@ -72,6 +74,22 @@ class RunRequestValidator(object):
         expected_path = normpath(join(self.data_dir, path))
         return commonprefix([self.data_dir, expected_path]) != self.data_dir
 
+    def _validate_file_url_path(self, url: str) -> List[str]:
+        result = []
+        try:
+            parsed_url = urlparse(url)
+            result = [self.forbidden_characters(parsed_url.path)]
+            if os.path.isabs(parsed_url.path):
+                result += ["Not a relative path: '%s'" % url]
+            elif self._path_is_outside_data_dir(parsed_url.path):
+                result += ["Normalized path points outside allowed root: '%s'" %
+                           parsed_url.path]
+
+        except Exception:
+            result += ["Could not parse URI '%s'" % url]
+
+        return result
+
     def _validate_url(self, url: str) -> List[str]:
         """
         Only allow https:// or relative file: URIs. HTTPS is used because
@@ -94,22 +112,34 @@ class RunRequestValidator(object):
                 # I don't see any general way to decode the query and recognize such attacks.
                 pass
             elif parsed_url.scheme == "" or parsed_url.scheme == "file":
-                result += [self.forbidden_characters(parsed_url.path)]
-                if os.path.isabs(parsed_url.path):
-                    result += ["Not a relative path: '%s'" % url]
-                elif self._path_is_outside_data_dir(parsed_url.path):
-                    result += ["Normalized path points outside allowed root: '%s'" %
-                               parsed_url.path]
+                result += self._validate_file_url_path(url)
             else:
                 result += ["Only 'https://' and 'file:' (relative) URIs are allowed: '%s'" % url]
 
-        except Exception:
+        except Exception as ex:
+            logger.warning(f"Exception during file URL validation: {ex}")
             result += ["Could not parse URI '%s'" % url]
 
         return result
 
     def _validate_workflow_url(self, url: str) -> List[str]:
-        return self._validate_url(url)
+        result = []
+        try:
+            parsed_url = urlparse(url)
+            if parsed_url.scheme == "trs":
+                # No further validation of the TRS URI yet.
+                pass
+            elif parsed_url.scheme == "" or parsed_url.scheme == "file":
+                result += self._validate_file_url_path(url)
+            else:
+                result += ["Only 'file:' (relative) and 'trs:' are allowed in workflow URIs: '%s'"
+                           % url]
+
+        except Exception as ex:
+            logger.warning(f"Exception during workflow URI validation: {ex}")
+            result += [f"Could not parse URI '{url}'"]
+
+        return result
 
     def _validate_rundir_tag(self, tags) -> List[str]:
         try:

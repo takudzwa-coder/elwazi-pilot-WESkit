@@ -8,22 +8,27 @@
 
 import logging
 import os
+from pathlib import Path
+from typing import Optional, List, Dict, Union
 from urllib.parse import urlparse
 
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
+from trs_cli.client import TRSClient
+from werkzeug.datastructures import FileStorage, ImmutableMultiDict
+from werkzeug.utils import secure_filename
 
+from weskit.classes.WorkflowEngine import WorkflowEngineParam
+from weskit.classes.TrsWorkflowInstaller \
+    import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.ClientError import ClientError
-from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ShellCommand import ShellCommand
 from weskit.tasks.CommandTask import run_command
-from werkzeug.utils import secure_filename
 from weskit.utils import get_current_timestamp
-from typing import Optional, List
-
 
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
@@ -158,68 +163,100 @@ class Manager:
         else:
             return None
 
-    def get_run(self, run_id, update) -> Run:
+    def get_run(self, run_id, update) -> Optional[Run]:
         if update:
             return self.update_runs(query={"run_id": run_id})[0]
         else:
             return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
-    def _process_workflow_attachment(self, run, files):
+    def _process_workflow_attachment(self, run,
+                                     files: "Optional[ImmutableMultiDict[str, FileStorage]]"):
         attachment_filenames = []
-        if "workflow_attachment" in files:
+        if files is not None and "workflow_attachment" in files:
             workflow_attachment_files = files.getlist("workflow_attachment")
             for attachment in workflow_attachment_files:
-                filename = secure_filename(attachment.filename)
-                # TODO could implement checks here
-                attachment_filenames.append(filename)
-                attachment.save(os.path.join(self.data_dir, run.dir, filename))
+                if attachment.filename is None:
+                    raise ClientError("Attachment file without name")
+                else:
+                    filename = secure_filename(attachment.filename)
+                    logger.error(f"Staging '{filename}'")
+                    # TODO could implement checks here
+                    attachment_filenames.append(filename)
+                    attachment.save(os.path.join(self.data_dir, run.dir, filename))
         return attachment_filenames
 
     def _prepare_workflow_path(self,
                                run_dir: str,
                                url: str,
-                               attachment_filenames: List[str]) \
+                               attachment_filenames:  List[str]) \
             -> str:
         """
-        Compose the path to the workflow from a relative "file:" URI or by (cached) downloading
-        an "https://" URI. After the function call the workflow file is present in the work_dir.
+        After the call either the workflow is accessible via the returned path relative to the
+        run directory (could go outside the WESKIT_DATA base directory, e.g. for centrally
+        installed workflows, or an exception is raised.
 
-        Attached files are extracted to the run directory. (TODO Caching?)
+        The call may install the workflow. TODO This may block. Make workflow installation async?
+
+        Attached files are extracted to the run directory.
 
         * Absolute input file://-paths are forbidden (raises ValueError).
         * Relative input file://-paths are interpreted relative the run's work-dir, both, if they
           are found in the attachment and if they refer to a path in the system-wide
           workflows_base_dir.
+        * Absolute trs://-URIs
 
-        https://- and s3://- paths are not yet implemented.
         """
         workflow_url = urlparse(url)
-        workflow_path_rel = None
         if workflow_url.scheme in ["file", '']:
+            # TODO Should we enforce the name/version/type structure also for manual workflows?
             if os.path.isabs(workflow_url.path):
                 raise ClientError("Absolute workflow_url forbidden " +
                                   "(should be validated already): '%s'" % url)
             elif workflow_url.path in attachment_filenames:
-                # File has already been extracted to work-dir. The command is executed in the
+                # File should already be extracted to work-dir. The command is executed in the
                 # work-dir as the current work-dir, so we take it as it is.
                 workflow_path_rel = secure_filename(workflow_url.path)
+
             else:
+                # The file refers to an already installed workflow.
                 workflow_path_rel = os.path.join(
                     os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
                     workflow_url.path)
+
         elif workflow_url.scheme == "https":
-            # TODO Download the workflow with git clone. Use caching.
-            # TODO Copy to run directory?
             raise ClientError("https:// workflow_url is not implemented")
 
+        elif workflow_url.scheme == "trs":
+            workflow_info = WorkflowInfo.from_uri_string(url)
+            installer = TrsWorkflowInstaller(
+                trs_client=TRSClient(uri=f"trs://{workflow_url.hostname}",
+                                     port=workflow_url.port),
+                workflow_base_dir=Path(self.workflows_base_dir))
+
+            workflow_meta: WorkflowInstallationMetadata = installer.install(workflow_info)
+            # TODO Is this what we want, installing TRS workflows centrally, for all users?
+            workflow_path_rel = os.path.relpath(
+                os.path.join(self.workflows_base_dir,
+                             workflow_meta.workflow_dir,
+                             workflow_meta.workflow_file),
+                os.path.join(self.data_dir, run_dir))
+
+        else:
+            raise ClientError(f"Unknown scheme in workflow_url: '{url}'")
+
+        # workflow_path_rel is always relative to the run_dir, even when referring to a centrally
+        # installed workflow.
         workflow_path_abs = os.path.join(self.data_dir, run_dir, workflow_path_rel)
         if not os.path.exists(workflow_path_abs):
-            raise ClientError("Derived workflow path is not accessible: '%s'" % (workflow_path_abs))
+            raise ClientError("Derived workflow path is not accessible: '%s'" % workflow_path_abs)
 
         return workflow_path_rel
 
-    def prepare_execution(self, run, files=[]):
+    def prepare_execution(self, run,
+                          files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None):
+        if files is None:
+            files = ImmutableMultiDict()
 
         if not run.status == RunStatus.INITIALIZING:
             return run
@@ -280,12 +317,16 @@ class Manager:
                               (run.request["workflow_type_version"],
                                ", ".join(self.workflow_engines[workflow_type].keys())))
 
+        if run.workflow_path is None:
+            raise RuntimeError(f"Workflow path of run is None: {run.id}")
+
         # Execute run
-        run_kwargs = {
+        workflow_engine_params: List[Dict[str, str]] = []
+        run_kwargs: Dict[str, Union[str, List[str], List[WorkflowEngineParam]]] = {
             "workflow_path": run.workflow_path,
             "workdir": os.path.join(self.data_dir, run.dir),
             "config_files": ["config.yaml"],
-            "workflow_engine_params": []
+            "workflow_engine_params": workflow_engine_params
         }
         run.start_time = get_current_timestamp()
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\

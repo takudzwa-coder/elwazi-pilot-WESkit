@@ -81,18 +81,18 @@ static_service_info:
 
     # The identifiers used in workflow_engine_versions correspond to versions
     # of the workflows available in WESkit. Currently, there are Snakemake
-    # and Nextflow Workflow-instances that identify as "snakemake" and "nextflow",
+    # and Nextflow Workflow-instances that identify as "SMK" and "NFL",
     # respectively. Only these identifiers (Workflow.name) can be used here.
     # These are also the versions-strings that WESkit accepts via its REST-API.
     workflow_engine_versions:
-        snakemake: "5.8.2"
-        nextflow: "20.10.0"
+        SMK: "6.10.0"
+        NFL: "20.04.0"
 
     # The first two levels of keys are the workflow_type and the workflow_type_version.
     # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
     default_workflow_engine_parameters:
-      nextflow:
-        "20.10.0":
+      NFL:
+        "21.04.0":
           # Environment variables for the workflow manager execution.
           - name: "NXF_OPTS"
             value: "-Xmx256m"
@@ -112,8 +112,8 @@ static_service_info:
           - name: with-report
             tags: ["run-parameter"]
 
-      snakemake:
-        "5.8.2":
+      SMK:
+        "6.10.0":
           # Environment variables for the workflow manager execution.
           - name: "SOME_VAR"
             value: "with value"
@@ -128,12 +128,12 @@ static_service_info:
     # Currently, the workflow_type_versions need to be among the workflow_engine_versions.
     # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91
     workflow_type_versions:
-      snakemake:
+      SMK:
         workflow_type_version:
-          - "5.8.2"
-      nextflow:
+          - "6.10.0"
+      NFL:
         workflow_type_version:
-          - "20.10.0"
+          - "21.04.0"
 
     # A web page URL with human-readable instructions on how to get an authorization token for use
     # with a specific WES endpoint.
