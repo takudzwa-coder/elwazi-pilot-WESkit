@@ -70,7 +70,9 @@ class Manager:
         return self.celery_app.tasks["weskit.tasks.CommandTask.run_command"]
 
     def cancel(self, run: Run) -> Run:
-        """See https://docs.celeryproject.org/en/latest/userguide/workers.html
+        """
+        See https://docs.celeryproject.org/en/latest/userguide/workers.html
+        See https://docs.celeryproject.org/en/stable/userguide/workers.html#revoke-revoking-tasks
         TODO Consider persistent revokes.
         """
         if run.status in running_states:
@@ -189,7 +191,7 @@ class Manager:
     def _prepare_workflow_path(self,
                                run_dir: str,
                                url: str,
-                               attachment_filenames:  List[str]) \
+                               attachment_filenames: List[str]) \
             -> str:
         """
         After the call either the workflow is accessible via the returned path relative to the

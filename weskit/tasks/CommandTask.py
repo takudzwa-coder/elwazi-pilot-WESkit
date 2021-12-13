@@ -42,7 +42,7 @@ def run_command(command: List[str],
     mkdir failed, or similar abnormal situations.
 
     Note: The interface is not based on ShellCommand because that would have required a means of
-          (de)serializing ShellCommand for transfor from the REST-server to the Celery worker.
+          (de)serializing ShellCommand for transfer from the REST-server to the Celery worker.
     """
     if environment is None:
         environment = {}
@@ -85,7 +85,7 @@ def run_command(command: List[str],
         else:
             # result.status should not be None, unless the process did not finish, which would be
             # a bug at this place.
-            exit_code = result.status.value
+            exit_code = result.status.code
         execution_log = {
             "start_time": start_time,
             "cmd": command,

@@ -9,7 +9,14 @@ handlers:
         class: logging.StreamHandler
         level: DEBUG
         formatter: standard
-        stream: ext://sys.stdout
+        stream: ext://sys.stderr
 root:
     handlers: [console]
     level: DEBUG
+asyncio:
+    # See https://docs.python.org/3/library/asyncio-dev.html#debug-modeß
+    level: DEBUG
+    handlers: [console]
+asyncssh:
+    level: DEBUG
+    handlers: [console]

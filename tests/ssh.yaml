@@ -1,7 +1,0 @@
-ssh: []
-#  - username:
-#    hostname: localhost
-#    port: 22
-#    knownhosts_file: ~/.ssh/known_hosts
-#    keyfile: ~/.ssh/id_rsa
-#    keyfile_passphrase: your passphrase
