@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
 @login_required
 def GetRunLog(run_id):
-    ctx = Helper(current_app, current_user)
+    logger.info("GetRun %s" % run_id)
     try:
-        logger.info("GetRun %s" % run_id)
+        ctx = Helper(current_app, current_user)
         ctx.assert_run_id(run_id)
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
@@ -59,9 +59,9 @@ def GetRunLog(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
 @login_required
 def CancelRun(run_id):
-    ctx = Helper(current_app, current_user)
+    logger.info("CancelRun %s" % run_id)
     try:
-        logger.info("CancelRun %s" % run_id)
+        ctx = Helper(current_app, current_user)
         ctx.assert_run_id(run_id)
         run = current_app.manager.database.get_run(run_id)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
@@ -85,9 +85,9 @@ def CancelRun(run_id):
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
 @login_required
 def GetRunStatus(run_id):
-    ctx = Helper(current_app, current_user)
+    logger.info("GetRunStatus %s" % run_id)
     try:
-        logger.info("GetRunStatus %s" % run_id)
+        ctx = Helper(current_app, current_user)
         ctx.assert_run_id(run_id)
         run = current_app.manager.get_run(run_id=run_id, update=True)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
@@ -108,8 +108,8 @@ def GetRunStatus(run_id):
 
 @bp.route("/ga4gh/wes/v1/service-info", methods=["GET"])
 def GetServiceInfo(*args, **kwargs):
+    logger.info("GetServiceInfo")
     try:
-        logger.info("GetServiceInfo")
         current_app.manager.update_runs()
         response = {
             "id":
@@ -162,9 +162,9 @@ def GetServiceInfo(*args, **kwargs):
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
 @login_required
 def ListRuns(*args, **kwargs):
-    ctx = Helper(current_app, current_user)
+    logger.info("ListRuns")
     try:
-        logger.info("ListRuns")
+        ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
         response = current_app.manager.database.list_run_ids_and_states(ctx.user.id)
         return jsonify(response), 200
@@ -176,8 +176,9 @@ def ListRuns(*args, **kwargs):
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
 @login_required
 def RunWorkflow(*args, **kwargs):
-    ctx = Helper(current_app, current_user)
+    logger.info("RunWorkflow")
     try:
+        ctx = Helper(current_app, current_user)
         data = request.json
         if data is None:
             return {
@@ -185,7 +186,6 @@ def RunWorkflow(*args, **kwargs):
                 "status_code": 400
             }, 400
         else:
-            logger.info("RunWorkflow")
             validator = current_app.request_validators["run_request"]
             validation_errors = validator.validate(data)
             if len(validation_errors) > 0:
@@ -220,9 +220,9 @@ def RunWorkflow(*args, **kwargs):
 @bp.route("/weskit/v1/runs", methods=["GET"])
 @login_required
 def ListRunsExtended(*args, **kwargs):
-    ctx = Helper(current_app, current_user)
+    logger.info("ListRunsExtended")
     try:
-        logger.info("ListRunsExtended")
+        ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
         response = current_app.manager.database.\
             list_run_ids_and_states_and_times(ctx.user.id)

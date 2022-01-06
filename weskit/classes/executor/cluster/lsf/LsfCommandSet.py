@@ -86,11 +86,11 @@ class LsfCommandSet:
                # stdin_file: Optional[PathLike] = None,  # possible with `-i`, but not needed
                settings: Optional[ExecutionSettings] = None) -> List[str]:
         """
-        Create a bsub command line for submitting an command to a cluster node. Note that the
+        Create a bsub command line for submitting a command to a cluster node. Note that the
         submission command includes the remote working directory and the environment of the
         command.
 
-        If you need shell expansion on the compute node, e.g. that some local variable on there
+        If you need shell expansion on the compute-node, e.g. that some local variable on there
         is used (e.g. LSF variables that are only available during execution), then you need
         to wrap the actual command in a shell, e.g.
 

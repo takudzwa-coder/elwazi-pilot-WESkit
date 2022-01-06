@@ -16,13 +16,12 @@
 from __future__ import annotations
 
 import abc
+from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from io import IOBase
 from os import PathLike
 from typing import Optional, Any, Union
-
-from builtins import property, bool, str
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.memory_units import Memory
@@ -166,7 +165,7 @@ class CommandResult:
         return self._end_time
 
     @end_time.setter
-    def end_time(self, value: str):
+    def end_time(self, value: Optional[datetime]):
         self._end_time = value
 
     def __repr__(self):

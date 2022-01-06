@@ -47,10 +47,12 @@ else:
 # Note that this cannot be solved by a fixture yielding multiple times.
 # See https://github.com/pytest-dev/pytest/issues/1595.
 #
-# Instead marks for individual parameters of pytest.mark.parametrize are used.
+# Instead, marks for individual parameters of pytest.mark.parametrize are used.
 # See https://docs.pytest.org/en/6.2.x/example/markers.html#marking-individual-tests-when-using-parametrize   # noqa
 #
-# You can select the tests to execute on the commandline.
+# You can select the tests to execute on the commandline, by pytest parameters, e.g. -m "not slow".
+# Note that if you select ssh or ssh_lsf you also need to configure the SSH connections in
+# tests/remote.yaml.
 executors = {
     "local": pytest.param(LocalExecutor(),
                           marks=[pytest.mark.integration]),

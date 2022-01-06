@@ -93,16 +93,16 @@ static_service_info:
       type: dict
       required: true
       schema:
-        snakemake:
+        SMK:
           type: string
-        nextflow:
+        NFL:
           type: string
     default_workflow_engine_parameters:
       type: dict
       required: false
       schema:              # workflow engine names
 
-        nextflow: &default_workflow_engine_parameters
+        NFL: &default_workflow_engine_parameters
           type: dict       # engine version tags
           required: true
           valuesrules:
@@ -120,7 +120,7 @@ static_service_info:
                 tags:
                   type: list
                   default: []
-        snakemake: *default_workflow_engine_parameters
+        SMK: *default_workflow_engine_parameters
 
     auth_instructions_url:
       type: string

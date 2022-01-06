@@ -5,10 +5,9 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from builtins import property, str
 from os import PathLike
 from typing import Dict, List, Optional
-
-from builtins import property, str
 
 
 class ShellCommand:
@@ -45,7 +44,7 @@ class ShellCommand:
         return self.__workdir
 
     @workdir.setter
-    def workdir(self, workdir: str):
+    def workdir(self, workdir: PathLike):
         self.__workdir = workdir
 
     def __repr__(self) -> str:

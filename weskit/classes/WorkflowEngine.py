@@ -9,6 +9,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from functools import reduce
+from pathlib import Path
 from typing import List, Dict, Optional
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -35,7 +36,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                         default_params))
         self._command_param_prefix = command_param_prefix
 
-    def _environment(self) -> Dict[str, str]:
+    def _environment(self) -> Dict[str, Optional[str]]:
         """
         Get a dictionary of environment parameters.
         """
@@ -90,7 +91,7 @@ class Snakemake(WorkflowEngine):
 
     @staticmethod
     def name():
-        return "snakemake"
+        return "SMK"
 
     def command(self,
                 workflow_path: str,
@@ -100,9 +101,9 @@ class Snakemake(WorkflowEngine):
             -> ShellCommand:
         command = ["snakemake", "--snakefile", workflow_path] + self._command_params()
         if config_files:
-            command += ["--configfile"] + config_files
+            command += ["--configfile"] + list(map(lambda p: str(p), config_files))
         return ShellCommand(command=command,
-                            workdir=workdir,
+                            workdir=Path(workdir),
                             environment=self._environment())
 
 
@@ -116,7 +117,7 @@ class Nextflow(WorkflowEngine):
 
     @staticmethod
     def name():
-        return "nextflow"
+        return "NFL"
 
     def _run_command_params(self) -> List[str]:
         """
@@ -140,7 +141,7 @@ class Nextflow(WorkflowEngine):
             raise ValueError("Nextflow accepts only a single parameters file (`-params-file`)")
         command += self._run_command_params()
         return ShellCommand(command=command,
-                            workdir=workdir,
+                            workdir=Path(workdir),
                             environment=self._environment())
 
 
