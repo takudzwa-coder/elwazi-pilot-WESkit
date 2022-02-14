@@ -5,26 +5,30 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+
 import logging
+import tempfile
+import asyncssh
+from pathlib import PurePath
 from datetime import datetime
 from os import PathLike
-from typing import Pattern, Optional
 
+from typing import Pattern, Optional
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, RunStatus
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
-from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
+from weskit.classes.executor.cluster.slurm.SlurmCommandSet import SlurmCommandSet
 from weskit.classes.executor.ExecutorException import ExecutorException
 
 
 logger = logging.getLogger(__name__)
 
 
-class LsfExecutor(ClusterExecutor):
+class SlurmExecutor(ClusterExecutor):
     """
-    Execute LSF job-management operations via shell commands issued on a local/remote host.
+    Execute Slurm job-management operations via shell commands issued on a local/remote host.
     """
 
     def __init__(self, executor: Executor):
@@ -33,7 +37,7 @@ class LsfExecutor(ClusterExecutor):
         should run locally, you can use a command_executor.LocalExecutor. If you need to submit via
         a remote connection you can use an command_executor.SshExecutor.
         """
-        self.__command_set = LsfCommandSet()
+        self.__command_set = SlurmCommandSet()
         self._executor = executor
 
     @property
@@ -44,11 +48,24 @@ class LsfExecutor(ClusterExecutor):
     def executor(self) -> Executor:
         return self._executor
 
-    _match_jid: Pattern = r'Job <(\d+)> is submitted to .+.\n'
-    _split_delimiter: str = " "
-    _match_status: Pattern = r'(\d+)\s+(\S+)\s+(-|\d+)'
-    _success_status_name: str = "DONE"
-    _success_exit_code: str = "-"
+    _match_jid: Pattern = r'Submitted batch job (\d+)'
+    _split_delimiter: str = ":"
+    _match_status: Pattern = r'(\d+)\s+(\S+)\s+(\d+:\d+)'
+    _success_status_name: str = "COMPLETED"
+    _success_exit_code: str = "0"
+    _shell_interpreter: str = '#!/bin/bash'
+
+    def _create_command_script(self, command: ShellCommand) -> PurePath:
+        """
+        We assume Bash is used on the remote side. The command (bash script) is written locally
+        into a NamedTemporaryFile.
+        """
+        sub_command = " ".join(command.command)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
+            if sub_command is not None:
+                for export in [self._shell_interpreter, sub_command]:
+                    print(export, end="\n", sep=" ", file=file)
+            return PurePath(file.name)
 
     def execute(self,
                 command: ShellCommand,
@@ -67,21 +84,46 @@ class LsfExecutor(ClusterExecutor):
 
         if stdin_file is not None:
             logger.error("stdin_file is not supported in ClusterExecutor.execute()")
-        # Note that there are at two shells involved: The environment on the submission host
+        # Note that there are at two shell involved: The environment on the submission host
         # and the environment on the compute node, on which the actual command is executed.
+
+        def _create_process(job_id: ProcessId,
+                            run_status: RunStatus):
+            process = ExecutedProcess(executor=self,
+                                      process_handle=job_id,
+                                      pre_result=CommandResult(command=command,
+                                                               id=job_id,
+                                                               stderr_file=stderr_file,
+                                                               stdout_file=stdout_file,
+                                                               stdin_file=stdin_file,
+                                                               start_time=datetime.now(),
+                                                               run_status=run_status))
+            return process
+
+        source_script = self._create_command_script(command)
+        target_script = str(command.workdir) + str("/.weskit_submitted_command.sh")
+        try:
+            self.copy_file(source_script, target_script)
+        except asyncssh.SFTPError:
+            return _create_process(job_id=0,
+                                   run_status=RunStatus(1, "EXIT"))
+
+        # Note that source and target are never the same file. Thus, the latter removal will only
+        # remove the (possibly remote) copy.
+
+        command.command = target_script
         submission_command = ShellCommand(self._command_set.submit(command=command,
                                                                    stdout_file=stdout_file,
                                                                    stderr_file=stderr_file,
                                                                    settings=settings))
         # The actual submission is done quickly. We wait here for the
-        # result and then use the cluster job ID returned from the submission command,
-        # as process ID to query the cluster job status later.
+        # result and then use the cluster job ID returned from the submission command, as process
+        # ID to query the cluster job status later.
 
         with execute(self._executor, submission_command) \
              as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
-            start_time = datetime.now()
             if result.status.failed:
                 raise ExecutorException(f"Failed to submit cluster job: {result}" +
                                         f"stdout={stdout_lines}, " +
@@ -90,17 +132,12 @@ class LsfExecutor(ClusterExecutor):
                 cluster_job_id = \
                     ProcessId(self.extract_jobid_from_submission_output(stdout_lines))
 
-        logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
+        # Remove the remote file once the submission has been executed.
+        self.remove_file(target_script)
 
+        logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
         # NOTE: We could now create an additional `wait` process that waits for the cluster job
-        # ID. However, we postpone the creation of this to a later stage.
-        # The process handle is just the cluster job ID.
-        return ExecutedProcess(executor=self,
-                               process_handle=cluster_job_id,
-                               pre_result=CommandResult(command=command,
-                                                        id=cluster_job_id,
-                                                        stderr_file=stderr_file,
-                                                        stdout_file=stdout_file,
-                                                        stdin_file=stdin_file,
-                                                        run_status=RunStatus(None),
-                                                        start_time=start_time))
+        # ID. However, we postpone the creation of this to a later stage. The process
+        # handle is just the cluster job ID.
+        return _create_process(job_id=cluster_job_id,
+                               run_status=RunStatus(None))

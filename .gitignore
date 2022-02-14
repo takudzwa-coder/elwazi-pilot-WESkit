@@ -4,7 +4,7 @@ trash/
 __pycache__/
 .idea/
 build/
-weskit.iml
+*.iml
 WESkit.egg-info
 dist
 settings.json

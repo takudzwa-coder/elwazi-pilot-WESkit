@@ -6,10 +6,13 @@
 #
 #  Authors: The WESkit Team
 import logging
+import os
 import subprocess  # nosec B603
 from datetime import datetime
 from os import PathLike
+from pathlib import Path
 from typing import Optional
+from shutil import copyfile
 
 from builtins import int, super, open, property
 
@@ -154,6 +157,15 @@ class LocalExecutor(base.Executor):
                                                       run_status=base.RunStatus(
                                                           exit_code, message=e.strerror),
                                                       start_time=start_time))
+
+    def copy_file(self, source: PathLike, target: PathLike):
+        if Path(source) == Path(target):
+            raise ValueError("Identical source and target paths: '{source}'")
+        else:
+            copyfile(source, target)
+
+    def remove_file(self, target: PathLike):
+        os.unlink(target)
 
     def get_status(self, process: base.ExecutedProcess) -> base.RunStatus:
         if process.handle is None:
