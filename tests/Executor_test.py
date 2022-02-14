@@ -13,8 +13,9 @@ import uuid
 from abc import abstractmethod, ABCMeta
 from datetime import timedelta, datetime
 from os import PathLike
-from pathlib import PurePath
-from typing import Optional
+from pathlib import PurePath, Path
+from typing import Optional, cast
+
 
 import pytest
 import yaml
@@ -26,7 +27,22 @@ from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, E
 from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.classes.executor.SshExecutor import SshExecutor
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
+from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
+
 from weskit.memory_units import Memory, Unit
+
+# Note that this cannot be solved by a fixture yielding multiple times.
+# See https://github.com/pytest-dev/pytest/issues/1595.
+#
+# Instead marks for individual parameters of pytest.mark.parametrize are used.
+# See https://docs.pytest.org/en/6.2.x/example/markers.html#marking-individual-tests-when-using-parametrize   # noqa
+#
+# You can select the tests to execute on the commandline.
+executors = {
+    "local": pytest.param(LocalExecutor(),
+                          marks=[pytest.mark.integration])
+}
+
 
 with open("tests/remote.yaml", "r") as f:
     remote_config = yaml.safe_load(f)
@@ -34,37 +50,29 @@ with open("tests/remote.yaml", "r") as f:
 
 if remote_config is not None and "ssh" in remote_config.keys():
     ssh_executor = SshExecutor(**(remote_config["ssh"]))
-else:
-    ssh_executor = None
+    executors["ssh"] = pytest.param(ssh_executor,
+                                    marks=[pytest.mark.slow,
+                                           pytest.mark.integration,
+                                           pytest.mark.ssh])
 
 
 if remote_config is not None and "lsf_submission_host" in remote_config.keys():
     ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']['ssh'])))
     shared_workdir = remote_config['lsf_submission_host']["shared_workdir"]
-else:
-    ssh_lsf_executor = None
+    executors["ssh_lsf"] = pytest.param(ssh_lsf_executor,
+                                        marks=[pytest.mark.slow,
+                                               pytest.mark.integration,
+                                               pytest.mark.ssh_lsf])
 
-# Note that this cannot be solved by a fixture yielding multiple times.
-# See https://github.com/pytest-dev/pytest/issues/1595.
-#
-# Instead, marks for individual parameters of pytest.mark.parametrize are used.
-# See https://docs.pytest.org/en/6.2.x/example/markers.html#marking-individual-tests-when-using-parametrize   # noqa
-#
-# You can select the tests to execute on the commandline, by pytest parameters, e.g. -m "not slow".
-# Note that if you select ssh or ssh_lsf you also need to configure the SSH connections in
-# tests/remote.yaml.
-executors = {
-    "local": pytest.param(LocalExecutor(),
-                          marks=[pytest.mark.integration]),
-    "ssh": pytest.param(ssh_executor,
-                        marks=[pytest.mark.slow,
-                               pytest.mark.integration,
-                               pytest.mark.ssh]),
-    "ssh_lsf": pytest.param(ssh_lsf_executor,
-                            marks=[pytest.mark.slow,
-                                   pytest.mark.integration,
-                                   pytest.mark.ssh_lsf])
-}
+
+if remote_config is not None and "slurm_submission_host" in remote_config.keys():
+    ssh_slurm_executor = SlurmExecutor(SshExecutor(**(
+        remote_config['slurm_submission_host']['ssh'])))
+    shared_workdir = remote_config['slurm_submission_host']["shared_workdir"]
+    executors["ssh_slurm"] = pytest.param(ssh_slurm_executor,
+                                          marks=[pytest.mark.slow,
+                                                 pytest.mark.integration,
+                                                 pytest.mark.ssh_slurm])
 
 
 def test_runstatus():
@@ -125,11 +133,13 @@ def test_inacessible_workdir(executor):
                            workdir=PurePath("/this/path/does/not/exist"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
-                                   job_name="weskit_test_inaccessible_workdir",
-                                   walltime=timedelta(minutes=5.0),
-                                   total_memory=Memory(100, Unit.MEGA)))
+                                job_name="weskit_test_inaccessible_workdir",
+                                walltime=timedelta(minutes=5.0),
+                                total_memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
     # Note: LSF exits with code 2 with LSB_EXIT_IF_CWD_NOTEXIST=Y, but at least it fails.
+    # Note: SLURM exits with code 0. It changes to /tmp if dir does not exists
+    # This behaviour can be changes by the admin. slurm.conf
     assert result.status.code in [1, 2], result.status
 
 
@@ -276,11 +286,15 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
 
     @property
     def ssh_executor(self) -> SshExecutor:
-        return ssh_lsf_executor.executor
+        # We do an explicit cast here. The only use case we are interested in is that the nested
+        # executor is a remote executor, and the only we provide is the one based on SSH. The
+        # cast avoids problems with the type highlighting and makes this decision (somehow)
+        # explicit, without coming up with a `RemoteExecutor` or so, which would be total overkill.
+        return cast("SshExecutor", ssh_lsf_executor.executor)
 
     @property
     def remote(self) -> str:
-        return self.executor.executor.hostname
+        return self.ssh_executor.hostname
 
     @property
     def workdir(self) -> PurePath:
@@ -327,13 +341,14 @@ def test_std_fds_are_closed(executor, temporary_dir):
 
 @pytest.mark.parametrize("executor", executors.values())
 def test_get_status(executor):
-    command = ShellCommand(["sleep", "20" if isinstance(executor, LsfExecutor) else "1"],
-                           workdir=PurePath("/"))
+    command = ShellCommand(["sleep", "20" if isinstance(executor, (SlurmExecutor, LsfExecutor))
+                            else "1"],
+                           workdir=PurePath("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
-                                   job_name="weskit_test_get_status",
-                                   walltime=timedelta(minutes=5.0),
-                                   total_memory=Memory(100, Unit.MEGA)))
+                                    job_name="weskit_test_get_status",
+                                    walltime=timedelta(minutes=5.0),
+                                    total_memory=Memory(100, Unit.MEGA)))
     status = executor.get_status(process)
     assert status.code is None
     assert not status.finished
@@ -348,8 +363,9 @@ def test_get_status(executor):
 
 # I didn't get the SshExecutor to succeed in this test (see comment below). As the usage-pattern
 # of the Executor does (currently) not rely on update_process() but only wait_for(), it's probably
-# acceptible to keep the SshExecutor out in this test.
-@pytest.mark.parametrize("executor", [executors["local"], executors["ssh_lsf"]])
+# acceptable to keep the SshExecutor out in this test.
+@pytest.mark.parametrize("executor",
+                         dict(filter(lambda kv: kv[0] != "ssh", executors.items())).values())
 def test_update_process(executor):
     if isinstance(executor, LocalExecutor):
         sleep_duration = 1
@@ -357,11 +373,13 @@ def test_update_process(executor):
         sleep_duration = 5
     elif isinstance(executor, LsfExecutor):
         sleep_duration = 30
+    elif isinstance(executor, SlurmExecutor):
+        sleep_duration = 30
     else:
         sleep_duration = 10
 
     command = ShellCommand(["sleep", str(sleep_duration)],
-                           workdir=PurePath("/"))
+                           workdir=PurePath("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
                                    job_name="weskit_test_update_process",
@@ -415,6 +433,12 @@ def test_executor_context_manager():
             process.result.status = RunStatus(self._target_runstatus)
             return process.result
 
+        def copy_file(self, source: PathLike, target: PathLike):
+            pass
+
+        def remove_file(self, file: PathLike):
+            pass
+
         def execute(self, command: ShellCommand,
                     stdout_file: Optional[FileRepr] = None,
                     stderr_file: Optional[FileRepr] = None,
@@ -442,8 +466,8 @@ def test_executor_context_manager():
         assert result.status.code == 0
         assert stderr.readlines() == ["stderr\n"]
         assert stdout.readlines() == ["stdout\n"]
-        assert result.stdout_file == PurePath(stdout.name)
-        assert result.stderr_file == PurePath(stderr.name)
+        assert result.stdout_file == Path(stdout.name)
+        assert result.stderr_file == Path(stderr.name)
         assert re.match(r"/tmp/\S+", stderr.name)
         assert re.match(r"/tmp/\S+", stdout.name)
 
@@ -451,7 +475,7 @@ def test_executor_context_manager():
 def test_lsf_extract_jobid():
     executor = LsfExecutor(executor=LocalExecutor())
     bsub_output = ["Job <12345> is submitted to default queue <short>.\n"]
-    assert executor.extract_jobid_from_bsub(bsub_output) == "12345"
+    assert executor.extract_jobid_from_submission_output(bsub_output) == "12345"
 
     delayed_bsub_output = [
         "don't remember exactly how this waiting line looks like",
@@ -459,7 +483,13 @@ def test_lsf_extract_jobid():
         "Job <54321> is submitted to default queue <short>.\n",
         "and this line should not occur, right"
     ]
-    assert executor.extract_jobid_from_bsub(delayed_bsub_output) == "54321"
+    assert executor.extract_jobid_from_submission_output(delayed_bsub_output) == "54321"
+
+
+def test_slurm_extract_jobid():
+    executor = SlurmExecutor(executor=LocalExecutor())
+    sbatch_output = ["Submitted batch job 24896 \n"]
+    assert executor.extract_jobid_from_submission_output(sbatch_output) == "24896"
 
 
 class TestLsfGetStatus:
@@ -503,6 +533,12 @@ class TestLsfGetStatus:
             def wait_for(self, process: ExecutedProcess) -> CommandResult:
                 self.update_process(process)
                 return process.result
+
+            def copy_file(self, source: PathLike, target: PathLike):
+                pass
+
+            def remove_file(self, file: PathLike):
+                pass
 
         executor = LsfExecutor(MockInnerExecutor())
         process = ExecutedProcess(executor=executor,

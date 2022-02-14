@@ -189,6 +189,26 @@ class SshExecutor(Executor):
             await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
 
+    async def _upload_file(self, local_path: PathLike, remote_path: PathLike):
+        """
+        We can't assume that local and remote path are identical. Thus file upload
+        has to go into a manually generated remote folder.
+
+        :param local_path:
+        :param remote_path:
+        :return:
+        """
+        try:
+            await asyncssh.scp(local_path, (self._connection, remote_path))
+        finally:
+            await self._event_loop.run_in_executor(None, lambda: os.unlink(local_path))
+
+    def copy_file(self, source: PathLike, target: PathLike):
+        self._event_loop.run_until_complete(self._upload_file(source, target))
+
+    def remove_file(self, target: PathLike):
+        self._event_loop.run_until_complete(self.remote_rm(target))
+
     async def _execute(self,
                        command: ShellCommand,
                        stdout_file: Optional[FileRepr] = None,
@@ -237,10 +257,11 @@ class SshExecutor(Executor):
             # The environment setup script is `source`d.
             effective_command = \
                 ["source", shlex.quote(str(self._setup_script_path(process_id))), "&&"] + \
+                ["sleep 1 &&"] + \
                 list(map(shlex.quote, command.command))
 
             final_command_str = " ".join(effective_command)
-            logger.debug(f"Executed command ({process_id}): {final_command_str}")
+            logger.debug(f"Executed command ({process_id}): {effective_command}")
             process: SSHClientProcess = await self._connection.\
                 create_process(command=final_command_str,
                                stdin=PIPE if stdin_file is None else stdin_file,

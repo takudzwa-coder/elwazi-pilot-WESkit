@@ -328,3 +328,18 @@ class Executor(metaclass=abc.ABCMeta):
         with the most recent result object.
         """
         pass
+
+    @abc.abstractmethod
+    def copy_file(self, source: PathLike,  target: PathLike):
+        """
+        Copy a file associated with the execution of a job from source to target. If the target is
+        remote then this corresponds to a network transfer.
+        """
+        pass
+
+    @abc.abstractmethod
+    def remove_file(self, target: PathLike):
+        """
+        Remove the target file. The target can be remote.
+        """
+        pass

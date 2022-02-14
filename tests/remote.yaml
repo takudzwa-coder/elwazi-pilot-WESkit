@@ -8,10 +8,20 @@
 #  keyfile_passphrase:
 
 #lsf_submission_host:
+# shared_workdir: /home/user
+# ssh:
+#   username: user
+#   hostname: odcf-worker01
+#   port: 22
+#   knownhosts_file: ~/.ssh/known_hosts
+#   keyfile: ~/.ssh/id_rsa
+#   keyfile_passphrase:
+
+#slurm_submission_host:
 #  shared_workdir: /home/user
 #  ssh:
 #    username: user
-#    hostname: odcf-worker01
+#    hostname: slurm_hpc
 #    port: 22
 #    knownhosts_file: ~/.ssh/known_hosts
 #    keyfile: ~/.ssh/id_rsa
