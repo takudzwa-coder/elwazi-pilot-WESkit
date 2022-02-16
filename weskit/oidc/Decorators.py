@@ -11,7 +11,6 @@ from functools import wraps
 from typing import Callable, Optional
 
 import requests
-import json
 from flask import current_app
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended.view_decorators import _decode_jwt_from_headers
@@ -40,13 +39,12 @@ def login_required(fn: Callable,
 
             # Check availability of access_token
             checkJWT = jwt_required(fn)(*args, **kwargs)
-
             if validate_online:
                 # make a request to oidc identity provider
                 if online_validation(current_app):
                     return checkJWT
                 else:
-                    return {"msg": "Online validation failed. Use new access_token"}, 401
+                    return {"msg": "Online validation failed"}, 401
 
             # in case of deactivated JWT ignore JWT validation
             return checkJWT
@@ -74,22 +72,23 @@ def online_validation(app) -> bool:
         ).json()
 
     except Exception as e:
-        logger.exception("Could not reach OIDC provider for online validation")
-        logger.exception(e)
+        logger.error("Could not reach OIDC provider for online validation", exc_info=e)
         return False
+
     if j.get('active', False):
         return True
     else:
-        logger.info("User validation at {} failed.".format(app.oidc_login.introspection_endpoint))
-        logger.info(json.dumps(j))
-        logger.info(access_token)
+        logger.warning("Online validation failed: id='{}', secret='{}', token='{}'".
+                       format(current_app.oidc_login.client_id,
+                              current_app.oidc_login.client_secret,
+                              get_token()))
         return False
 
 
 def get_token(token_type: str = "access") -> Optional[str]:   # nosec B107, token_type no problem
     """
     This function returns the encoded access_token from different sources.
-    Its basically identical to a function from jwt_extended but has different
+    It is basically identical to a function from jwt_extended but has different
     return
     """
 
