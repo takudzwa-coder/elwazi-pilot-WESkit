@@ -525,6 +525,8 @@ def test_lsf_parse_get_status():
                                           "123 TheRealStatus -\n",
                                           "another line to ignore\n",
                                           "123 DoneAnyway;-P 1"])
+    with pytest.raises(ValueError):
+        executor.parse_get_status_output([])
 
 
 class TestLsfGetStatus:

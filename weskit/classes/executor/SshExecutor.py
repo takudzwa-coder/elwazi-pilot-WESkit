@@ -311,11 +311,11 @@ class SshExecutor(Executor):
             process_dir = self._process_directory(process.id.value)
             await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)
         except TimeoutError as e:
-            ExecutionError(f"Process {process.id.value} timed out:" +
-                           str(process.command.command), e)
+            raise ExecutionError(f"Process {process.id.value} timed out:" +
+                                 str(process.command.command), e)
         except ProcessError as e:
-            ExecutorException(f"Error during cleanup of {process.id.value}:" +
-                              str(process.command.command), e)
+            raise ExecutorException(f"Error during cleanup of {process.id.value}:" +
+                                    str(process.command.command), e)
         return process.result
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
@@ -326,4 +326,4 @@ class SshExecutor(Executor):
             process.handle.kill()
             self.wait_for(process)
         except OSError as e:
-            ExecutionError(f"Could not kill process ({process.command.command})", e)
+            raise ExecutionError(f"Could not kill process ({process.command.command})", e)
