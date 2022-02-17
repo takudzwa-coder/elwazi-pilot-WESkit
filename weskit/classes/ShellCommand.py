@@ -44,7 +44,7 @@ class ShellCommand:
         return self.__workdir
 
     @workdir.setter
-    def workdir(self, workdir: PathLike):
+    def workdir(self, workdir: Optional[PathLike]):
         self.__workdir = workdir
 
     def __repr__(self) -> str:

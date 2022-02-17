@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# Create .git/hooks/pre-commit (e.g. from the example you find there) and add the line
+#
+# git-hooks/pre-commit
+#
+
+set -ue
+
+# Type checks
+echo "Mypy ..." >> /dev/stderr
+mypy tests/ weskit/
+
+# Code style checks
+echo "flake8 ..." >> /dev/stderr
+flake8 tests/ weskit/
+
+# Security
+echo "bandit ..." >> /dev/stderr
+bandit -r weskit/ uwsgi_server/
+
+# Run unit tests
+echo "pytest ..." >> /dev/stderr
+python -m pytest -m "not integration"

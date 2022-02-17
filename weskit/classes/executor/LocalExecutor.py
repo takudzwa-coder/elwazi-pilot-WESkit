@@ -11,8 +11,8 @@ import subprocess  # nosec B603
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
-from typing import Optional
 from shutil import copyfile
+from typing import Optional, cast, IO
 
 from builtins import int, super, open, property
 
@@ -66,7 +66,7 @@ class ClosingPopen(subprocess.Popen):
             self._close_std_fds()
         return retcode
 
-    def wait(self, timeout: Optional[float] = ...) -> int:
+    def wait(self, timeout: Optional[float] = None) -> int:
         retcode = super().wait(timeout)
         self._close_std_fds()
         return retcode
@@ -81,6 +81,12 @@ class LocalExecutor(base.Executor):
     def __init__(self):
         pass
 
+    def _file_repr_to_io(self, file: Optional[base.FileRepr], mode: str) -> Optional[IO]:
+        if isinstance(file, PathLike):
+            return open(cast(PathLike, file), mode)
+        else:
+            return file
+
     def execute(self,
                 command: ShellCommand,
                 stdout_file: Optional[base.FileRepr] = None,
@@ -94,19 +100,11 @@ class LocalExecutor(base.Executor):
 
         Note, the LocalExecutor supports processing of IOBase objects as stderr, stdout, stdin.
         """
-        if isinstance(stdin_file, PathLike):
-            stdin = open(stdin_file, "r")
-        else:
-            stdin = stdin_file
-        if isinstance(stderr_file, PathLike):
-            stderr = open(stderr_file, "a")
-        else:
-            stderr = stdin_file
-        if isinstance(stdout_file, PathLike):
-            stdout = open(stdout_file, "a")
-        else:
-            stdout = stdout_file
-
+        # In the following explicit cast is used to avoid mypy errors. Mypy cannot (yet) infer the
+        # type from `isinstance` conditions.
+        stdin = self._file_repr_to_io(stdin_file, "r")
+        stderr = self._file_repr_to_io(stderr_file, "a")
+        stdout = self._file_repr_to_io(stdout_file, "a")
         start_time = datetime.now()
 
         # Note that shell=False (default) to ensure that no shell injection can be done.

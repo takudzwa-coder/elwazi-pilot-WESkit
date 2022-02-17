@@ -33,7 +33,7 @@ class Run:
         self.workflow_path = data.get("workflow_path", None)
         self.outputs = data.get("outputs", {})
         self.log = data.get("execution_log", {})
-        self.__status = RunStatus.\
+        self.__status: RunStatus = RunStatus.\
             from_string(data.get("run_status", "INITIALIZING"))
         self.start_time = data.get("start_time", None)
         self.task_logs = data.get("task_logs", [])

@@ -46,23 +46,10 @@ test:
   stage: test
   extends: .conda
   script:
-    - python -m pytest -vvv --cov=weskit/ -m "not slow"
-
-code_style:
-  stage: test
-  image: python:latest
-  before_script:
-    - pip install flake8 mccabe
-  script:
+    - mypy --install-types --non-interactive weskit/ tests/
     - flake8
-
-security:
-  stage: test
-  image: python:latest
-  before_script:
-    - pip install bandit
-  script:
-    - bandit -r weskit/ uWSGI_Server/
+    - bandit -r weskit/ uwsgi_server/
+    - python -m pytest -vvv --cov=weskit/ -m "not slow"
 
 # See
 # https://docs.gitlab.com/ee/user/project/deploy_tokens/index.html
@@ -81,7 +68,7 @@ security:
 .build_image:
   extends: .gitlab-registry
   # Only build images, if the QA jobs succeeded.
-  needs: [code_style, test]
+  needs: [test]
   script:
     - |
       cat - <<THE_END

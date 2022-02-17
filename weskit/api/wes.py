@@ -8,8 +8,8 @@
 
 import logging
 
-from flask import current_app, jsonify, request
 from flask import Blueprint
+from flask import current_app, jsonify, request
 from flask_jwt_extended import current_user
 from rfc3339 import rfc3339
 
@@ -29,7 +29,7 @@ def GetRunLog(run_id):
     logger.info("GetRun %s" % run_id)
     try:
         ctx = Helper(current_app, current_user)
-        ctx.assert_run_id(run_id)
+        ctx.assert_run_id_syntax(run_id)
         run = current_app.manager.get_run(
             run_id=run_id, update=True)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
@@ -62,7 +62,7 @@ def CancelRun(run_id):
     logger.info("CancelRun %s" % run_id)
     try:
         ctx = Helper(current_app, current_user)
-        ctx.assert_run_id(run_id)
+        ctx.assert_run_id_syntax(run_id)
         run = current_app.manager.database.get_run(run_id)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
@@ -88,7 +88,7 @@ def GetRunStatus(run_id):
     logger.info("GetRunStatus %s" % run_id)
     try:
         ctx = Helper(current_app, current_user)
-        ctx.assert_run_id(run_id)
+        ctx.assert_run_id_syntax(run_id)
         run = current_app.manager.get_run(run_id=run_id, update=True)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
@@ -144,8 +144,7 @@ def GetServiceInfo(*args, **kwargs):
                 dict(map(lambda kv: (kv[0], ",".join(kv[1])),
                          current_app.service_info.workflow_engine_versions().items())),
             "default_workflow_engine_parameters":
-                current_app.service_info.
-                default_workflow_engine_parameters(),
+                current_app.service_info.default_workflow_engine_parameters(),
             "system_state_counts":
                 current_app.service_info.system_state_counts(),
             "auth_instructions_url":
@@ -241,7 +240,7 @@ def GetRunStderr(run_id):
     """
     ctx = Helper(current_app, current_user)
     logger.info("GetStderr %s" % run_id)
-    ctx.assert_run_id(run_id)
+    ctx.assert_run_id_syntax(run_id)
     return ctx.get_log_response(run_id, "stderr")
 
 
@@ -254,5 +253,5 @@ def GetRunStdout(run_id):
     """
     ctx = Helper(current_app, current_user)
     logger.info("GetStdout %s" % run_id)
-    ctx.assert_run_id(run_id)
+    ctx.assert_run_id_syntax(run_id)
     return ctx.get_log_response(run_id, "stdout")

@@ -8,28 +8,26 @@
 #
 #  Authors: The WESkit Team
 
+import logging
+import os
+import sys
+from logging.config import dictConfig
 from typing import Optional
 
 import yaml
-import sys
-import logging
-import os
-
 from celery import Celery
-from pymongo import MongoClient
-from logging.config import dictConfig
 from flask import Flask
-from weskit.utils import create_validator
+from pymongo import MongoClient
 
-from weskit.oidc.Login import Login
-from weskit.oidc import Factory as OIDCFactory
-from weskit.classes.Database import Database
 from weskit.api.RunRequestValidator import RunRequestValidator
-from weskit.classes.WorkflowEngine import WorkflowEngineFactory
+from weskit.classes.Database import Database
+from weskit.classes.ErrorCodes import ErrorCodes
 from weskit.classes.Manager import Manager
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.ErrorCodes import ErrorCodes
-
+from weskit.classes.WorkflowEngine import WorkflowEngineFactory
+from weskit.oidc import Factory as OIDCFactory
+from weskit.oidc.Login import Login
+from weskit.utils import create_validator
 
 logger = logging.getLogger(__name__)
 
@@ -85,16 +83,17 @@ def create_database(database_url=None):
 
 def create_app(celery: Celery,
                database: Database) -> WESApp:
-    if os.getenv("WESKIT_CONFIG") is not None:
-        default_config = os.getenv("WESKIT_CONFIG", "")
-    else:
-        raise RuntimeError("WESKIT_CONFIG is undefined")
 
-    default_log_config = os.getenv(
+    if os.getenv("WESKIT_CONFIG") is not None:
+        config_file = os.getenv("WESKIT_CONFIG", "")
+    else:
+        raise ValueError("Cannot start WESkit: Environment variable WESKIT_CONFIG is undefined")
+
+    log_config_file = os.getenv(
         "WESKIT_LOG_CONFIG",
         os.path.join("config", "log-config.yaml"))
 
-    default_validation_config = os.getenv(
+    validation_config_file = os.getenv(
         "WESKIT_VALIDATION_CONFIG",
         os.path.join("config", "validation.yaml"))
 
@@ -107,19 +106,19 @@ def create_app(celery: Celery,
     request_validation_config = \
         os.path.join("config", "request-validation.yaml")
 
-    with open(default_log_config, "r") as yaml_file:
+    with open(log_config_file, "r") as yaml_file:
         log_config = yaml.safe_load(yaml_file)
         dictConfig(log_config)
-        logger.info("Read log config from " + default_log_config)
+        logger.info("Read log config from " + log_config_file)
 
-    with open(default_config, "r") as yaml_file:
+    with open(config_file, "r") as yaml_file:
         config = yaml.safe_load(yaml_file)
-        logger.info("Read config from " + default_config)
+        logger.info("Read config from " + config_file)
 
-    with open(default_validation_config, "r") as yaml_file:
+    with open(validation_config_file, "r") as yaml_file:
         validation = yaml.safe_load(yaml_file)
         logger.debug("Read validation specification from " +
-                     default_validation_config)
+                     validation_config_file)
 
     with open(request_validation_config, "r") as yaml_file:
         request_validation = yaml.safe_load(yaml_file)

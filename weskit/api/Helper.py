@@ -38,7 +38,7 @@ class Helper:
 
     def get_access_denied_response(self,
                                    run_id: str,
-                                   run: Run = None):
+                                   run: Optional[Run] = None):
         if run is None:
             logger.error("Could not find '%s'" % run_id)
             return {"msg": "Could not find '%s'" % run_id,
@@ -82,7 +82,7 @@ class Helper:
         if msg:
             raise ClientError("Syntactically invalid user ID: '%s'" % user_id)
 
-    def assert_run_id(self, run_id: str):
+    def assert_run_id_syntax(self, run_id: str):
         msg = RunRequestValidator.invalid_run_id(run_id)
         if msg:
             raise ClientError("Syntactically invalid run ID: '%s'" % run_id)

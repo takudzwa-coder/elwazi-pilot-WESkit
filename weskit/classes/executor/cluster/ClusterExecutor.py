@@ -10,15 +10,14 @@ import re
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from datetime import datetime
-from io import IOBase
 from os import PathLike
 from pathlib import PurePath
 from tempfile import NamedTemporaryFile
-from typing import Optional, List, Pattern
+from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, ExecutedProcess, RunStatus, CommandResult, ExecutionSettings
+    Executor, ExecutedProcess, RunStatus, CommandResult, ExecutionSettings, FileRepr
 from weskit.classes.executor.ExecutorException import ExecutorException
 
 logger = logging.getLogger(__name__)
@@ -29,7 +28,7 @@ def execute(executor: Executor,
             command: ShellCommand,
             encoding="utf-8",
             **kwargs) \
-        -> (CommandResult, IOBase, IOBase):
+        -> Iterator[Tuple[CommandResult, IO[str], IO[str]]]:
     """
     Convenience syntax for executing a ShellCommand with temporary locally buffered stdout and
     stderr. This is mostly a workaround for dysfunctional data streaming if IOBase objects, in
@@ -93,6 +92,12 @@ class ClusterExecutor(Executor):
         """
         self._executor = executor
 
+    def copy_file(self, source: PathLike, target: PathLike):
+        self._executor.copy_file(source, target)
+
+    def remove_file(self, target: PathLike):
+        self._executor.remove_file(target)
+
     @property
     @abstractmethod
     def _command_set(self) -> CommandSet:
@@ -100,34 +105,8 @@ class ClusterExecutor(Executor):
 
     @property
     @abstractmethod
-    def _match_jid(self) -> Pattern:
+    def _jid_in_submission_output_pattern(self) -> str:
         pass
-
-    @property
-    @abstractmethod
-    def _split_delimiter(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _match_status(self) -> Pattern:
-        pass
-
-    @property
-    @abstractmethod
-    def _success_status_name(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _success_exit_code(self) -> str:
-        pass
-
-    def copy_file(self, source: PathLike, target: PathLike):
-        self._executor.copy_file(source, target)
-
-    def remove_file(self, target: PathLike):
-        self._executor.remove_file(target)
 
     def extract_jobid_from_submission_output(self, output: List[str]):
         if len(output) == 0:
@@ -136,11 +115,75 @@ class ClusterExecutor(Executor):
         # I this situation a number of diagnostic messages are shown, but eventually, the
         # submission line is displayed. We simply try to parse all these lines and are happy
         # with the first line that matches.
-        matches = map(lambda l: re.match(self._match_jid, l), output)
+        matches = map(lambda l: re.match(self._jid_in_submission_output_pattern, l), output)
         first_match = next(filter(lambda m: bool(m), matches), None)
         if first_match is None:
             raise ExecutorException(f"Could not parse job ID from: {output}")
         return first_match.group(1)
+
+    @property
+    @abstractmethod
+    def _success_status_name(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _success_exit_value(self) -> str:
+        """
+        This is not necessarily a number.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def _get_status_output_pattern(self) -> str:
+        """
+        A pattern that is matched on the output lines of the status query command of the cluster.
+        The following _extract_* methods are used to extract specific information from the match
+        result of this pattern.
+        """
+        pass
+
+    @abstractmethod
+    def _extract_jid(self, match: Match[str]) -> str:
+        pass
+
+    @abstractmethod
+    def _extract_status_name(self, match: Match[str]) -> str:
+        pass
+
+    @abstractmethod
+    def _extract_exit_code(self, match: Match[str]) -> str:
+        pass
+
+    def parse_get_status_output(self,
+                                stdout_lines: List[str]) \
+            -> Tuple[str, str, str]:
+        """
+        Throws a ValueError, if not exactly a single stdout_line matches the status output pattern.
+
+        :param stdout_lines:
+        :return: job_id, status_name, exit_code
+        """
+        # Jobs may produce multiple lines output, if it has to wait for the
+        # job submission server to answer. We assume that we are only interested
+        # in those lines matching the regular expression.
+        match_lines: List[Match[str]] = \
+            list(map(lambda m: cast(Match[str], m),   # get rid of the optional type for mypy
+                     filter(lambda m: bool(m),
+                            map(lambda line: re.match(self._get_status_output_pattern,
+                                                      line.rstrip()),
+                                stdout_lines))))
+        if len(match_lines) != 1:
+            raise ValueError(len(match_lines))
+
+        # Now get the information about the job executed on the cluster.
+        job_id, status_name, reported_exit_code = \
+            self._extract_jid(match_lines[0]), \
+            self._extract_status_name(match_lines[0]), \
+            self._extract_exit_code(match_lines[0])
+
+        return job_id, status_name, reported_exit_code
 
     def get_status(self, process: ExecutedProcess) -> RunStatus:
         status_command = ShellCommand(self._command_set.get_status([process.id.value]))
@@ -148,22 +191,15 @@ class ClusterExecutor(Executor):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
 
-            # Jobs may produce multiple lines output, if it has to wait for the
-            # job submission server to answer. We assume that we are only interested
-            # in those lines matching the regular expression.
-            match_lines = list(filter(lambda m: bool(m),
-                                      map(lambda line: re.match(self._match_status, line.rstrip()),
-                                          stdout_lines)))
-            if len(match_lines) != 1:
-                raise ExecutorException(f"No unique match of status for {process.result.id}: " +
+            try:
+                job_id, status_name, reported_exit_code = \
+                    self.parse_get_status_output(stdout_lines)
+            except ValueError:
+                raise ExecutorException("No unique match of status. " +
+                                        f"For {process.result.id}: " +
                                         f"{str(result)}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
-
-            # Now get the information about the job executed on the cluster.
-            job_id, status_name, reported_exit_code = \
-                match_lines[0][1], match_lines[0][2], \
-                str(match_lines[0][3]).split(self._split_delimiter)[0]
 
             if job_id != str(process.id.value):
                 raise ExecutorException("Job ID didn't match the parsed one" +
@@ -174,7 +210,8 @@ class ClusterExecutor(Executor):
 
             # The reported exit code is '-' if the job is still running, or if the job
             # is done with return value 0.
-            if reported_exit_code == self._success_exit_code:
+            exit_code: Optional[int]
+            if reported_exit_code == self._success_exit_value:
                 if status_name == self._success_status_name:
                     exit_code = 0
                 else:
@@ -187,8 +224,8 @@ class ClusterExecutor(Executor):
     def kill(self, process: ExecutedProcess):
         # Not tested therefore
         raise NotImplementedError("kill on ClusterExecutor is not tested")
-        kill_command = ShellCommand(self._command_set.kill(process.id.value))
-        self._executor.wait_for(self._executor.execute(kill_command))
+        # kill_command = ShellCommand(self._command_set.kill(process.id.value))
+        # self._executor.wait_for(self._executor.execute(kill_command))
 
     def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
         old_status = process.result.status
@@ -202,7 +239,7 @@ class ClusterExecutor(Executor):
         return process
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if(process.result.status.finished):
+        if process.result.status.finished:
             return process.result
         wait_command = ShellCommand(self._command_set.wait_for(process.id.value))
         with execute(self._executor, wait_command) as (result, stdout, stderr):
@@ -222,9 +259,9 @@ class ClusterExecutor(Executor):
     @abstractmethod
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[PathLike] = None,
-                stderr_file: Optional[PathLike] = None,
-                stdin_file: Optional[PathLike] = None,
+                stdout_file: Optional[FileRepr] = None,
+                stderr_file: Optional[FileRepr] = None,
+                stdin_file: Optional[FileRepr] = None,
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) \
             -> ExecutedProcess:

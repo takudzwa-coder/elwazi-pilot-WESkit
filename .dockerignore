@@ -18,7 +18,12 @@ stack.yaml
 *.log
 WESkit.egg-info
 __pycache__
-uWSGI_Server/certs/weskit.*
+uwsgi_server/certs/
+!uwsgi_server/certs/.keep
 .editorconfig
-.coverage
-testfile
+.coverage*
+test-data/
+.snakemake/
+git-hooks/
+.mypy*
+workflows/

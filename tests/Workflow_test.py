@@ -222,5 +222,6 @@ def test_update_all_runs(manager,
             continue
         manager.update_runs(query={})
         db_run = manager.database.get_run(run_id=run.id)
+        assert db_run is not None
         assert db_run.status == RunStatus.COMPLETE
         success = True

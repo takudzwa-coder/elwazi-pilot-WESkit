@@ -109,9 +109,9 @@ static_service_info:
           # Parameters to be used before the target. See `snakemake --help`.
           # Do not include double-dashs, e.g. use "max-jobs-per-second" rather than
           # "--max-jobs-per-second".
-          - name: cores
+          - name: --cores
             value: 1
-            tags: ["command-parameter"]
+            slot: "command"
 
     # The workflow_type_versions need to be among the workflow_engine_versions.
     # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91

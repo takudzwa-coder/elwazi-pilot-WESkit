@@ -32,8 +32,14 @@ dependencies:
   - asyncssh=2.7.2
   - singularity=3.7.1
   - flufl.lock=6.0
-  - mypy=0.910
-  - types-requests=2.26.1
+  - mypy=0.931
+  - types-requests
+  - typed-ast
+  - types-pyyaml
+  - typing-extensions
+  - types-setuptools
+  - types-six
+  - types-toml
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1
