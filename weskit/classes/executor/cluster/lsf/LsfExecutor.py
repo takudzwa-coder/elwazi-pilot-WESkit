@@ -8,16 +8,14 @@
 import logging
 from datetime import datetime
 from os import PathLike
-from typing import Pattern, Optional
-
+from typing import Optional, Match
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, RunStatus
+from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
-from weskit.classes.executor.ExecutorException import ExecutorException
-
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +42,30 @@ class LsfExecutor(ClusterExecutor):
     def executor(self) -> Executor:
         return self._executor
 
-    _match_jid: Pattern = r'Job <(\d+)> is submitted to .+.\n'
-    _split_delimiter: str = " "
-    _match_status: Pattern = r'(\d+)\s+(\S+)\s+(-|\d+)'
-    _success_status_name: str = "DONE"
-    _success_exit_code: str = "-"
+    @property
+    def _jid_in_submission_output_pattern(self) -> str:
+        return r'Job <(\d+)> is submitted to .+.\n'
+
+    @property
+    def _get_status_output_pattern(self) -> str:
+        return r'(\d+)\s+(\S+)\s+(-|\d+)'
+
+    def _extract_jid(self, match: Match[str]) -> str:
+        return match.group(1)
+
+    def _extract_status_name(self, match: Match[str]) -> str:
+        return match.group(2)
+
+    def _extract_exit_code(self, match: Match[str]) -> str:
+        return match.group(3)
+
+    @property
+    def _success_status_name(self) -> str:
+        return "DONE"
+
+    @property
+    def _success_exit_value(self) -> str:
+        return "-"
 
     def execute(self,
                 command: ShellCommand,

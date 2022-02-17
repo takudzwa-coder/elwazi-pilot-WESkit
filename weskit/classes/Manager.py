@@ -9,7 +9,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict
 from urllib.parse import urlparse
 
 import yaml
@@ -19,14 +19,13 @@ from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
-from weskit.classes.WorkflowEngine import WorkflowEngineParam
-from weskit.classes.TrsWorkflowInstaller \
-    import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.TrsWorkflowInstaller \
+    import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.tasks.CommandTask import run_command
 from weskit.utils import get_current_timestamp
 
@@ -210,6 +209,7 @@ class Manager:
 
         """
         workflow_url = urlparse(url)
+        workflow_path_rel: str
         if workflow_url.scheme in ["file", '']:
             # TODO Should we enforce the name/version/type structure also for manual workflows?
             if os.path.isabs(workflow_url.path):
@@ -323,16 +323,13 @@ class Manager:
             raise RuntimeError(f"Workflow path of run is None: {run.id}")
 
         # Execute run
-        workflow_engine_params: List[Dict[str, str]] = []
-        run_kwargs: Dict[str, Union[str, List[str], List[WorkflowEngineParam]]] = {
-            "workflow_path": run.workflow_path,
-            "workdir": os.path.join(self.data_dir, run.dir),
-            "config_files": ["config.yaml"],
-            "workflow_engine_params": workflow_engine_params
-        }
         run.start_time = get_current_timestamp()
+        workflow_engine_params: List[Dict[str, str]] = []
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
-            command(**run_kwargs)
+            command(workflow_path=run.workflow_path,
+                    workdir=Path(os.path.join(self.data_dir, run.dir)),
+                    config_files=["config.yaml"],
+                    workflow_engine_params=workflow_engine_params)
         run.log["cmd"] = command.command
         run.log["env"] = command.environment
         if run.status == RunStatus.INITIALIZING:

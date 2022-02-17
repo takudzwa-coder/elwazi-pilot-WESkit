@@ -18,6 +18,7 @@ compose
 data/
 test-data/
 *.gz
-.coverage
+.coverage*
 testfile
 uwsgi_server/certs
+!uwsgi_server/certs/.keep

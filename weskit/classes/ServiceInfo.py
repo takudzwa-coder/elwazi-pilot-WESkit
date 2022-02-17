@@ -11,6 +11,9 @@ from typing import Dict, List
 from weskit.classes.Database import Database
 
 
+ParameterList = List[Dict[str, str]]
+
+
 class ServiceInfo:
     """Note that the static_service_info is not validated in here. External
     validation is required. ServiceInfo returns whatever it gets as static
@@ -66,8 +69,20 @@ class ServiceInfo:
         return dict(map(lambda k: (k, list(self.default_workflow_engine_parameters()[k].keys())),
                         self.default_workflow_engine_parameters().keys()))
 
-    def default_workflow_engine_parameters(self):
-        return self._static_service_info["default_workflow_engine_parameters"]
+    def default_workflow_engine_parameters(self) \
+            -> Dict[str, Dict[str, ParameterList]]:
+        """
+        We use the "slot" field internally, to map parameters to command slots, but WES has no
+        notion of slots. So discard the slot fields here for reporting via the REST-API.
+        """
+        def _remove_slot_fields(params: ParameterList) -> ParameterList:
+            return [{k: v for k, v in param.items() if k != "slot"}
+                    for param in params]
+        return {engine: {version: _remove_slot_fields(params)
+                         for version, params
+                         in versions.items()}
+                for engine, versions
+                in self._static_service_info["default_workflow_engine_parameters"].items()}
 
     def system_state_counts(self) -> Dict[str, int]:
         return self._db.count_states()

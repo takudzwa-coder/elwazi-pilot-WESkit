@@ -13,6 +13,7 @@ import requests
 import pytest
 from flask import current_app
 
+from weskit.oidc.User import User
 from weskit.api.Helper import Helper
 from weskit import WESApp
 from weskit.classes.RunStatus import RunStatus
@@ -99,20 +100,20 @@ def login_fixture():
 
 class TestHelper:
 
-    # Compare weskit.oidc.User
-    class User:
+    class MockUser(User):
         def __init__(self, user_id: str):
+            super().__init__()
             self.id = user_id
 
     @pytest.mark.integration
     def test_get_user_id(self, nologin_app: WESApp, login_app: WESApp):
-        user = TestHelper.User("testUser")
+        user = TestHelper.MockUser("testUser")
         assert Helper(login_app, user).user.id == user.id
         assert Helper(nologin_app, None).user.id == "not-logged-in-user"
 
     @pytest.mark.integration
     def test_access_denied_response(self, login_app):
-        user = TestHelper.User("testUser")
+        user = TestHelper.MockUser("testUser")
         helper = Helper(login_app, user)
         assert helper.get_access_denied_response("runId", None) == \
                ({"msg": "Could not find 'runId'",
@@ -135,7 +136,7 @@ class TestHelper:
 
     @pytest.mark.integration
     def test_log_response(self, test_run, login_app):
-        helper = Helper(login_app, TestHelper.User(test_run.user_id))
+        helper = Helper(login_app, TestHelper.MockUser(test_run.user_id))
 
         stderr, stderr_code = helper.get_log_response(test_run.id, "stderr")
         assert stderr_code == 200

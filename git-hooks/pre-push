@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# Create .git/hooks/pre-push (e.g. from the example you find there) and add the line
+#
+# git-hooks/pre-push
+#
+
+set -ue
+
+hooksDir="$(dirname "$BASH_SOURCE")"
+
+# The pre-commit checks are fast and added again here, because if you do a rebase you may end up
+# with failing code. So before you push, everything should be checked (again).
+"$hooksDir/pre-commit"
+
+# Run the tests
+echo "pytest ..." >> /dev/stderr
+python -m pytest -v --cov=weskit/ -m "not slow"

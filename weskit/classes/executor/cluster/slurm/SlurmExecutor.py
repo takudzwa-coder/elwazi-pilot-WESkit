@@ -8,20 +8,19 @@
 
 import logging
 import tempfile
-import asyncssh
-from pathlib import PurePath
 from datetime import datetime
 from os import PathLike
+from pathlib import PurePath, Path
+from typing import Optional, Match
 
-from typing import Pattern, Optional
+import asyncssh
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, RunStatus
+from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.slurm.SlurmCommandSet import SlurmCommandSet
-from weskit.classes.executor.ExecutorException import ExecutorException
-
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +38,7 @@ class SlurmExecutor(ClusterExecutor):
         """
         self.__command_set = SlurmCommandSet()
         self._executor = executor
+        self._shell_interpreter = '/bin/bash'
 
     @property
     def _command_set(self) -> CommandSet:
@@ -48,12 +48,30 @@ class SlurmExecutor(ClusterExecutor):
     def executor(self) -> Executor:
         return self._executor
 
-    _match_jid: Pattern = r'Submitted batch job (\d+)'
-    _split_delimiter: str = ":"
-    _match_status: Pattern = r'(\d+)\s+(\S+)\s+(\d+:\d+)'
-    _success_status_name: str = "COMPLETED"
-    _success_exit_code: str = "0"
-    _shell_interpreter: str = '#!/bin/bash'
+    @property
+    def _success_status_name(self) -> str:
+        return "COMPLETED"
+
+    @property
+    def _jid_in_submission_output_pattern(selfs) -> str:
+        return r'Submitted batch job (\d+)'
+
+    @property
+    def _success_exit_value(self) -> str:
+        return "0"
+
+    @property
+    def _get_status_output_pattern(self) -> str:
+        return r'(\d+)\s+(\S+)\s+(\d+):\d+'
+
+    def _extract_jid(self, match: Match[str]) -> str:
+        return match.group(1)
+
+    def _extract_status_name(self, match: Match[str]) -> str:
+        return match.group(2)
+
+    def _extract_exit_code(self, match: Match[str]) -> str:
+        return match.group(3)
 
     def _create_command_script(self, command: ShellCommand) -> PurePath:
         """
@@ -63,7 +81,7 @@ class SlurmExecutor(ClusterExecutor):
         sub_command = " ".join(command.command)
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             if sub_command is not None:
-                for export in [self._shell_interpreter, sub_command]:
+                for export in ["#!" + self._shell_interpreter, sub_command]:
                     print(export, end="\n", sep=" ", file=file)
             return PurePath(file.name)
 
@@ -78,7 +96,7 @@ class SlurmExecutor(ClusterExecutor):
         stdout, stderr, and stdin files are *remote files on the cluster nodes*.
 
         WARNING: Do not set too many environment variables in `command.environment`. The
-                implementation uses `bsub -env` and too many variables may result in a too long
+                implementation uses `srun --export` and too many variables may result in a too long
                 command-line.
         """
 
@@ -101,17 +119,17 @@ class SlurmExecutor(ClusterExecutor):
             return process
 
         source_script = self._create_command_script(command)
-        target_script = str(command.workdir) + str("/.weskit_submitted_command.sh")
+        target_script = Path(str(command.workdir), ".weskit_submitted_command.sh")
         try:
             self.copy_file(source_script, target_script)
         except asyncssh.SFTPError:
-            return _create_process(job_id=0,
+            return _create_process(job_id=ProcessId(0),
                                    run_status=RunStatus(1, "EXIT"))
 
         # Note that source and target are never the same file. Thus, the latter removal will only
         # remove the (possibly remote) copy.
 
-        command.command = target_script
+        command.command = [str(target_script)]
         submission_command = ShellCommand(self._command_set.submit(command=command,
                                                                    stdout_file=stdout_file,
                                                                    stderr_file=stderr_file,

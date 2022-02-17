@@ -7,54 +7,102 @@
 #  Authors: The WESkit Team
 
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
+from os import PathLike
 from typing import List, Dict, Optional
 
 from weskit.classes.ShellCommand import ShellCommand
 
 
-@dataclass()
-class WorkflowEngineParam(object):
-    name: str
-    value: Optional[str]   # Optional values are for CLI parameters that don't take values.
-    tags: List[str]
+class WorkflowEngineParam(metaclass=ABCMeta):
+
+    def __init__(self, name):
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+
+class CommandLineParam(WorkflowEngineParam):
+
+    def __init__(self,
+                 name: str,
+                 value: Optional[str]):
+        super().__init__(name)
+        self._value = value
+
+    @property
+    def value(self) -> Optional[str]:
+        return self._value
+
+
+class EnvironmentVariable(WorkflowEngineParam):
+
+    def __init__(self,
+                 name: str,
+                 value: str):
+        super().__init__(name)
+        self._value = value
+
+    @property
+    def value(self) -> str:
+        return self._value
+
+
+class WorkflowEngineParams(object):
+
+    def __init__(self,
+                 environment: List[EnvironmentVariable],
+                 command: List[CommandLineParam],
+                 run: List[CommandLineParam]):
+        self._environment = environment \
+            if environment is not None else []
+        self._command = command \
+            if command is not None else []
+        self._run = run \
+            if run is not None else []
+
+    @property
+    def environment(self) -> List[EnvironmentVariable]:
+        return self._environment
+
+    @property
+    def command(self) -> List[CommandLineParam]:
+        return self._command
+
+    @property
+    def run(self) -> List[CommandLineParam]:
+        return self._run
 
 
 class WorkflowEngine(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self,
-                 default_params: List[WorkflowEngineParam],
-                 command_param_prefix: str):
-        self.default_environment_params = \
-            list(filter(lambda p: "environment-variable" in p.tags,
-                        default_params))
-        self.default_command_params = \
-            list(filter(lambda p: "command-parameter" in p.tags,
-                        default_params))
-        self._command_param_prefix = command_param_prefix
+                 default_params: WorkflowEngineParams):
+        self.default_params = default_params
 
-    def _environment(self) -> Dict[str, Optional[str]]:
+    def _environment(self) -> Dict[str, str]:
         """
         Get a dictionary of environment parameters.
         """
         return dict(map(lambda param: (param.name, param.value),
-                        self.default_environment_params))
+                        self.default_params.environment))
 
     @staticmethod
-    def _workflow_engine_cli_param(prefix: str, param: WorkflowEngineParam) -> List[str]:
-        result = [prefix + param.name]
+    def _workflow_engine_cli_param(param: CommandLineParam) -> List[str]:
+        result = [param.name]
         if param.value is not None:
             result += [str(param.value)]
         return result
 
     @staticmethod
-    def _workflow_engine_cli_params(prefix: str, params: List[WorkflowEngineParam]) -> List[str]:
+    def _workflow_engine_cli_params(params: List[CommandLineParam]) -> List[str]:
         return reduce(
             lambda acc, v: acc + v,
-            map(lambda wep: WorkflowEngine._workflow_engine_cli_param(prefix, wep),
+            map(lambda wep: WorkflowEngine._workflow_engine_cli_param(wep),
                 params),
             [])
 
@@ -62,15 +110,14 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         Get a list of command-line parameters to be inserted into the command-line.
         """
-        return self._workflow_engine_cli_params(self._command_param_prefix,
-                                                self.default_command_params)
+        return self._workflow_engine_cli_params(self.default_params.command)
 
     @abstractmethod
     def command(self,
                 workflow_path: str,
-                workdir: str,
+                workdir: PathLike,
                 config_files: List[str],
-                workflow_engine_params: List[WorkflowEngineParam])\
+                workflow_engine_params: List[WorkflowEngineParam]) \
             -> ShellCommand:
         """
         Use the instance variables and run parameters to compose a command to be executed
@@ -86,8 +133,9 @@ class WorkflowEngine(metaclass=ABCMeta):
 
 class Snakemake(WorkflowEngine):
 
-    def __init__(self, default_params: List[WorkflowEngineParam]):
-        super().__init__(default_params, "--")
+    def __init__(self,
+                 default_params: WorkflowEngineParams):
+        super().__init__(default_params)
 
     @staticmethod
     def name():
@@ -95,7 +143,7 @@ class Snakemake(WorkflowEngine):
 
     def command(self,
                 workflow_path: str,
-                workdir: str,
+                workdir: PathLike,
                 config_files: List[str],
                 workflow_engine_params: List[WorkflowEngineParam])\
             -> ShellCommand:
@@ -109,11 +157,9 @@ class Snakemake(WorkflowEngine):
 
 class Nextflow(WorkflowEngine):
 
-    def __init__(self, default_params: List[WorkflowEngineParam]):
-        super().__init__(default_params, "-")
-        self.default_run_params = \
-            list(filter(lambda p: "run-parameter" in p.tags,
-                        default_params))
+    def __init__(self,
+                 default_params: WorkflowEngineParams,):
+        super().__init__(default_params)
 
     @staticmethod
     def name():
@@ -123,12 +169,11 @@ class Nextflow(WorkflowEngine):
         """
         An additional parameter slot for `nextflow run`.
         """
-        return WorkflowEngine._workflow_engine_cli_params(self._command_param_prefix,
-                                                          self.default_run_params)
+        return WorkflowEngine._workflow_engine_cli_params(self.default_params.run)
 
     def command(self,
                 workflow_path: str,
-                workdir: str,
+                workdir: PathLike,
                 config_files: List[str],
                 workflow_engine_params: List[WorkflowEngineParam])\
             -> ShellCommand:
@@ -148,14 +193,36 @@ class Nextflow(WorkflowEngine):
 class WorkflowEngineFactory:
 
     @staticmethod
-    def _process_params_list(params: List[Dict[str, str]]) -> List[WorkflowEngineParam]:
-        return list(map(lambda param: WorkflowEngineParam(name=param["name"],
-                                                          value=param.get("value", None),
-                                                          tags=param.get("tags", [])),
-                        params))
+    def _process_env_slot(params: List[dict], tag: str) -> \
+            List[EnvironmentVariable]:
+        return list(map(lambda param: EnvironmentVariable(name=param["name"],
+                                                          value=param["value"]),
+                        filter(lambda param: tag in param["slot"],
+                               params)))
 
     @staticmethod
-    def _process_versions(cls, engine_params: Dict[str, dict]) -> Dict[str, WorkflowEngineParam]:
+    def _process_cli_slot(params: List[dict], tag: str) -> \
+            List[CommandLineParam]:
+        return list(map(lambda param: CommandLineParam(name=param["name"],
+                                                       value=param.get("value", None)),
+                        filter(lambda param: tag in param["slot"],
+                               params)))
+
+    @staticmethod
+    def _process_params_list(params: List[Dict[str, str]]) -> WorkflowEngineParams:
+        environment_params = \
+            WorkflowEngineFactory._process_env_slot(params, "environment")
+        command_params = \
+            WorkflowEngineFactory._process_cli_slot(params, "command")
+        run_params = \
+            WorkflowEngineFactory._process_cli_slot(params, "run")
+        return WorkflowEngineParams(environment=environment_params,
+                                    command=command_params,
+                                    run=run_params)
+
+    @staticmethod
+    def _process_versions(cls, engine_params: Dict[str, List[Dict[str, str]]]) -> \
+            Dict[str, Dict[str, CommandLineParam]]:
         """
         :param cls: WorkflowEngine class
         :param engine_params: Version name -> List of dictionaries, one for each parameter.
@@ -177,9 +244,11 @@ class WorkflowEngineFactory:
         """
         workflow_engines = {
             Snakemake.name(): WorkflowEngineFactory.
-            _process_versions(Snakemake, engine_params[Snakemake.name()]),
+            _process_versions(Snakemake,
+                              engine_params[Snakemake.name()]),
             Nextflow.name(): WorkflowEngineFactory.
-            _process_versions(Nextflow, engine_params[Nextflow.name()])
+            _process_versions(Nextflow,
+                              engine_params[Nextflow.name()])
         }
         # The semantics of workflow_type and workflow_engine_parameters is not completely defined
         # yet. There is also a proposal for a workflow_engine_name parameter.

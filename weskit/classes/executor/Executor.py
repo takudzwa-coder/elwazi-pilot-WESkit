@@ -19,9 +19,8 @@ import abc
 from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from io import IOBase
 from os import PathLike
-from typing import Optional, Any, Union
+from typing import Optional, Any, Union, IO
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.memory_units import Memory
@@ -81,7 +80,7 @@ class RunStatus:
     @property
     def success(self) -> bool:
         """
-        Return whether the command is an success state.
+        Return whether the command is a success state.
         """
         return self.code is not None and self.code == 0
 
@@ -100,7 +99,7 @@ class RunStatus:
 
 # Some executors support using streams, filedescriptors, etc. so more general file representations
 # as parameters for stdout and stderr. We declare the type here.
-FileRepr = Union[PathLike, IOBase]
+FileRepr = Union[PathLike, IO[str]]
 
 
 class CommandResult:
@@ -182,8 +181,8 @@ class ExecutionSettings:
     job_name: Optional[str] = None
     accounting_name: Optional[str] = None
     group: Optional[str] = None
-    walltime: timedelta = None
-    total_memory: Memory = None
+    walltime: Optional[timedelta] = None
+    total_memory: Optional[Memory] = None
     queue: Optional[str] = None
     cores: Optional[int] = None
 

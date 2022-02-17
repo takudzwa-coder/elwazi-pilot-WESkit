@@ -157,7 +157,7 @@ class SshExecutor(Executor):
 
     async def _upload_setup_script(self, process_id: uuid.UUID, command: ShellCommand):
         """
-        SSH usually does not allow to set environment variables. Therefore we create a little
+        SSH usually does not allow to set environment variables. Therefore, we create a little
         script that sets up the environment for the remote process.
 
         The wrapper will be put into a directory that uniquely identifies the process and uses
@@ -289,7 +289,7 @@ class SshExecutor(Executor):
 
     def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
         """
-        Update the the executed process, if possible.
+        Update the executed process, if possible.
         """
         result = process.result
         return_code = process.handle.returncode
@@ -301,7 +301,7 @@ class SshExecutor(Executor):
 
     async def _wait_for(self, process: ExecutedProcess) -> CommandResult:
         try:
-            process._handle = await process.handle.wait()
+            await process.handle.wait()
             self.update_process(process)
             setup_script_path = self._setup_script_path(process.id.value)
             await self._connection.run(f"rm {shlex.quote(str(setup_script_path))}", check=True)

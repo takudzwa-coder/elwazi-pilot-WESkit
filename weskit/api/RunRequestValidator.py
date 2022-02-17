@@ -8,7 +8,7 @@
 import logging
 import os
 import re
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Callable, TypeVar
 from urllib.parse import urlparse
 
 logger = logging.Logger(__file__)
@@ -33,7 +33,10 @@ class RunRequestValidator(object):
         """Validate the overall structure, types and values of the run request
         fields. workflow_params and workflow_engine_parameters are not tested
         semantically but their structure is validated (see schema)."""
-        def apply_if_not_none(value, func) -> Optional[Any]:
+
+        T = TypeVar('T')
+
+        def apply_if_not_none(value: T, func: Callable[[T], List[str]]) -> List[str]:
             if value is not None:
                 return func(value)
             else:
@@ -78,7 +81,7 @@ class RunRequestValidator(object):
         result = []
         try:
             parsed_url = urlparse(url)
-            result = [self.forbidden_characters(parsed_url.path)]
+            result += self.forbidden_characters(parsed_url.path)
             if os.path.isabs(parsed_url.path):
                 result += ["Not a relative path: '%s'" % url]
             elif self._path_is_outside_data_dir(parsed_url.path):
@@ -187,12 +190,12 @@ class RunRequestValidator(object):
         compile(r'[;\'"\[\]{}()$]')
 
     @staticmethod
-    def forbidden_characters(value: str) -> Optional[str]:
+    def forbidden_characters(value: str) -> List[str]:
         """
         Ensure a string does not contain any malicious code, without being too restrictive. Still,
         e.g. it should be possible to use the string to actually do a query to a remote server to
         retrieve a resource. This is probably just a minimal check.
         """
         if RunRequestValidator._uri_query_forbidden_pattern.search(value):
-            return "Forbidden characters: '%s'" % value
-        return None
+            return ["Forbidden characters: '%s'" % value]
+        return []

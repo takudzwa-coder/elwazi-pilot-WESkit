@@ -90,18 +90,18 @@ def test_get_workflow_engine_versions(service_info):
 
 def test_get_default_workflow_engine_parameters(service_info):
     default = service_info.default_workflow_engine_parameters()
-    TestCase().assertDictEqual(default, {
+    case = TestCase()
+    case.maxDiff = None
+    case.assertDictEqual(default, {
         "SMK": {
             "6.10.0": [
                 {
                     "name": "SOME_VAR",
-                    "value": "with value",
-                    "tags": ["environment-variable"]
+                    "value": "with value"
                 },
                 {
-                    "name": "cores",
-                    "value": 1,
-                    "tags": ["command-parameter"]
+                    "name": "--cores",
+                    "value": 1
                 }
             ]
         },
@@ -109,28 +109,22 @@ def test_get_default_workflow_engine_parameters(service_info):
             "21.04.0": [
                 {
                     "name": "NXF_OPTS",
-                    "value": "-Xmx256m",
-                    "tags": ["environment-variable"]
+                    "value": "-Xmx256m"
                 },
                 {
-                    "name": "Djava.io.tmpdir=/tmp",
-                    "tags": ["command-parameter"]
+                    "name": "-Djava.io.tmpdir=/tmp"
                 },
                 {
-                    "name": "with-trace",
-                    "tags": ["run-parameter"]
+                    "name": "-with-trace"
                 },
                 {
-                    "name": "with-timeline",
-                    "tags": ["run-parameter"]
+                    "name": "-with-timeline"
                 },
                 {
-                    "name": "with-dag",
-                    "tags": ["run-parameter"]
+                    "name": "-with-dag"
                 },
                 {
-                    "name": "with-report",
-                    "tags": ["run-parameter"]
+                    "name": "-with-report"
                 }
             ]
         }})

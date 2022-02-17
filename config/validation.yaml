@@ -117,9 +117,9 @@ static_service_info:
                 value:
                   required: false
                   type: string
-                tags:
-                  type: list
-                  default: []
+                slot:
+                  type: string
+                  required: true
         SMK: *default_workflow_engine_parameters
 
     auth_instructions_url:

@@ -16,19 +16,18 @@ from os import PathLike
 from pathlib import PurePath, Path
 from typing import Optional, cast
 
-
 import pytest
 import yaml
+from typing.io import IO
 
-from weskit.classes.executor.ExecutorException import ExecutorException
-from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, RunStatus, ProcessId
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, Executor
+from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, RunStatus, ProcessId
+from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.classes.executor.SshExecutor import SshExecutor
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
-
 from weskit.memory_units import Memory, Unit
 
 # Note that this cannot be solved by a fixture yielding multiple times.
@@ -409,55 +408,66 @@ def test_kill_process(executor):
     assert True
 
 
+class MockExecutor(Executor):
+
+    def __init__(self, target_runstatus):
+        self.update_process_called_with = None
+        self.get_status_called_with = None
+        self.wait_for_called_with = None
+        self._target_runstatus = target_runstatus
+
+    def get_status(self, process: ExecutedProcess) -> RunStatus:
+        self.get_status_called_with = process
+        return process.result.status
+
+    def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
+        return process
+
+    def kill(self, process: ExecutedProcess):
+        pass
+
+    def wait_for(self, process: ExecutedProcess) -> CommandResult:
+        self.wait_for_called_with = process
+        process.result.status = RunStatus(self._target_runstatus)
+        return process.result
+
+    def copy_file(self, source: PathLike, target: PathLike):
+        pass
+
+    def remove_file(self, file: PathLike):
+        pass
+
+    def _write_mock_to_opt_filerepr(self, text: str, file: Optional[FileRepr]):
+        if file is not None:
+            # mypy does not understand `isinstance` for type inference.
+            # Instead we do explicit casts to the two types unified in FileRepr.
+            if isinstance(file, IO):
+                print(text, file=cast(IO[str], file))
+            else:
+                with open(cast(PathLike, file), "w") as f:
+                    print(text, file=f)
+
+    def execute(self,
+                command: ShellCommand,
+                stdout_file: Optional[FileRepr] = None,
+                stderr_file: Optional[FileRepr] = None,
+                stdin_file: Optional[FileRepr] = None,
+                settings: Optional[ExecutionSettings] = None,
+                **kwargs) -> ExecutedProcess:
+        self._write_mock_to_opt_filerepr("stdout", stdout_file)
+        self._write_mock_to_opt_filerepr("stderr", stderr_file)
+        return ExecutedProcess(process_handle=None,
+                               executor=self,
+                               pre_result=CommandResult(command=command,
+                                                        id=ProcessId(12234),
+                                                        run_status=RunStatus(),
+                                                        stderr_file=stderr_file,
+                                                        stdout_file=stdout_file,
+                                                        stdin_file=stdin_file,
+                                                        start_time=datetime.now()))
+
+
 def test_executor_context_manager():
-    class MockExecutor(Executor):
-
-        def __init__(self, target_runstatus):
-            self.update_process_called_with = None
-            self.get_status_called_with = None
-            self.wait_for_called_with = None
-            self._target_runstatus = target_runstatus
-
-        def get_status(self, process: ExecutedProcess) -> RunStatus:
-            self.get_status_called_with = process
-            return process.result.status
-
-        def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
-            return process
-
-        def kill(self, process: ExecutedProcess):
-            pass
-
-        def wait_for(self, process: ExecutedProcess) -> CommandResult:
-            self.wait_for_called_with = process
-            process.result.status = RunStatus(self._target_runstatus)
-            return process.result
-
-        def copy_file(self, source: PathLike, target: PathLike):
-            pass
-
-        def remove_file(self, file: PathLike):
-            pass
-
-        def execute(self, command: ShellCommand,
-                    stdout_file: Optional[FileRepr] = None,
-                    stderr_file: Optional[FileRepr] = None,
-                    stdin_file: Optional[FileRepr] = None,
-                    settings: Optional[ExecutionSettings] = None,
-                    **kwargs) -> ExecutedProcess:
-            with open(stdout_file, "w") as f:
-                print("stdout", file=f)
-            with open(stderr_file, "w") as f:
-                print("stderr", file=f)
-            return ExecutedProcess(process_handle=None,
-                                   executor=self,
-                                   pre_result=CommandResult(command=command,
-                                                            id=ProcessId(12234),
-                                                            run_status=RunStatus(),
-                                                            stderr_file=stderr_file,
-                                                            stdout_file=stdout_file,
-                                                            stdin_file=stdin_file,
-                                                            start_time=datetime.now()))
 
     command = ShellCommand(["echo", "something"])
     executor = MockExecutor(target_runstatus=0)
@@ -490,6 +500,31 @@ def test_slurm_extract_jobid():
     executor = SlurmExecutor(executor=LocalExecutor())
     sbatch_output = ["Submitted batch job 24896 \n"]
     assert executor.extract_jobid_from_submission_output(sbatch_output) == "24896"
+
+
+def test_slurm_parse_get_status():
+    executor = SlurmExecutor(LocalExecutor())
+    assert executor.parse_get_status_output(["36027            FAILED    127:0"]) == \
+           ("36027", "FAILED", "127")
+    with pytest.raises(ValueError):
+        executor.parse_get_status_output(["35677          State      123"])
+
+
+def test_lsf_parse_get_status():
+    executor = LsfExecutor(LocalExecutor())
+    assert executor.parse_get_status_output(["6789 EXIT 1"]) == ("6789", "EXIT", "1")
+    assert executor.parse_get_status_output(['6781 DONE -\n']) == ("6781", "DONE", "-")
+    assert executor.parse_get_status_output(["bli bla blu\n",
+                                             "ignore me\n",
+                                             "123 TheRealStatus -\n",
+                                             "another line to ignore\n"]) == \
+           ("123", "TheRealStatus", "-")
+    with pytest.raises(ValueError):
+        executor.parse_get_status_output(["bli bla blu\n",
+                                          "ignore me\n",
+                                          "123 TheRealStatus -\n",
+                                          "another line to ignore\n",
+                                          "123 DoneAnyway;-P 1"])
 
 
 class TestLsfGetStatus:
