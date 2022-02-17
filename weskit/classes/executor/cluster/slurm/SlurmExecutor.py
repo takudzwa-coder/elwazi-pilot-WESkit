@@ -17,7 +17,7 @@ import asyncssh
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, RunStatus
+    Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
 from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.slurm.SlurmCommandSet import SlurmCommandSet
@@ -106,7 +106,7 @@ class SlurmExecutor(ClusterExecutor):
         # and the environment on the compute node, on which the actual command is executed.
 
         def _create_process(job_id: ProcessId,
-                            run_status: RunStatus):
+                            execution_status: ExecutionStatus):
             process = ExecutedProcess(executor=self,
                                       process_handle=job_id,
                                       pre_result=CommandResult(command=command,
@@ -115,7 +115,7 @@ class SlurmExecutor(ClusterExecutor):
                                                                stdout_file=stdout_file,
                                                                stdin_file=stdin_file,
                                                                start_time=datetime.now(),
-                                                               run_status=run_status))
+                                                               execution_status=execution_status))
             return process
 
         source_script = self._create_command_script(command)
@@ -124,7 +124,7 @@ class SlurmExecutor(ClusterExecutor):
             self.copy_file(source_script, target_script)
         except asyncssh.SFTPError:
             return _create_process(job_id=ProcessId(0),
-                                   run_status=RunStatus(1, "EXIT"))
+                                   execution_status=ExecutionStatus(1, "EXIT"))
 
         # Note that source and target are never the same file. Thus, the latter removal will only
         # remove the (possibly remote) copy.
@@ -158,4 +158,4 @@ class SlurmExecutor(ClusterExecutor):
         # ID. However, we postpone the creation of this to a later stage. The process
         # handle is just the cluster job ID.
         return _create_process(job_id=cluster_job_id,
-                               run_status=RunStatus(None))
+                               execution_status=ExecutionStatus(None))

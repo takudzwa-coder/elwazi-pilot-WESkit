@@ -10,7 +10,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import CommandResult
@@ -64,7 +64,7 @@ def run_command(command: List[str],
     stdout_file_rel = log_dir_rel / "stdout"
     execution_log_rel = log_dir_rel / "log.json"
 
-    result: CommandResult
+    result: Optional[CommandResult] = None
     try:
         stderr_file_abs = workdir_abs / stderr_file_rel
         stdout_file_abs = workdir_abs / stdout_file_rel
@@ -79,6 +79,7 @@ def run_command(command: List[str],
         outputs = list(filter(
             lambda fn: os.path.commonpath([fn, str(log_base_path)]) != str(log_base_path),
             collect_relative_paths_from(workdir_abs)))
+        exit_code: Optional[int]
         if result is None:
             # result may be None, if the execution failed because the command does not exist
             exit_code = -1

@@ -19,7 +19,7 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, ExecutedProcess, RunStatus, CommandResult, ExecutionSettings, FileRepr
+    Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings, FileRepr
 from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
 
 logger = logging.getLogger(__name__)
@@ -194,28 +194,27 @@ class ClusterExecutor(Executor):
     @retry(wait=wait_exponential(multiplier=1, min=1, max=6),
            stop=stop_after_attempt(4),
            retry=retry_if_exception(is_retryable_error))
-    def get_status(self, process: ExecutedProcess) -> RunStatus:
+    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
         status_command = ShellCommand(self._command_set.get_status([process.id.value]))
         with execute(self._executor, status_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
-
+            base_error_info = ", ".join([
+                f"command={status_command}",
+                f"result={result}",
+                f"stdout={stdout_lines}"
+                f"stderr={stderr_lines}"
+                ])
+            if not result.status.success:
+                raise ExecutionError("Could not request status. " + base_error_info)
             try:
                 job_id, status_name, reported_exit_code = \
                     self.parse_get_status_output(stdout_lines)
             except ValueError:
-                raise ExecutorException("No unique match of status. " +
-                                        f"For {process.result.id}: " +
-                                        f"{str(result)}, " +
-                                        f"stdout={stdout_lines}, " +
-                                        f"stderr={stderr_lines}")
+                raise ExecutorException("No unique match of status. " + base_error_info)
 
             if job_id != str(process.id.value):
-                raise ExecutorException("Job ID didn't match the parsed one" +
-                                        f"{process.result.id}: " +
-                                        f"{str(status_command)}, " +
-                                        f"stdout={stdout_lines}, " +
-                                        f"stderr={stderr_lines}")
+                raise ExecutorException("Job ID didn't match the parsed one. " + base_error_info)
 
             # The reported exit code is '-' if the job is still running, or if the job
             # is done with return value 0.
@@ -228,7 +227,7 @@ class ClusterExecutor(Executor):
             else:
                 exit_code = int(reported_exit_code)
 
-            return RunStatus(exit_code, status_name)
+            return ExecutionStatus(exit_code, status_name)
 
     def kill(self, process: ExecutedProcess):
         # Not tested therefore

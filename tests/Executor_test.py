@@ -22,7 +22,7 @@ from typing.io import IO
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, Executor
-from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, RunStatus, ProcessId
+from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, ExecutionStatus, ProcessId
 from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.classes.executor.SshExecutor import SshExecutor
@@ -74,27 +74,29 @@ if remote_config is not None and "slurm_submission_host" in remote_config.keys()
                                                  pytest.mark.ssh_slurm])
 
 
-def test_runstatus():
-    success_result = RunStatus(0)
+def test_execution_status():
+    success_result = ExecutionStatus(0)
     assert not success_result.failed
     assert success_result.finished
     assert success_result.success
     assert success_result.name is None
     assert success_result.message is None
+    assert str(success_result) == "ExecutionStatus(code=0)"
 
-    failed_result = RunStatus(1)
+    failed_result = ExecutionStatus(1)
     assert failed_result.failed
     assert failed_result.finished
     assert not failed_result.success
 
-    unfinished_result = RunStatus()
+    unfinished_result = ExecutionStatus()
     assert not unfinished_result.finished
     assert not unfinished_result.success
     assert not unfinished_result.failed
 
-    full_result = RunStatus(1, "name", "message")
+    full_result = ExecutionStatus(1, "name", "message")
     assert full_result.name == "name"
     assert full_result.message == "message"
+    assert str(full_result) == "ExecutionStatus(code=1, name=name, message=message)"
 
 
 @pytest.mark.parametrize("executor", executors.values())
@@ -410,13 +412,13 @@ def test_kill_process(executor):
 
 class MockExecutor(Executor):
 
-    def __init__(self, target_runstatus):
+    def __init__(self, target_status):
         self.update_process_called_with = None
         self.get_status_called_with = None
         self.wait_for_called_with = None
-        self._target_runstatus = target_runstatus
+        self._target_status = target_status
 
-    def get_status(self, process: ExecutedProcess) -> RunStatus:
+    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
         self.get_status_called_with = process
         return process.result.status
 
@@ -428,7 +430,7 @@ class MockExecutor(Executor):
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
         self.wait_for_called_with = process
-        process.result.status = RunStatus(self._target_runstatus)
+        process.result.status = ExecutionStatus(self._target_status)
         return process.result
 
     def copy_file(self, source: PathLike, target: PathLike):
@@ -460,7 +462,7 @@ class MockExecutor(Executor):
                                executor=self,
                                pre_result=CommandResult(command=command,
                                                         id=ProcessId(12234),
-                                                        run_status=RunStatus(),
+                                                        execution_status=ExecutionStatus(),
                                                         stderr_file=stderr_file,
                                                         stdout_file=stdout_file,
                                                         stdin_file=stdin_file,
@@ -470,7 +472,7 @@ class MockExecutor(Executor):
 def test_executor_context_manager():
 
     command = ShellCommand(["echo", "something"])
-    executor = MockExecutor(target_runstatus=0)
+    executor = MockExecutor(target_status=0)
     with execute(executor, command) as (result, stdout, stderr):
         assert executor.wait_for_called_with.id.value == 12234
         assert result.status.code == 0
@@ -553,11 +555,11 @@ class TestLsfGetStatus:
                 return ExecutedProcess(self, None,
                                        CommandResult(command, ProcessId(5432),
                                                      stdout_file, stderr_file, stdin_file,
-                                                     RunStatus(None),
+                                                     ExecutionStatus(None),
                                                      start_time=datetime.now()))
 
-            def get_status(self, process: ExecutedProcess) -> RunStatus:
-                return RunStatus(0)
+            def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
+                return ExecutionStatus(0)
 
             def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
                 process.result.status = self.get_status(process)
@@ -582,7 +584,7 @@ class TestLsfGetStatus:
                                   process_handle=None,
                                   pre_result=CommandResult(ShellCommand([]),
                                                            id=ProcessId(cluster_job_id),
-                                                           run_status=RunStatus(),
+                                                           execution_status=ExecutionStatus(),
                                                            stdin_file=None,
                                                            stdout_file=None,
                                                            stderr_file=None,
