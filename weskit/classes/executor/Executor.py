@@ -250,8 +250,9 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
 class Executor(metaclass=abc.ABCMeta):
     """
     Execute a command on some execution infrastructure. Note that all operations may be blocking.
-    All methods may throw an ExecutorException, if the command could not successfully be executed
-    on the infrastructure.
+    All methods may throw an ExecutionError, if the command could not successfully be executed
+    on the infrastructure. All other errors, such as parse errors, that occur because the output
+    of a successfully executed command is unexpected are returned as ExecutorExceptions.
     """
 
     @abc.abstractmethod

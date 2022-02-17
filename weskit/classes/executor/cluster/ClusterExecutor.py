@@ -15,10 +15,12 @@ from pathlib import PurePath
 from tempfile import NamedTemporaryFile
 from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, RunStatus, CommandResult, ExecutionSettings, FileRepr
-from weskit.classes.executor.ExecutorException import ExecutorException
+from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,10 @@ class CommandSet(metaclass=ABCMeta):
         pass
 
 
+def is_retryable_error(exception: BaseException) -> bool:
+    return isinstance(exception, ExecutionError)
+
+
 class ClusterExecutor(Executor):
     """
     Execute job-management operations via shell commands issued on a local/remote host.
@@ -88,7 +94,7 @@ class ClusterExecutor(Executor):
         """
         Provide an executor that is used to execute the cluster specific commands.
         E.g. if this the commands should run locally, you can use a command_executor.LocalExecutor.
-        If you need to submit via a remote connection you can use an command_executor.SshExecutor.
+        If you need to submit via a remote connection, you can use a command_executor.SshExecutor.
         """
         self._executor = executor
 
@@ -185,6 +191,9 @@ class ClusterExecutor(Executor):
 
         return job_id, status_name, reported_exit_code
 
+    @retry(wait=wait_exponential(multiplier=1, min=1, max=6),
+           stop=stop_after_attempt(4),
+           retry=retry_if_exception(is_retryable_error))
     def get_status(self, process: ExecutedProcess) -> RunStatus:
         status_command = ShellCommand(self._command_set.get_status([process.id.value]))
         with execute(self._executor, status_command) as (result, stdout, stderr):

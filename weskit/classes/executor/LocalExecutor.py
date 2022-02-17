@@ -173,7 +173,7 @@ class LocalExecutor(base.Executor):
 
     def update_process(self, process: base.ExecutedProcess) -> base.ExecutedProcess:
         """
-        Update the the executed process, if possible.
+        Update the executed process, if possible.
         """
         if process.handle is None:
             # There is no process handle. We cannot update the result.
