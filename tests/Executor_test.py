@@ -215,6 +215,11 @@ class TestExecuteLocalProcess(ExecuteProcess):
         self.check_execution_result(result, stdout_file, stderr_file, stdout_file)
 
 
+@pytest.mark.skipif("ssh" not in executors.keys(),
+                    reason="No SshExecutor. Did you configure your tests/remote.yaml?")
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.ssh
 class ExecuteProcessViaSsh(ExecuteProcess):
 
     @property
@@ -251,6 +256,8 @@ class ExecuteProcessViaSsh(ExecuteProcess):
                                     local_temp / f"{prefix}.stdout")
 
 
+@pytest.mark.skipif("ssh" not in executors.keys(),
+                    reason="No SshExecutor. Did you configure your tests/remote.yaml?")
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.ssh
