@@ -12,7 +12,7 @@ from typing import Optional, Match
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, RunStatus
+    Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
 from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
@@ -29,7 +29,7 @@ class LsfExecutor(ClusterExecutor):
         """
         Provide an executor that is used to execute the cluster commands. E.g. if this the commands
         should run locally, you can use a command_executor.LocalExecutor. If you need to submit via
-        a remote connection you can use an command_executor.SshExecutor.
+        a remote connection, you can use a command_executor.SshExecutor.
         """
         self.__command_set = LsfCommandSet()
         self._executor = executor
@@ -119,5 +119,5 @@ class LsfExecutor(ClusterExecutor):
                                                         stderr_file=stderr_file,
                                                         stdout_file=stdout_file,
                                                         stdin_file=stdin_file,
-                                                        run_status=RunStatus(None),
+                                                        execution_status=ExecutionStatus(None),
                                                         start_time=start_time))

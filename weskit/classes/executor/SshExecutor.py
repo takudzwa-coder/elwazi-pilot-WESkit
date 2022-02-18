@@ -24,10 +24,14 @@ from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, ChannelOpenE
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor \
     import Executor, ExecutionSettings, ExecutedProcess, \
-    CommandResult, RunStatus, ProcessId, FileRepr
-from weskit.classes.executor.ExecutorException import ExecutorException
+    CommandResult, ExecutionStatus, ProcessId, FileRepr
+from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
 
 logger = logging.getLogger(__name__)
+
+
+def is_retryable_error(exception: BaseException) -> bool:
+    return isinstance(exception, ExecutionError)
 
 
 class SshExecutor(Executor):
@@ -257,7 +261,6 @@ class SshExecutor(Executor):
             # The environment setup script is `source`d.
             effective_command = \
                 ["source", shlex.quote(str(self._setup_script_path(process_id))), "&&"] + \
-                ["sleep 1 &&"] + \
                 list(map(shlex.quote, command.command))
 
             final_command_str = " ".join(effective_command)
@@ -269,7 +272,7 @@ class SshExecutor(Executor):
                                stderr=PIPE if stderr_file is None else stderr_file,
                                **kwargs)
         except ChannelOpenError as e:
-            raise ExecutorException("Couldn't execute process", e)
+            raise ExecutionError("Couldn't execute process", e)
 
         return ExecutedProcess(executor=self,
                                process_handle=process,
@@ -278,14 +281,14 @@ class SshExecutor(Executor):
                                                         stdout_file=stdout_file,
                                                         stderr_file=stderr_file,
                                                         stdin_file=stdin_file,
-                                                        run_status=RunStatus(),
+                                                        execution_status=ExecutionStatus(),
                                                         start_time=start_time))
 
     def execute(self, *args, **kwargs) -> ExecutedProcess:
         return self._event_loop.run_until_complete(self._execute(*args, **kwargs))
 
-    def get_status(self, process: ExecutedProcess) -> RunStatus:
-        return RunStatus(process.handle.returncode)
+    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
+        return ExecutionStatus(process.handle.returncode)
 
     def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
         """
@@ -294,7 +297,7 @@ class SshExecutor(Executor):
         result = process.result
         return_code = process.handle.returncode
         if return_code is not None:
-            result.status = RunStatus(return_code)
+            result.status = ExecutionStatus(return_code)
             result.end_time = datetime.now()
             process.result = result
         return process
@@ -308,11 +311,11 @@ class SshExecutor(Executor):
             process_dir = self._process_directory(process.id.value)
             await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)
         except TimeoutError as e:
-            ExecutorException(f"Process {process.id.value} timed out:" +
-                              str(process.command.command), e)
+            raise ExecutionError(f"Process {process.id.value} timed out:" +
+                                 str(process.command.command), e)
         except ProcessError as e:
-            ExecutorException(f"Error during cleanup of {process.id.value}:" +
-                              str(process.command.command), e)
+            raise ExecutorException(f"Error during cleanup of {process.id.value}:" +
+                                    str(process.command.command), e)
         return process.result
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
@@ -323,4 +326,4 @@ class SshExecutor(Executor):
             process.handle.kill()
             self.wait_for(process)
         except OSError as e:
-            ExecutorException(f"Could not kill process ({process.command.command})", e)
+            raise ExecutionError(f"Could not kill process ({process.command.command})", e)

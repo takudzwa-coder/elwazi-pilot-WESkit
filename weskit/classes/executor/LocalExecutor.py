@@ -131,7 +131,7 @@ class LocalExecutor(base.Executor):
                                                       stdout_file=stdout_file,
                                                       stderr_file=stderr_file,
                                                       stdin_file=stdin_file,
-                                                      run_status=base.RunStatus(),
+                                                      execution_status=base.ExecutionStatus(),
                                                       start_time=start_time))
         except FileNotFoundError as e:
             # The other executors recognize inaccessible working directories or missing commands
@@ -152,7 +152,7 @@ class LocalExecutor(base.Executor):
                                                       stdout_file=stdout_file,
                                                       stderr_file=stderr_file,
                                                       stdin_file=stdin_file,
-                                                      run_status=base.RunStatus(
+                                                      execution_status=base.ExecutionStatus(
                                                           exit_code, message=e.strerror),
                                                       start_time=start_time))
 
@@ -165,15 +165,15 @@ class LocalExecutor(base.Executor):
     def remove_file(self, target: PathLike):
         os.unlink(target)
 
-    def get_status(self, process: base.ExecutedProcess) -> base.RunStatus:
+    def get_status(self, process: base.ExecutedProcess) -> base.ExecutionStatus:
         if process.handle is None:
             return process.result.status
         else:
-            return base.RunStatus(process.handle.poll())
+            return base.ExecutionStatus(process.handle.poll())
 
     def update_process(self, process: base.ExecutedProcess) -> base.ExecutedProcess:
         """
-        Update the the executed process, if possible.
+        Update the executed process, if possible.
         """
         if process.handle is None:
             # There is no process handle. We cannot update the result.
@@ -182,7 +182,7 @@ class LocalExecutor(base.Executor):
             result = process.result
             return_code = process.handle.poll()
             if return_code is not None:
-                result.status = base.RunStatus(return_code)
+                result.status = base.ExecutionStatus(return_code)
                 result.end_time = datetime.now()
                 process.result = result
             return process

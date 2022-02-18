@@ -43,15 +43,16 @@ class ProcessId:
         return f"ProcessId({self.value})"
 
 
-class RunStatus:
+class ExecutionStatus:
     """
-    The RunStatus is the status of the command execution on the execution infrastructure.
+    The ExecutionStatus is the status of the command execution on the execution infrastructure.
     Usually, this is just an integer, which is available, if the process is still running.
     In a cluster, there can also be a status name, e.g. PENDING or similar, as issued by the
     cluster system.
     """
 
-    def __init__(self, code: Optional[int] = None,
+    def __init__(self,
+                 code: Optional[int] = None,
                  name: Optional[str] = None,
                  message: Optional[str] = None):
         self._code = code
@@ -92,9 +93,10 @@ class RunStatus:
         return self.code is not None and self.code != 0
 
     def __str__(self) -> str:
-        return f"code={self.code}" + \
-               f", name={self.name}" if self.name is not None else "" +\
-               f", message={self.message}" if self.message is not None else ""
+        return f"ExecutionStatus(code={self.code}" + \
+               (f", name={self.name}" if self.name is not None else "") + \
+               (f", message={self.message}" if self.message is not None else "") +\
+               ")"
 
 
 # Some executors support using streams, filedescriptors, etc. so more general file representations
@@ -115,12 +117,12 @@ class CommandResult:
                  stdout_file: Optional[FileRepr],
                  stderr_file: Optional[FileRepr],
                  stdin_file: Optional[FileRepr],
-                 run_status: RunStatus,
+                 execution_status: ExecutionStatus,
                  start_time: datetime,
                  end_time: Optional[datetime] = None):
         self._command = command
         self._process_id = id
-        self._run_status = run_status
+        self._execution_status = execution_status
         self._stdout_file = stdout_file
         self._stderr_file = stderr_file
         self._stdin_file = stdin_file
@@ -152,12 +154,12 @@ class CommandResult:
         return self._start_time
 
     @property
-    def status(self) -> RunStatus:
-        return self._run_status
+    def status(self) -> ExecutionStatus:
+        return self._execution_status
 
     @status.setter
-    def status(self, value: RunStatus):
-        self._run_status = value
+    def status(self, value: ExecutionStatus):
+        self._execution_status = value
 
     @property
     def end_time(self) -> Optional[datetime]:
@@ -250,8 +252,9 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
 class Executor(metaclass=abc.ABCMeta):
     """
     Execute a command on some execution infrastructure. Note that all operations may be blocking.
-    All methods may throw an ExecutorException, if the command could not successfully be executed
-    on the infrastructure.
+    All methods may throw an ExecutionError, if the command could not successfully be executed
+    on the infrastructure. All other errors, such as parse errors, that occur because the output
+    of a successfully executed command is unexpected are returned as ExecutorExceptions.
     """
 
     @abc.abstractmethod
@@ -292,7 +295,7 @@ class Executor(metaclass=abc.ABCMeta):
     # Executor for the following operations.
 
     @abc.abstractmethod
-    def get_status(self, process: ExecutedProcess) -> RunStatus:
+    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
         """
         Get the status of the process in the execution infrastructure. The `process.result` is not
         modified.

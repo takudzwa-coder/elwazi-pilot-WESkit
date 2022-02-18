@@ -40,6 +40,7 @@ dependencies:
   - types-setuptools
   - types-six
   - types-toml
+  - tenacity=8.0.1
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1

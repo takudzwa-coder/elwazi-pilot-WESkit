@@ -7,4 +7,14 @@
 #  Authors: The WESkit Team
 
 class ExecutorException(Exception):
+    """
+    Any error in the Executor, including e.g. parse errors, etc.
+    """
+    pass
+
+
+class ExecutionError(ExecutorException):
+    """
+    Error during the execution of a command, i.e. command returned e.g. with exit code != 0.
+    """
     pass
