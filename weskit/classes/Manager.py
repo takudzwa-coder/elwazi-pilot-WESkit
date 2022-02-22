@@ -17,7 +17,7 @@ from celery import Celery, Task
 from celery.app.control import Control
 from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename, return_pre_signed_url
 
 from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
@@ -117,7 +117,8 @@ class Manager:
             result = running_task.get()
             if "WESKIT_S3_ENDPOINT" in os.environ:
                 run.outputs["S3"] = [
-                    return_pre_signed_url(outfile, result["workdir"]) for outfile in result["output_files"]]
+                    return_pre_signed_url(
+                        outfile, result["workdir"]) for outfile in result["output_files"]]
             else:
                 run.outputs["workflow"] = result["output_files"]
             run.log = result

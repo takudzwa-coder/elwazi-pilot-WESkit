@@ -8,7 +8,6 @@
 
 import boto3
 import os
-import re
 import traceback
 from typing import Optional
 from urllib.parse import urlparse
@@ -73,10 +72,10 @@ def safe_getenv(key: str) -> str:
 def return_pre_signed_url(workdir, outfile):
     """Returns a presigned url for an output in a workdir file."""
     s3client = boto3.client("s3",
-                            endpoint_url = safe_getenv("WESKIT_S3_ENDPOINT"),
-                            aws_access_key_id = safe_getenv("WESKIT_S3_ID"),
-                            aws_secret_access_key = safe_getenv("WESKIT_S3_SECRET"),
-                            region_name = safe_getenv("WESKIT_S3_REGION"))
+                            endpoint_url=safe_getenv("WESKIT_S3_ENDPOINT"),
+                            aws_access_key_id=safe_getenv("WESKIT_S3_ID"),
+                            aws_secret_access_key=safe_getenv("WESKIT_S3_SECRET"),
+                            region_name=safe_getenv("WESKIT_S3_REGION"))
     url = s3client.generate_presigned_url(
         ClientMethod="get_object",
         Params={
