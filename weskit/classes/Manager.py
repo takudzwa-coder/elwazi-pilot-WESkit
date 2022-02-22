@@ -17,7 +17,7 @@ from celery import Celery, Task
 from celery.app.control import Control
 from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
-from werkzeug.utils import secure_filename, return_pre_signed_url
+from werkzeug.utils import secure_filename
 
 from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
@@ -27,7 +27,7 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.tasks.CommandTask import run_command
-from weskit.utils import get_current_timestamp
+from weskit.utils import get_current_timestamp, return_pre_signed_url
 
 celery_to_wes_state = {
     "PENDING": RunStatus.QUEUED,
