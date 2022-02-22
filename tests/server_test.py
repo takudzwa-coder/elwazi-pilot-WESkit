@@ -57,8 +57,6 @@ def test_run(test_client,
         success = True
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
-    for out_s3_url in run.outputs["S3"]:
-        assert validate_url(out_s3_url)
     yield run
 
 
@@ -219,6 +217,9 @@ class TestWithHeaderToken:
         assert response.status_code == 200, response.json
         for output in response.json["outputs"]["workflow"]:
             assert not os.path.isabs(output)
+        # test that s3 outputs are valid urls
+        for output_url in response.json["outputs"]["S3"]:
+            assert validate_url(output_url)
 
     @pytest.mark.integration
     def test_accept_get_runs_header(self,
