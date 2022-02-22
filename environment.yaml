@@ -41,6 +41,7 @@ dependencies:
   - types-six
   - types-toml
   - tenacity=8.0.1
+  - validators=0.18.2
   - pip:
      - testcontainers==3.0.0
      - redis==3.5.1
