@@ -12,6 +12,7 @@ import os
 import requests
 import pytest
 from flask import current_app
+from validators.url import url as validate_url
 
 from weskit.oidc.User import User
 from weskit.api.Helper import Helper
@@ -56,6 +57,8 @@ def test_run(test_client,
         success = True
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
+    for out_s3_url in run.outputs["S3"]:
+        assert validate_url(out_s3_url)
     yield run
 
 
