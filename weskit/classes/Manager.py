@@ -115,7 +115,11 @@ class Manager:
         if run.status == RunStatus.COMPLETE:   # Celery job succeeded
             running_task = self._run_task.AsyncResult(run.celery_task_id)
             result = running_task.get()
-            run.outputs["workflow"] = result["output_files"]
+            if "WESKIT_S3_ENDPOINT" in os.environ:
+                run.outputs["S3"] = [
+                    return_pre_signed_url(outfile, result["workdir"]) for outfile in result["output_files"]]
+            else:
+                run.outputs["workflow"] = result["output_files"]
             run.log = result
 
             run_dir_abs = os.path.join(self.data_dir, result["workdir"])
