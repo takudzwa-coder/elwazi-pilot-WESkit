@@ -116,9 +116,8 @@ class Manager:
             running_task = self._run_task.AsyncResult(run.celery_task_id)
             result = running_task.get()
             if "WESKIT_S3_ENDPOINT" in os.environ:
-                run.outputs["S3"] = [
-                    return_pre_signed_url(
-                        outfile=outfile, workdir=result["workdir"]) for outfile in result["output_files"]]
+                run.outputs["S3"] = [return_pre_signed_url(outfile=out, workdir=result["workdir"])
+                                     for out in result["output_files"]]
             run.outputs["workflow"] = result["output_files"]
             run.log = result
 
