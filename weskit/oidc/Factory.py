@@ -19,6 +19,7 @@ from jwt.algorithms import RSAAlgorithm
 
 from weskit.oidc.Login import Login
 from weskit.oidc.User import User
+from weskit.utils import safe_getenv
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +60,10 @@ def setup(app: Flask, config: dict) -> None:
     This makes multiple requests to the issuer/identity provider!
     """
     # Get and validate necessary environment variables.
-    issuer_url = _safe_getenv("OIDC_ISSUER_URL")
-    client_secret = _safe_getenv('OIDC_CLIENT_SECRET')
-    realm = _safe_getenv('OIDC_REALM')
-    client_id = _safe_getenv('OIDC_CLIENTID')
+    issuer_url = safe_getenv("OIDC_ISSUER_URL")
+    client_secret = safe_getenv('OIDC_CLIENT_SECRET')
+    realm = safe_getenv('OIDC_REALM')
+    client_id = safe_getenv('OIDC_CLIENTID')
 
     # JWT Setup
     _copy_jwt_vars_to_toplevel_config(app, config)
@@ -87,13 +88,6 @@ def setup(app: Flask, config: dict) -> None:
         :return: User
         """
         return User()
-
-
-def _safe_getenv(key: str) -> str:
-    value = os.environ[key]
-    if value is None or len(value) == 0:
-        raise ValueError("Environment variable '%s' is set to invalid value '%s'" % (key, value))
-    return value
 
 
 def _copy_jwt_vars_to_toplevel_config(flaskapp: Flask, config: dict) \
