@@ -80,7 +80,7 @@ def return_pre_signed_url(workdir, outfile):
         ClientMethod="get_object",
         Params={
             "Bucket": workdir.split("/")[0],
-            "Key": "{}/hello_world.txt".format(workdir.split("/")[1])
+            "Key": "{}/{}".format(workdir.split("/")[1], outfile)
         }
     )
     return(url)
