@@ -143,7 +143,7 @@ class SlurmExecutor(ClusterExecutor):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
             if result.status.failed:
-                raise ExecutorException(f"Failed to submit cluster job: {result}" +
+                raise ExecutorException(f"Failed to submit cluster job: {result}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
             else:

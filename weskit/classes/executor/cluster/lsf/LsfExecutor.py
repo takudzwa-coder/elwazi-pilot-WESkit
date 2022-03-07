@@ -100,7 +100,7 @@ class LsfExecutor(ClusterExecutor):
             stderr_lines = stderr.readlines()
             start_time = datetime.now()
             if result.status.failed:
-                raise ExecutorException(f"Failed to submit cluster job: {result}" +
+                raise ExecutorException(f"Failed to submit cluster job: {result}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
             else:

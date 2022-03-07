@@ -32,8 +32,9 @@ def test_lsf_submit_full_command():
         submit(command=ShellCommand(["bash", "-c", "echo \"hello. $someVar, $someOtherVar\""],
                                     workdir=PurePath("/some/dir"),
                                     environment={
-                                        "someVar": "someVal",
-                                        "someOtherVar": "containing, a, comma"
+                                        "some": "someVal",
+                                        "someOther": "with, comma",
+                                        "space": "here -> "
                                     }),
                stdout_file=PurePath("/path/to/stdout"),
                stderr_file=PurePath("/another/pa   th/to/stderr"),
@@ -51,7 +52,7 @@ def test_lsf_submit_full_command():
     assert command == [
         'bsub',
         '-env',
-        'LSB_EXIT_IF_CWD_NOTEXIST=Y, someVar=someVal, someOtherVar=\'containing, a, comma\'',
+        "LSB_EXIT_IF_CWD_NOTEXIST=Y, some='someVal', someOther='with, comma', space='here -> '",
         '-cwd', '/some/dir',
         '-oo', '/path/to/stdout',
         '-eo', "/another/pa   th/to/stderr",

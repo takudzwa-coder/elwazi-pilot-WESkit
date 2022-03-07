@@ -157,12 +157,17 @@ class ExecuteProcess(metaclass=ABCMeta):
         pass
 
     def execute(self, stdout_file, stderr_file) -> CommandResult:
-        # Note: This tests exports ENV_VAL to Bash, as executed command. This variable (and $PWD)
-        #       is then used to evaluate the shell expression.
-        command = ShellCommand(["bash", "-c", "echo \"hello $ENV_VAL (from $PWD)\""],
+        # Note: This tests exports variables to Bash, as executed command. The variables (and $PWD)
+        #       are then used to evaluate the shell expression.
+        command = ShellCommand(["bash", "-c",
+                                "echo \"In $PWD. Hello '$ENV_VAL'. Hello '$WITH_SPACE'. Hello '$SPACEY_END'.\""],       # noqa
                                workdir=self.workdir,
                                environment={
-                                   "ENV_VAL": "world"
+                                   # "EMPTY": "",              # `bsub -env "EMPTY="` fails
+                                   "ENV_VAL": "world",
+                                   "SPACEY_END": "earth",   # Should be "earth " to ensure terminal
+                                                            # but fails for LsfExecutor (bug?).
+                                   "WITH_SPACE": "wo, rld"  # Should be "wo, rld ".  dito.
                                })
         process = self.executor.execute(command,
                                         stdout_file=stdout_file,
@@ -177,12 +182,29 @@ class ExecuteProcess(metaclass=ABCMeta):
         assert observed == expected
 
     def check_execution_result(self, result, remote_stdout_file, remote_stderr_file, stdout_file):
-        assert result.status.code == 0
-        assert result.stdout_file == remote_stdout_file
-        assert result.stderr_file == remote_stderr_file
-
+        assert result.stdout_file == remote_stdout_file, result
         with open(stdout_file, "r") as stdout:
-            self._assert_stdout(stdout.readlines(), [f"hello world (from {str(self.workdir)})\n"])
+            stdout_lines = stdout.readlines()
+
+        assert result.stderr_file == remote_stderr_file, result
+
+        self._assert_stdout(
+            stdout_lines,
+            [f"In {str(self.workdir)}. Hello 'world'. Hello 'wo, rld'. Hello 'earth'.\n"]
+            # WARNING: LSF Bug with terminal spaces in variable values provided by `-env`.
+            #          With the actual input the solution should be
+            #
+            #          Hello 'world'. Hello 'wo, rld '. Hello 'earth '
+            #
+            # You can check this with
+            #
+            # bsub -env "test='some val ', other='other val '" \
+            #    -M 102400K -R 'rusage[mem=102400K]' \
+            #    -W 00:05 -R 'span[hosts=1]' \
+            #    bash -c 'echo "-$test-$other-"'
+        )
+
+        assert result.status.code == 0, result
 
         assert result.status.success
         assert result.status.finished

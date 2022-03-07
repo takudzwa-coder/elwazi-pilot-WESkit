@@ -25,13 +25,10 @@ class LsfCommandSet(CommandSet):
         job, but not the environment local to the submission host.
         """
 
-        def quote_comma_value(variable_value: str):
-            if variable_value.find(',') != -1:
-                # The [docs](https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=o-env) do not
-                # tell what to do, if the value contains both a command and an apostrophe :-(
-                return f"'{variable_value}'"
-            else:
-                return variable_value
+        def quote(variable_value: str):
+            # The [docs](https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=o-env) do not
+            # tell what to do, if the value contains an apostrophe :-(
+            return f"'{variable_value}'"
 
         # We want jobs to exit, if the chosen remote workdir does not exist. No explicit "none"
         # is necessary because it is implicit, if there is at least as single variable set.
@@ -39,7 +36,7 @@ class LsfCommandSet(CommandSet):
         if len(environment) > 0:
             # Note: The space after the comma is needed.
             environment_string += ", " + ", ".join(
-                [f"{it[0]}={quote_comma_value(it[1])}" for it in environment.items()]
+                [f"{it[0]}={quote(it[1])}" for it in environment.items()]
             )
         return ["-env", environment_string]
 
