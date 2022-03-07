@@ -254,7 +254,7 @@ class SshExecutor(Executor):
             # actual command is executed remotely.
             await self._upload_setup_script(process_id, command)
 
-            # SSH is always associated with a shell. Therefore a string is processed by asyncssh,
+            # SSH is always associated with a shell. Therefore, a string is processed by asyncssh,
             # rather than an executable with a sequence of parameters, all in a list (compare
             # subprocess.run/Popen).
             #
