@@ -6,6 +6,7 @@
 #
 #  Authors: The WESkit Team
 
+import boto3
 import os
 import traceback
 from typing import Optional
@@ -59,3 +60,27 @@ def create_validator(schema):
         else:
             return validator.errors
     return _validate
+
+
+def safe_getenv(key: str) -> str:
+    value = os.environ[key]
+    if value is None or len(value) == 0:
+        raise ValueError("Environment variable '%s' is set to invalid value '%s'" % (key, value))
+    return value
+
+
+def return_pre_signed_url(workdir, outfile):
+    """Returns a presigned url for an output in a workdir file."""
+    s3client = boto3.client("s3",
+                            endpoint_url=safe_getenv("WESKIT_S3_ENDPOINT"),
+                            aws_access_key_id=safe_getenv("WESKIT_S3_ID"),
+                            aws_secret_access_key=safe_getenv("WESKIT_S3_SECRET"),
+                            region_name=safe_getenv("WESKIT_S3_REGION"))
+    url = s3client.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={
+            "Bucket": workdir.split("/")[0],
+            "Key": "{}/{}".format(workdir.split("/")[1], outfile)
+        }
+    )
+    return(url)

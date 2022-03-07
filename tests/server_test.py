@@ -12,6 +12,7 @@ import os
 import requests
 import pytest
 from flask import current_app
+from validators.url import url as validate_url
 
 from weskit.oidc.User import User
 from weskit.api.Helper import Helper
@@ -216,6 +217,9 @@ class TestWithHeaderToken:
         assert response.status_code == 200, response.json
         for output in response.json["outputs"]["workflow"]:
             assert not os.path.isabs(output)
+        # test that s3 outputs are valid urls
+        for output_url in response.json["outputs"]["S3"]:
+            assert validate_url(output_url)
 
     @pytest.mark.integration
     def test_accept_get_runs_header(self,

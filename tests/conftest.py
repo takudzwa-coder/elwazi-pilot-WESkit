@@ -79,6 +79,11 @@ def _setup_test_app(redis_container,
     os.environ["WESKIT_CONFIG"] = config
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
+    os.environ["WESKIT_S3_ENDPOINT"] = "http://localhost:9000"
+    os.environ["WESKIT_S3_ID"] = "minioadmin"
+    os.environ["WESKIT_S3_SECRET"] = "minioadmin"
+    os.environ["WESKIT_S3_REGION"] = "us-east-1"
+
     app = create_app(celery=celery_session_app,
                      database=test_database)
     app.testing = True
