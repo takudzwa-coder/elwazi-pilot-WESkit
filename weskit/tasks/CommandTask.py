@@ -103,5 +103,6 @@ def run_command(command: List[str],
         execution_log_abs = workdir_abs / execution_log_rel
         with open(execution_log_abs, "w") as fh:
             json.dump(execution_log, fh)
+            print("\n", file=fh)
 
     return execution_log

@@ -8,13 +8,12 @@
 import logging
 import os
 import subprocess  # nosec B603
+from builtins import int, super, open, property
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
 from shutil import copyfile
 from typing import Optional, cast, IO
-
-from builtins import int, super, open, property
 
 import weskit.classes.executor.Executor as base
 from weskit.classes.ShellCommand import ShellCommand

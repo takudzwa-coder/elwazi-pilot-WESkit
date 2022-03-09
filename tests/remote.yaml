@@ -4,7 +4,7 @@
 #  hostname: localhost
 #  port: 22
 #  knownhosts_file: ~/.ssh/known_hosts
-#  keyfile: ~/.ssh/id_rsa
+#  keyfile: ~/.ssh/weskit_test_rsa
 #  keyfile_passphrase:
 
 #lsf_submission_host:
@@ -14,7 +14,7 @@
 #   hostname: odcf-worker01
 #   port: 22
 #   knownhosts_file: ~/.ssh/known_hosts
-#   keyfile: ~/.ssh/id_rsa
+#   keyfile: ~/.ssh/weskit_test_rsa
 #   keyfile_passphrase:
 
 #slurm_submission_host:
@@ -24,5 +24,5 @@
 #    hostname: slurm_hpc
 #    port: 22
 #    knownhosts_file: ~/.ssh/known_hosts
-#    keyfile: ~/.ssh/id_rsa
+#    keyfile: ~/.ssh/weskit_test_rsa
 #    keyfile_passphrase:

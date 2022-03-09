@@ -1,0 +1,101 @@
+#  Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+#
+#  Distributed under the MIT License. Full text at
+#
+#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
+#
+#  Authors: The WESkit Team
+from typing import Dict, List, Union
+
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine
+from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
+
+# Type aliases to simplify the signature of the type annotations.
+ConfParameter = Dict[str, Union[str, bool]]
+ConfParameters = List[ConfParameter]
+ConfVersions = Dict[str, ConfParameters]
+
+
+class WorkflowEngineFactory:
+    """
+    Create a data index structure from an engine specification as found in the `weskit.yaml`.
+    The index has the shape $engineName:str -> $version:str -> WorkflowEngine. The
+    WorkflowEngine is pre-configured with the default workflow engine parameters taken from the
+    `weskit.yaml`.
+    """
+
+    @staticmethod
+    def create_engine(engine_class,
+                      parameters: ConfParameters) \
+            -> WorkflowEngine:
+        """
+        Convert a list of parameter name/value dictionaries of actual parameters to a dictionary of
+        ActualEngineParams.
+
+        Raises a KeyError, if the parameter name is not among the aliases of all allowed parameters
+        for this WorkflowEngine.
+        """
+        actual_params = []
+        for p in parameters:
+            param = engine_class.known_parameters()[p["name"]]
+            value = p.get("value", None)
+            is_api_parameter = bool(p.get("api", False))   # type was checked by validation
+            actual_params += [ActualEngineParameter(param,
+                                                    None if value is None else str(value),
+                                                    is_api_parameter)]
+        return engine_class(actual_params)
+
+    @staticmethod
+    def _create_versions(engine_class, engine_params: ConfVersions) \
+            -> Dict[str, WorkflowEngine]:
+        """
+        :param engine_class: WorkflowEngine class
+        :param engine_params: Version name -> List of dictionaries, one for each parameter.
+        :return:
+        """
+        return dict(map(lambda by_version: (by_version[0],
+                                            WorkflowEngineFactory.
+                                            create_engine(engine_class,
+                                                          by_version[1])),
+                        engine_params.items()))
+
+    @staticmethod
+    def _maybe_engine(engine_class,
+                      engine_params: Dict[str, ConfVersions]) \
+            -> Dict[str, Dict[str, WorkflowEngine]]:
+        """
+        Create a WorkflowEngine entry, if the engine is defined in the configuration.
+        """
+        def engine_is_defined() -> bool:
+            return engine_class.name() in engine_params
+
+        def some_version_is_defined() -> bool:
+            return len(engine_params[engine_class.name()]) > 0
+
+        if engine_is_defined() and some_version_is_defined():
+            return {engine_class.name(): WorkflowEngineFactory.
+                    _create_versions(engine_class,
+                                     engine_params[engine_class.name()])}
+        else:
+            return {}
+
+    @staticmethod
+    def create(engine_params: Dict[str, ConfVersions]) -> \
+            Dict[str, Dict[str, WorkflowEngine]]:
+        """
+        Return a dictionary of all WorkflowEngines mapping workflow_engine to
+        workflow_engine_version to WorkflowEngine instances.
+
+        This is yet statically implemented, but could at some
+        point by done with https://stackoverflow.com/a/3862957/8784544.
+        """
+        workflow_engines = {}
+        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Snakemake, engine_params))
+        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Nextflow, engine_params))
+
+        # The semantics of workflow_type and workflow_engine_parameters is not completely defined
+        # yet. There is also a proposal for a workflow_engine_name parameter.
+        # Compare https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91
+        # See also https://github.com/ga4gh/workflow-execution-service-schemas/issues/171
+
+        return workflow_engines

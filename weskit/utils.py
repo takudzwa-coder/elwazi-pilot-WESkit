@@ -9,9 +9,9 @@
 import boto3
 import os
 import traceback
-from typing import Optional
-from urllib.parse import urlparse
 from datetime import datetime
+from typing import Dict, Union, List
+from urllib.parse import urlparse
 
 from cerberus import Validator
 
@@ -52,13 +52,13 @@ def get_traceback(e: Exception) -> str:
 def create_validator(schema):
     """Return a validator function that can be provided a data structure to
     be validated. The validator is returned as second argument."""
-    def _validate(target) -> Optional[str]:
+    def _validate(target) -> Union[Dict[str, dict], List[str]]:
         validator = Validator()
-        result = validator.validate(target, schema)
-        if result:
-            return None
+        validation_success = validator.validate(target, schema)
+        if validation_success:
+            return validator.normalized(target, schema)
         else:
-            return validator.errors
+            return [validator.errors]
     return _validate
 
 

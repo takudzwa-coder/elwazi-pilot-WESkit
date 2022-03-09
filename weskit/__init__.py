@@ -24,7 +24,7 @@ from weskit.classes.Database import Database
 from weskit.classes.ErrorCodes import ErrorCodes
 from weskit.classes.Manager import Manager
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.WorkflowEngine import WorkflowEngineFactory
+from weskit.classes.WorflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory
 from weskit.oidc.Login import Login
 from weskit.utils import create_validator
@@ -124,11 +124,14 @@ def create_app(celery: Celery,
         request_validation = yaml.safe_load(yaml_file)
 
     # Validate configuration YAML.
-    config_errors = create_validator(validation)(config)
-    if config_errors:
+    validation_result = create_validator(validation)(config)
+    if isinstance(validation_result, list):
         logger.error("Could not validate config.yaml: {}".
-                     format(config_errors))
+                     format(validation_result))
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
+    else:
+        # The validation result contains the normalized config (with default values set).
+        config = validation_result
 
     # Insert the "celery" section from the configuration file into the Celery config.
     celery.conf.update(**config.get("celery", {}))
@@ -137,9 +140,7 @@ def create_app(celery: Celery,
         Manager(celery_app=celery,
                 database=database,
                 workflow_engines=WorkflowEngineFactory.
-                workflow_engine_index(config
-                                      ["static_service_info"]
-                                      ["default_workflow_engine_parameters"]),
+                create(config["static_service_info"]["default_workflow_engine_parameters"]),
                 workflows_base_dir=workflows_base_dir,
                 data_dir=weskit_data,
                 require_workdir_tag=config["require_workdir_tag"])

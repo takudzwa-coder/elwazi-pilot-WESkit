@@ -6,6 +6,7 @@
 #
 #  Authors: The WESkit Team
 import uuid
+from typing import Dict, Optional
 
 import yaml
 
@@ -14,8 +15,15 @@ from weskit.classes.Run import Run
 import time
 
 
-def get_mock_run(workflow_url, workflow_type, workflow_type_version,
-                 tags=None, user_id="test_id"):
+def get_mock_run(workflow_url,
+                 workflow_type,
+                 workflow_type_version,
+                 workflow_engine_parameters=None,
+                 tags=None,
+                 user_id="test_id"):
+    workflow_engine_parameters = {}\
+        if workflow_engine_parameters is None\
+        else workflow_engine_parameters
     data = {
         "run_id": str(uuid.uuid4()),
         "run_status": "INITIALIZING",
@@ -26,6 +34,7 @@ def get_mock_run(workflow_url, workflow_type, workflow_type_version,
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
             "workflow_params": {"text": "hello_world"},
+            "workflow_engine_parameters": workflow_engine_parameters
         },
         "execution_path": [],
         "run_log": {},
@@ -57,7 +66,8 @@ def is_run_failed(status: RunStatus) -> bool:
     ]
 
 
-def get_workflow_data(snakefile, config):
+def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]] = None):
+    engine_params = {} if engine_params is None else engine_params
     with open(config) as file:
         workflow_params = yaml.load(file, Loader=yaml.FullLoader)
 
@@ -65,7 +75,8 @@ def get_workflow_data(snakefile, config):
         "workflow_params": workflow_params,
         "workflow_type": "SMK",
         "workflow_type_version": "6.10.0",
-        "workflow_url": snakefile
+        "workflow_url": snakefile,
+        "workflow_engine_parameters": engine_params
     }
     return data
 

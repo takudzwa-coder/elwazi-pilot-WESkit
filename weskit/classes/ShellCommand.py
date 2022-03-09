@@ -50,4 +50,4 @@ class ShellCommand:
     def __repr__(self) -> str:
         return ", ".join([f"ShellCommand(command={str(self.command)}",
                           f"env={self.environment}",
-                          f"workdir={self.workdir}"])
+                          f"workdir={self.workdir})"])

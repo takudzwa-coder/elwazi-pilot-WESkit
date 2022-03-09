@@ -12,8 +12,16 @@ from weskit import create_validator
 
 
 def test_validate_config(test_validation, test_config):
-    config_errors = create_validator(test_validation)(test_config)
-    assert not config_errors, config_errors
+    validation_result = create_validator(test_validation)(test_config)
+    assert isinstance(validation_result, dict), validation_result
+
+    # Ensure default value is set
+    max_memory = list(filter(lambda p: p["name"] == "max-memory",
+                             validation_result["static_service_info"]
+                             ["default_workflow_engine_parameters"]
+                             ["NFL"]["21.04.0"]))[0]
+    assert "api" in max_memory
+    assert not max_memory["api"]
 
 
 def test_get_id(service_info):
@@ -95,36 +103,25 @@ def test_get_default_workflow_engine_parameters(service_info):
     case.assertDictEqual(default, {
         "SMK": {
             "6.10.0": [
-                {
-                    "name": "SOME_VAR",
-                    "value": "with value"
-                },
-                {
-                    "name": "--cores",
-                    "value": 1
-                }
             ]
         },
         "NFL": {
             "21.04.0": [
                 {
-                    "name": "NXF_OPTS",
-                    "value": "-Xmx256m"
+                    "name": "trace",
+                    "value": "true"
                 },
                 {
-                    "name": "-Djava.io.tmpdir=/tmp"
+                    "name": "timeline",
+                    "value": "true"
                 },
                 {
-                    "name": "-with-trace"
+                    "name": "graph",
+                    "value": "true"
                 },
                 {
-                    "name": "-with-timeline"
-                },
-                {
-                    "name": "-with-dag"
-                },
-                {
-                    "name": "-with-report"
+                    "name": "report",
+                    "value": "true"
                 }
             ]
         }})

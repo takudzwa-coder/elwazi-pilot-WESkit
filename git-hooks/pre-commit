@@ -7,18 +7,22 @@
 
 set -ue
 
-# Type checks
-echo "Mypy ..." >> /dev/stderr
-mypy tests/ weskit/
+if [[ ! -v NO_COMMIT_CHECKS || (-v NO_COMMIT_CHECKS && "$NO_COMMIT_CHECKS" != "true") ]]; then
 
-# Code style checks
-echo "flake8 ..." >> /dev/stderr
-flake8 tests/ weskit/
+  # Type checks
+  echo "Mypy ..." >> /dev/stderr
+  mypy tests/ weskit/
 
-# Security
-echo "bandit ..." >> /dev/stderr
-bandit -r weskit/ uwsgi_server/
+  # Code style checks
+  echo "flake8 ..." >> /dev/stderr
+  flake8 tests/ weskit/
 
-# Run unit tests
-echo "pytest ..." >> /dev/stderr
-python -m pytest -m "not integration"
+  # Security
+  echo "bandit ..." >> /dev/stderr
+  bandit -r weskit/ uwsgi_server/
+
+  # Run unit tests
+  echo "pytest ..." >> /dev/stderr
+  python -m pytest -m "not integration"
+
+fi
