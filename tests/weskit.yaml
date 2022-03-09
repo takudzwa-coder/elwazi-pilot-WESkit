@@ -93,37 +93,30 @@ static_service_info:
     default_workflow_engine_parameters:
       NFL:
         "21.04.0":
-          # Environment variables for the workflow manager execution.
-          - name: "NXF_OPTS"
-            value: "-Xmx256m"
-            slot: "environment"
-          # Single-dash parameters before the target. See `nextflow help`.
-          # Do not include the dash. E.g. use "C" for the "-C" parameter or "D" for java options.
-          - name: "-Djava.io.tmpdir=/tmp"
-            slot: "command"
-          # Single-dash run parameters. See `nextflow help run`.
-          # Do not include the dash. E.g. use "with-trace" for the "-with-trace" parameter.
-          - name: -with-trace
-            slot: "run"
-          - name: -with-timeline
-            slot: "run"
-          - name: -with-dag
-            slot: "run"
-          - name: -with-report
-            slot: "run"
+          - name: "max-memory"
+            value: "256m"
+            # api: false       # By default `false`
+          - name: "tempdir"
+            value: "/tmp"
+            api: false
+          - name: "trace"
+            value: "true"
+            api: true
+          - name: "timeline"
+            value: "true"
+            api: true
+          - name: "graph"
+            value: "true"
+            api: true
+          - name: "report"
+            value: "true"
+            api: true
 
       SMK:
         "6.10.0":
-          # Environment variables for the workflow manager execution.
-          - name: "SOME_VAR"
-            value: "with value"
-            slot: "environment"
-          # Parameters to be used before the target. See `snakemake --help`.
-          # Do not include double-dashs, e.g. use "max-jobs-per-second" rather than
-          # "--max-jobs-per-second".
-          - name: --cores
-            value: 1
-            slot: "command"
+          - name: "cores"
+            value: "1"
+            api: false
 
     # Currently, the workflow_type_versions need to be among the workflow_engine_versions.
     # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91

@@ -98,17 +98,16 @@ static_service_info:
         NFL:
           type: string
     default_workflow_engine_parameters:
-      type: dict
+      type: dict           # workflow engine names
       required: false
-      schema:              # workflow engine names
-
+      schema:
         NFL: &default_workflow_engine_parameters
           type: dict       # engine version tags
-          required: true
+          required: false
           valuesrules:
             type: list
             default: []
-            valuesrules:   # engine parameter
+            schema:        # engine parameter
               type: dict
               schema:
                 name:
@@ -117,9 +116,10 @@ static_service_info:
                 value:
                   required: false
                   type: string
-                slot:
-                  type: string
-                  required: true
+                  nullable: true     # e.g. interpret None values as software default
+                api:
+                  type: boolean
+                  default: false
         SMK: *default_workflow_engine_parameters
 
     auth_instructions_url:

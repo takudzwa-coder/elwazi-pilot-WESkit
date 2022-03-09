@@ -5,10 +5,12 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from __future__ import annotations
+
 import logging
 import os
 import re
-from typing import List, Optional, Dict, Callable, TypeVar
+from typing import List, Optional, Dict, Callable, TypeVar, Union
 from urllib.parse import urlparse
 
 logger = logging.Logger(__file__)
@@ -17,7 +19,7 @@ logger = logging.Logger(__file__)
 class RunRequestValidator(object):
 
     def __init__(self,
-                 syntax_validator,
+                 syntax_validator: Callable[[Dict[str, dict]], Union[Dict[str, dict], List[str]]],
                  workflow_types_and_versions: Dict[str, List[str]],
                  data_dir: str,
                  require_workdir_tag: bool):
@@ -29,33 +31,46 @@ class RunRequestValidator(object):
         self.require_rundir_tag = require_workdir_tag
 
     def validate(self,
-                 data: dict) -> Optional[List[str]]:
+                 data: dict) \
+            -> Union[dict, List[str]]:
         """Validate the overall structure, types and values of the run request
         fields. workflow_params and workflow_engine_parameters are not tested
-        semantically but their structure is validated (see schema)."""
+        semantically but their structure is validated (see schema).
+        Either return the normalized data or a list of error messages."""
 
         T = TypeVar('T')
 
-        def apply_if_not_none(value: T, func: Callable[[T], List[str]]) -> List[str]:
+        def apply_if_not_none(value: Optional[T], func: Callable[[T], List[str]]) -> List[str]:
             if value is not None:
                 return func(value)
             else:
                 return []
 
-        stx_errors = self._validate_syntax(data)
+        stx_errors: List[str] = []
+        syntax_validation_result = self._validate_and_normalize_syntax(data)
+        if isinstance(syntax_validation_result, list):
+            stx_errors += syntax_validation_result
+            normalized_data = data
+        else:
+            normalized_data = syntax_validation_result
+
         wtnv_errors = self._validate_workflow_type_and_version(
-            data.get("workflow_type", None),
-            data.get("workflow_type_version", None))
-        url_errors = apply_if_not_none(data.get("workflow_url", None),
+            normalized_data.get("workflow_type", None),           # not optional by standard
+            normalized_data.get("workflow_type_version", None))   # not optional by standard
+        url_errors = apply_if_not_none(normalized_data.get("workflow_url", None),
                                        self._validate_workflow_url)
         workdir_tag_errors = self._validate_rundir_tag(
-            data.get("tags", None))
+            normalized_data.get("tags", None))
 
-        return list(filter(lambda v: v != [] and v is not None,
-                           stx_errors + wtnv_errors + url_errors + workdir_tag_errors))
+        all_errors = stx_errors + wtnv_errors + url_errors + workdir_tag_errors
+        if len(all_errors) > 0:
+            return list(filter(lambda v: v != [] and v is not None, all_errors))
+        else:
+            return normalized_data
 
-    def _validate_syntax(self, data: dict) -> List[str]:
-        return [self.syntax_validator(data)]
+    def _validate_and_normalize_syntax(self, data: dict) \
+            -> Union[dict, List[str]]:
+        return self.syntax_validator(data)
 
     def _validate_workflow_type_and_version(self, wf_type: str, version: str) \
             -> List[str]:

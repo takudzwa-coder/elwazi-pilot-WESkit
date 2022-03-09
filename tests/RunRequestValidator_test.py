@@ -10,8 +10,8 @@ import os
 import pytest
 import yaml
 
-from weskit.utils import create_validator
 from weskit.api.RunRequestValidator import RunRequestValidator
+from weskit.utils import create_validator
 
 
 @pytest.fixture(scope="session")
@@ -39,7 +39,7 @@ def run_request_validator(request_validation, service_info):
                                False)
 
 
-def request(**kwargs):
+def request(**kwargs) -> dict:
     default = {
         "workflow_params": {},
         "workflow_type": "SMK",
@@ -51,7 +51,8 @@ def request(**kwargs):
 
 def test_validate_success(run_request_validator):
     the_request = request()
-    assert run_request_validator.validate(the_request) == []
+    normalized = run_request_validator.validate(the_request)
+    assert isinstance(normalized, dict), normalized
 
 
 def test_validate_structure(run_request_validator):
@@ -79,13 +80,13 @@ def test_validate_structure(run_request_validator):
            [{'workflow_url': ['required field']}]
 
     request_with_trs = request(workflow_url="trs://some-server/ga4gh/trs/v2/wfid/wfvers/wftype")
-    assert run_request_validator.validate(request_with_trs) == []
+    assert isinstance(run_request_validator.validate(request_with_trs), dict)
 
 
 def test_validate_run_dir_tag(run_request_validator_rundir):
-    assert run_request_validator_rundir.validate(request(tags={
+    assert isinstance(run_request_validator_rundir.validate(request(tags={
         "run_dir": "file:relative/path/to/file"
-    })) == []
+    })), dict)
 
     assert run_request_validator_rundir.validate(request(tags={
         "run_dir": "file:/absolute/path/to/file"
@@ -93,12 +94,12 @@ def test_validate_run_dir_tag(run_request_validator_rundir):
 
 
 def test_workflow_type(run_request_validator):
-    assert run_request_validator.validate(request(workflow_type="SMK",
-                                                  workflow_type_version="6.10.0")) == \
-        []
-    assert run_request_validator.validate(request(workflow_type="NFL",
-                                                  workflow_type_version="21.04.0")) == \
-        []
+    assert isinstance(run_request_validator.validate(request(workflow_type="SMK",
+                                                             workflow_type_version="6.10.0")),
+                      dict)
+    assert isinstance(run_request_validator.validate(request(workflow_type="NFL",
+                                                             workflow_type_version="21.04.0")),
+                      dict)
     assert run_request_validator.validate(request(workflow_type="blabla")) == \
         ["Unknown workflow_type 'blabla'. Know NFL, SMK"]
     assert run_request_validator.validate(request(workflow_type="NFL",
@@ -112,10 +113,10 @@ def test_workflow_type_version(run_request_validator):
 
 
 def test_workflow_url(run_request_validator):
-    assert run_request_validator.validate(request(workflow_url="relative/path")) == \
-           []
-    assert run_request_validator.validate(request(workflow_url="file:relative/path")) == \
-           []
+    assert isinstance(run_request_validator.validate(request(workflow_url="relative/path")),
+                      dict)
+    assert isinstance(run_request_validator.validate(request(workflow_url="file:relative/path")),
+                      dict)
     assert run_request_validator.validate(request(workflow_url="file:/absolute/path")) == \
            ["Not a relative path: 'file:/absolute/path'"]
     assert run_request_validator.validate(request(workflow_url="/absolute/path")) == \

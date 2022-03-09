@@ -8,10 +8,8 @@
 import datetime
 from typing import Dict, List
 
+from weskit.classes.WorflowEngineFactory import ConfParameters
 from weskit.classes.Database import Database
-
-
-ParameterList = List[Dict[str, str]]
 
 
 class ServiceInfo:
@@ -70,18 +68,16 @@ class ServiceInfo:
                         self.default_workflow_engine_parameters().keys()))
 
     def default_workflow_engine_parameters(self) \
-            -> Dict[str, Dict[str, ParameterList]]:
+            -> Dict[str, Dict[str, ConfParameters]]:
         """
-        We use the "slot" field internally, to map parameters to command slots, but WES has no
-        notion of slots. So discard the slot fields here for reporting via the REST-API.
+        We use the "api" field internally, to configure in the server which parameters are allowed
+        to be set via the REST API. Forbidden parameters are not reported via the ServiceInfo
         """
-        def _remove_slot_fields(params: ParameterList) -> ParameterList:
-            return [{k: v for k, v in param.items() if k != "slot"}
-                    for param in params]
-        return {engine: {version: _remove_slot_fields(params)
-                         for version, params
-                         in versions.items()}
-                for engine, versions
+        return {engine: {version: [{"name": parameter["name"], "value": parameter["value"]}
+                                   for parameter in parameters
+                                   if parameter["api"]]
+                         for version, parameters in by_version.items()}
+                for engine, by_version
                 in self._static_service_info["default_workflow_engine_parameters"].items()}
 
     def system_state_counts(self) -> Dict[str, int]:

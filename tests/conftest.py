@@ -20,7 +20,7 @@ from testcontainers.mongodb import MongoDbContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.redis import RedisContainer
 
-from weskit import create_app, Manager, WorkflowEngineFactory
+from weskit import create_app, Manager, WorkflowEngineFactory, create_validator
 from weskit import create_database
 from weskit.classes.ServiceInfo import ServiceInfo
 
@@ -182,19 +182,13 @@ def test_validation():
 
 
 @pytest.fixture(scope="session")
-def test_config():
+def test_config(test_validation):
     # This uses a dedicated test configuration YAML.
     with open("tests/weskit.yaml", "r") as ff:
-        test_config = yaml.load(ff, Loader=yaml.FullLoader)
-    yield test_config
-
-
-@pytest.fixture(scope="session")
-def test_config_conda_parameters():
-    # This uses a dedicated test configuration YAML.
-    with open("tests/weskit_conda_para.yaml", "r") as ff:
-        test_config = yaml.load(ff, Loader=yaml.FullLoader)
-    yield test_config
+        raw_config = yaml.load(ff, Loader=yaml.FullLoader)
+    validation_result = create_validator(test_validation)(raw_config)
+    assert isinstance(validation_result, dict)
+    yield validation_result
 
 
 @pytest.fixture(scope="session")
@@ -264,7 +258,7 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
     return Manager(celery_app=celery_session_app,
                    database=test_database,
                    workflow_engines=WorkflowEngineFactory.
-                   workflow_engine_index(
+                   create(
                        test_config
                        ["static_service_info"]
                        ["default_workflow_engine_parameters"]),
@@ -281,10 +275,3 @@ def manager(celery_session_app, redis_container, test_config, test_database):
 @pytest.fixture(scope="session")
 def manager_rundir(celery_session_app, redis_container, test_config, test_database):
     return create_manager(celery_session_app, redis_container, test_config, test_database, True)
-
-
-@pytest.fixture(scope="session")
-def manager_conda_para(celery_session_app, redis_container, test_config_conda_parameters,
-                       test_database):
-    return create_manager(celery_session_app, redis_container, test_config_conda_parameters,
-                          test_database, False)

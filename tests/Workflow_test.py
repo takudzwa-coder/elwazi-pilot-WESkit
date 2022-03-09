@@ -70,7 +70,8 @@ def test_execute_snakemake(manager,
                            celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="6.10.0",
+                       workflow_engine_parameters={})
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
     start_time = time.time()
@@ -89,50 +90,12 @@ def test_execute_snakemake(manager,
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
-    assert run.log["env"] == {"SOME_VAR": "with value"}
+    assert run.log["env"] == {}
     assert run.log["cmd"] == [
         "snakemake",
         "--snakefile",
         run.workflow_path,
-        "--cores",
-        "1",
-        "--configfile",
-        "config.yaml"
-    ]
-
-
-@pytest.mark.integration
-@pytest.mark.slow
-def test_execute_snakemake_conda_para(manager_conda_para, celery_worker):
-    run = get_mock_run(workflow_url="file:tests/wf4/Snakefile",
-                       workflow_type="SMK",
-                       workflow_type_version="6.10.0"
-                       )
-    run = manager_conda_para.prepare_execution(run, files=[])
-    run = manager_conda_para.execute(run)
-    success = False
-    while not success:
-        status = run.status
-        if status != RunStatus.COMPLETE:
-            assert_status_is_not_failed(status)
-            print("Waiting ... (status=%s)" % status.name)
-            time.sleep(1)
-            run = manager_conda_para.update_run(run)
-            continue
-        filename = os.path.join(manager_conda_para.data_dir, run.dir, "version.txt")
-        assert os.path.isfile(filename)
-        with open(filename, "r") as fh:
-            assert fh.readlines() == ["Python 3.9.4\n"]
-        success = True
-
-    assert run.log["env"] == {"SOME_VAR": "with value"}
-    assert run.log["cmd"] == [
-        "snakemake",
-        "--snakefile",
-        run.workflow_path,
-        "--cores",
-        "1",
-        "--use-conda",
+        "--cores", "1",
         "--configfile",
         "config.yaml"
     ]
@@ -143,7 +106,8 @@ def test_execute_nextflow(manager,
                           celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
                        workflow_type="NFL",
-                       workflow_type_version="21.04.0")
+                       workflow_type_version="21.04.0",
+                       workflow_engine_parameters={"trace": "False"})
     run = manager.prepare_execution(run, files=[])
     manager.execute(run)
     start_time = time.time()
@@ -172,9 +136,7 @@ def test_execute_nextflow(manager,
         "-Djava.io.tmpdir=/tmp",
         "run",
         run.workflow_path,
-        "-params-file",
-        "config.yaml",
-        "-with-trace",
+        "-params-file", "config.yaml",
         "-with-timeline",
         "-with-dag",
         "-with-report"
@@ -219,9 +181,10 @@ def test_update_all_runs(manager,
             assert_status_is_not_failed(status)
             time.sleep(1)
             run = manager.update_state(run)
-            continue
-        manager.update_runs(query={})
-        db_run = manager.database.get_run(run_id=run.id)
-        assert db_run is not None
-        assert db_run.status == RunStatus.COMPLETE
-        success = True
+        else:
+            success = True
+
+    manager.update_runs(query={})
+    db_run = manager.database.get_run(run_id=run.id)
+    assert db_run is not None
+    assert db_run.status == RunStatus.COMPLETE

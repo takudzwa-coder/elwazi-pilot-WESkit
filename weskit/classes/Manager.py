@@ -9,7 +9,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List
 from urllib.parse import urlparse
 
 import yaml
@@ -327,12 +327,11 @@ class Manager:
 
         # Execute run
         run.start_time = get_current_timestamp()
-        workflow_engine_params: List[Dict[str, str]] = []
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
             command(workflow_path=run.workflow_path,
-                    workdir=Path(os.path.join(self.data_dir, run.dir)),
-                    config_files=["config.yaml"],
-                    workflow_engine_params=workflow_engine_params)
+                    workdir=Path(self.data_dir, run.dir),
+                    config_files=[Path("config.yaml")],
+                    engine_params=run.request.get("workflow_engine_parameters", {}))
         run.log["cmd"] = command.command
         run.log["env"] = command.environment
         if run.status == RunStatus.INITIALIZING:

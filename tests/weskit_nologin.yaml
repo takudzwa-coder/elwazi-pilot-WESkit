@@ -23,7 +23,7 @@ static_service_info:
     # Name of this service. Should be human readable.
     name: "WESkit"
 
-    # Type of a GA4GH service
+    # Type of GA4GH service
     type:
       # Namespace in reverse domain name format. Use org.ga4gh for implementations compliant with
       # official GA4GH specifications. For services with custom APIs not standardized by GA4GH, or
@@ -86,32 +86,14 @@ static_service_info:
     # These are also the versions-strings that WESkit accepts via its REST-API.
     workflow_engine_versions:
         SMK: "6.10.0"
-        NFL: "21.04.0"
 
-  # The first two levels of keys are the workflow_type and the workflow_type_version.
-  # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
+    # The first two levels of keys are the workflow_type and the workflow_type_version.
+    # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
     default_workflow_engine_parameters:
-      NFL:
-        "21.04.0": []
-          # Environment variables for the workflow manager execution.
-
-          # Single-dash parameters before the target. See `nextflow help`.
-          # Do not include the dash. E.g. use "C" for the "-C" parameter or "D" for java options.
-
-          # Single-dash run parameters. See `nextflow help run`.
-          # Do not include the dash. E.g. use "with-trace" for the "-with-trace" parameter.
-
-
       SMK:
         "6.10.0":
-          # Environment variables for the workflow manager execution.
-
-          # Parameters to be used before the target. See `snakemake --help`.
-          # Do not include double-dashs, e.g. use "max-jobs-per-second" rather than
-          # "--max-jobs-per-second".
-          - name: --cores
-            value: 1
-            slot: "command"
+           - name: cores
+             value: "1"
 
     # The workflow_type_versions need to be among the workflow_engine_versions.
     # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91
@@ -119,9 +101,6 @@ static_service_info:
       SMK:
         workflow_type_version:
           - "5"
-      NFL:
-        workflow_type_version:
-          - "20"
 
     # A web page URL with human-readable instructions on how to get an authorization token for use
     # with a specific WES endpoint.
