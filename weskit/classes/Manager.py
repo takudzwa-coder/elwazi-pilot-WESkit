@@ -272,27 +272,17 @@ class Manager:
         else:
             run.dir = os.path.join(run.id[0:4], run.id)
 
-        try:
-            run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
-            if not os.path.exists(run_dir_abs):
-                os.makedirs(run_dir_abs, exist_ok=True)
+        run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
+        if not os.path.exists(run_dir_abs):
+            os.makedirs(run_dir_abs, exist_ok=True)
 
-            with open(run_dir_abs + "/config.yaml", "w") as ff:
-                yaml.dump(run.request["workflow_params"], ff)
+        with open(run_dir_abs + "/config.yaml", "w") as ff:
+            yaml.dump(run.request["workflow_params"], ff)
 
-            run.workflow_path = self._prepare_workflow_path(
-                run.dir,
-                run.request["workflow_url"],
-                self._process_workflow_attachment(run, files))
-        except OSError as e:
-            # This is a serious problem, e.g. RO-filesystem, permission error, etc.
-            run.status = RunStatus.SYSTEM_ERROR
-            self.database.update_run(run)
-            raise e
-        except ClientError as e:
-            run.status = RunStatus.EXECUTOR_ERROR
-            self.database.update_run(run)
-            raise e
+        run.workflow_path = self._prepare_workflow_path(
+            run.dir,
+            run.request["workflow_url"],
+            self._process_workflow_attachment(run, files))
 
         return run
 
