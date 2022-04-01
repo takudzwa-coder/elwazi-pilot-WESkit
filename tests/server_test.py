@@ -60,6 +60,20 @@ def test_run(test_client,
     yield run
 
 
+@pytest.fixture(scope="module")
+def incomplete_run(test_client,
+                   celery_session_worker):
+    manager = current_app.manager
+    request = get_workflow_data(
+        snakefile="file:tests/wf1/Snakefile",
+        config="tests/wf1/config.yaml")
+    run = manager.create_and_insert_run(request=request,
+                                        user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
+    run = manager.prepare_execution(run)
+    manager.database.update_run(run)
+    return run
+
+
 @pytest.fixture(name="OIDC_credentials", scope="session")
 def login_fixture():
     """
@@ -146,6 +160,22 @@ class TestHelper:
         stdout, stdout_code = helper.get_log_response(test_run.id, "stdout")
         assert stdout_code == 200
         assert len(stdout["content"]) == 0
+
+    @pytest.mark.integration
+    def test_log_response_run_incomplete(self, incomplete_run, login_app):
+        helper = Helper(login_app, TestHelper.MockUser(incomplete_run.user_id))
+        assert helper.get_log_response(incomplete_run.id, "stderr") == \
+               ({"msg": "Run '%s' is not in COMPLETED state" % incomplete_run.id,
+                 "status_code": 409
+                 }, 409)
+
+    @pytest.mark.integration
+    def test_log_response_access_denied(self, test_run, login_app):
+        helper = Helper(login_app, TestHelper.MockUser("forbiddenUser"))
+        assert helper.get_log_response(test_run.id, "stderr") == \
+               ({"msg": f"User 'forbiddenUser' not allowed to access '{test_run.id}'",
+                 "status_code": 403
+                 }, 403)
 
 
 class TestOpenEndpoint:
