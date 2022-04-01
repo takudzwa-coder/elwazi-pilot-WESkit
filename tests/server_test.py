@@ -274,6 +274,14 @@ class TestWithHeaderToken:
         assert response.status_code == 404
 
     @pytest.mark.integration
+    def test_get_run(self,
+                     test_client,
+                     OIDC_credentials):
+        response = test_client.get("/weskit/v1/runs/nonExistingRun",
+                                   headers=OIDC_credentials.headerToken)
+        assert response.status_code == 404
+
+    @pytest.mark.integration
     def test_get_run_stderr_with_header(self,
                                         test_client,
                                         test_run,
