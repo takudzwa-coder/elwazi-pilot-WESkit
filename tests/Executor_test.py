@@ -131,7 +131,7 @@ def test_submit_nonexisting_command(executor):
 @pytest.mark.parametrize("executor", executors.values())
 def test_inacessible_workdir(executor):
     command = ShellCommand(["bash", "-c", "echo"],
-                           workdir=PurePath("/this/path/does/not/exist"))
+                           workdir=Path("/this/path/does/not/exist"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
                                 job_name="weskit_test_inaccessible_workdir",
@@ -139,7 +139,7 @@ def test_inacessible_workdir(executor):
                                 total_memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
     # Note: LSF exits with code 2 with LSB_EXIT_IF_CWD_NOTEXIST=Y, but at least it fails.
-    # Note: SLURM exits with code 0. It changes to /tmp if dir does not exists
+    # Note: SLURM exits with code 0. It changes to /tmp if dir does not exist.
     # This behaviour can be changes by the admin. slurm.conf
     assert result.status.code in [1, 2], result.status
 
@@ -160,7 +160,8 @@ class ExecuteProcess(metaclass=ABCMeta):
         # Note: This tests exports variables to Bash, as executed command. The variables (and $PWD)
         #       are then used to evaluate the shell expression.
         command = ShellCommand(["bash", "-c",
-                                "echo \"In $PWD. Hello '$ENV_VAL'. Hello '$WITH_SPACE'. Hello '$SPACEY_END'.\""],       # noqa
+                                "echo \"In $PWD. Hello '$ENV_VAL'. "
+                                "Hello '$WITH_SPACE'. Hello '$SPACEY_END'.\""],
                                workdir=self.workdir,
                                environment={
                                    # "EMPTY": "",              # `bsub -env "EMPTY="` fails
