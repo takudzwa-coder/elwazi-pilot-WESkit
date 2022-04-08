@@ -99,7 +99,6 @@ def _copy_jwt_vars_to_toplevel_config(flaskapp: Flask, config: dict) \
         "JWT_COOKIE_SECURE",
         "JWT_TOKEN_LOCATION",
         "JWT_ALGORITHM",
-        "JWT_DECODE_AUDIENCE",
         "JWT_IDENTITY_CLAIM",
         "JWT_COOKIE_SECURE"
     ]
