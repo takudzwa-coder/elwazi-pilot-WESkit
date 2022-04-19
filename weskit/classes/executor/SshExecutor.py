@@ -15,7 +15,7 @@ from asyncio.subprocess import PIPE
 from datetime import datetime
 from os import PathLike
 from pathlib import PurePath
-from typing import Optional, List
+from typing import Optional, Sequence
 
 import asyncssh
 from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, ChannelOpenError, \
@@ -103,8 +103,8 @@ class SshExecutor(Executor):
         # * https://asyncssh.readthedocs.io/en/latest/api.html#specifying-known-hosts
         # * https://asyncssh.readthedocs.io/en/latest/api.html#specifying-private-keys
         # * https://asyncssh.readthedocs.io/en/latest/api.html#sshclientconnectionoptions
-        ssh_keys: List[SSHKey] = asyncssh.read_private_key_list(self._keyfile,
-                                                                self._keyfile_passphrase)
+        ssh_keys: Sequence[SSHKey] = asyncssh.read_private_key_list(PurePath(self._keyfile),
+                                                                    self._keyfile_passphrase)
         logger.info(f"Read private keys from {self._keyfile}. " +
                     f"sha256 fingerprints: {list(map(lambda k: k.get_fingerprint(), ssh_keys))}")
         try:
@@ -126,13 +126,13 @@ class SshExecutor(Executor):
         except asyncio.TimeoutError as e:
             raise ExecutorException("Connection error (timeout)", e)
 
-    async def put(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
+    async def put(self, srcpath: PurePath, dstpath: PurePath, **kwargs):
         await asyncssh.scp(srcpaths=srcpath, dstpath=(self._connection, dstpath), **kwargs)
 
-    async def get(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
+    async def get(self, srcpath: PurePath, dstpath: PurePath, **kwargs):
         await asyncssh.scp(srcpaths=(self._connection, srcpath), dstpath=dstpath, **kwargs)
 
-    async def remote_rm(self, path: PathLike):
+    async def remote_rm(self, path: PurePath):
         await self._connection.run(f"rm {shlex.quote(str(path))}")
 
     def _process_directory(self, process_id: uuid.UUID) -> PurePath:
@@ -193,7 +193,7 @@ class SshExecutor(Executor):
             await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
 
-    async def _upload_file(self, local_path: PathLike, remote_path: PathLike):
+    async def _upload_file(self, local_path: PurePath, remote_path: PurePath):
         """
         We can't assume that local and remote path are identical. Thus file upload
         has to go into a manually generated remote folder.
@@ -207,10 +207,10 @@ class SshExecutor(Executor):
         finally:
             await self._event_loop.run_in_executor(None, lambda: os.unlink(local_path))
 
-    def copy_file(self, source: PathLike, target: PathLike):
+    def copy_file(self, source: PurePath, target: PurePath):
         self._event_loop.run_until_complete(self._upload_file(source, target))
 
-    def remove_file(self, target: PathLike):
+    def remove_file(self, target: PurePath):
         self._event_loop.run_until_complete(self.remote_rm(target))
 
     async def _execute(self,
