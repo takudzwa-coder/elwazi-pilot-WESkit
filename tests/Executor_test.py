@@ -602,10 +602,10 @@ class TestLsfGetStatus:
                 self.update_process(process)
                 return process.result
 
-            def copy_file(self, source: PathLike, target: PathLike):
+            def copy_file(self, source: PurePath, target: PurePath):
                 pass
 
-            def remove_file(self, file: PathLike):
+            def remove_file(self, file: PurePath):
                 pass
 
         executor = LsfExecutor(MockInnerExecutor())

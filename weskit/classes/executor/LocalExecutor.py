@@ -11,7 +11,7 @@ import subprocess  # nosec B603
 from builtins import int, super, open, property
 from datetime import datetime
 from os import PathLike
-from pathlib import Path
+from pathlib import PurePath
 from shutil import copyfile
 from typing import Optional, cast, IO
 
@@ -155,8 +155,8 @@ class LocalExecutor(base.Executor):
                                                           exit_code, message=e.strerror),
                                                       start_time=start_time))
 
-    def copy_file(self, source: PathLike, target: PathLike):
-        if Path(source) == Path(target):
+    def copy_file(self, source: PurePath, target: PurePath):
+        if source == target:
             raise ValueError("Identical source and target paths: '{source}'")
         else:
             copyfile(source, target)
