@@ -99,6 +99,8 @@ class Manager:
             if run.celery_task_id is not None:
                 running_task = self._run_task.\
                     AsyncResult(run.celery_task_id)
+                logger.debug("Run %s with state %s got Celery ID %s in state '%s'" % (
+                    run.id, run.status, run.celery_task_id, running_task.state))
                 if ((run.status != RunStatus.CANCELING) or
                     (run.status == RunStatus.CANCELING and
                      running_task.state == "REVOKED")):
@@ -169,7 +171,11 @@ class Manager:
 
     def get_run(self, run_id, update) -> Optional[Run]:
         if update:
-            return self.update_runs(query={"run_id": run_id})[0]
+            runs = self.update_runs(query={"run_id": run_id})
+            if len(runs) == 0:
+                return None
+            else:
+                return runs[0]
         else:
             return self.database.get_run(run_id)
 

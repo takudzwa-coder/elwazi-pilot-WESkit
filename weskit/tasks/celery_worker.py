@@ -5,9 +5,27 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+import logging
+import os
+
+import yaml
 
 import weskit
 from weskit.tasks.CommandTask import run_command
 
-celery_app = weskit.create_celery()
+
+logger = logging.getLogger(__name__)
+
+
+if os.getenv("WESKIT_CONFIG") is not None:
+    config_file = os.getenv("WESKIT_CONFIG", "")
+else:
+    raise ValueError("Cannot start WESkit: Environment variable WESKIT_CONFIG is undefined")
+
+with open(config_file, "r") as yaml_file:
+    config = yaml.safe_load(yaml_file)
+    logger.info("Read config from " + config_file)
+
+# Insert the "celery" section from the configuration file into the Celery config.
+celery_app = weskit.create_celery(**config.get("celery", {}))
 celery_app.task(run_command)
