@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>", methods=["GET"])
-@login_required
+@login_required()
 def GetRunLog(run_id):
     logger.info("GetRun %s" % run_id)
     try:
@@ -58,7 +58,7 @@ def GetRunLog(run_id):
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/cancel", methods=["POST"])
-@login_required
+@login_required()
 def CancelRun(run_id):
     logger.info("CancelRun %s" % run_id)
     try:
@@ -85,7 +85,7 @@ def CancelRun(run_id):
 
 
 @bp.route("/ga4gh/wes/v1/runs/<string:run_id>/status", methods=["GET"])
-@login_required
+@login_required()
 def GetRunStatus(run_id):
     logger.info("GetRunStatus %s" % run_id)
     try:
@@ -162,7 +162,7 @@ def GetServiceInfo(*args, **kwargs):
 
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["GET"])
-@login_required
+@login_required()
 def ListRuns(*args, **kwargs):
     logger.info("ListRuns")
     try:
@@ -177,7 +177,7 @@ def ListRuns(*args, **kwargs):
 
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
-@login_required
+@login_required()
 def RunWorkflow(*args, **kwargs):
     logger.info("RunWorkflow")
     try:
@@ -236,7 +236,7 @@ def RunWorkflow(*args, **kwargs):
 
 
 @bp.route("/weskit/v1/runs", methods=["GET"])
-@login_required
+@login_required()
 def ListRunsExtended(*args, **kwargs):
     logger.info("ListRunsExtended")
     try:
@@ -252,7 +252,7 @@ def ListRunsExtended(*args, **kwargs):
 
 
 @bp.route("/weskit/v1/runs/<string:run_id>/stderr", methods=["GET"])
-@login_required
+@login_required()
 def GetRunStderr(run_id):
     """
     Return a dictionary with a "content" field that contains the standard error of the requested
@@ -270,7 +270,7 @@ def GetRunStderr(run_id):
 
 
 @bp.route("/weskit/v1/runs/<string:run_id>/stdout", methods=["GET"])
-@login_required
+@login_required()
 def GetRunStdout(run_id):
     """
     Return a dictionary with a "content" field that contains the standard output of the requested

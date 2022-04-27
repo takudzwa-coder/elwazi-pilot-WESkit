@@ -170,10 +170,6 @@ def create_app(celery: Celery,
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
-    if OIDCFactory.is_login_enabled(config):
-        OIDCFactory.setup(app, config)
-        app.is_login_enabled = True
-    else:
-        app.is_login_enabled = False
+    OIDCFactory.setup(app, config)
 
     return app

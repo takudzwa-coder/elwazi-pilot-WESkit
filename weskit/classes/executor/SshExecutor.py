@@ -126,11 +126,13 @@ class SshExecutor(Executor):
         except asyncio.TimeoutError as e:
             raise ExecutorException("Connection error (timeout)", e)
 
-    async def put(self, srcpath: PurePath, dstpath: PurePath, **kwargs):
-        await asyncssh.scp(srcpaths=srcpath, dstpath=(self._connection, dstpath), **kwargs)
+    async def put(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
+        await asyncssh.scp(srcpaths=str(srcpath),
+                           dstpath=(self._connection, str(dstpath)), **kwargs)
 
-    async def get(self, srcpath: PurePath, dstpath: PurePath, **kwargs):
-        await asyncssh.scp(srcpaths=(self._connection, srcpath), dstpath=dstpath, **kwargs)
+    async def get(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
+        await asyncssh.scp(srcpaths=(self._connection, str(srcpath)),
+                           dstpath=str(dstpath), **kwargs)
 
     async def remote_rm(self, path: PurePath):
         await self._connection.run(f"rm {shlex.quote(str(path))}")
@@ -203,7 +205,7 @@ class SshExecutor(Executor):
         :return:
         """
         try:
-            await asyncssh.scp(local_path, (self._connection, remote_path))
+            await asyncssh.scp(str(local_path), (self._connection, str(remote_path)))
         finally:
             await self._event_loop.run_in_executor(None, lambda: os.unlink(local_path))
 

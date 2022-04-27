@@ -139,32 +139,54 @@ login:
     enabled:
       type: boolean
       required: true
-
     jwt:
       type: dict
       required: false
       schema:
         JWT_COOKIE_SECURE:
           type: boolean
-          required: true
+          default: true
+        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
         JWT_TOKEN_LOCATION:
           type: list
-          required: true
+          default: ["headers"]
+        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_NAME
+        JWT_HEADER_NAME:
+          type: string
+          default: "Authorization"
+        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_TYPE
+        JWT_HEADER_TYPE:
+          type: string
+          default: "Bearer"
         JWT_ALGORITHM:
           type: string
-          required: true
+          default: "RS256"
         JWT_DECODE_AUDIENCE:
           type: string
-          required: true
+          default: "account"
         JWT_IDENTITY_CLAIM:
           type: string
-          required: true
+          default: "sub"
         JWT_ACCESS_COOKIE_PATH:
           type: string
-          required: true
+          default: "/"
         JWT_REFRESH_COOKIE_PATH:
           type: string
-          required: true
+          default: "/"
+      default:
+        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
+        JWT_TOKEN_LOCATION: [ "headers" ]
+        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_NAME
+        JWT_HEADER_NAME: "Authorization"
+        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_TYPE
+        JWT_HEADER_TYPE: "Bearer"
+        JWT_COOKIE_SECURE: true
+        JWT_ALGORITHM: "RS256"
+        JWT_DECODE_AUDIENCE: "account"
+        JWT_IDENTITY_CLAIM: "sub"
+        JWT_ACCESS_COOKIE_PATH: "/"
+        JWT_REFRESH_COOKIE_PATH: "/"
+
 
 # Celery configuration. Use keys and values according to
 # https://docs.celeryproject.org/en/stable/userguide/configuration.html#configuration

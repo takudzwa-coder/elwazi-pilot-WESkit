@@ -16,11 +16,11 @@ require_workdir_tag: false
 static_service_info:
 
     # Unique ID of this service. Reverse domain name notation is recommended, though not required.
-    # The identifier should attempt to be globally unique so it can be used in downstream
+    # The identifier should attempt to be globally unique, so it can be used in downstream
     # aggregator services e.g. Service Registry.
     id: "weskit.api"
 
-    # Name of this service. Should be human readable.
+    # Name of this service. Should be human-readable.
     name: "WESkit"
 
     # Type of a GA4GH service
@@ -36,7 +36,7 @@ static_service_info:
       # Version of the API or specification. GA4GH specifications use semantic versioning.
       version: 1.0.0
 
-    # Description of the service. Should be human readable and provide information about the
+    # Description of the service. Should be human-readable and provide information about the
     # service.
     description: "WESkit - A GA4GH Compliant Workflow Execution Server"
 
@@ -51,7 +51,7 @@ static_service_info:
     contact_url:
       mailto:your@email.de
 
-    # URL of the documentation of this service (RFC 3986 format). This should help someone learn
+    # URL of the documentation of this service (RFC 3986 format). This should help someone to learn
     # how to use your service, including any specifics required to access data, e.g.
     # authentication.
     documentation_url:
@@ -142,8 +142,12 @@ login:
     # Only allow JWT cookies to be sent over https. In production, this
     # should likely be True
     JWT_COOKIE_SECURE: true
-    JWT_TOKEN_LOCATION:
-      - headers
+    # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
+    JWT_TOKEN_LOCATION: ["headers"]
+    # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_NAME
+    JWT_HEADER_NAME: "Authorization"
+    # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_TYPE
+    JWT_HEADER_TYPE: "Bearer"
     JWT_ALGORITHM: "RS256"
     JWT_DECODE_AUDIENCE: "account"
     JWT_IDENTITY_CLAIM: "sub"
