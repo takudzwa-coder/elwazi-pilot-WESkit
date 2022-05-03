@@ -95,7 +95,10 @@ def GetRunStatus(run_id):
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
-            return run.status.name, 200
+            return {
+                "run_id": run_id,
+                "state": run.status.name
+            }, 200
         else:
             return access_denied_response
 

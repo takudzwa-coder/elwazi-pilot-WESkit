@@ -115,8 +115,9 @@ class Run:
 
     @status.setter
     def status(self, run_status: RunStatus):
-        logger.info("Updating state of %s: %s -> %s" %
-                    (self.id, self.__status.name, run_status.name))
+        if self.__status != run_status.name:
+            logger.info("Updating state of %s: %s -> %s" %
+                        (self.id, self.__status.name, run_status.name))
         self.__status = run_status
 
     @property

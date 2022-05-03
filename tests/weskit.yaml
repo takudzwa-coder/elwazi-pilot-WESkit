@@ -86,7 +86,7 @@ static_service_info:
     # These are also the versions-strings that WESkit accepts via its REST-API.
     workflow_engine_versions:
         SMK: "6.10.0"
-        NFL: "20.04.0"
+        NFL: "21.04.0"
 
     # The first two levels of keys are the workflow_type and the workflow_type_version.
     # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
