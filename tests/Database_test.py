@@ -7,11 +7,13 @@
 #  Authors: The WESkit Team
 
 import copy
+
 import pytest
 
+from weskit.exceptions import DatabaseOperationError, ConcurrentModificationError
+from test_utils import get_mock_run
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
-from test_utils import get_mock_run
 
 
 @pytest.mark.integration
@@ -19,7 +21,7 @@ def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
                         workflow_type="SMK",
                         workflow_type_version="6.10.0")
-    assert test_database.insert_run(run1)
+    test_database.insert_run(run1)
     run2 = test_database.get_run(run1.id)
     assert run1 == run2
     run_id_and_states = test_database.list_run_ids_and_states()
@@ -27,16 +29,60 @@ def test_insert_and_load_run(test_database):
 
 
 @pytest.mark.integration
+def test_except_on_duplicate_run(test_database):
+    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="6.10.0")
+    test_database.insert_run(run)
+    with pytest.raises(DatabaseOperationError):
+        test_database.insert_run(run)
+
+
+@pytest.mark.integration
 def test_update_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
-    assert test_database.insert_run(run)
+    test_database.insert_run(run)
     new_run = copy.copy(run)
+    # Runs in state RUNNING must have a celery_task_id.
+    # Not nice: Interaction with test_update_all_runs via to DB.
+    new_run.celery_task_id = "1245"
     new_run.status = RunStatus.RUNNING
     test_database.update_run(new_run)
     assert new_run.status == RunStatus.RUNNING
     assert run.status == RunStatus.INITIALIZING
+
+
+@pytest.mark.integration
+def test_except_update_on_current_update(test_database):
+    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="6.10.0")
+
+    # Now simulate a concurrent run, by just changing the value before writing it to the database.
+    # The only thing necessary is to modify the db_version counter. We don't do any content
+    # comparisons.
+    modified_run = Run({**dict(run), "db_version": run.db_version + 1})
+    test_database.insert_run(modified_run)
+
+    # Modify the run, to unsure an update is attempted.
+    run.status = RunStatus.RUNNING
+
+    # The old run and the modified run should be divergent now.
+    with pytest.raises(ConcurrentModificationError):
+        test_database.update_run(run)
+
+
+@pytest.mark.integration
+def test_except_update_on_missing_run(test_database):
+    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="6.10.0")
+    # Modify the run, to ensure an update is attempted.
+    run.status = RunStatus.RUNNING
+    with pytest.raises(DatabaseOperationError):
+        test_database.update_run(run)
 
 
 @pytest.mark.integration
@@ -59,7 +105,7 @@ def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
-    assert test_database.insert_run(run)
+    test_database.insert_run(run)
     assert test_database.delete_run(run)
     find_run = test_database.get_run(run.id)
     assert find_run is None

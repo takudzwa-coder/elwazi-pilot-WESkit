@@ -263,8 +263,8 @@ class ClusterExecutor(Executor):
         wait_command = ShellCommand(self._command_set.wait_for(process.id.value))
         try:
             with execute(self._executor, wait_command) as (result, stdout, stderr):
+                error_message = stderr.readlines()
                 if result.status.code == 2:
-                    error_message = stderr.readlines()
                     if error_message != \
                             [f"done({process.id.value}): Wait condition is never satisfied\n"]:
                         raise ExecutorException(f"Wait failed: {str(result)}, " +
@@ -272,7 +272,7 @@ class ClusterExecutor(Executor):
                                                 f"stdout={stdout.readlines()}")
                 elif result.status.failed:
                     raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                            f"stderr={stdout.readlines()}, " +
+                                            f"stderr={error_message}, " +
                                             f"stdout={stdout.readlines()}")
         except Error as e:
             logger.debug(e.reason)

@@ -20,8 +20,8 @@ from testcontainers.mongodb import MongoDbContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.redis import RedisContainer
 
-from weskit import create_app, Manager, WorkflowEngineFactory, create_validator
-from weskit import create_database
+from weskit import create_app, create_database, Manager, WorkflowEngineFactory
+from weskit.utils import create_validator
 from weskit.classes.ServiceInfo import ServiceInfo
 
 logger = logging.getLogger(__name__)
@@ -209,8 +209,10 @@ def database_container():
 @pytest.fixture(scope="session")
 def test_database(database_container):
     database = create_database(database_container.get_connection_url())
+    # We have to initialize the MongoClient.
+    database.initialize()
     yield database
-    database._db_runs().drop()
+    database._runs.drop()
 
 
 @pytest.fixture(scope="session")
