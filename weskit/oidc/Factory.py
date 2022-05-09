@@ -113,6 +113,7 @@ def _copy_jwt_vars_to_toplevel_config(flaskapp: Flask, config: dict) \
         "JWT_HEADER_NAME",
         "JWT_HEADER_TYPE",
         "JWT_ALGORITHM",
+        "JWT_DECODE_AUDIENCE",
         "JWT_IDENTITY_CLAIM",
         "JWT_COOKIE_SECURE"
     ]
