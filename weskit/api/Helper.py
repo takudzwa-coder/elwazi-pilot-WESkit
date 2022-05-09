@@ -58,24 +58,19 @@ class Helper:
         """
         Safe access to "stderr" or "stdout" (= log_name) data.
         """
-        try:
-            run = self.app.manager.get_run(
-                run_id=run_id, update=True)
-            access_denied_response = self.get_access_denied_response(run_id, run)
+        run = self.app.manager.get_run(
+            run_id=run_id, update=True)
+        access_denied_response = self.get_access_denied_response(run_id, run)
 
-            if access_denied_response is None:
-                if run.status is not RunStatus.COMPLETE:
-                    return {"msg": "Run '%s' is not in COMPLETED state" % run_id,
-                            "status_code": 409
-                            }, 409     # CONFLICT (with current resource state)
-                else:
-                    return {"content": getattr(run, log_name)}, 200
+        if access_denied_response is None:
+            if run.status is not RunStatus.COMPLETE:
+                return {"msg": "Run '%s' is not in COMPLETED state" % run_id,
+                        "status_code": 409
+                        }, 409     # CONFLICT (with current resource state)
             else:
-                return access_denied_response
-
-        except Exception as e:
-            logger.error(e, exc_info=True)
-            raise e
+                return {"content": getattr(run, log_name)}, 200
+        else:
+            return access_denied_response
 
     def assert_user_id(self, user_id: str):
         msg = RunRequestValidator.invalid_user_id(user_id)

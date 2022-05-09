@@ -98,10 +98,10 @@ class ClusterExecutor(Executor):
         """
         self._executor = executor
 
-    def copy_file(self, source: PathLike, target: PathLike):
+    def copy_file(self, source: PurePath, target: PurePath):
         self._executor.copy_file(source, target)
 
-    def remove_file(self, target: PathLike):
+    def remove_file(self, target: PurePath):
         self._executor.remove_file(target)
 
     @property

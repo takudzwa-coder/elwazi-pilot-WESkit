@@ -99,6 +99,8 @@ class Manager:
             if run.celery_task_id is not None:
                 running_task = self._run_task.\
                     AsyncResult(run.celery_task_id)
+                logger.debug("Run %s with state %s got Celery ID %s in state '%s'" % (
+                    run.id, run.status, run.celery_task_id, running_task.state))
                 if ((run.status != RunStatus.CANCELING) or
                     (run.status == RunStatus.CANCELING and
                      running_task.state == "REVOKED")):
@@ -158,7 +160,7 @@ class Manager:
     def create_and_insert_run(self, request, user_id)\
             -> Optional[Run]:
         run = Run(data={"run_id": self.database.create_run_id(),
-                        "run_status": "INITIALIZING",
+                        "run_status": RunStatus.INITIALIZING.name,
                         "request_time": get_current_timestamp(),
                         "request": request,
                         "user_id": user_id})
@@ -169,7 +171,11 @@ class Manager:
 
     def get_run(self, run_id, update) -> Optional[Run]:
         if update:
-            return self.update_runs(query={"run_id": run_id})[0]
+            runs = self.update_runs(query={"run_id": run_id})
+            if len(runs) == 0:
+                return None
+            else:
+                return runs[0]
         else:
             return self.database.get_run(run_id)
 
@@ -263,8 +269,8 @@ class Manager:
         if files is None:
             files = ImmutableMultiDict()
 
-        if not run.status == RunStatus.INITIALIZING:
-            return run
+        if run.status != RunStatus.INITIALIZING:
+            raise RuntimeError("run.status not INITIALIZING but %s" % run.status)
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -272,55 +278,41 @@ class Manager:
         else:
             run.dir = os.path.join(run.id[0:4], run.id)
 
-        try:
-            run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
-            if not os.path.exists(run_dir_abs):
-                os.makedirs(run_dir_abs, exist_ok=True)
+        run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
+        if not os.path.exists(run_dir_abs):
+            os.makedirs(run_dir_abs, exist_ok=True)
 
-            with open(run_dir_abs + "/config.yaml", "w") as ff:
-                yaml.dump(run.request["workflow_params"], ff)
+        with open(run_dir_abs + "/config.yaml", "w") as ff:
+            yaml.dump(run.request["workflow_params"], ff)
 
-            run.workflow_path = self._prepare_workflow_path(
-                run.dir,
-                run.request["workflow_url"],
-                self._process_workflow_attachment(run, files))
-        except OSError as e:
-            # This is a serious problem, e.g. RO-filesystem, permission error, etc.
-            run.status = RunStatus.SYSTEM_ERROR
-            self.database.update_run(run)
-            raise e
-        except ClientError as e:
-            run.status = RunStatus.EXECUTOR_ERROR
-            self.database.update_run(run)
-            raise e
+        run.workflow_path = self._prepare_workflow_path(
+            run.dir,
+            run.request["workflow_url"],
+            self._process_workflow_attachment(run, files))
 
         return run
 
     def execute(self, run: Run) -> Run:
-        if not run.status == RunStatus.INITIALIZING:
-            return run
+        if run.status != RunStatus.INITIALIZING:
+            raise RuntimeError("run.status not INITIALIZING but %s" % run.status)
 
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             # This should have been found in the validation.
-            run.status = RunStatus.SYSTEM_ERROR
-            self.database.update_run(run)
-            raise ClientError("Workflow type '%s' is not known. Know %s" %
-                              (run.request["workflow_type"],
-                               ", ".join(self.workflow_engines.keys())))
+            raise RuntimeError("Workflow type '%s' is not known. Know %s" %
+                               (run.request["workflow_type"],
+                                ", ".join(self.workflow_engines.keys())))
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
             # This should have been found in the validation.
-            run.status = RunStatus.SYSTEM_ERROR
-            self.database.update_run(run)
-            raise ClientError("Workflow type version '%s' is not known. Know %s" %
-                              (run.request["workflow_type_version"],
-                               ", ".join(self.workflow_engines[workflow_type].keys())))
+            raise RuntimeError("Workflow type version '%s' is not known. Know %s" %
+                               (run.request["workflow_type_version"],
+                                ", ".join(self.workflow_engines[workflow_type].keys())))
 
         if run.workflow_path is None:
             raise RuntimeError(f"Workflow path of run is None: {run.id}")
@@ -334,15 +326,14 @@ class Manager:
                     engine_params=run.request.get("workflow_engine_parameters", {}))
         run.log["cmd"] = command.command
         run.log["env"] = command.environment
-        if run.status == RunStatus.INITIALIZING:
-            task = self._run_task.apply_async(
-                args=[],
-                kwargs={
-                    "command": command.command,
-                    "environment": command.environment,
-                    "base_workdir": self.data_dir,
-                    "sub_workdir": run.dir
-                })
-            run.celery_task_id = task.id
+        task = self._run_task.apply_async(
+            args=[],
+            kwargs={
+                "command": command.command,
+                "environment": command.environment,
+                "base_workdir": self.data_dir,
+                "sub_workdir": run.dir
+            })
+        run.celery_task_id = task.id
 
         return run

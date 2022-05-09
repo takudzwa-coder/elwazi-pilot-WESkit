@@ -5,24 +5,51 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from __future__ import annotations
 
-from flask_jwt_extended import utils
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Set, Any
+
+from flask import Flask
+
+not_logged_in_user_id = "not-logged-in-user"
 
 
+@dataclass
 class User:
     """
     This class makes the content of the jwt easily accessible.
     """
+    id: str = not_logged_in_user_id
+    username: Optional[str] = None
+    email_verified: Optional[str] = None
+    preferred_username: Optional[str] = None
+    email: Optional[str] = None
+    auth_time: Optional[str] = None
+    realm_roles: dict = field(default_factory=lambda: {"roles": []})
 
-    not_logged_in_user_id = "not-logged-in-user"
+    @staticmethod
+    def from_jwt_payload(app: Flask, jwt_payload: Dict[Any, Any]) -> User:
+        """
+        Create User object from jwt_payload dictionary. Only fields that can be processed are
+        mapped into the User instance. Other fields are ignored.
 
-    def __init__(self):
-        token_data = utils.get_raw_jwt()
-        self.id = token_data.get('sub', User.not_logged_in_user_id)
-        self.username = token_data.get('name', None)
-        self.email_verified = token_data.get('email_verified', None)
-        self.preferred_username = token_data.get('preferred_username', None)
-        self.email = token_data.get('email', None)
-        # self.user_claims = tokenData.get('user_claims', None)
-        self.auth_time = token_data.get('auth_time', None)
-        self.realm_roles = token_data.get('realm_access', dict()).get('roles', [])
+        :param app: Flask application object
+        :param jwt_payload: Dictionary with the JWT payload as received from the client.
+        :return:
+        """
+        identity_claim = app.config["JWT_IDENTITY_CLAIM"]
+        key_mapping = {
+            identity_claim: "id",
+            "name": "username",
+            "realm_access": "realm_roles"
+        }
+        allowed_fields: Set[str] = {
+            identity_claim, "name", "realm_access", "email_verified", "preferred_username",
+            "email", "auth_time"
+        }
+        return User(**{
+            key_mapping.get(k, k): v
+            for k, v in jwt_payload.items()
+            if k in allowed_fields
+        })

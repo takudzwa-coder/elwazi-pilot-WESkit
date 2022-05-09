@@ -7,11 +7,11 @@
 #  Authors: The WESkit Team
 import logging
 import os
-import subprocess  # nosec B603
+import subprocess  # nosec B603 B404
 from builtins import int, super, open, property
 from datetime import datetime
 from os import PathLike
-from pathlib import Path
+from pathlib import PurePath
 from shutil import copyfile
 from typing import Optional, cast, IO
 
@@ -136,8 +136,11 @@ class LocalExecutor(base.Executor):
             # The other executors recognize inaccessible working directories or missing commands
             # only after the wait_for(). We emulate this behaviour here such that all executors
             # behave identically with respect to these problems.
-            if e.strerror == f"No such file or directory: {command.workdir.__repr__()}":
+            if str(e).startswith(f"[Errno 2] No such file or directory: {repr(command.workdir)}"):
                 # cd /dir/does/not/exist: exit code 1
+                # Since somewhere between 3.7.9 and 3.10.4 the e.strerror does not contain the
+                # missing file anymore, which make it impossible to tell from the message, whether
+                # the workdir is inaccessible, or the executed command.
                 exit_code = 1
             else:
                 # Command not executable: exit code 127
@@ -155,8 +158,8 @@ class LocalExecutor(base.Executor):
                                                           exit_code, message=e.strerror),
                                                       start_time=start_time))
 
-    def copy_file(self, source: PathLike, target: PathLike):
-        if Path(source) == Path(target):
+    def copy_file(self, source: PurePath, target: PurePath):
+        if source == target:
             raise ValueError("Identical source and target paths: '{source}'")
         else:
             copyfile(source, target)

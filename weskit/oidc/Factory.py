@@ -23,7 +23,7 @@ from weskit.utils import safe_getenv
 logger = logging.getLogger(__name__)
 
 
-def is_login_enabled(config: dict) -> bool:
+def _is_login_enabled(config: dict) -> bool:
     """
     This function checks if all required configurations are set end enabled in the config file
     It returns true if the Login is correctly set up end enabled, otherwise false
@@ -58,46 +58,60 @@ def setup(app: Flask, config: dict) -> None:
 
     This makes multiple requests to the issuer/identity provider!
     """
-    # Get and validate necessary environment variables.
-    issuer_url = safe_getenv("OIDC_ISSUER_URL")
-    client_secret = safe_getenv('OIDC_CLIENT_SECRET')
-    realm = safe_getenv('OIDC_REALM')
-    client_id = safe_getenv('OIDC_CLIENTID')
+    if not _is_login_enabled(config):
+        app.is_login_enabled = False
+        # flask-jwt-extension 4 needs some of these variables to be always set. Although the
+        # documentation says for many of them that there is a default (e.g. for
+        # JWT_TOKEN_LOCATION, JWT_HEADER_NAME, and JWT_HEADER_TYPE), we do get exceptions,
+        # if the values are not set explicitly.
+        _copy_jwt_vars_to_toplevel_config(app, config)
+    else:
+        app.is_login_enabled = True
 
-    # JWT Setup
-    _copy_jwt_vars_to_toplevel_config(app, config)
-    oidc_config = _retrieve_oidc_config(issuer_url)
-    app.config["JWT_PUBLIC_KEY"] = _retrieve_rsa_public_key(oidc_config)
-    # Deactivate JWT CSRF since it is not working with external Identity Provider access tokens.
-    # It is reimplemented by this module.
-    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
-    jwt_manager = JWTManager(app)
+        # Get and validate necessary environment variables.
+        issuer_url = safe_getenv("OIDC_ISSUER_URL")
+        client_secret = safe_getenv('OIDC_CLIENT_SECRET')
+        realm = safe_getenv('OIDC_REALM')
+        client_id = safe_getenv('OIDC_CLIENTID')
 
-    # A a Login object to allow access to some information from the login_required decorator.
-    app.oidc_login = Login(client_id=client_id,
-                           client_secret=client_secret,
-                           realm=realm,
-                           oidc_config=oidc_config)
+        # JWT Setup
+        _copy_jwt_vars_to_toplevel_config(app, config)
+        oidc_config = _retrieve_oidc_config(issuer_url)
+        app.config["JWT_PUBLIC_KEY"] = _retrieve_rsa_public_key(oidc_config)
+        # Deactivate JWT CSRF since it is not working with external Identity Provider access tokens.
+        # It is reimplemented by this module.
+        app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+        jwt_manager = JWTManager(app)
 
-    @jwt_manager.user_loader_callback_loader
-    def user_loader_callback(identity: str) -> User:
-        """
-        This function returns a User object if the flask_jwt_extended current_user is called
-        :param identity: unused, since data of access token will be used here but its required
-        :return: User
-        """
-        return User()
+        # A a Login object to allow access to some information from the login_required decorator.
+        app.oidc_login = Login(client_id=client_id,
+                               client_secret=client_secret,
+                               realm=realm,
+                               oidc_config=oidc_config)
+
+        @jwt_manager.user_lookup_loader
+        def user_loader_callback(jwt_headers: dict, jwt_payload: dict) -> User:
+            """
+            https://flask-jwt-extended.readthedocs.io/en/stable/api/#flask_jwt_extended.JWTManager.user_lookup_loader  # noqa
+
+            This function returns a User object if the flask_jwt_extended current_user is called.
+
+            :return: User
+            """
+            return User.from_jwt_payload(app, jwt_payload)
 
 
 def _copy_jwt_vars_to_toplevel_config(flaskapp: Flask, config: dict) \
         -> None:
     """
     Flask_jwt_extended expect its configuration in the app.config object.
-    Therefore we copy the config to the app object.
+    Therefore, we copy the config to the app object.
     """
     jwt_config_items = [
         "JWT_COOKIE_SECURE",
         "JWT_TOKEN_LOCATION",
+        "JWT_HEADER_NAME",
+        "JWT_HEADER_TYPE",
         "JWT_ALGORITHM",
         "JWT_IDENTITY_CLAIM",
         "JWT_COOKIE_SECURE"

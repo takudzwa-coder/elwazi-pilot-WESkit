@@ -7,19 +7,20 @@
 #  Authors: The WESkit Team
 
 import logging
-import time
 import os
-import requests
+import time
+
 import pytest
+import requests
 from flask import current_app
 from validators.url import url as validate_url
 
-from weskit.oidc.User import User
-from weskit.api.Helper import Helper
-from weskit import WESApp
-from weskit.classes.RunStatus import RunStatus
 from test_utils import \
     assert_within_timeout, is_within_timout, assert_status_is_not_failed, get_workflow_data
+from weskit import WESApp
+from weskit.api.Helper import Helper
+from weskit.classes.RunStatus import RunStatus
+from weskit.oidc.User import User, not_logged_in_user_id
 from weskit.utils import to_filename
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,20 @@ def test_run(test_client,
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
     yield run
+
+
+@pytest.fixture(scope="module")
+def incomplete_run(test_client,
+                   celery_session_worker):
+    manager = current_app.manager
+    request = get_workflow_data(
+        snakefile="file:tests/wf1/Snakefile",
+        config="tests/wf1/config.yaml")
+    run = manager.create_and_insert_run(request=request,
+                                        user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
+    run = manager.prepare_execution(run)
+    manager.database.update_run(run)
+    return run
 
 
 @pytest.fixture(name="OIDC_credentials", scope="session")
@@ -101,20 +116,15 @@ def login_fixture():
 
 class TestHelper:
 
-    class MockUser(User):
-        def __init__(self, user_id: str):
-            super().__init__()
-            self.id = user_id
-
     @pytest.mark.integration
     def test_get_user_id(self, nologin_app: WESApp, login_app: WESApp):
-        user = TestHelper.MockUser("testUser")
+        user = User(id="testUser")
         assert Helper(login_app, user).user.id == user.id
-        assert Helper(nologin_app, None).user.id == "not-logged-in-user"
+        assert Helper(nologin_app, None).user.id == not_logged_in_user_id
 
     @pytest.mark.integration
     def test_access_denied_response(self, login_app):
-        user = TestHelper.MockUser("testUser")
+        user = User(id="testUser")
         helper = Helper(login_app, user)
         assert helper.get_access_denied_response("runId", None) == \
                ({"msg": "Could not find 'runId'",
@@ -137,7 +147,7 @@ class TestHelper:
 
     @pytest.mark.integration
     def test_log_response(self, test_run, login_app):
-        helper = Helper(login_app, TestHelper.MockUser(test_run.user_id))
+        helper = Helper(login_app, User(id=test_run.user_id))
 
         stderr, stderr_code = helper.get_log_response(test_run.id, "stderr")
         assert stderr_code == 200
@@ -146,6 +156,22 @@ class TestHelper:
         stdout, stdout_code = helper.get_log_response(test_run.id, "stdout")
         assert stdout_code == 200
         assert len(stdout["content"]) == 0
+
+    @pytest.mark.integration
+    def test_log_response_run_incomplete(self, incomplete_run, login_app):
+        helper = Helper(login_app, User(id=incomplete_run.user_id))
+        assert helper.get_log_response(incomplete_run.id, "stderr") == \
+               ({"msg": "Run '%s' is not in COMPLETED state" % incomplete_run.id,
+                 "status_code": 409
+                 }, 409)
+
+    @pytest.mark.integration
+    def test_log_response_access_denied(self, test_run, login_app):
+        helper = Helper(login_app, User(id="forbiddenUser"))
+        assert helper.get_log_response(test_run.id, "stderr") == \
+               ({"msg": f"User 'forbiddenUser' not allowed to access '{test_run.id}'",
+                 "status_code": 403
+                 }, 403)
 
 
 class TestOpenEndpoint:
@@ -244,6 +270,14 @@ class TestWithHeaderToken:
                             test_client,
                             OIDC_credentials):
         response = test_client.get("/weskit/v1/runs/nonExistingRun/status",
+                                   headers=OIDC_credentials.headerToken)
+        assert response.status_code == 404
+
+    @pytest.mark.integration
+    def test_get_run(self,
+                     test_client,
+                     OIDC_credentials):
+        response = test_client.get("/weskit/v1/runs/nonExistingRun",
                                    headers=OIDC_credentials.headerToken)
         assert response.status_code == 404
 

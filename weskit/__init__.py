@@ -50,7 +50,7 @@ class WESApp(Flask):
         setattr(self, 'oidc_login', oidc_login)
 
 
-def create_celery():
+def create_celery(**kwargs):
     broker_url = os.environ.get("BROKER_URL")
     # Provide RESULT_BACKEND as lower-priority variable than the native CELERY_RESULT_BACKEND.
     backend_url = os.environ.get("CELERY_RESULT_BACKEND",
@@ -58,7 +58,8 @@ def create_celery():
     return Celery(
         app="WESkit",
         broker=broker_url,
-        backend=backend_url)
+        backend=backend_url,
+        **kwargs)
 
 
 def read_swagger():
@@ -170,10 +171,6 @@ def create_app(celery: Celery,
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
-    if OIDCFactory.is_login_enabled(config):
-        OIDCFactory.setup(app, config)
-        app.is_login_enabled = True
-    else:
-        app.is_login_enabled = False
+    OIDCFactory.setup(app, config)
 
     return app
