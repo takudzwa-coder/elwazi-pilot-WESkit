@@ -6,7 +6,8 @@
 #
 #  Authors: The WESkit Team
 
-import logging, json
+import json
+import logging
 
 from flask import Blueprint
 from flask import current_app, jsonify, request
