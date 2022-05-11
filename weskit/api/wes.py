@@ -6,7 +6,7 @@
 #
 #  Authors: The WESkit Team
 
-import logging
+import logging, json
 
 from flask import Blueprint
 from flask import current_app, jsonify, request
@@ -185,24 +185,34 @@ def RunWorkflow(*args, **kwargs):
     logger.info("RunWorkflow")
     try:
         ctx = Helper(current_app, current_user)
-        data = request.json
-        if data is None:
+
+        if request.content_type == "application/json":
+            data = request.json
+            if data is None:
+                return {
+                    "msg": "Malformed request: No JSON data",
+                    "status_code": 400
+                }, 400
+        else:
+            data = request.form.to_dict()
+            if len(data) == 0:
+                return {
+                    "msg": "Malformed request: Empty form data",
+                    "status_code": 400
+                }, 400
+            data["workflow_params"] = json.loads(data["workflow_params"])
+
+        validator = current_app.request_validators["run_request"]
+        validation_result = validator.validate(data)
+        if isinstance(validation_result, list):
             return {
-                "msg": "Malformed request: No JSON data",
+                "msg": "Malformed request: {}".format(validation_result),
                 "status_code": 400
             }, 400
         else:
-            validator = current_app.request_validators["run_request"]
-            validation_result = validator.validate(data)
-            if isinstance(validation_result, list):
-                return {
-                  "msg": "Malformed request: {}".format(validation_result),
-                  "status_code": 400
-                }, 400
-            else:
-                run = current_app.manager.\
-                    create_and_insert_run(request=validation_result,
-                                          user_id=ctx.user.id)
+            run = current_app.manager.\
+                create_and_insert_run(request=validation_result,
+                                      user_id=ctx.user.id)
 
     except ClientError as e:
         logger.warning(e, exc_info=True)
