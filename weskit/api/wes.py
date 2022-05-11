@@ -182,7 +182,7 @@ def ListRuns(*args, **kwargs):
 
 @bp.route("/ga4gh/wes/v1/runs", methods=["POST"])
 @login_required()
-def RunWorkflow(*args, **kwargs): 
+def RunWorkflow(*args, **kwargs):
     logger.info("RunWorkflow")
     try:
         ctx = Helper(current_app, current_user)
