@@ -115,7 +115,9 @@ def _copy_jwt_vars_to_toplevel_config(flaskapp: Flask, config: dict) \
         "JWT_ALGORITHM",
         "JWT_DECODE_AUDIENCE",
         "JWT_IDENTITY_CLAIM",
-        "JWT_COOKIE_SECURE"
+        "JWT_COOKIE_SECURE",
+        "userinfo_validation_claim",
+        "userinfo_validation_value"
     ]
     for key in jwt_config_items:
         flaskapp.config[key] = config['login']['jwt'][key]
