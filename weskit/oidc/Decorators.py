@@ -99,7 +99,8 @@ def validate_userinfo(app) -> dict:
         logger.error("Could not reach OIDC provider for userinfo validation", exc_info=e)
         return False
 
-    if j[app.config["userinfo_validation_claim"]] == app.config["userinfo_validation_value"]:
+    test_claim =  j[app.config["userinfo_validation_claim"]]
+    if app.config["userinfo_validation_value"] in test_claim:
         return True
     else:
         logger.warning("Userinfo validation failed: id='{}', secret='{}', token='{}'".
