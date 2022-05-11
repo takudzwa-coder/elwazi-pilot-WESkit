@@ -153,6 +153,8 @@ login:
     JWT_IDENTITY_CLAIM: "sub"
     JWT_ACCESS_COOKIE_PATH: "/"
     JWT_REFRESH_COOKIE_PATH: "/"
+    userinfo_validation_claim: "name"
+    userinfo_validation_value: "Harry Potter"
 
 # Celery configuration. Use keys and values according to
 # https://docs.celeryproject.org/en/stable/userguide/configuration.html#configuration
