@@ -88,7 +88,7 @@ def validate_userinfo(app) -> bool:
         return True
 
     access_token = get_token()
-    header = {"Authorization": "Bearer " + access_token}
+    header = {"Authorization": "Bearer " + str(access_token)}
 
     try:
         j = requests.get(
