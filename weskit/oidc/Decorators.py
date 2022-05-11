@@ -81,7 +81,7 @@ def validate(app) -> bool:
         return False
 
 
-def validate_userinfo(app) -> dict:
+def validate_userinfo(app) -> bool:
 
     if (app.config["userinfo_validation_claim"] is None and
             app.config["userinfo_validation_value"] is None):
