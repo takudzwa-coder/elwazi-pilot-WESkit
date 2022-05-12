@@ -57,7 +57,7 @@ def test_validate_success(run_request_validator):
 
 def test_validate_structure(run_request_validator):
     assert run_request_validator.validate(request(workflow_params={})) == \
-           [{'workflow_params': ['must be of dict string']}]
+           [{'workflow_params': ['must be of string type']}]
 
     request_wo_params = request()
     request_wo_params.pop("workflow_params")
