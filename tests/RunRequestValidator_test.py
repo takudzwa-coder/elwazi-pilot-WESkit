@@ -41,7 +41,7 @@ def run_request_validator(request_validation, service_info):
 
 def request(**kwargs) -> dict:
     default = {
-        "workflow_params": {},
+        "workflow_params": "{}",
         "workflow_type": "SMK",
         "workflow_type_version": "6.10.0",
         "workflow_url": "file:tests/wf/Snakefile"
@@ -56,8 +56,8 @@ def test_validate_success(run_request_validator):
 
 
 def test_validate_structure(run_request_validator):
-    assert run_request_validator.validate(request(workflow_params="")) == \
-           [{'workflow_params': ['must be of dict type']}]
+    assert run_request_validator.validate(request(workflow_params={})) == \
+           [{'workflow_params': ['must be of dict string']}]
 
     request_wo_params = request()
     request_wo_params.pop("workflow_params")

@@ -192,10 +192,10 @@ def RunWorkflow(*args, **kwargs):
                 "msg": "Malformed request: Empty form data",
                 "status_code": 400
             }, 400
-        data["workflow_params"] = json.loads(data["workflow_params"])
-        data["workflow_engine_parameters"] = json.loads(data["workflow_engine_parameters"])
+
         validator = current_app.request_validators["run_request"]
         validation_result = validator.validate(data)
+        logger.error(validation_result)
         if isinstance(validation_result, list):
             return {
                 "msg": "Malformed request: {}".format(validation_result),
