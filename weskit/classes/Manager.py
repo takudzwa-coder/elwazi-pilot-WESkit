@@ -13,6 +13,7 @@ from typing import Optional, List
 from urllib.parse import urlparse
 
 import yaml
+import json
 from celery import Celery, Task
 from celery.app.control import Control
 from trs_cli.client import TRSClient
@@ -159,6 +160,9 @@ class Manager:
 
     def create_and_insert_run(self, request, user_id)\
             -> Optional[Run]:
+        if not isinstance(request["workflow_params"], dict):
+            request["workflow_params"] = json.loads(request["workflow_params"])
+            request["workflow_engine_parameters"] = json.loads(request["workflow_engine_parameters"])
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": RunStatus.INITIALIZING.name,
                         "request_time": get_current_timestamp(),

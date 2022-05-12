@@ -187,13 +187,13 @@ def RunWorkflow(*args, **kwargs):
     try:
         ctx = Helper(current_app, current_user)
         data = request.form.to_dict()
-        print(data)
         if len(data) == 0:
             return {
                 "msg": "Malformed request: Empty form data",
                 "status_code": 400
             }, 400
         data["workflow_params"] = json.loads(data["workflow_params"])
+        data["workflow_engine_parameters"] = json.loads(data["workflow_engine_parameters"])
         validator = current_app.request_validators["run_request"]
         validation_result = validator.validate(data)
         if isinstance(validation_result, list):

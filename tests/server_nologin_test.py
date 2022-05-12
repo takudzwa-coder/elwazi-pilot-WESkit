@@ -54,7 +54,6 @@ class TestWithoutLogin:
         data = get_workflow_data(
             snakefile="tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        print(data)
         response = test_client_nologin.post("/ga4gh/wes/v1/runs", data=data,
                                             content_type="multipart/form-data")
         assert response.status_code == 200, response.data

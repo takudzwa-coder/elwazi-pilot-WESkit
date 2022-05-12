@@ -243,6 +243,7 @@ class TestWithHeaderToken:
         data["workflow_type"] = "SMK"
         data["workflow_type_version"] = "6.10.0"
         data["workflow_attachment"] = (open("tests/wf1/Snakefile", "rb"), "Snakefile")
+        data["workflow_engine_parameters"] = "{}"
 
         response = test_client.post(
             "/ga4gh/wes/v1/runs",
