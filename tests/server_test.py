@@ -231,12 +231,11 @@ class TestWithHeaderToken:
     "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
 
-
     @pytest.mark.integration
     def test_submit_workflow_header_upload(self,
-                                        test_client,
-                                        test_run,
-                                        OIDC_credentials):
+                                           test_client,
+                                           test_run,
+                                           OIDC_credentials):
 
         data = {}
         data["workflow_params"] = '{"text": "hello world"}'
@@ -364,4 +363,3 @@ class TestWithHeaderToken:
         assert response.status_code == 200, response.json
         assert isinstance(response.json, dict)
         assert "content" in response.json
-

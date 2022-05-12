@@ -186,23 +186,14 @@ def RunWorkflow(*args, **kwargs):
     logger.info("RunWorkflow")
     try:
         ctx = Helper(current_app, current_user)
-
-        if request.content_type == "application/json":
-            data = request.json
-            if data is None:
-                return {
-                    "msg": "Malformed request: No JSON data",
-                    "status_code": 400
-                }, 400
-        else:
-            data = request.form.to_dict()
-            if len(data) == 0:
-                return {
-                    "msg": "Malformed request: Empty form data",
-                    "status_code": 400
-                }, 400
-            data["workflow_params"] = json.loads(data["workflow_params"])
-
+        data = request.form.to_dict()
+        print(data)
+        if len(data) == 0:
+            return {
+                "msg": "Malformed request: Empty form data",
+                "status_code": 400
+            }, 400
+        data["workflow_params"] = json.loads(data["workflow_params"])
         validator = current_app.request_validators["run_request"]
         validation_result = validator.validate(data)
         if isinstance(validation_result, list):
