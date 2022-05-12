@@ -6,7 +6,6 @@
 #
 #  Authors: The WESkit Team
 
-import json
 import logging
 
 from flask import Blueprint
