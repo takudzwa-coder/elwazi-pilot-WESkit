@@ -41,6 +41,8 @@ def login_required(validate_online: bool = True):
                 if validate_online:
                     if not validate(current_app):
                         return {"msg": "Online validation failed"}, 401
+                    if not validate_userinfo(current_app):
+                        return {"msg": "Userinfo validation failed"}, 401
             return fn(*args, **kwargs)
 
         return decorator
@@ -73,6 +75,36 @@ def validate(app) -> bool:
         return True
     else:
         logger.warning("Online validation failed: id='{}', secret='{}', token='{}'".
+                       format(current_app.oidc_login.client_id,
+                              current_app.oidc_login.client_secret,
+                              get_token()))
+        return False
+
+
+def validate_userinfo(app) -> bool:
+
+    if (app.config["userinfo_validation_claim"] is None and
+            app.config["userinfo_validation_value"] is None):
+        return True
+
+    access_token = get_token()
+    header = {"Authorization": "Bearer " + str(access_token)}
+
+    try:
+        claim_response = requests.get(
+            url=app.oidc_login.userinfo_endpoint,
+            headers=header
+        ).json()
+    except Exception as e:
+        logger.error("Could not reach OIDC provider for userinfo validation", exc_info=e)
+        return False
+
+    test_claim = claim_response[app.config["userinfo_validation_claim"]]
+
+    if app.config["userinfo_validation_value"] in test_claim:
+        return True
+    else:
+        logger.warning("Userinfo validation failed: id='{}', secret='{}', token='{}'".
                        format(current_app.oidc_login.client_id,
                               current_app.oidc_login.client_secret,
                               get_token()))

@@ -163,7 +163,8 @@ login:
           default: "RS256"
         JWT_DECODE_AUDIENCE:
           type: string
-          default: "account"
+          nullable: true
+          default: null
         JWT_IDENTITY_CLAIM:
           type: string
           default: "sub"
@@ -173,6 +174,14 @@ login:
         JWT_REFRESH_COOKIE_PATH:
           type: string
           default: "/"
+        userinfo_validation_claim:
+          type: string
+          nullable: true
+          default: null
+        userinfo_validation_value:
+          type: string
+          nullable: true
+          default: null
       default:
         # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
         JWT_TOKEN_LOCATION: [ "headers" ]
@@ -182,7 +191,7 @@ login:
         JWT_HEADER_TYPE: "Bearer"
         JWT_COOKIE_SECURE: true
         JWT_ALGORITHM: "RS256"
-        JWT_DECODE_AUDIENCE: "account"
+        JWT_DECODE_AUDIENCE: null
         JWT_IDENTITY_CLAIM: "sub"
         JWT_ACCESS_COOKIE_PATH: "/"
         JWT_REFRESH_COOKIE_PATH: "/"

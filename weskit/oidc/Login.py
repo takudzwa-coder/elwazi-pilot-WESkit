@@ -25,3 +25,7 @@ class Login:
     @property
     def token_endpoint(self) -> str:
         return self.config["token_endpoint"]
+
+    @property
+    def userinfo_endpoint(self) -> str:
+        return self.config["userinfo_endpoint"]
