@@ -164,7 +164,10 @@ class Manager:
         request["workflow_params"] = json.loads(request["workflow_params"])
         request["workflow_engine_parameters"] = \
             json.loads(request["workflow_engine_parameters"])
-        request["tags"] = json.loads(request["tags"])
+        if "tags" in request.keys():
+            request["tags"] = json.loads(request["tags"])
+        else:
+            request["tags"] = None
 
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": RunStatus.INITIALIZING.name,
