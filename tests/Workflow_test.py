@@ -59,7 +59,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0",
-                       tags='{"run_dir": "sample1/my_workdir"}')
+                       tags={"run_dir": "sample1/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
     assert run.status == RunStatus.INITIALIZING
     assert run.dir == "sample1/my_workdir"
