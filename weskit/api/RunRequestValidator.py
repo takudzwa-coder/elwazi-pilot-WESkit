@@ -7,6 +7,7 @@
 #  Authors: The WESkit Team
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -164,9 +165,9 @@ class RunRequestValidator(object):
             if self.require_rundir_tag:
                 if tags is None:
                     return ["'run_dir' tag is required but tags field is missing"]
-                elif "run_dir" not in tags.keys():
+                tags = json.loads(tags)
+                if "run_dir" not in tags.keys():
                     return ["'run_dir' tag is required and missing"]
-
                 parsed_url = urlparse(tags["run_dir"])
                 if parsed_url.scheme != "" and parsed_url.scheme != "file":
                     return ["'run_dir' tag must be relative file path"]

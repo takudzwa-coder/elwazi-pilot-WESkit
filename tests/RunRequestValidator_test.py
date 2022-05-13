@@ -84,13 +84,12 @@ def test_validate_structure(run_request_validator):
 
 
 def test_validate_run_dir_tag(run_request_validator_rundir):
-    assert isinstance(run_request_validator_rundir.validate(request(tags={
-        "run_dir": "file:relative/path/to/file"
-    })), dict)
+    assert isinstance(run_request_validator_rundir.validate(request(tags=
+      '{"run_dir": "file:relative/path/to/file"}')), dict)
 
-    assert run_request_validator_rundir.validate(request(tags={
-        "run_dir": "file:/absolute/path/to/file"
-    })) == ["Not a relative path: 'file:/absolute/path/to/file'"]
+    assert run_request_validator_rundir.validate(request(tags=
+      '{"run_dir": "file:/absolute/path/to/file"}')
+      ) == ["Not a relative path: 'file:/absolute/path/to/file'"]
 
 
 def test_workflow_type(run_request_validator):
