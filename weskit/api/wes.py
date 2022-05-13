@@ -95,7 +95,10 @@ def GetRunStatus(run_id):
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
-            return run.status.name, 200
+            return {
+                "run_id": run_id,
+                "state": run.status.name
+            }, 200
         else:
             return access_denied_response
 
@@ -182,24 +185,25 @@ def RunWorkflow(*args, **kwargs):
     logger.info("RunWorkflow")
     try:
         ctx = Helper(current_app, current_user)
-        data = request.json
-        if data is None:
+        data = request.form.to_dict()
+        if len(data) == 0:
             return {
-                "msg": "Malformed request: No JSON data",
+                "msg": "Malformed request: Empty form data",
+                "status_code": 400
+            }, 400
+
+        validator = current_app.request_validators["run_request"]
+        validation_result = validator.validate(data)
+        logger.error(validation_result)
+        if isinstance(validation_result, list):
+            return {
+                "msg": "Malformed request: {}".format(validation_result),
                 "status_code": 400
             }, 400
         else:
-            validator = current_app.request_validators["run_request"]
-            validation_result = validator.validate(data)
-            if isinstance(validation_result, list):
-                return {
-                  "msg": "Malformed request: {}".format(validation_result),
-                  "status_code": 400
-                }, 400
-            else:
-                run = current_app.manager.\
-                    create_and_insert_run(request=validation_result,
-                                          user_id=ctx.user.id)
+            run = current_app.manager.\
+                create_and_insert_run(request=validation_result,
+                                      user_id=ctx.user.id)
 
     except ClientError as e:
         logger.warning(e, exc_info=True)

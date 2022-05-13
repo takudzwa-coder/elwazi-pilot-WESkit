@@ -230,6 +230,29 @@ class TestWithHeaderToken:
     submitting an access token in the request header in the format
     "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
+
+    @pytest.mark.integration
+    def test_submit_workflow_header_upload(self,
+                                           test_client,
+                                           test_run,
+                                           OIDC_credentials):
+
+        data = {}
+        data["workflow_params"] = '{"text": "hello world"}'
+        data["workflow_url"] = "Snakefile"
+        data["workflow_type"] = "SMK"
+        data["workflow_type_version"] = "6.10.0"
+        data["workflow_attachment"] = (open("tests/wf1/Snakefile", "rb"), "Snakefile")
+        data["workflow_engine_parameters"] = "{}"
+
+        response = test_client.post(
+            "/ga4gh/wes/v1/runs",
+            data=data,
+            content_type="multipart/form-data",
+            headers=OIDC_credentials.headerToken)
+
+        assert response.status_code == 200
+
     @pytest.mark.integration
     def test_accept_run_workflow_header(self,
                                         test_client,
@@ -264,11 +287,34 @@ class TestWithHeaderToken:
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
+        assert response.json[0].keys() == \
+               {"request", "run_id", "run_status", "start_time", "user_id"}
 
     @pytest.mark.integration
     def test_get_run_status(self,
                             test_client,
+                            test_run,
                             OIDC_credentials):
+        run_id = test_run.id
+        response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
+                                   headers=OIDC_credentials.headerToken)
+        start_time = time.time()
+        while response.status_code == 409:   # workflow still running
+            assert is_within_timout(start_time, 20), "Timeout requesting status"
+            time.sleep(1)
+            response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
+                                       headers=OIDC_credentials.headerToken)
+
+        assert response.status_code == 200
+        assert response.json == {
+            "run_id": run_id,
+            "state": "COMPLETE"
+        }
+
+    @pytest.mark.integration
+    def test_get_nonexisting_run_status(self,
+                                        test_client,
+                                        OIDC_credentials):
         response = test_client.get("/weskit/v1/runs/nonExistingRun/status",
                                    headers=OIDC_credentials.headerToken)
         assert response.status_code == 404

@@ -38,26 +38,28 @@ class TestWithoutLogin:
         data = get_workflow_data(
             snakefile="tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_client_nologin.post("/ga4gh/wes/v1/runs", json=data)
-        assert response.status_code == 200, response.json
+        response = test_client_nologin.post("/ga4gh/wes/v1/runs", data=data,
+                                            content_type="multipart/form-data")
+        assert response.status_code == 200, response.data
         response = test_client_nologin.get("/ga4gh/wes/v1/runs")
-        assert response.status_code == 200, response.json
+        assert response.status_code == 200, response.data
 
     @pytest.mark.integration
     def test_list_runs_extended_wo_login(self, test_client_nologin, celery_worker):
         response = test_client_nologin.get("/weskit/v1/runs")
-        assert response.status_code == 200, response.json
+        assert response.status_code == 200, response.data
 
     @pytest.mark.integration
     def test_submit_workflow_wo_login(self, test_client_nologin, celery_worker):
         data = get_workflow_data(
             snakefile="tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_client_nologin.post("/ga4gh/wes/v1/runs", json=data)
-        assert response.status_code == 200, response.json
+        response = test_client_nologin.post("/ga4gh/wes/v1/runs", data=data,
+                                            content_type="multipart/form-data")
+        assert response.status_code == 200, response.data
 
     @pytest.mark.integration
     def test_get_run_status(self,
                             test_client_nologin):
         response = test_client_nologin.get("/weskit/v1/runs/nonExistingRun/status")
-        assert response.status_code == 404, response.json
+        assert response.status_code == 404, response.data
