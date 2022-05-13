@@ -91,7 +91,7 @@ def validate_userinfo(app) -> bool:
     header = {"Authorization": "Bearer " + str(access_token)}
 
     try:
-        claim_response  = requests.get(
+        claim_response = requests.get(
             url=app.oidc_login.userinfo_endpoint,
             headers=header
         ).json()
