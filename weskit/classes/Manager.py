@@ -166,8 +166,6 @@ class Manager:
         if "workflow_engine_parameters" in request.keys():
             request["workflow_engine_parameters"] = \
                 json.loads(request["workflow_engine_parameters"])
-        else:
-            request["workflow_engine_parameters"] = None
 
         if "tags" in request.keys():
             request["tags"] = json.loads(request["tags"])
