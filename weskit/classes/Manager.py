@@ -13,6 +13,7 @@ from typing import Optional, List
 from urllib.parse import urlparse
 
 import yaml
+import json
 from celery import Celery, Task
 from celery.app.control import Control
 from trs_cli.client import TRSClient
@@ -159,6 +160,15 @@ class Manager:
 
     def create_and_insert_run(self, request, user_id)\
             -> Optional[Run]:
+
+        request["workflow_params"] = json.loads(request["workflow_params"])
+        request["workflow_engine_parameters"] = \
+            json.loads(request["workflow_engine_parameters"])
+        if "tags" in request.keys():
+            request["tags"] = json.loads(request["tags"])
+        else:
+            request["tags"] = None
+
         run = Run(data={"run_id": self.database.create_run_id(),
                         "run_status": RunStatus.INITIALIZING.name,
                         "request_time": get_current_timestamp(),
@@ -190,7 +200,6 @@ class Manager:
                     raise ClientError("Attachment file without name")
                 else:
                     filename = secure_filename(attachment.filename)
-                    logger.error(f"Staging '{filename}'")
                     # TODO could implement checks here
                     attachment_filenames.append(filename)
                     attachment.save(os.path.join(self.data_dir, run.dir, filename))

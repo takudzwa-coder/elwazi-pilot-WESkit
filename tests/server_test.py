@@ -230,6 +230,29 @@ class TestWithHeaderToken:
     submitting an access token in the request header in the format
     "'Authorization': 'Bearer xxxxxxxxxxxxxxxx-xxxx-xxxxxxxxxx"
     """
+
+    @pytest.mark.integration
+    def test_submit_workflow_header_upload(self,
+                                           test_client,
+                                           test_run,
+                                           OIDC_credentials):
+
+        data = {}
+        data["workflow_params"] = '{"text": "hello world"}'
+        data["workflow_url"] = "Snakefile"
+        data["workflow_type"] = "SMK"
+        data["workflow_type_version"] = "6.10.0"
+        data["workflow_attachment"] = (open("tests/wf1/Snakefile", "rb"), "Snakefile")
+        data["workflow_engine_parameters"] = "{}"
+
+        response = test_client.post(
+            "/ga4gh/wes/v1/runs",
+            data=data,
+            content_type="multipart/form-data",
+            headers=OIDC_credentials.headerToken)
+
+        assert response.status_code == 200
+
     @pytest.mark.integration
     def test_accept_run_workflow_header(self,
                                         test_client,

@@ -9,6 +9,7 @@ import uuid
 from typing import Dict, Optional
 
 import yaml
+import json
 
 from weskit.classes.RunStatus import RunStatus
 from weskit.classes.Run import Run
@@ -69,14 +70,14 @@ def is_run_failed(status: RunStatus) -> bool:
 def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]] = None):
     engine_params = {} if engine_params is None else engine_params
     with open(config) as file:
-        workflow_params = yaml.load(file, Loader=yaml.FullLoader)
+        workflow_params = json.dumps(yaml.load(file, Loader=yaml.FullLoader))
 
     data = {
         "workflow_params": workflow_params,
         "workflow_type": "SMK",
         "workflow_type_version": "6.10.0",
         "workflow_url": snakefile,
-        "workflow_engine_parameters": engine_params
+        "workflow_engine_parameters": json.dumps(engine_params)
     }
     return data
 
