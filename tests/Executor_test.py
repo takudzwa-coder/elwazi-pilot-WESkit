@@ -14,7 +14,7 @@ from abc import abstractmethod, ABCMeta
 from datetime import timedelta, datetime
 from os import PathLike
 from pathlib import PurePath, Path
-from typing import Optional, cast
+from typing import Optional, cast, Dict
 
 import pytest
 import yaml
@@ -55,9 +55,11 @@ if remote_config is not None and "ssh" in remote_config.keys():
                                            pytest.mark.ssh])
 
 
+shared_workdir: Dict[str, str] = {}
+
 if remote_config is not None and "lsf_submission_host" in remote_config.keys():
     ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']['ssh'])))
-    shared_workdir = remote_config['lsf_submission_host']["shared_workdir"]
+    shared_workdir["ssh_lsf"] = remote_config['lsf_submission_host']["shared_workdir"]
     executors["ssh_lsf"] = pytest.param(ssh_lsf_executor,
                                         marks=[pytest.mark.slow,
                                                pytest.mark.integration,
@@ -67,7 +69,7 @@ if remote_config is not None and "lsf_submission_host" in remote_config.keys():
 if remote_config is not None and "slurm_submission_host" in remote_config.keys():
     ssh_slurm_executor = SlurmExecutor(SshExecutor(**(
         remote_config['slurm_submission_host']['ssh'])))
-    shared_workdir = remote_config['slurm_submission_host']["shared_workdir"]
+    shared_workdir["ssh_slurm"] = remote_config['slurm_submission_host']["shared_workdir"]
     executors["ssh_slurm"] = pytest.param(ssh_slurm_executor,
                                           marks=[pytest.mark.slow,
                                                  pytest.mark.integration,
@@ -331,7 +333,7 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
     def workdir(self) -> PurePath:
         # Note: For this test, the workdir needs to be accessibly from the submission/ssh host
         #       and the compute nodes. Therefore, choose a location on a shared filesystem.
-        return PurePath(shared_workdir)
+        return PurePath(shared_workdir["ssh_lsf"])
 
     def _assert_stdout(self, observed, expected):
         """
@@ -435,9 +437,10 @@ def test_update_process(executor):
 
 
 @pytest.mark.parametrize("executor", executors.values())
+@pytest.mark.skip
 def test_kill_process(executor):
     # TODO Killing is not implemented yet.
-    assert True
+    assert False
 
 
 class MockExecutor(Executor):
