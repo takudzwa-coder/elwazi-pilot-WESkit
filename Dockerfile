@@ -54,7 +54,7 @@ RUN conda init bash
 RUN conda config --set proxy_servers.http "$HTTP_PROXY" && \
     conda config --set proxy_servers.https "$HTTPS_PROXY" && \
     echo "Installing mamba ..." && \
-    conda install mamba=0.15.3 -n base -c conda-forge \
+    conda install mamba=0.15.3 -n base -c conda-forge
 
 # Note: With the current Conda version 4.9.2, the environment.yaml must be located in a writable
 # directory, or Conda will fail with a permission denied error.
