@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import abc
+import json
 from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -178,16 +179,38 @@ class CommandResult:
 class ExecutionSettings:
     """
     Any information that is needed for executing the command on the execution infrastructure.
-    All information is optional and it is the responsibility of the Executor to decide, which of
+    All information is optional, and it is the responsibility of the Executor to decide, which of
     the information to use, or what to do if information is missing.
     """
     job_name: Optional[str] = None
     accounting_name: Optional[str] = None
     group: Optional[str] = None
     walltime: Optional[timedelta] = None
-    total_memory: Optional[Memory] = None
+    memory: Optional[Memory] = None
     queue: Optional[str] = None
     cores: Optional[int] = None
+
+    def __iter__(self):
+        for i in {
+            "job_name": self.job_name,
+            "accounting_name": self.accounting_name,
+            "group": self.group,
+            "walltime": self.walltime,
+            "memory": self.memory,
+            "queue": self.queue,
+            "cores": self.cores
+        }.items():
+            yield i
+
+    def encode_json(self):
+        return dict(self)
+
+    @staticmethod
+    def from_json(json_string: str) -> ExecutionSettings:
+        args = json.loads(json_string)
+        args["walltime"] = timedelta(seconds=float(args["walltime"]))
+        args["memory"] = Memory.from_str(args["memory"])
+        return ExecutionSettings(**args)
 
 
 class ExecutedProcess(metaclass=abc.ABCMeta):

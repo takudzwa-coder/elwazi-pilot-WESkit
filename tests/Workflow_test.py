@@ -5,19 +5,18 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-import re
-
-import time
 import os
+import re
+import time
 
 import pytest
-
-from weskit.exceptions import ClientError
-from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
+
 from test_utils import get_mock_run, is_within_timeout, assert_status_is_not_failed
 from weskit.classes.RunStatus import RunStatus
+from weskit.exceptions import ClientError
+from weskit.utils import to_filename
 
 
 @pytest.mark.integration

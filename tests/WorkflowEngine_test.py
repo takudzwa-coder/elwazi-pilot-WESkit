@@ -5,15 +5,21 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
 
+<<<<<<< HEAD
 from weskit.exceptions import ClientError
+=======
+>>>>>>> 3e986b6 (Resource setting for workflow engine. Celery de/serialization. Bugfix value->default_value in ServiceInfo.)
 from weskit import WorkflowEngineFactory
+from weskit.ClientError import ClientError
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow
 from weskit.classes.WorkflowEngineParameters import \
     EngineParameter, ActualEngineParameter, ParameterIndex
+from weskit.memory_units import Memory, Unit
 
 
 def test_engine_parameter():
@@ -126,6 +132,67 @@ def test_command_with_run_parameter():
                                '--configfile', '/the/config.file']
     assert command.environment == {}
     assert command.workdir == Path("/a/workdir")
+
+
+def test_engine_execution_settings():
+    engine = WorkflowEngineFactory.create_engine(
+        Snakemake,
+        [{"name": "job-name", "value": None, "api": True},
+         {"name": "max-runtime", "value": "15:00", "api": True},
+         {"name": "max-memory", "value": "5G", "api": True},
+         {"name": "cores", "value": "2", "api": True},
+         {"name": "group", "value": None, "api": True},
+         {"name": "accounting-name", "value": None, "api": True},
+         {"name": "queue", "value": None, "api": True},
+         ]
+    )
+
+    default_settings = engine.execution_settings({})
+    assert default_settings.job_name is None
+    assert default_settings.walltime == timedelta(hours=15)
+    assert default_settings.memory == Memory(value=5, unit=Unit.GIGA)
+    assert default_settings.cores == 2
+    assert default_settings.group is None
+    assert default_settings.accounting_name is None
+    assert default_settings.queue is None
+
+    settings = engine.execution_settings({"job-name": "the-job",
+                                          "max-runtime": "125:00",
+                                          "max-memory": "2G",
+                                          "cores": "4",
+                                          "group": "groupX",
+                                          "accounting-name": "projectX",
+                                          "queue": "the-queue"})
+    assert settings.job_name == "the-job"
+    assert settings.walltime == timedelta(hours=125)
+    assert settings.memory == Memory(value=2, unit=Unit.GIGA)
+    assert settings.cores == 4
+    assert settings.group == "groupX"
+    assert settings.accounting_name == "projectX"
+    assert settings.queue == "the-queue"
+
+
+def test_forbidden_engine_execution_settings():
+    engine = WorkflowEngineFactory.create_engine(
+        Snakemake,
+        [{"name": "job-name", "value": None, "api": False},
+         {"name": "max-runtime", "value": "15:00", "api": True},
+         {"name": "max-memory", "value": "5G", "api": True},
+         {"name": "cores", "value": "2", "api": True},
+         {"name": "group", "value": None, "api": True},
+         {"name": "accounting-name", "value": None, "api": True},
+         {"name": "queue", "value": None, "api": True},
+         ]
+    )
+
+    with pytest.raises(ClientError):
+        engine.execution_settings({"job-name": "the-job",
+                                   "max-runtime": "125:00",
+                                   "max-memory": "2G",
+                                   "cores": "4",
+                                   "group": "groupX",
+                                   "accounting-name": "projectX",
+                                   "queue": "the-queue"})
 
 
 def test_command_with_unset_parameter():

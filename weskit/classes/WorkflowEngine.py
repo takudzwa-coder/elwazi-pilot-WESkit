@@ -11,11 +11,15 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Dict, Optional
 
-from weskit.exceptions import ClientError
-from weskit.memory_units import Memory, Unit
+from tempora import parse_timedelta
+
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
+from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.exceptions import ClientError
+from weskit.memory_units import Memory, Unit
+from weskit.utils import mop
 
 
 class WorkflowEngine(metaclass=ABCMeta):
@@ -34,8 +38,16 @@ class WorkflowEngine(metaclass=ABCMeta):
     def known_parameters(cls) -> ParameterIndex:
         """
         Get an index of the workflow engine parameters allowed for this WorkflowEngine subclass.
+
+        By default, all parameters related to ExecutionSettings are "known".
         """
-        pass
+        return KNOWN_PARAMS.subset(frozenset({"job-name",
+                                              "max-memory",
+                                              "max-runtime",
+                                              "cores",
+                                              "group",
+                                              "queue",
+                                              "accounting-name"}))
 
     def _optional_param(self,
                         param: ActualEngineParameter,
@@ -138,6 +150,27 @@ class WorkflowEngine(metaclass=ABCMeta):
     def name() -> str:
         pass
 
+    def execution_settings(self,
+                           engine_params: Dict[str, Optional[str]]) -> ExecutionSettings:
+
+        # Concerning type: This works with ParameterIndex.get() because ParameterIndex
+        # is generic and here it is ParameterIndex[ActualEngineParameter].
+        def get_value(parameter: Optional[ActualEngineParameter]) -> Optional[str]:
+            if parameter is None:
+                return None
+            else:
+                return parameter.value
+
+        parameter_idx = ParameterIndex(self._effective_run_params(engine_params))
+        return ExecutionSettings(
+            job_name=get_value(parameter_idx.get("job-name")),
+            accounting_name=get_value(parameter_idx.get("accounting-name")),
+            group=get_value(parameter_idx.get("group")),
+            walltime=mop(get_value(parameter_idx.get("max-runtime")), parse_timedelta),
+            memory=mop(get_value(parameter_idx.get("max-memory")), Memory.from_str),
+            queue=get_value(parameter_idx.get("queue")),
+            cores=mop(get_value(parameter_idx.get("cores")), int))
+
 
 class Snakemake(WorkflowEngine):
 
@@ -154,7 +187,9 @@ class Snakemake(WorkflowEngine):
         return KNOWN_PARAMS.subset(frozenset({"cores",
                                               "use-singularity",
                                               "use-conda",
-                                              "profile"}))
+                                              "profile"})
+                                   .union([list(par.names)[0] for par in super(Snakemake, cls).
+                                          known_parameters().all]))
 
     def _environment(self, parameters: List[ActualEngineParameter]) -> Dict[str, str]:
         return {}
@@ -202,7 +237,9 @@ class Nextflow(WorkflowEngine):
                                               "timeline",
                                               "graph",
                                               "max-memory",
-                                              "tempdir"}))
+                                              "tempdir"})
+                                   .union([list(par.names)[0] for par in super(Nextflow, cls).
+                                          known_parameters().all]))
 
     def _environment(self, parameters: List[ActualEngineParameter]) -> Dict[str, str]:
         result = {}

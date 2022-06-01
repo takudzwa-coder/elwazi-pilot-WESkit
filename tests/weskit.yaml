@@ -114,6 +114,17 @@ static_service_info:
           - name: "max-memory"
             value: "256m"
             # api: false       # By default `false`
+          - name: "max-runtime"
+            value: "05:00"
+            api: false
+          - name: "accounting-name"
+            api: true
+          - name: "job-name"
+            api: true
+          - name: "group"
+            api: true
+          - name: "queue"
+            api: true
           - name: "tempdir"
             value: "/tmp"
             api: false

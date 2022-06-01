@@ -73,7 +73,8 @@ class ServiceInfo:
         We use the "api" field internally, to configure in the server which parameters are allowed
         to be set via the REST API. Forbidden parameters are not reported via the ServiceInfo
         """
-        return {engine: {version: [{"name": parameter["name"], "value": parameter["value"]}
+        return {engine: {version: [{"name": parameter["name"],
+                                    "default_value": parameter.get("value")}
                                    for parameter in parameters
                                    if parameter["api"]]
                          for version, parameters in by_version.items()}

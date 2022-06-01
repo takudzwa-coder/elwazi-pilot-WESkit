@@ -29,6 +29,7 @@ from weskit.classes.RunStatus import RunStatus
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
+from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.exceptions import ClientError, ConcurrentModificationError
 from weskit.tasks.CommandTask import run_command
 from weskit.utils import get_current_timestamp, return_pre_signed_url
@@ -375,6 +376,9 @@ class Manager:
                     workdir=Path(self.data_dir, str(run.dir)),
                     config_files=[Path("config.yaml")],
                     engine_params=run.request.get("workflow_engine_parameters", {}))
+        execution_settings: ExecutionSettings = \
+            self.workflow_engines[workflow_type][workflow_type_version].\
+            execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
         run.log["cmd"] = command.command
         run.log["env"] = command.environment
         run.start_time = get_current_timestamp()
@@ -382,6 +386,7 @@ class Manager:
             args=[],
             kwargs={
                 "command": command.command,
+                "execution_settings": execution_settings,
                 "environment": command.environment,
                 "local_base_workdir": self.data_dir,
                 "sub_workdir": run.dir,

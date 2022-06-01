@@ -229,7 +229,11 @@ def celery_config(redis_container):
     return {
         "broker_url": get_redis_url(redis_container),
         "result_backend": get_redis_url(redis_container),
-        "task_track_started": True
+        "task_track_started": True,
+        "serializer": "WESkitJSON",
+        "task_serializer": "WESkitJSON",
+        "result_serializer": "WESkitJSON",
+        "accept_content": ["application/x-WESkitJSON"]
     }
 
 

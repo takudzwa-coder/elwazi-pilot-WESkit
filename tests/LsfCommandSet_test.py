@@ -45,7 +45,7 @@ def test_lsf_submit_full_command():
                                                              hours=1,
                                                              minutes=34,
                                                              seconds=45),
-                                          total_memory=Memory.from_str("5G"),
+                                          memory=Memory.from_str("5G"),
                                           queue="test-queue",
                                           cores=10))
     print(" ".join(list(map(shlex.quote, command))))

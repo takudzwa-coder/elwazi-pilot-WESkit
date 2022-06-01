@@ -107,22 +107,14 @@ def test_get_default_workflow_engine_parameters(service_info):
         },
         "NFL": {
             "21.04.0": [
-                {
-                    "name": "trace",
-                    "value": "true"
-                },
-                {
-                    "name": "timeline",
-                    "value": "true"
-                },
-                {
-                    "name": "graph",
-                    "value": "true"
-                },
-                {
-                    "name": "report",
-                    "value": "true"
-                }
+                {"name": "accounting-name", "default_value": None},
+                {"name": "job-name", "default_value": None},
+                {"name": "group", "default_value": None},
+                {"name": "queue", "default_value": None},
+                {"name": "trace", "default_value": "true"},
+                {"name": "timeline", "default_value": "true"},
+                {"name": "graph", "default_value": "true"},
+                {"name": "report", "default_value": "true"}
             ]
         }})
 
