@@ -9,7 +9,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from urllib.parse import urlparse
 
 import yaml
@@ -52,10 +52,12 @@ class Manager:
     def __init__(self,
                  celery_app: Celery,
                  database: Database,
+                 executor: Dict[str, Any],
                  workflow_engines: dict,
                  data_dir: str,
                  workflows_base_dir: str,
                  require_workdir_tag: bool) -> None:
+        self.executor = executor
         self.workflow_engines = workflow_engines
         self.data_dir = data_dir
         self.celery_app = celery_app
@@ -343,8 +345,9 @@ class Manager:
             kwargs={
                 "command": command.command,
                 "environment": command.environment,
-                "base_workdir": self.data_dir,
-                "sub_workdir": run.dir
+                "local_base_workdir": self.data_dir,
+                "sub_workdir": run.dir,
+                "executor_parameters": self.executor
             })
         run.celery_task_id = task.id
 

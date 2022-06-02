@@ -49,12 +49,12 @@ def get_mock_run(workflow_url,
     return run
 
 
-def is_within_timout(start_time, timeout=30) -> bool:
+def is_within_timeout(start_time, timeout=30) -> bool:
     return (time.time() - start_time) <= timeout
 
 
 def assert_within_timeout(start_time, timeout=30):
-    assert is_within_timout(start_time, timeout), "Test timed out"
+    assert is_within_timeout(start_time, timeout), "Test timed out"
 
 
 def is_run_failed(status: RunStatus) -> bool:

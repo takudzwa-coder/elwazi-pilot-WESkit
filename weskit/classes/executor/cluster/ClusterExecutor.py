@@ -22,7 +22,8 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings, FileRepr
-from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
+from weskit.classes.executor.ExecutorException import \
+    ExecutorException, ExecutionError, TimingError
 from weskit.classes.executor.SshExecutor import SshExecutor
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class CommandSet(metaclass=ABCMeta):
 
 
 def is_retryable_error(exception: BaseException) -> bool:
-    return isinstance(exception, ExecutionError)
+    return isinstance(exception, (ExecutionError, TimingError))
 
 
 class ClusterExecutor(Executor):
@@ -210,6 +211,10 @@ class ClusterExecutor(Executor):
                 ])
             if not result.status.success:
                 raise ExecutionError("Could not request status. " + base_error_info)
+            if len(stdout_lines) == 0:
+                # In case command was successfully executed but output is
+                # 'blocked' by the server (slurm).
+                raise TimingError("Status is empty. " + base_error_info)
             try:
                 job_id, status_name, reported_exit_code = \
                     self.parse_get_status_output(stdout_lines)

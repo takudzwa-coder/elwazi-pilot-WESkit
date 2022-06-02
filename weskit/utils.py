@@ -31,7 +31,7 @@ def to_filename(uris):
     return filenames
 
 
-def format_timestamp(time) -> str:
+def format_timestamp(time: datetime) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 

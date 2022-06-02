@@ -13,6 +13,24 @@ TESTING: true
 # Use a custom workdir for each run. This needs to be defined by tags field in request
 require_workdir_tag: false
 
+# 'executor' defines where the workflow engine is executed. Allowed values are
+# "ssh", "ssh_lsf", "ssh_slurm", "local", "local_lsf", and "local_slurm"
+#
+# Remote executors (all but "local") need a remote_base_dir. This is the corresponding value for
+# WESKIT_DATA, but located on the remote filesystem. "remote_base_dir" is ignored if the executor
+# type is set to "local". If any of the executors involving SSH is used, additionally "login" is
+# is needed, but is ignored for all "local" executor types.
+executor:
+  type: "local"
+#  remote_base_dir: "/tmp"
+#  login:
+#    username: "user"
+#    hostname: "localhost"
+#    port: 22
+#    knownhosts_file: "~/.ssh/known_hosts"
+#    keyfile: "~/.ssh/weskit_cluster_test_rsa"
+#    keyfile_passphrase: ""
+
 static_service_info:
 
     # Unique ID of this service. Reverse domain name notation is recommended, though not required.

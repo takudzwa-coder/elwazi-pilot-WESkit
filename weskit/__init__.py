@@ -24,7 +24,7 @@ from weskit.classes.Database import Database
 from weskit.classes.ErrorCodes import ErrorCodes
 from weskit.classes.Manager import Manager
 from weskit.classes.ServiceInfo import ServiceInfo
-from weskit.classes.WorflowEngineFactory import WorkflowEngineFactory
+from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory
 from weskit.oidc.Login import Login
 from weskit.utils import create_validator
@@ -136,10 +136,10 @@ def create_app(celery: Celery,
 
     # Insert the "celery" section from the configuration file into the Celery config.
     celery.conf.update(**config.get("celery", {}))
-
     manager = \
         Manager(celery_app=celery,
                 database=database,
+                executor=config["executor"],
                 workflow_engines=WorkflowEngineFactory.
                 create(config["static_service_info"]["default_workflow_engine_parameters"]),
                 workflows_base_dir=workflows_base_dir,

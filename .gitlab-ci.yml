@@ -49,7 +49,7 @@ test:
     - mypy --install-types --non-interactive weskit/ tests/
     - flake8
     - bandit -r weskit/ uwsgi_server/
-    - python -m pytest -vvv --cov=weskit/ -m "not slow"
+    - python -m pytest -vvv --cov=weskit/ -m "not slow and not ssh"
 
 # See
 # https://docs.gitlab.com/ee/user/project/deploy_tokens/index.html
