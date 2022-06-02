@@ -12,6 +12,57 @@ require_workdir_tag:
   type: boolean
   required: true
 
+executor:
+  type: dict
+  schema:
+    type:
+      allowed:
+        - local
+        - local_slurm
+        - local_lsf
+        - ssh
+        - ssh_slurm
+        - ssh_lsf
+      required: true
+      type: string
+    remote_base_dir:
+      type: string
+      required: false
+      dependencies:
+        type:
+          - local_slurm
+          - local_lsf
+          - ssh
+          - ssh_slurm
+          - ssh_lsf
+    login:
+      type: dict
+      required: false
+      dependencies:
+        type:
+          - ssh
+          - ssh_slurm
+          - ssh_lsf
+      schema:
+        username:
+          required: true
+          type: string
+        hostname:
+          required: true
+          type: string
+        port:
+          required: false
+          type: number
+        knownhosts_file:
+          required: true
+          type: string
+        keyfile:
+          required: true
+          type: string
+        keyfile_passphrase:
+          type: string
+          required: false
+
 static_service_info:
   type: dict
   required: true
@@ -121,7 +172,6 @@ static_service_info:
                   type: boolean
                   default: false
         SMK: *default_workflow_engine_parameters
-
     auth_instructions_url:
       type: string
       required: true

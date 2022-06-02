@@ -18,3 +18,10 @@ class ExecutionError(ExecutorException):
     Error during the execution of a command, i.e. command returned e.g. with exit code != 0.
     """
     pass
+
+
+class TimingError(ExecutorException):
+    """
+    Command execution was partially successful i.e. command execution returned no output
+    """
+    pass

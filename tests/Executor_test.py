@@ -14,7 +14,7 @@ from abc import abstractmethod, ABCMeta
 from datetime import timedelta, datetime
 from os import PathLike
 from pathlib import PurePath, Path
-from typing import Optional, cast, Dict
+from typing import Optional, cast
 
 import pytest
 import yaml
@@ -30,50 +30,60 @@ from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 from weskit.memory_units import Memory, Unit
 
-# Note that this cannot be solved by a fixture yielding multiple times.
+
+# Note that testing multiple executors cannot be done by a fixture yielding multiple times.
 # See https://github.com/pytest-dev/pytest/issues/1595.
 #
-# Instead marks for individual parameters of pytest.mark.parametrize are used.
+# Instead, marks for individual parameters of pytest.mark.parametrize are used.
 # See https://docs.pytest.org/en/6.2.x/example/markers.html#marking-individual-tests-when-using-parametrize   # noqa
 #
 # You can select the tests to execute on the commandline.
-executors = {
-    "local": pytest.param(LocalExecutor(),
-                          marks=[pytest.mark.integration])
-}
 
 
-with open("tests/remote.yaml", "r") as f:
-    remote_config = yaml.safe_load(f)
+def get_remote_config():
+    with open("tests/remote.yaml", "r") as f:
+        return yaml.safe_load(f)
 
 
-if remote_config is not None and "ssh" in remote_config.keys():
-    ssh_executor = SshExecutor(**(remote_config["ssh"]))
-    executors["ssh"] = pytest.param(ssh_executor,
-                                    marks=[pytest.mark.slow,
-                                           pytest.mark.integration,
-                                           pytest.mark.ssh])
+def get_executors(remote_config):
+    executors = {
+        "local": pytest.param(LocalExecutor(),
+                              None,
+                              marks=[pytest.mark.integration])
+    }
 
-
-shared_workdir: Dict[str, str] = {}
-
-if remote_config is not None and "lsf_submission_host" in remote_config.keys():
-    ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']['ssh'])))
-    shared_workdir["ssh_lsf"] = remote_config['lsf_submission_host']["shared_workdir"]
-    executors["ssh_lsf"] = pytest.param(ssh_lsf_executor,
+    if remote_config is not None and "ssh" in remote_config.keys():
+        ssh_executor = SshExecutor(**(remote_config["ssh"]))
+        executors["ssh"] = pytest.param(ssh_executor,
+                                        None,
                                         marks=[pytest.mark.slow,
                                                pytest.mark.integration,
-                                               pytest.mark.ssh_lsf])
+                                               pytest.mark.ssh])
+
+    if remote_config is not None and "lsf_submission_host" in remote_config.keys():
+        ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']['ssh'])))
+        shared_workdir_lsf = remote_config['lsf_submission_host']["shared_workdir"]
+        executors["ssh_lsf"] = pytest.param(ssh_lsf_executor,
+                                            shared_workdir_lsf,
+                                            marks=[pytest.mark.slow,
+                                                   pytest.mark.integration,
+                                                   pytest.mark.ssh_lsf])
+
+    if remote_config is not None and "slurm_submission_host" in remote_config.keys():
+        ssh_slurm_executor = SlurmExecutor(SshExecutor(**(
+            remote_config['slurm_submission_host']['ssh'])))
+        shared_workdir_slurm = remote_config['slurm_submission_host']["shared_workdir"]
+        executors["ssh_slurm"] = pytest.param(ssh_slurm_executor,
+                                              shared_workdir_slurm,
+                                              marks=[pytest.mark.slow,
+                                                     pytest.mark.integration,
+                                                     pytest.mark.ssh_slurm])
+
+    return executors
 
 
-if remote_config is not None and "slurm_submission_host" in remote_config.keys():
-    ssh_slurm_executor = SlurmExecutor(SshExecutor(**(
-        remote_config['slurm_submission_host']['ssh'])))
-    shared_workdir["ssh_slurm"] = remote_config['slurm_submission_host']["shared_workdir"]
-    executors["ssh_slurm"] = pytest.param(ssh_slurm_executor,
-                                          marks=[pytest.mark.slow,
-                                                 pytest.mark.integration,
-                                                 pytest.mark.ssh_slurm])
+remote_config = get_remote_config()
+executors = get_executors(remote_config)
 
 
 def test_execution_status():
@@ -101,8 +111,8 @@ def test_execution_status():
     assert str(full_result) == "ExecutionStatus(code=1, name=name, message=message)"
 
 
-@pytest.mark.parametrize("executor", executors.values())
-def test_submit_failing_command(executor):
+@pytest.mark.parametrize("executor,_", executors.values())
+def test_submit_failing_command(executor, _):
     command = ShellCommand(["bash", "-c", "nonexistingcommand"],
                            workdir=PurePath("./"))
     process = executor.execute(command,
@@ -117,8 +127,8 @@ def test_submit_failing_command(executor):
     assert result.status.failed
 
 
-@pytest.mark.parametrize("executor", executors.values())
-def test_submit_nonexisting_command(executor):
+@pytest.mark.parametrize("executor,_", executors.values())
+def test_submit_nonexisting_command(executor, _):
     command = ShellCommand(["nonexistingcommand"],
                            workdir=PurePath("./"))
     process = executor.execute(command,
@@ -130,8 +140,8 @@ def test_submit_nonexisting_command(executor):
     assert result.status.code == 127
 
 
-@pytest.mark.parametrize("executor", executors.values())
-def test_inacessible_workdir(executor):
+@pytest.mark.parametrize("executor,_", executors.values())
+def test_inacessible_workdir(executor, _):
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=Path("/this/path/does/not/exist"))
     process = executor.execute(command,
@@ -143,6 +153,7 @@ def test_inacessible_workdir(executor):
     # Note: LSF exits with code 2 with LSB_EXIT_IF_CWD_NOTEXIST=Y, but at least it fails.
     # Note: SLURM exits with code 0. It changes to /tmp if dir does not exist.
     # This behaviour can be changes by the admin. slurm.conf
+    # ssh exits with 0
     assert result.status.code in [1, 2], result.status
 
 
@@ -290,11 +301,11 @@ class TestSubmitSshProcess(ExecuteProcessViaSsh):
 
     @property
     def executor(self) -> SshExecutor:
-        return ssh_executor
+        return cast("SshExecutor", executors["ssh"].values[0])
 
     @property
     def ssh_executor(self) -> SshExecutor:
-        return ssh_executor
+        return cast("SshExecutor", executors["ssh"].values[0])
 
     @property
     def remote(self) -> str:
@@ -315,7 +326,7 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
 
     @property
     def executor(self) -> LsfExecutor:
-        return ssh_lsf_executor
+        return cast("LsfExecutor", executors["ssh_lsf"].values[0])
 
     @property
     def ssh_executor(self) -> SshExecutor:
@@ -323,7 +334,11 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
         # executor is a remote executor, and the only we provide is the one based on SSH. The
         # cast avoids problems with the type highlighting and makes this decision (somehow)
         # explicit, without coming up with a `RemoteExecutor` or so, which would be total overkill.
-        return cast("SshExecutor", ssh_lsf_executor.executor)
+        return cast("SshExecutor", self.executor.executor)
+
+    @property
+    def shared_workdir(self) -> str:
+        return cast("str", executors["ssh_lsf"].values[1])
 
     @property
     def remote(self) -> str:
@@ -333,7 +348,7 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
     def workdir(self) -> PurePath:
         # Note: For this test, the workdir needs to be accessibly from the submission/ssh host
         #       and the compute nodes. Therefore, choose a location on a shared filesystem.
-        return PurePath(shared_workdir["ssh_lsf"])
+        return PurePath(self.shared_workdir)
 
     def _assert_stdout(self, observed, expected):
         """
@@ -359,8 +374,8 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
 
 
 # This tests an internal feature of the LocalExecutor().
-@pytest.mark.parametrize("executor", [executors["local"]])
-def test_std_fds_are_closed(executor, temporary_dir):
+@pytest.mark.parametrize("executor,_", [executors["local"]])
+def test_std_fds_are_closed(executor, _, temporary_dir):
     workdir = PurePath(temporary_dir)
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=workdir)
@@ -372,8 +387,8 @@ def test_std_fds_are_closed(executor, temporary_dir):
     assert process.handle.stderr_fd.closed
 
 
-@pytest.mark.parametrize("executor", executors.values())
-def test_get_status(executor):
+@pytest.mark.parametrize("executor,_", executors.values())
+def test_get_status(executor, _):
     command = ShellCommand(["sleep", "20" if isinstance(executor, (SlurmExecutor, LsfExecutor))
                             else "1"],
                            workdir=PurePath("./"))
@@ -397,13 +412,11 @@ def test_get_status(executor):
 # I didn't get the SshExecutor to succeed in this test (see comment below). As the usage-pattern
 # of the Executor does (currently) not rely on update_process() but only wait_for(), it's probably
 # acceptable to keep the SshExecutor out in this test.
-@pytest.mark.parametrize("executor",
+@pytest.mark.parametrize("executor,_",
                          dict(filter(lambda kv: kv[0] != "ssh", executors.items())).values())
-def test_update_process(executor):
+def test_update_process(executor, _):
     if isinstance(executor, LocalExecutor):
         sleep_duration = 1
-    elif isinstance(executor, SshExecutor):
-        sleep_duration = 5
     elif isinstance(executor, LsfExecutor):
         sleep_duration = 30
     elif isinstance(executor, SlurmExecutor):
@@ -436,9 +449,9 @@ def test_update_process(executor):
     assert not result.status.failed
 
 
-@pytest.mark.parametrize("executor", executors.values())
 @pytest.mark.skip
-def test_kill_process(executor):
+@pytest.mark.parametrize("executor,_", executors.values())
+def test_kill_process(executor, _):
     # TODO Killing is not implemented yet.
     assert False
 
@@ -503,7 +516,6 @@ class MockExecutor(Executor):
 
 
 def test_executor_context_manager():
-
     command = ShellCommand(["echo", "something"])
     executor = MockExecutor(target_status=0)
     with execute(executor, command) as (result, stdout, stderr):

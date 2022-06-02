@@ -16,7 +16,7 @@ from flask import current_app
 from validators.url import url as validate_url
 
 from test_utils import \
-    assert_within_timeout, is_within_timout, assert_status_is_not_failed, get_workflow_data
+    assert_within_timeout, is_within_timeout, assert_status_is_not_failed, get_workflow_data
 from weskit import WESApp
 from weskit.api.Helper import Helper
 from weskit.classes.RunStatus import RunStatus
@@ -148,7 +148,6 @@ class TestHelper:
     @pytest.mark.integration
     def test_log_response(self, test_run, login_app):
         helper = Helper(login_app, User(id=test_run.user_id))
-
         stderr, stderr_code = helper.get_log_response(test_run.id, "stderr")
         assert stderr_code == 200
         assert stderr["content"][0] == 'Building DAG of jobs...\n'
@@ -300,7 +299,7 @@ class TestWithHeaderToken:
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()
         while response.status_code == 409:   # workflow still running
-            assert is_within_timout(start_time, 20), "Timeout requesting status"
+            assert is_within_timeout(start_time, 20), "Timeout requesting status"
             time.sleep(1)
             response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
                                        headers=OIDC_credentials.headerToken)
@@ -337,7 +336,7 @@ class TestWithHeaderToken:
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()
         while response.status_code == 409:   # workflow still running
-            assert is_within_timout(start_time, 20), "Timeout requesting stderr"
+            assert is_within_timeout(start_time, 20), "Timeout requesting stderr"
             time.sleep(1)
             response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                        headers=OIDC_credentials.headerToken)
@@ -356,11 +355,10 @@ class TestWithHeaderToken:
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()
         while response.status_code == 409:    # workflow still running
-            assert is_within_timout(start_time, 20), "Timeout requesting stdout"
+            assert is_within_timeout(start_time, 20), "Timeout requesting stdout"
             time.sleep(1)
             response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                        headers=OIDC_credentials.headerToken)
-
         assert response.status_code == 200, response.json
         assert isinstance(response.json, dict)
         assert "content" in response.json

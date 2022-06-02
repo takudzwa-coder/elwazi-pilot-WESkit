@@ -16,7 +16,7 @@ from weskit.ClientError import ClientError
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
-from test_utils import get_mock_run, is_within_timout, assert_status_is_not_failed
+from test_utils import get_mock_run, is_within_timeout, assert_status_is_not_failed
 from weskit.classes.RunStatus import RunStatus
 
 
@@ -38,10 +38,8 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     try:
         manager.prepare_execution(run, files=[])
     except ClientError as e:
-        regex = re.compile("Derived workflow path is not accessible: '" +
-                           manager.data_dir +
-                           "[0-9a-zA-Z-]+/[0-9a-zA-Z-]+/../../../tests/wf1/Filesnake'")
-        assert re.match(regex, e.message) is not None
+        regex = re.compile("Derived workflow path is not accessible:")
+        assert re.search(regex, e.message) is not None
 
     # 3.) copy attached workflow to workdir
     wf_url = "wf_1.smk"
@@ -77,7 +75,7 @@ def test_execute_snakemake(manager,
     start_time = time.time()
     success = False
     while not success:
-        assert is_within_timout(start_time), "Test timed out"
+        assert is_within_timeout(start_time), "Test timed out"
         status = run.status
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
@@ -86,7 +84,6 @@ def test_execute_snakemake(manager,
             run = manager.update_run(run)
         else:
             success = True
-
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
@@ -113,7 +110,7 @@ def test_execute_nextflow(manager,
     start_time = time.time()
     success = False
     while not success:
-        assert is_within_timout(start_time), "Test timed out"
+        assert is_within_timeout(start_time), "Test timed out"
         status = run.status
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
@@ -122,7 +119,6 @@ def test_execute_nextflow(manager,
             run = manager.update_run(run)
         else:
             success = True
-
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
     hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
                                     run.outputs["workflow"]))
@@ -174,7 +170,7 @@ def test_update_all_runs(manager,
     start_time = time.time()
     success = False
     while not success:
-        assert is_within_timout(start_time), "Test timed out"
+        assert is_within_timeout(start_time), "Test timed out"
         status = run.status
         print("Waiting ... (status=%s)" % status.name)
         if status != RunStatus.COMPLETE:

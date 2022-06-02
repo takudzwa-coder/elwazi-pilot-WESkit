@@ -64,6 +64,7 @@ class RunRequestValidator(object):
             normalized_data.get("tags", None))
 
         all_errors = stx_errors + wtnv_errors + url_errors + workdir_tag_errors
+
         if len(all_errors) > 0:
             return list(filter(lambda v: v != [] and v is not None, all_errors))
         else:

@@ -75,7 +75,16 @@ class SshExecutor(Executor):
         self._keepalive_count_max = keepalive_count_max
         self._knownhosts_file = knownhosts_file
         self._executor_id = uuid.uuid4()
-        self._event_loop = asyncio.get_event_loop()
+        try:
+            self._event_loop = asyncio.get_event_loop()
+        except RuntimeError as ex:
+            # Compare StackOverflow: https://tinyurl.com/yckkwbew
+            if str(ex).startswith('There is no current event loop in thread'):
+                logger.warning("Using a fresh asyncio event-loop", exc_info=ex)
+                self._event_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self._event_loop)
+            else:
+                raise ex
         self._connect()
 
     @property
@@ -182,7 +191,7 @@ class SshExecutor(Executor):
             await asyncssh.scp(local_script_file,
                                (self._connection, self._setup_script_path(process_id)))
         finally:
-            await self._event_loop.run_in_executor(None, lambda: os.unlink(local_script_file))
+            os.unlink(local_script_file)
 
     async def _is_executable(self, path: PathLike) -> bool:
         """
@@ -207,7 +216,7 @@ class SshExecutor(Executor):
         try:
             await asyncssh.scp(str(local_path), (self._connection, str(remote_path)))
         finally:
-            await self._event_loop.run_in_executor(None, lambda: os.unlink(local_path))
+            os.unlink(local_path)
 
     def copy_file(self, source: PurePath, target: PurePath):
         self._event_loop.run_until_complete(self._upload_file(source, target))

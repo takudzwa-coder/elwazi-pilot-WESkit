@@ -8,7 +8,7 @@
 import datetime
 from typing import Dict, List
 
-from weskit.classes.WorflowEngineFactory import ConfParameters
+from weskit.classes.WorkflowEngineFactory import ConfParameters
 from weskit.classes.Database import Database
 
 
