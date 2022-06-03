@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from weskit.ClientError import ClientError
 from weskit import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow
 from weskit.classes.WorkflowEngineParameters import \
@@ -205,7 +206,7 @@ def test_create_nextflow():
     assert created2.environment == {"NXF_OPTS": "-Xmx2048m"}
     assert created2.workdir == Path("/a/workdir")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ClientError):
         engine.command(Path("/some/path"),
                        Path("/a/workdir"),
                        [Path("/the/config.file")],

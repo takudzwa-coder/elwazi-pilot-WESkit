@@ -13,6 +13,10 @@ hooksDir="$(dirname "$BASH_SOURCE")"
 # with failing code. So before you push, everything should be checked (again).
 "$hooksDir/pre-commit"
 
-# Run the tests
-echo "pytest ..." >> /dev/stderr
-python -m pytest -v --cov=weskit/ -m "not slow"
+if [[ ! -v NO_PUSH_CHECKS || (-v NO_PUSH_CHECKS && "$NO_PUSH_CHECKS" != "true") ]]; then
+
+  # Run the tests
+  echo "pytest ..." >> /dev/stderr
+  python -m pytest -v --cov=weskit/ -m "not slow"
+
+fi

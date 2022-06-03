@@ -11,6 +11,7 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Dict, Optional
 
+from weskit.ClientError import ClientError
 from weskit.memory_units import Memory, Unit
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.WorkflowEngineParameters import \
@@ -113,7 +114,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                 result += [checked_run_params.get(default_param.param, default_param)]
             else:
                 if default_param.param in checked_run_params.keys():
-                    raise KeyError(f"Parameter {default_param.param.names} is forbidden")
+                    raise ClientError(f"Parameter {default_param.param.names} is forbidden")
                 result += [default_param]
         return result
 
