@@ -123,6 +123,9 @@ static_service_info:
           - name: "use-conda"
             value: "true"
             api: true
+          - name: "profile"
+            value: "myprofile"
+            api: true
 
     # Currently, the workflow_type_versions need to be among the workflow_engine_versions.
     # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91
