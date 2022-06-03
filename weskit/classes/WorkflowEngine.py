@@ -122,6 +122,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                 workflow_path: PathLike,
                 workdir: Optional[PathLike],
                 config_files: List[PathLike],
+                profile: Optional[PathLike],
                 engine_params: Dict[str, Optional[str]]) \
             -> ShellCommand:
         """
@@ -162,12 +163,16 @@ class Snakemake(WorkflowEngine):
         result = []
         for param in parameters:
             result += self._argument_param(param, "cores", "--cores")
+            result += self._optional_param(param, "use-singularity", "--use-singularity")
+            result += self._optional_param(param, "use-conda", "--use-conda")
+            result += self._optional_param(param, "profile", "--profile")
         return result
 
     def command(self,
                 workflow_path: PathLike,
                 workdir: Optional[PathLike],
                 config_files: List[PathLike],
+                profile: Optional[PathLike],
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
@@ -176,6 +181,8 @@ class Snakemake(WorkflowEngine):
                    ] + self._command_params(parameters)
         if len(config_files) > 0:
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
+        if profile is not None:
+            command += ["--profile"] + [str(profile)]
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(parameters))
@@ -236,6 +243,7 @@ class Nextflow(WorkflowEngine):
                 workflow_path: PathLike,
                 workdir: Optional[PathLike],
                 config_files: List[PathLike],
+                profile: Optional[PathLike],
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)

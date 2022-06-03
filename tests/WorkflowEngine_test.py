@@ -63,10 +63,16 @@ def test_actual_parameter():
 def test_create_snakemake():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": True}]
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "TRUE", "api": True},
+         {"name": "use-conda", "value": "TRUE", "api": True},
+         {"name": "profile", "value": "TRUE", "api": True}]
     )
     assert engine.default_params == [
-        ActualEngineParameter(EngineParameter({"cores"}), "2", True)
+        ActualEngineParameter(EngineParameter({"cores"}), "2", True),
+        ActualEngineParameter(EngineParameter({"use-singularity"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True)
     ]
     assert engine.name() == "SMK"
 
@@ -81,18 +87,25 @@ def test_create_snakemake():
 def test_command_with_default_parameters():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": True}]
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "T", "api": True},
+         {"name": "use-conda", "value": "T", "api": True},
+         {"name": "profile", "value": "F", "api": True}]
     )
 
     # Test default value with empty run parameters.
     command = engine.command(Path("/some/path"),
                              Path("/some/workdir"),
                              [Path("/some/config.yaml")],
+                             Path("myprofile"),
                              {})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
-                               '--configfile', '/some/config.yaml']
+                               '--use-singularity',
+                               '--use-conda',
+                               '--configfile', '/some/config.yaml',
+                               '--profile', 'myprofile']
     assert command.environment == {}
     assert command.workdir == Path("/some/workdir")
 
