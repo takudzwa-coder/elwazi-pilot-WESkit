@@ -23,8 +23,9 @@ executor:
         - ssh
         - ssh_slurm
         - ssh_lsf
-      required: true
+      required: false
       type: string
+      default: local
     remote_base_dir:
       type: string
       required: false
