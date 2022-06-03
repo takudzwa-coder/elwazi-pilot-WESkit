@@ -150,7 +150,10 @@ class Snakemake(WorkflowEngine):
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
-        return KNOWN_PARAMS.subset(frozenset({"cores"}))
+        return KNOWN_PARAMS.subset(frozenset({"cores",
+                                              "use-singularity",
+                                              "use-conda",
+                                              "profile"}))
 
     def _environment(self, parameters: List[ActualEngineParameter]) -> Dict[str, str]:
         return {}
