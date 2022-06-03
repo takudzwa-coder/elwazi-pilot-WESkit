@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from weskit.ClientError import ClientError
 from weskit import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow
 from weskit.classes.WorkflowEngineParameters import \
@@ -63,10 +64,16 @@ def test_actual_parameter():
 def test_create_snakemake():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": True}]
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "TRUE", "api": True},
+         {"name": "use-conda", "value": "TRUE", "api": True},
+         {"name": "profile", "value": "TRUE", "api": True}]
     )
     assert engine.default_params == [
-        ActualEngineParameter(EngineParameter({"cores"}), "2", True)
+        ActualEngineParameter(EngineParameter({"cores"}), "2", True),
+        ActualEngineParameter(EngineParameter({"use-singularity"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True)
     ]
     assert engine.name() == "SMK"
 
@@ -81,7 +88,10 @@ def test_create_snakemake():
 def test_command_with_default_parameters():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": True}]
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "T", "api": True},
+         {"name": "use-conda", "value": "T", "api": True},
+         {"name": "profile", "value": "myprofile", "api": True}]
     )
 
     # Test default value with empty run parameters.
@@ -92,6 +102,9 @@ def test_command_with_default_parameters():
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
+                               '--use-singularity',
+                               '--use-conda',
+                               '--profile', 'myprofile',
                                '--configfile', '/some/config.yaml']
     assert command.environment == {}
     assert command.workdir == Path("/some/workdir")
@@ -136,9 +149,12 @@ def test_command_with_unset_parameter():
 def test_command_setting_non_api_parameter():
     engine2 = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": False}]
+        [{"name": "cores", "value": "2", "api": False},
+         {"name": "use-singularity", "value": "T", "api": True},
+         {"name": "use-conda", "value": "T", "api": True},
+         {"name": "profile", "value": "myprofile", "api": True}]
     )
-    with pytest.raises(KeyError):
+    with pytest.raises(ClientError):
         engine2.command(Path("/some/path"),
                         Path("/a/workdir"),
                         [Path("/the/config.file")],
@@ -190,7 +206,7 @@ def test_create_nextflow():
     assert created2.environment == {"NXF_OPTS": "-Xmx2048m"}
     assert created2.workdir == Path("/a/workdir")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ClientError):
         engine.command(Path("/some/path"),
                        Path("/a/workdir"),
                        [Path("/the/config.file")],

@@ -11,6 +11,7 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Dict, Optional
 
+from weskit.ClientError import ClientError
 from weskit.memory_units import Memory, Unit
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.WorkflowEngineParameters import \
@@ -113,7 +114,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                 result += [checked_run_params.get(default_param.param, default_param)]
             else:
                 if default_param.param in checked_run_params.keys():
-                    raise KeyError(f"Parameter {default_param.param.names} is forbidden")
+                    raise ClientError(f"Parameter {default_param.param.names} is forbidden")
                 result += [default_param]
         return result
 
@@ -150,7 +151,10 @@ class Snakemake(WorkflowEngine):
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
-        return KNOWN_PARAMS.subset(frozenset({"cores"}))
+        return KNOWN_PARAMS.subset(frozenset({"cores",
+                                              "use-singularity",
+                                              "use-conda",
+                                              "profile"}))
 
     def _environment(self, parameters: List[ActualEngineParameter]) -> Dict[str, str]:
         return {}
@@ -159,6 +163,9 @@ class Snakemake(WorkflowEngine):
         result = []
         for param in parameters:
             result += self._argument_param(param, "cores", "--cores")
+            result += self._optional_param(param, "use-singularity", "--use-singularity")
+            result += self._optional_param(param, "use-conda", "--use-conda")
+            result += self._argument_param(param, "profile", "--profile")
         return result
 
     def command(self,
