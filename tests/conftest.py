@@ -193,7 +193,7 @@ def test_config(test_validation):
 
 @pytest.fixture(scope="session")
 def database_container():
-    MONGODB_CONTAINER = "mongo:4.4.6"
+    MONGODB_CONTAINER = "mongo:5.0.6"
 
     db_container = MongoDbContainer(MONGODB_CONTAINER)
 
@@ -215,7 +215,7 @@ def test_database(database_container):
 
 @pytest.fixture(scope="session")
 def redis_container():
-    redis_container = RedisContainer("redis:6.2.3-alpine")
+    redis_container = RedisContainer("redis:6.2.6-alpine")
     with redis_container as rc:
         os.environ["BROKER_URL"] = get_redis_url(rc)
         os.environ["CELERY_RESULT_BACKEND"] = get_redis_url(rc)
