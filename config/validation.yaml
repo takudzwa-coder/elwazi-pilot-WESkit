@@ -182,6 +182,18 @@ static_service_info:
         type: string
 
 
+cors:
+  type: dict
+  default:
+    enabled: false
+  required: false
+  schema:
+    enabled:
+      type: boolean
+      default: false
+      required: true
+
+
 login:
   type: dict
   required: false
