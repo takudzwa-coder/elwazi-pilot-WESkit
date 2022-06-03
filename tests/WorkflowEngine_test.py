@@ -154,7 +154,7 @@ def test_command_setting_non_api_parameter():
          {"name": "use-conda", "value": "T", "api": True},
          {"name": "profile", "value": "myprofile", "api": True}]
     )
-    with pytest.raises(KeyError):
+    with pytest.raises(ClientError):
         engine2.command(Path("/some/path"),
                         Path("/a/workdir"),
                         [Path("/the/config.file")],
