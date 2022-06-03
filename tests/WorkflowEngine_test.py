@@ -113,12 +113,16 @@ def test_command_with_default_parameters():
 def test_command_with_run_parameter():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": True}]
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "F", "api": True},
+         {"name": "use-conda", "value": "F", "api": True},
+         {"name": "profile", "value": "F", "api": True}]
     )
 
     command = engine.command(Path("/some/path"),
                              Path("/a/workdir"),
                              [Path("/the/config.file")],
+                             None,
                              {"cores": "1"})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
@@ -131,13 +135,17 @@ def test_command_with_run_parameter():
 def test_command_with_unset_parameter():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": True}]
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "F", "api": True},
+         {"name": "use-conda", "value": "F", "api": True},
+         {"name": "profile", "value": "F", "api": True}]
     )
 
     # Try unsetting value parameter.
     command = engine.command(Path("/some/path"),
                              Path("/a/workdir"),
                              [Path("/the/config.file")],
+                             None,
                              {"cores": None})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
@@ -149,12 +157,16 @@ def test_command_with_unset_parameter():
 def test_command_setting_non_api_parameter():
     engine2 = WorkflowEngineFactory.create_engine(
         Snakemake,
-        [{"name": "cores", "value": "2", "api": False}]
+        [{"name": "cores", "value": "2", "api": False},
+         {"name": "use-singularity", "value": "T", "api": True},
+         {"name": "use-conda", "value": "T", "api": True},
+         {"name": "profile", "value": "F", "api": True}]
     )
     with pytest.raises(KeyError):
         engine2.command(Path("/some/path"),
                         Path("/a/workdir"),
                         [Path("/the/config.file")],
+                        None,
                         {"cores": "1"})
 
 
