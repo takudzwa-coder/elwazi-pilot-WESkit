@@ -91,7 +91,10 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"tempdir"}),
     EngineParameter({"graph"}),
     EngineParameter({"max-memory"}),
-    EngineParameter({"cores"})
+    EngineParameter({"cores"}),
+    EngineParameter({"use-singularity"}),
+    EngineParameter({"use-conda"}),
+    EngineParameter({"profile"})
 ])
 
 
