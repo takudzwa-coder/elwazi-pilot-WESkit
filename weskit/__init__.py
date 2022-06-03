@@ -17,6 +17,7 @@ from typing import Optional
 import yaml
 from celery import Celery
 from flask import Flask
+from flask_cors import CORS
 from pymongo import MongoClient
 
 from weskit.api.RunRequestValidator import RunRequestValidator
@@ -170,6 +171,10 @@ def create_app(celery: Celery,
 
     from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
+
+    # Enable CORS headers for all origins, if enabled
+    if config["cors"]["enabled"]:
+        CORS(app)
 
     OIDCFactory.setup(app, config)
 

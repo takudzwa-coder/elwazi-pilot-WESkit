@@ -154,6 +154,9 @@ static_service_info:
         tag1: value1
         tag2: value2
 
+cors:
+  enabled: true
+
 login:
   enabled: true
   jwt:
