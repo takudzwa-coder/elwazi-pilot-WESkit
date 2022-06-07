@@ -8,7 +8,7 @@
 import datetime
 from unittest import TestCase
 
-from weskit import create_validator
+from weskit.utils import create_validator
 
 
 def test_validate_config(test_validation, test_config):

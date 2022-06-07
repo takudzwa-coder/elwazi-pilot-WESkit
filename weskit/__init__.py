@@ -11,44 +11,23 @@
 import logging
 import os
 import sys
-from logging.config import dictConfig
-from typing import Optional
-
 import yaml
 from celery import Celery
-from flask import Flask
 from flask_cors import CORS
-from pymongo import MongoClient
+from logging.config import dictConfig
 
 from weskit.api.RunRequestValidator import RunRequestValidator
+from weskit.api.wes import bp as wes_bp
 from weskit.classes.Database import Database
 from weskit.classes.ErrorCodes import ErrorCodes
 from weskit.classes.Manager import Manager
 from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.classes.WESApp import WESApp
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory
-from weskit.oidc.Login import Login
 from weskit.utils import create_validator
 
 logger = logging.getLogger(__name__)
-
-
-class WESApp(Flask):
-    """We make a subclass of Flask that takes the important app-global
-    (~thread local) resources.
-    Compare https://stackoverflow.com/a/21845744/8784544"""
-
-    def __init__(self,
-                 manager: Manager,
-                 service_info: ServiceInfo,
-                 request_validators: dict,
-                 oidc_login: Optional[Login] = None,
-                 *args, **kwargs):
-        super().__init__(__name__, *args, **kwargs)
-        setattr(self, 'manager', manager)
-        setattr(self, 'service_info', service_info)
-        setattr(self, 'request_validators', request_validators)
-        setattr(self, 'oidc_login', oidc_login)
 
 
 def create_celery(**kwargs):
@@ -74,17 +53,18 @@ def read_swagger():
     return swagger
 
 
-def create_database(database_url=None):
+def create_database(database_url=None) -> Database:
+    logger.info(f"Process ID (create_database) = {os.getpid()}")
+
     if database_url is None:
         database_url = os.getenv("WESKIT_DATABASE_URL")
     logger.info("Connecting to %s" % database_url)
-    # The connect=False postpones the creation of a connection object until the uwsgi server
-    # has forked.
-    return Database(MongoClient(database_url, connect=False), "WES")
+    return Database(database_url, "WES")
 
 
 def create_app(celery: Celery,
                database: Database) -> WESApp:
+    logger.info(f"Process ID (create_app) = {os.getpid()}")
 
     if os.getenv("WESKIT_CONFIG") is not None:
         config_file = os.getenv("WESKIT_CONFIG", "")
@@ -168,8 +148,6 @@ def create_app(celery: Celery,
 
     app.log_config = log_config
     app.logger = logger
-
-    from weskit.api.wes import bp as wes_bp
     app.register_blueprint(wes_bp)
 
     # Enable CORS headers for all origins, if enabled

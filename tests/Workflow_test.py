@@ -12,7 +12,7 @@ import os
 
 import pytest
 
-from weskit.ClientError import ClientError
+from weskit.exceptions import ClientError
 from weskit.utils import to_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
@@ -27,6 +27,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
+    manager.database.insert_run(run)
     run = manager.prepare_execution(run, files=[])
     assert run.status == RunStatus.INITIALIZING
 
@@ -36,6 +37,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
     try:
+        manager.database.insert_run(run)
         manager.prepare_execution(run, files=[])
     except ClientError as e:
         regex = re.compile("Derived workflow path is not accessible:")
@@ -49,6 +51,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
         run = get_mock_run(workflow_url=wf_url,
                            workflow_type="SMK",
                            workflow_type_version="6.10.0")
+        manager.database.insert_run(run)
         run = manager.prepare_execution(run, files)
     assert run.status == RunStatus.INITIALIZING
     assert os.path.isfile(os.path.join(manager.data_dir, run.dir, wf_url))
@@ -72,6 +75,8 @@ def test_execute_snakemake(manager,
                        workflow_engine_parameters={})
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
+    manager.database.insert_run(run)
+
     start_time = time.time()
     success = False
     while not success:
@@ -106,7 +111,9 @@ def test_execute_nextflow(manager,
                        workflow_type_version="21.04.0",
                        workflow_engine_parameters={"trace": "False"})
     run = manager.prepare_execution(run, files=[])
-    manager.execute(run)
+    run = manager.execute(run)
+    manager.database.insert_run(run)
+
     start_time = time.time()
     success = False
     while not success:
@@ -139,22 +146,22 @@ def test_execute_nextflow(manager,
     ]
 
 
-# # Celery's revoke function applied to the Snakemake job results in a change
-# # of the main process's working directory, if a celery_session_worker is
-# # used. Therefore the test should use a celery_worker. THIS does NOT solve
-# # the general problem though, if in production workers are reused for new
-# # tasks!
-# @pytest.mark.integration
-# def test_cancel_workflow(manager, celery_worker):
-#     run = get_mock_run(workflow_url="tests/wf2/Snakefile",
-#                        workflow_type="SMK")
-#     run = manager.prepare_execution(run, files=[])
-#     run = manager.execute(run)
-#     # Before we cancel, we need to wait that the execution actually started.
-#     # Cancellation of the preparation is not implemented.
-#     time.sleep(5)
-#     manager.cancel(run)
-#     assert run.run_status == RunStatus.CANCELED
+# Celery's revoke function applied to the Snakemake job results in a change
+# of the main process's working directory, if a celery_session_worker is
+# used. Therefore, the test should use a celery_worker. THIS does NOT solve
+# the general problem though, if in production workers are reused for new
+# tasks!
+@pytest.mark.skip
+def test_cancel_workflow(manager, celery_worker):
+    run = get_mock_run(workflow_url="tests/wf2/Snakefile",
+                       workflow_type="SMK")
+    run = manager.prepare_execution(run, files=[])
+    run = manager.execute(run)
+    # Before we cancel, we need to wait that the execution actually started.
+    # Cancellation of the preparation is not implemented.
+    time.sleep(5)
+    manager.cancel(run)
+    assert run.run_status == RunStatus.CANCELED
 
 
 @pytest.mark.integration
@@ -166,7 +173,8 @@ def test_update_all_runs(manager,
     manager.database.insert_run(run)
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
-    manager.database.update_run(run)
+    run = manager.database.update_run(run)
+
     start_time = time.time()
     success = False
     while not success:
@@ -176,11 +184,11 @@ def test_update_all_runs(manager,
         if status != RunStatus.COMPLETE:
             assert_status_is_not_failed(status)
             time.sleep(1)
-            run = manager.update_state(run)
+            run = manager.update_run(run)
         else:
             success = True
 
-    manager.update_runs(query={})
-    db_run = manager.database.get_run(run_id=run.id)
+    manager.update_runs()
+    db_run = manager.get_run(run.id)
     assert db_run is not None
     assert db_run.status == RunStatus.COMPLETE

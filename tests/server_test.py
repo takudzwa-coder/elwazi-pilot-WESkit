@@ -41,9 +41,8 @@ def test_run(test_client,
     run = manager.create_and_insert_run(request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run = manager.prepare_execution(run)
-    manager.database.update_run(run)
     run = manager.execute(run)
-    manager.database.update_run(run)
+    run = manager.database.update_run(run)
     success = False
     start_time = time.time()
     while not success:
@@ -67,12 +66,38 @@ def incomplete_run(test_client,
     manager = current_app.manager
     request = get_workflow_data(
         snakefile="file:tests/wf1/Snakefile",
-        config="tests/wf1/config.yaml")
+        config="tests/wf2/config.yaml")
     run = manager.create_and_insert_run(request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
+    run.request["workflow_params"]["duration"] = 1
     run = manager.prepare_execution(run)
     manager.database.update_run(run)
     return run
+
+
+@pytest.fixture(scope="function")
+def long_run(test_client,
+             celery_session_worker):
+    manager = current_app.manager
+    request = get_workflow_data(
+        snakefile="file:tests/wf2/Snakefile",
+        config="tests/wf2/config.yaml")
+    run = manager.create_and_insert_run(request=request,
+                                        user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
+    run.request["workflow_params"]["duration"] = 10
+    run = manager.prepare_execution(run)
+    run = manager.execute(run)
+    run = manager.database.update_run(run)
+    start_time = time.time()
+    status = False
+    while status != RunStatus.RUNNING:
+        assert_within_timeout(start_time)
+        status = run.status
+        assert_status_is_not_failed(status)
+        print("Waiting ... (status=%s)" % status.name)
+        time.sleep(1)
+        run = current_app.manager.update_run(run)
+    yield run
 
 
 @pytest.fixture(name="OIDC_credentials", scope="session")
@@ -362,3 +387,22 @@ class TestWithHeaderToken:
         assert response.status_code == 200, response.json
         assert isinstance(response.json, dict)
         assert "content" in response.json
+
+
+class TestManagerRaiseError:
+
+    @pytest.mark.integration
+    def test_update_run_fails_with_missing_celery_id(self, long_run):
+        long_run.celery_task_id = None
+        with pytest.raises(RuntimeError):
+            current_app.manager.update_run(long_run)
+
+    @pytest.mark.integration
+    def test_fails_reexecute_active_run(self, long_run):
+        with pytest.raises(RuntimeError):
+            current_app.manager.execute(long_run)
+
+    @pytest.mark.integration
+    def test_fails_prepare_execution(self, long_run):
+        with pytest.raises(RuntimeError):
+            current_app.manager.prepare_execution(long_run)

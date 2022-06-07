@@ -155,7 +155,7 @@ static_service_info:
         tag2: value2
 
 cors:
-  enabled: true
+  enabled: false
 
 login:
   enabled: true

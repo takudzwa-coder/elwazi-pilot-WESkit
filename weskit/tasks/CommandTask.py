@@ -143,6 +143,8 @@ def run_command(command: List[str],
                                    command_context.stderr_file)
         result = executor.wait_for(process)
 
+    # TODO Catch exceptions and log them. These are always infrastructure problems, and should not
+    #      be exposed to the user in the execution directory, but only the in the worker logs.
     finally:
         # The relative directory context is used for reporting in the logs.
         relative_context = PathContext(Path("."),
@@ -157,11 +159,11 @@ def run_command(command: List[str],
                         collect_relative_paths_from(worker_context.workdir)))                    # type: ignore  # noqa
         exit_code: Optional[int]
         if result is None:
-            # result may be None, if the execution failed because the command does not exist
+            # result may be None, if the execution failed because the command does not exist.
             exit_code = -1
         else:
             # result.status should not be None, unless the process did not finish, which would be
-            # a bug at this place.
+            # a bug at this place. This is guaranteed by tests (Executor_test.py).
             exit_code = result.status.code
         execution_log = {
             "start_time": format_timestamp(start_time),

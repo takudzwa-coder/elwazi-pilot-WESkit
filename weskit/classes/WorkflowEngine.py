@@ -11,7 +11,7 @@ from os import PathLike
 from pathlib import Path
 from typing import List, Dict, Optional
 
-from weskit.ClientError import ClientError
+from weskit.exceptions import ClientError
 from weskit.memory_units import Memory, Unit
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.WorkflowEngineParameters import \

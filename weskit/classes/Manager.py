@@ -6,43 +6,32 @@
 #
 #  Authors: The WESkit Team
 
+import json
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Dict, Any
+from typing import Optional, List
 from urllib.parse import urlparse
 
 import yaml
-import json
 from celery import Celery, Task
 from celery.app.control import Control
+from celery.result import AsyncResult
+from pymongo.errors import PyMongoError
 from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
-from weskit.ClientError import ClientError
 from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
+from weskit.exceptions import ClientError, ConcurrentModificationError
 from weskit.tasks.CommandTask import run_command
 from weskit.utils import get_current_timestamp, return_pre_signed_url
-
-celery_to_wes_state = {
-    "PENDING": RunStatus.QUEUED,
-    "STARTED": RunStatus.RUNNING,
-    "SUCCESS": RunStatus.COMPLETE,
-    "FAILURE": RunStatus.EXECUTOR_ERROR,
-    "RETRY": RunStatus.QUEUED,
-    "REVOKED": RunStatus.CANCELED
-}
-
-running_states = [
-    RunStatus.QUEUED,
-    RunStatus.RUNNING
-]
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +65,10 @@ class Manager:
         See https://docs.celeryproject.org/en/latest/userguide/workers.html
         See https://docs.celeryproject.org/en/stable/userguide/workers.html#revoke-revoking-tasks
         TODO Consider persistent revokes.
+        TODO State is not written back to DB
         """
-        if run.status in running_states:
+        raise NotImplementedError()
+        if run.status.is_running:
             run.status = RunStatus.CANCELING
             # This is a quickfix for executing the tests.
             # This might be a bad solution for multithreaded use-cases,
@@ -89,37 +80,30 @@ class Manager:
                        signal='SIGKILL')
             os.chdir(cwd)
         elif run.status is RunStatus.INITIALIZING:
-            run.status = RunStatus.SYSTEM_ERROR
+            # We cannot yet cancel a run in the initializing state. Ignore the request!
+            # TODO Try updating the state until it is RUNNING. Then cancel the RUNNING run.
+            pass
         return run
 
-    def update_state(self, run: Run) -> Run:
-        """
-        Check whether task is running, initializing or canceling and update state.
-        """
-        if run.status in running_states or \
-           run.status == RunStatus.INITIALIZING or \
-           run.status == RunStatus.CANCELING:
-            if run.celery_task_id is not None:
-                running_task = self._run_task.\
-                    AsyncResult(run.celery_task_id)
-                logger.debug("Run %s with state %s got Celery ID %s in state '%s'" % (
-                    run.id, run.status, run.celery_task_id, running_task.state))
-                if ((run.status != RunStatus.CANCELING) or
-                    (run.status == RunStatus.CANCELING and
-                     running_task.state == "REVOKED")):
-                    run.status = celery_to_wes_state[running_task.state]
-            elif (run.status in running_states or
-                  run.status == RunStatus.CANCELING):
-                run.status = RunStatus.SYSTEM_ERROR
-        return run
+    def _get_run_task(self, run: Run) -> Optional[AsyncResult]:
+        celery_task = self._run_task.AsyncResult(run.celery_task_id)
+        logger.debug("Run %s with state %s got Celery ID %s in Celery state '%s'" % (
+            run.id, run.status, run.celery_task_id, celery_task.state))
+        return celery_task
 
-    def update_run_results(self, run: Run) -> Run:
+    def _update_run_results(self, run: Run, celery_task) -> Run:
         """
-        For a run in COMPLETED state, update the Run with information from the Celery task.
+        For the semantics of Celery's built-in states, see
+
+            https://docs.celeryq.dev/en/stable/userguide/tasks.html#built-in-states
+
+        For a run with SUCCESSFUL Celery state, update the Run with information from the
+        Celery task.
         """
-        if run.status == RunStatus.COMPLETE:   # Celery job succeeded
-            running_task = self._run_task.AsyncResult(run.celery_task_id)
-            result = running_task.get()
+        if celery_task.status == "SUCCESS":
+            # The command itself may have failed, though, because run_command catches execution
+            # errors of the command and lets the Celery job succeed.
+            result = celery_task.get()
             if "WESKIT_S3_ENDPOINT" in os.environ:
                 run.outputs["S3"] = [return_pre_signed_url(outfile=out, workdir=result["workdir"])
                                      for out in result["output_files"]]
@@ -127,38 +111,81 @@ class Manager:
             run.log = result
 
             run_dir_abs = os.path.join(self.data_dir, result["workdir"])
-            if run.exit_code != -1:            # Command (in Celery job) was executed (maybe error)
+            if run.exit_code != -1:     # Command (in Celery job) was executed (maybe error 0)
+                # WARNING: Updates of > 4 mb can be slow with MongoDB.
                 with open(os.path.join(run_dir_abs, result["stdout_file"]), "r") as f:
                     run.stdout = f.readlines()
                 with open(os.path.join(run_dir_abs, result["stderr_file"]), "r") as f:
                     run.stderr = f.readlines()
+            else:
+                # run_command produces exit_code == -1 if there are technical errors during the
+                # command execution (other than workflow engine errors; e.g. SSH connection).
+                raise self._record_error(run,
+                                         RuntimeError("Error during processing of '%s'" % run.id),
+                                         RunStatus.SYSTEM_ERROR)
+
+        run.status = RunStatus.from_celery_and_exit(celery_task.state, run.exit_code)
         return run
 
-    def update_run(self, run) -> Run:
+    def _record_error(self, run: Run,
+                      exception: Exception,
+                      new_state: RunStatus) -> Exception:
+        """
+        Take an exception, log it, set run.status to new_state, and try to store the
+        updated Run in the database (e.g. will if this is e.g. DB connection exception).
+
+        Return the exception to simplify usage as `raise self._record_error(...)`.
+        """
+        logger.error("%s during processing of run '%s'" % (new_state.name, run.id))
+        run.status = new_state
+        if not isinstance(exception, PyMongoError) and \
+                not isinstance(exception, ConcurrentModificationError):
+            # Assumption: Recovery has been tried before (e.g. in Database). A PyMongoError here
+            # is non-recoverable. Thus, we should not try to write to the DB for PyMongoErrors.
+            self.database.update_run(run, resolution_fun=Run.merge)
+        return exception
+
+    def update_run(self,
+                   run: Run,
+                   max_tries: int = 1) -> Run:
+        """
+        Given an old Run and a new Run (that may or may not differ from the old Run version),
+        retrieve the status information from Celery and update the run. Then, if there is a change
+        compared to the old Run, update the run in the database.
+        """
         try:
-            updated_run = self.update_run_results(self.update_state(run))
+            if run.celery_task_id is not None:
+                celery_task = self._get_run_task(run)
+                run = self._update_run_results(run, celery_task)
+
+            elif run.status.is_running or run.status == RunStatus.CANCELING:
+                raise self._record_error(
+                    run,
+                    RuntimeError(f"No Celery task ID for run {run.id} in status {run.status}"),
+                    RunStatus.SYSTEM_ERROR)
+
         except FileNotFoundError as e:
             # This may happen, if the open()s fail, e.g. because the run directory was manually
-            # deleted.
-            logger.error("SYSTEM_ERROR during run %s status update!" % run.id)
-            logger.error(e, exc_info=True)
-            updated_run = run
-            updated_run.status = RunStatus.SYSTEM_ERROR
-        self.database.update_run(updated_run)
-        return updated_run
+            # deleted or is unavailable due to network problems.
+            raise self._record_error(run, e, RunStatus.SYSTEM_ERROR)
+
+        return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
-                    query: Optional[dict] = None) -> List[Run]:
-        if query is None:
-            # Generally updating finished runs does not make much sense and creates problems with
-            # deleted runs. On the long run, with increasing numbers of runs there will also be
-            # a performance problem when updating accumulating finished runs.
-            query = {"run_status": {"$not": {"$in": [RunStatus.COMPLETE.name,
-                                                     RunStatus.SYSTEM_ERROR.name,
-                                                     RunStatus.EXECUTOR_ERROR.name,
-                                                     RunStatus.CANCELED.name]}}}
+                    run_id: Optional[str] = None,
+                    max_tries: int = 1) -> List[Run]:
+        # Generally updating finished runs does not make much sense and creates problems with
+        # deleted runs. On the long run, with increasing numbers of runs there will also be
+        # a performance problem when updating accumulated finished runs.
+        query: dict
+        if run_id is None:
+            query = {"run_status": {"$not": {"$in": [state.name
+                                                     for state in RunStatus.TERMINAL_STATES()]}}}
+        else:
+            query = {"run_id": run_id}
+
         runs = self.database.get_runs(query)
-        return list(map(self.update_run, runs))
+        return list(map(lambda run: self.update_run(run, max_tries), runs))
 
     def create_and_insert_run(self, request, user_id)\
             -> Optional[Run]:
@@ -179,20 +206,15 @@ class Manager:
                         "request_time": get_current_timestamp(),
                         "request": request,
                         "user_id": user_id})
-        if self.database.insert_run(run):
-            return run
-        else:
-            return None
+        self.database.insert_run(run)
+        return run
 
-    def get_run(self, run_id, update) -> Optional[Run]:
-        if update:
-            runs = self.update_runs(query={"run_id": run_id})
-            if len(runs) == 0:
-                return None
-            else:
-                return runs[0]
-        else:
-            return self.database.get_run(run_id)
+    def get_run(self, run_id: str) -> Optional[Run]:
+        """
+        Request the current version of the run from the database. No update of the state
+        from Celery is done. Return None, if no Run with the run_id can be found in the DB.
+        """
+        return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
     def _process_workflow_attachment(self, run,
@@ -284,7 +306,8 @@ class Manager:
             files = ImmutableMultiDict()
 
         if run.status != RunStatus.INITIALIZING:
-            raise RuntimeError("run.status not INITIALIZING but %s" % run.status)
+            ex = RuntimeError("run.status not INITIALIZING but %s" % run.status)
+            raise self._record_error(run, ex, RunStatus.SYSTEM_ERROR)
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -292,54 +315,69 @@ class Manager:
         else:
             run.dir = os.path.join(run.id[0:4], run.id)
 
-        run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
-        if not os.path.exists(run_dir_abs):
-            os.makedirs(run_dir_abs, exist_ok=True)
+        try:
+            run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
+            if not os.path.exists(run_dir_abs):
+                os.makedirs(run_dir_abs, exist_ok=True)
 
-        with open(run_dir_abs + "/config.yaml", "w") as ff:
-            yaml.dump(run.request["workflow_params"], ff)
+            with open(run_dir_abs + "/config.yaml", "w") as ff:
+                yaml.dump(run.request["workflow_params"], ff)
 
-        run.workflow_path = self._prepare_workflow_path(
-            run.dir,
-            run.request["workflow_url"],
-            self._process_workflow_attachment(run, files))
+            run.workflow_path = self._prepare_workflow_path(
+                run.dir,
+                run.request["workflow_url"],
+                self._process_workflow_attachment(run, files))
+        except (ClientError, OSError) as e:
+            # Any error during preparation, also if caused by the client should result in the
+            # run to be in SYSTEM_ERROR state.
+            raise self._record_error(run, e, RunStatus.SYSTEM_ERROR)
 
         return run
 
     def execute(self, run: Run) -> Run:
         if run.status != RunStatus.INITIALIZING:
-            raise RuntimeError("run.status not INITIALIZING but %s" % run.status)
+            ex = RuntimeError("run.status not INITIALIZING but %s" % run.status)
+            self._record_error(run, ex, RunStatus.SYSTEM_ERROR)
+            raise ex
 
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             # This should have been found in the validation.
-            raise RuntimeError("Workflow type '%s' is not known. Know %s" %
-                               (run.request["workflow_type"],
-                                ", ".join(self.workflow_engines.keys())))
+            raise self._record_error(
+                run,
+                RuntimeError("Workflow type '%s' is not known. Know %s" %
+                             (run.request["workflow_type"],
+                              ", ".join(self.workflow_engines.keys()))),
+                RunStatus.SYSTEM_ERROR)
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
             # This should have been found in the validation.
-            raise RuntimeError("Workflow type version '%s' is not known. Know %s" %
-                               (run.request["workflow_type_version"],
-                                ", ".join(self.workflow_engines[workflow_type].keys())))
+            raise self._record_error(
+                run,
+                RuntimeError("Workflow type version '%s' is not known. Know %s" %
+                             (run.request["workflow_type_version"],
+                              ", ".join(self.workflow_engines[workflow_type].keys()))),
+                RunStatus.SYSTEM_ERROR)
 
         if run.workflow_path is None:
-            raise RuntimeError(f"Workflow path of run is None: {run.id}")
+            raise self._record_error(run,
+                                     RuntimeError(f"Workflow path of run is None: {run.id}"),
+                                     RunStatus.SYSTEM_ERROR)
 
         # Execute run
-        run.start_time = get_current_timestamp()
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
             command(workflow_path=run.workflow_path,
-                    workdir=Path(self.data_dir, run.dir),
+                    workdir=Path(self.data_dir, str(run.dir)),
                     config_files=[Path("config.yaml")],
                     engine_params=run.request.get("workflow_engine_parameters", {}))
         run.log["cmd"] = command.command
         run.log["env"] = command.environment
+        run.start_time = get_current_timestamp()
         task = self._run_task.apply_async(
             args=[],
             kwargs={

@@ -6,8 +6,7 @@
 #
 #  Authors: The WESkit Team
 
-from weskit import create_database, create_celery
-from weskit import create_app
+from weskit import create_database, create_celery, create_app
 
 
 def main():

@@ -13,9 +13,8 @@ from flask import current_app, jsonify, request
 from flask_jwt_extended import current_user
 from rfc3339 import rfc3339
 
-from weskit.classes.RunStatus import RunStatus
-from weskit.ClientError import ClientError
 from weskit.api.Helper import Helper
+from weskit.exceptions import ClientError
 from weskit.oidc.Decorators import login_required
 
 bp = Blueprint("wes", __name__)
@@ -31,8 +30,8 @@ def GetRunLog(run_id):
     try:
         ctx = Helper(current_app, current_user)
         ctx.assert_run_id_syntax(run_id)
-        run = current_app.manager.get_run(
-            run_id=run_id, update=True)
+        manager = current_app.manager
+        run = manager.update_run(manager.get_run(run_id))
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
@@ -64,7 +63,7 @@ def CancelRun(run_id):
     try:
         ctx = Helper(current_app, current_user)
         ctx.assert_run_id_syntax(run_id)
-        run = current_app.manager.database.get_run(run_id)
+        run = current_app.manager.get_run(run_id)
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
@@ -79,7 +78,6 @@ def CancelRun(run_id):
         return {"msg": e.message, "status_code": 500}, 500
 
     except Exception as e:
-        # Don't track SYSTEM_ERROR. The problem may be temporary.
         logger.error(e, exc_info=True)
         raise e
 
@@ -91,7 +89,8 @@ def GetRunStatus(run_id):
     try:
         ctx = Helper(current_app, current_user)
         ctx.assert_run_id_syntax(run_id)
-        run = current_app.manager.get_run(run_id=run_id, update=True)
+        manager = current_app.manager
+        run = manager.update_run(manager.get_run(run_id))
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
@@ -107,7 +106,6 @@ def GetRunStatus(run_id):
         return {"msg": e.message, "status_code": 500}, 500
 
     except Exception as e:
-        # Don't track SYSTEM_ERROR on the run. The problem may be temporary.
         logger.error(e, exc_info=True)
         raise e
 
@@ -174,7 +172,6 @@ def ListRuns(*args, **kwargs):
         response = current_app.manager.database.list_run_ids_and_states(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
-        # Don't track SYSTEM_ERROR on the runs. The problem may be temporary.
         logger.error(e, exc_info=True)
         raise e
 
@@ -204,38 +201,24 @@ def RunWorkflow(*args, **kwargs):
             run = current_app.manager.\
                 create_and_insert_run(request=validation_result,
                                       user_id=ctx.user.id)
+            logger.info("Created run %s" % run.id)
 
-    except ClientError as e:
-        logger.warning(e, exc_info=True)
-        return {"msg": e.message, "status_code": 500}, 500
-    except Exception as e:
-        # There is no run object yet, so we cannot track SYSTEM_ERROR in the database.
-        logger.error(e, exc_info=True)
-        raise e
-
-    # Now a run object exists. If there happens an error in the following code, we need to update
-    # the status of the run in the database.
-    try:
-        logger.info("Prepare execution %s" % run.id)
+        logger.info("Preparing execution %s" % run.id)
         run = current_app.manager.\
             prepare_execution(run, files=request.files)
-        current_app.manager.database.update_run(run)
+        run = current_app.manager.database.update_run(run)
 
-        logger.info("Execute Workflow %s" % run.id)
+        logger.info("Executing Workflow %s" % run.id)
         run = current_app.manager.execute(run)
-        current_app.manager.database.update_run(run)
+        run = current_app.manager.database.update_run(run)
 
         return {"run_id": run.id}, 200
 
     except ClientError as e:
         logger.warning(e, exc_info=True)
-        run.status = RunStatus.EXECUTOR_ERROR
-        current_app.manager.database.update_run(run)
         return {"msg": e.message, "status_code": 500}, 500
     except Exception as e:
         logger.error(e, exc_info=True)
-        run.status = RunStatus.SYSTEM_ERROR
-        current_app.manager.database.update_run(run)
         raise e
 
 
@@ -250,7 +233,6 @@ def ListRunsExtended(*args, **kwargs):
             list_run_ids_and_states_and_times(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
-        # Don't track SYSTEM_ERROR on the run. The problem may be temporary.
         logger.error(e, exc_info=True)
         raise e
 
@@ -268,7 +250,6 @@ def GetRunStderr(run_id):
         ctx.assert_run_id_syntax(run_id)
         return ctx.get_log_response(run_id, "stderr")
     except Exception as e:
-        # Don't track SYSTEM_ERROR on the run. The problem may be temporary.
         logger.error(e, exc_info=True)
         raise e
 
@@ -286,6 +267,5 @@ def GetRunStdout(run_id):
         ctx.assert_run_id_syntax(run_id)
         return ctx.get_log_response(run_id, "stdout")
     except Exception as e:
-        # Don't track SYSTEM_ERROR on the run. The problem may be temporary.
         logger.error(e, exc_info=True)
         raise e
