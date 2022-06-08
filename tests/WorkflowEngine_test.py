@@ -10,15 +10,11 @@ from pathlib import Path
 
 import pytest
 
-<<<<<<< HEAD
-from weskit.exceptions import ClientError
-=======
->>>>>>> 3e986b6 (Resource setting for workflow engine. Celery de/serialization. Bugfix value->default_value in ServiceInfo.)
 from weskit import WorkflowEngineFactory
-from weskit.ClientError import ClientError
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow
 from weskit.classes.WorkflowEngineParameters import \
     EngineParameter, ActualEngineParameter, ParameterIndex
+from weskit.exceptions import ClientError
 from weskit.memory_units import Memory, Unit
 
 
