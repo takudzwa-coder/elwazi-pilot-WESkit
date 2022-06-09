@@ -229,10 +229,9 @@ class Database:
             .delete_one({"run_id": run.id}) \
             .acknowledged
 
-    def list_run_ids_and_states_and_times(self, user_id=Optional[str]) -> list:
-        filter = None
-        if user_id is not None:
-            filter = {"user_id": user_id}
+    def list_run_ids_and_states_and_times(self, user_id: str) -> list:
+        if user_id is None:
+            raise ValueError("Can only list runs for specific user.")
         return list(self._runs.find(
             projection={"_id": False,
                         "run_id": True,
@@ -242,4 +241,4 @@ class Database:
                         "user_id": True,
                         "request": True
                         },
-            filter=filter))
+            filter={"user_id": user_id}))
