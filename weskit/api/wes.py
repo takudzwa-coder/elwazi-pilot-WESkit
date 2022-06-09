@@ -169,8 +169,14 @@ def ListRuns(*args, **kwargs):
     try:
         ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
-        response = current_app.manager.database.list_run_ids_and_states(ctx.user.id)
-        return jsonify(response), 200
+        runs = [{
+            "run_id": x["run_id"],
+            "state": x["run_status"]
+        } for x in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
+        return jsonify({
+            "runs": runs,
+            "next_page_token": ""
+        }), 200
     except Exception as e:
         logger.error(e, exc_info=True)
         raise e

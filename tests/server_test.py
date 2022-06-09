@@ -275,7 +275,13 @@ class TestWithHeaderToken:
                                     OIDC_credentials):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
-        assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
+        assert response.json["next_page_token"] == ""   # For now, everything on one page.
+        runs = [x for x in response.json["runs"] if x['run_id'] == test_run.id]
+        assert len(runs) == 1
+        assert runs[0] == {
+            "run_id": test_run.id,
+            "state": "COMPLETE"
+        }
 
     @pytest.mark.integration
     def test_list_runs_extended_with_header(self,
