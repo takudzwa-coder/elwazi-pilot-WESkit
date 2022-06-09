@@ -21,7 +21,7 @@ from trs_cli.client import TRSClient
 from trs_cli.errors import InvalidResponseError
 from trs_cli.models import Error
 
-from weskit.ClientError import ClientError
+from weskit.exceptions import ClientError
 
 logger = logging.Logger(__name__)
 

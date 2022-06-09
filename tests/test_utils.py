@@ -59,7 +59,6 @@ def assert_within_timeout(start_time, timeout=30):
 
 def is_run_failed(status: RunStatus) -> bool:
     return status in [
-        RunStatus.UNKNOWN,
         RunStatus.EXECUTOR_ERROR,
         RunStatus.SYSTEM_ERROR,
         RunStatus.CANCELED,

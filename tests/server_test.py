@@ -41,9 +41,8 @@ def test_run(test_client,
     run = manager.create_and_insert_run(request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run = manager.prepare_execution(run)
-    manager.database.update_run(run)
     run = manager.execute(run)
-    manager.database.update_run(run)
+    run = manager.database.update_run(run)
     success = False
     start_time = time.time()
     while not success:

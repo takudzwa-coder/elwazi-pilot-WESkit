@@ -7,7 +7,7 @@ import requests
 from trs_cli import TRSClient
 from trs_cli.models import ToolFile, Error
 
-from weskit.ClientError import ClientError
+from weskit.exceptions import ClientError
 from weskit.classes.TrsWorkflowInstaller import \
     TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 

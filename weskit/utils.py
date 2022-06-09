@@ -6,13 +6,13 @@
 #
 #  Authors: The WESkit Team
 
-import boto3
 import os
 import traceback
 from datetime import datetime
 from typing import Dict, Union, List
 from urllib.parse import urlparse
 
+import boto3
 from cerberus import Validator
 
 
@@ -83,4 +83,4 @@ def return_pre_signed_url(workdir, outfile):
             "Key": "{}/{}".format(workdir.split("/")[1], outfile)
         }
     )
-    return(url)
+    return url

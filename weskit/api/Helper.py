@@ -9,13 +9,12 @@
 import logging
 from typing import Optional
 
-from weskit.oidc.User import User
-from weskit.ClientError import ClientError
-from weskit import WESApp
 from weskit.api.RunRequestValidator import RunRequestValidator
-from weskit.classes.RunStatus import RunStatus
 from weskit.classes.Run import Run
-
+from weskit.classes.RunStatus import RunStatus
+from weskit.classes.WESApp import WESApp
+from weskit.exceptions import ClientError
+from weskit.oidc.User import User
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +57,8 @@ class Helper:
         """
         Safe access to "stderr" or "stdout" (= log_name) data.
         """
-        run = self.app.manager.get_run(
-            run_id=run_id, update=True)
+        manager = self.app.manager
+        run = manager.update_run(manager.get_run(run_id))
         access_denied_response = self.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:

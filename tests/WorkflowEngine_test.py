@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from weskit.ClientError import ClientError
+from weskit.exceptions import ClientError
 from weskit import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow
 from weskit.classes.WorkflowEngineParameters import \
