@@ -20,11 +20,12 @@ from weskit.classes.RunStatus import RunStatus
 def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
                         workflow_type="SMK",
-                        workflow_type_version="6.10.0")
+                        workflow_type_version="6.10.0",
+                        user_id="test_id")
     test_database.insert_run(run1)
     run2 = test_database.get_run(run1.id)
     assert run1 == run2
-    run_id_and_states = test_database.list_run_ids_and_states()
+    run_id_and_states = test_database.list_run_ids_and_states("test_id")
     assert len(run_id_and_states) == 1
 
 
