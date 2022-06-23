@@ -6,8 +6,9 @@ rule step1:
     output:
         file="hello_world.txt"
     params:
-        text=config["text"]
+        text=config["text"],
+        duration=config["duration"]
     shell:
         """
-        sleep 100; echo {params.text} > {output.file}
+        sleep {params.duration}; echo {params.text} > {output.file}
         """
