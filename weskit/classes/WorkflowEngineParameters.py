@@ -7,7 +7,7 @@
 #  Authors: The WESkit Team
 from __future__ import annotations
 
-from typing import List, Optional, Dict, FrozenSet, Any, Set
+from typing import Optional, Dict, FrozenSet, Any, Set, Union, TypeVar, Generic, List
 
 
 class EngineParameter:
@@ -17,7 +17,7 @@ class EngineParameter:
     """
 
     def __init__(self,
-                 names: Set[str]):
+                 names: Union[Set[str], FrozenSet[str]]):
         self._names = frozenset(names)
 
     @property
@@ -36,14 +36,19 @@ class EngineParameter:
         return hash(self.names)
 
 
-class ParameterIndex:
+# We make ParameterIndex a generic such that it can be ParameterIndex[EngineParameter] or
+# ParameterIndex[ActualEngineParameter]. The contents of the latter support .get().value.
+P = TypeVar("P", bound="EngineParameter")
+
+
+class ParameterIndex(Generic[P]):
     """
     We use a central index of allowed engine parameters to retrieve parameters via any of their
     aliases and ensure that no two parameters share aliases.
     """
 
-    def __init__(self, parameters: List[EngineParameter]):
-        checked_params: Dict[str, EngineParameter] = {}
+    def __init__(self, parameters: List[P]):
+        checked_params: Dict[str, P] = {}
         for param in parameters:
             for name in param.names:
                 # It's fine if it is the same name and same object, but not the same name but
@@ -56,17 +61,17 @@ class ParameterIndex:
         self._parameters = checked_params
 
     @property
-    def all(self) -> List[EngineParameter]:
-        results: Dict[EngineParameter, Any] = {}
+    def all(self) -> List[P]:
+        results: Dict[P, Any] = {}
         for p in self._parameters.values():
             results[p] = True
         return list(results.keys())
 
-    def get(self, name: str, default: Optional[EngineParameter] = None) ->\
-            Optional[EngineParameter]:
+    def get(self, name: str, default: Optional[P] = None) ->\
+            Optional[P]:
         return self._parameters.get(name, default)
 
-    def __getitem__(self, name: str) -> EngineParameter:
+    def __getitem__(self, name: str) -> P:
         return self._parameters[name]
 
     def subset(self, names: FrozenSet[str]) -> ParameterIndex:
@@ -81,8 +86,8 @@ class ParameterIndex:
         ])
 
 
-# (Yet,) Static configuration of allowed parameters. We have this global "database" to promote.
-# the usage of similar parameter names for all workflows. We may for instance also add ontology
+# (Yet,) Static configuration of allowed parameters. We have this global "database" to promote
+# the usage of similar parameter names for all workflows. We may, for instance, also add ontology
 # terms and term IDs.
 KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"trace"}),
@@ -90,17 +95,22 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"report"}),
     EngineParameter({"tempdir"}),
     EngineParameter({"graph"}),
+    EngineParameter({"job-name"}),
     EngineParameter({"max-memory"}),
     EngineParameter({"cores"}),
+    EngineParameter({"accounting-name"}),
+    EngineParameter({"group"}),
+    EngineParameter({"queue"}),
+    EngineParameter({"max-runtime"}),
     EngineParameter({"use-singularity"}),
     EngineParameter({"use-conda"}),
     EngineParameter({"profile"})
 ])
 
 
-class ActualEngineParameter:
+class ActualEngineParameter(EngineParameter):
     """
-    A WorkflowEngineParam is an AllowedEngineParameter with value.
+    A WorkflowEngineParam is an EngineParameter with value.
 
     Note that the value is basically untyped, i.e. Optional[str]. The types are only known at
     run-time, which would require lots of `cast` etc. to get working. The untyped version seemed
@@ -111,6 +121,7 @@ class ActualEngineParameter:
                  param: EngineParameter,
                  value: Optional[str] = None,
                  api_parameter: bool = False):
+        super().__init__(names=param.names)
         self._param = param
         self._value = value
         self._api_parameter = api_parameter
@@ -128,7 +139,7 @@ class ActualEngineParameter:
         return self._value
 
     def __repr__(self) -> str:
-        return f"ActualEngineParam({self.param.names}, {self.value})"
+        return "ActualEngineParam({" + ", ".join(self.param.names) + "}, {self.value})"
 
     def __eq__(self, other) -> bool:
         if isinstance(other, type(self)):

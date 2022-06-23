@@ -21,7 +21,8 @@ import yaml
 from typing.io import IO
 
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.Executor import ExecutionSettings, CommandResult, Executor
+from weskit.classes.executor.Executor import \
+    ExecutionSettings, CommandResult, Executor
 from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, ExecutionStatus, ProcessId
 from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.LocalExecutor import LocalExecutor
@@ -29,6 +30,7 @@ from weskit.classes.executor.SshExecutor import SshExecutor
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 from weskit.memory_units import Memory, Unit
+from weskit.serializer import to_json, from_json
 
 
 # Note that testing multiple executors cannot be done by a fixture yielding multiple times.
@@ -86,6 +88,45 @@ remote_config = get_remote_config()
 executors = get_executors(remote_config)
 
 
+def test_execution_setting_dict():
+    setting = ExecutionSettings(job_name="name",
+                                accounting_name="projectName",
+                                cores=1,
+                                walltime=timedelta(hours=1),
+                                memory=Memory(1, Unit.GIGA),
+                                queue="devel",
+                                group="some")
+    assert dict(setting) == {
+        "job_name": "name",
+        "accounting_name": "projectName",
+        "cores": 1,
+        "walltime": timedelta(hours=1),
+        "memory": Memory(1, Unit.GIGA),
+        "queue": "devel",
+        "group": "some"
+    }
+
+    assert ExecutionSettings(**dict(setting)) == setting
+
+
+def test_execution_setting_json():
+    setting = ExecutionSettings(job_name="name",
+                                accounting_name="projectName",
+                                cores=1,
+                                walltime=timedelta(hours=1),
+                                memory=Memory(1, Unit.GIGA),
+                                queue="devel",
+                                group="some")
+    assert to_json(setting) == \
+           '{"__type__": "weskit.classes.executor.Executor.ExecutionSettings", "__data__": '\
+           '{"job_name": "name", "accounting_name": "projectName", "group": "some", '\
+           '"walltime": {"__type__": "datetime.timedelta", "__data__": "3600.0"}, '\
+           '"memory": {"__type__": "weskit.memory_units.Memory", "__data__": "1GB"}, '\
+           '"queue": "devel", "cores": 1}}'
+
+    assert from_json(to_json(setting))
+
+
 def test_execution_status():
     success_result = ExecutionStatus(0)
     assert not success_result.failed
@@ -119,7 +160,7 @@ def test_submit_failing_command(executor, _):
                                settings=ExecutionSettings(
                                    job_name="weskit_test_submit_failing_command",
                                    walltime=timedelta(minutes=5.0),
-                                   total_memory=Memory(100, Unit.MEGA)))
+                                   memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
     assert result.status.code == 127
     assert not result.status.success
@@ -135,7 +176,7 @@ def test_submit_nonexisting_command(executor, _):
                                settings=ExecutionSettings(
                                    job_name="weskit_test_submit_nonexisting_command",
                                    walltime=timedelta(minutes=5.0),
-                                   total_memory=Memory(100, Unit.MEGA)))
+                                   memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
     assert result.status.code == 127
 
@@ -148,7 +189,7 @@ def test_inacessible_workdir(executor, _):
                                settings=ExecutionSettings(
                                 job_name="weskit_test_inaccessible_workdir",
                                 walltime=timedelta(minutes=5.0),
-                                total_memory=Memory(100, Unit.MEGA)))
+                                memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
     # Note: LSF exits with code 2 with LSB_EXIT_IF_CWD_NOTEXIST=Y, but at least it fails.
     # Note: SLURM exits with code 0. It changes to /tmp if dir does not exist.
@@ -189,7 +230,7 @@ class ExecuteProcess(metaclass=ABCMeta):
                                         settings=ExecutionSettings(
                                             job_name="weskit_test_execute",
                                             walltime=timedelta(minutes=5.0),
-                                            total_memory=Memory(100, Unit.MEGA)))
+                                            memory=Memory(100, Unit.MEGA)))
         return self.executor.wait_for(process)
 
     def _assert_stdout(self, observed, expected):
@@ -396,7 +437,7 @@ def test_get_status(executor, _):
                                settings=ExecutionSettings(
                                     job_name="weskit_test_get_status",
                                     walltime=timedelta(minutes=5.0),
-                                    total_memory=Memory(100, Unit.MEGA)))
+                                    memory=Memory(100, Unit.MEGA)))
     status = executor.get_status(process)
     assert status.code is None
     assert not status.finished
@@ -430,7 +471,7 @@ def test_update_process(executor, _):
                                settings=ExecutionSettings(
                                    job_name="weskit_test_update_process",
                                    walltime=timedelta(minutes=5.0),
-                                   total_memory=Memory(100, Unit.MEGA)))
+                                   memory=Memory(100, Unit.MEGA)))
     executor.update_process(process)
     result = process.result
     assert result.status.code is None

@@ -9,7 +9,7 @@
 import os
 import traceback
 from datetime import datetime
-from typing import Dict, Union, List
+from typing import Dict, Union, List, TypeVar, Optional, Callable
 from urllib.parse import urlparse
 
 import boto3
@@ -84,3 +84,18 @@ def return_pre_signed_url(workdir, outfile):
         }
     )
     return url
+
+
+T = TypeVar("T")
+
+R = TypeVar("R")
+
+
+def mop(value: Optional[T], fun: Callable[[T], R]) -> Optional[R]:
+    """
+    Map a function over an optional value.
+    """
+    if value is not None:
+        return fun(value)
+    else:
+        return None

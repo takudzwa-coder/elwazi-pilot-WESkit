@@ -26,6 +26,7 @@ from weskit.classes.WESApp import WESApp
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory
 from weskit.utils import create_validator
+import weskit.celeryconfig   # noqa F401
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +36,13 @@ def create_celery(**kwargs):
     # Provide RESULT_BACKEND as lower-priority variable than the native CELERY_RESULT_BACKEND.
     backend_url = os.environ.get("CELERY_RESULT_BACKEND",
                                  os.environ.get("RESULT_BACKEND"))
-    return Celery(
+    celery = Celery(
         app="WESkit",
         broker=broker_url,
-        backend=backend_url,
-        **kwargs)
+        backend=backend_url)
+    celery.config_from_object(celeryconfig)   # noqa F821
+    celery.conf.update(**kwargs)
+    return celery
 
 
 def read_swagger():

@@ -6,6 +6,7 @@
 #
 #  Authors: The WESkit Team
 from __future__ import annotations
+
 import json
 import logging
 import os
@@ -14,9 +15,10 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.Executor import CommandResult
+from weskit.classes.executor.Executor import CommandResult, ExecutionSettings
 from weskit.tasks.EngineExecutor import get_executor, EngineExecutorType
-from weskit.utils import get_current_timestamp, collect_relative_paths_from, format_timestamp
+from weskit.utils import format_timestamp
+from weskit.utils import get_current_timestamp, collect_relative_paths_from
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,7 @@ class PathContext:
 
 def run_command(command: List[str],
                 local_base_workdir: str,
+                execution_settings: ExecutionSettings,
                 sub_workdir: str,
                 executor_parameters: Dict[str, Any],
                 environment: Optional[Dict[str, str]] = None,
@@ -140,7 +143,8 @@ def run_command(command: List[str],
 
         process = executor.execute(shell_command,
                                    command_context.stdout_file,
-                                   command_context.stderr_file)
+                                   command_context.stderr_file,
+                                   settings=execution_settings)
         result = executor.wait_for(process)
 
     # TODO Catch exceptions and log them. These are always infrastructure problems, and should not

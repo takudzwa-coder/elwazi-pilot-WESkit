@@ -13,7 +13,9 @@ from pathlib import Path
 import pytest
 
 import Executor_test
-from weskit.tasks.CommandTask import run_command, PathContext
+from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.tasks.CommandTask import PathContext
+from weskit.tasks.CommandTask import run_command
 from weskit.utils import format_timestamp
 
 
@@ -61,7 +63,8 @@ def test_run_command(temporary_dir, test_config):
     result = run_command(command=command,
                          local_base_workdir=str(data_dir),
                          sub_workdir=workdir,
-                         executor_parameters=test_config['executor'])
+                         executor_parameters=test_config['executor'],
+                         execution_settings=ExecutionSettings())
     assert result["output_files"] == ["x"]
     with open(os.path.join(temporary_dir, "x"), "r") as f:
         assert f.readlines() == ["hello world\n"]
@@ -86,10 +89,11 @@ def test_run_command_ssh(temporary_dir, test_config):
     result = run_command(command=command,
                          local_base_workdir=str(data_dir),
                          sub_workdir=workdir,
+                         execution_settings=ExecutionSettings(),
                          executor_parameters={
                             "type": "ssh",
                             "remote_base_dir": "/tmp",
-                            "login": Executor_test.remote_config["ssh"]
+                            "login": Executor_test.remote_config["ssh"]  # "ssh" in remote.yaml
                          })
     assert result["output_files"] == ["x"]
     with open(os.path.join(temporary_dir, "x"), "r") as f:

@@ -110,9 +110,9 @@ class LsfCommandSet(CommandSet):
                 if settings.accounting_name is not None else []
 
             result += [
-                "-M", self._memory_string(settings.total_memory),
-                "-R", f"rusage[mem={self._memory_string(settings.total_memory)}]"] \
-                if settings.total_memory is not None else []
+                "-M", self._memory_string(settings.memory),
+                "-R", f"rusage[mem={self._memory_string(settings.memory)}]"] \
+                if settings.memory is not None else []
 
             result += ["-W", self._walltime_string(settings.walltime)] \
                 if settings.walltime is not None else []

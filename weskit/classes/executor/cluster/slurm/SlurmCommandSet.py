@@ -121,8 +121,8 @@ class SlurmCommandSet(CommandSet):
             result += ["-a", settings.accounting_name] \
                 if settings.accounting_name is not None else []
 
-            result += ["--mem", self._memory_string(settings.total_memory)] \
-                if settings.total_memory is not None else []
+            result += ["--mem", self._memory_string(settings.memory)] \
+                if settings.memory is not None else []
 
             result += ["-t", self._walltime_string(settings.walltime)] \
                 if settings.walltime is not None else []
@@ -133,7 +133,7 @@ class SlurmCommandSet(CommandSet):
             result += ["-c", str(settings.cores)] \
                 if settings.cores is not None else []
 
-        # We always use a single host. Number of Nodes asigned to the job
+        # We always use a single host. Number of Nodes assigned to the job
         result += ["-N", "1"]
         result += ["".join(list(map(shlex.quote, command.command)))]
         return result
