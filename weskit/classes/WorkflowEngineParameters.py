@@ -110,7 +110,7 @@ KNOWN_PARAMS = ParameterIndex([
 
 class ActualEngineParameter(EngineParameter):
     """
-    A WorkflowEngineParam is an AllowedEngineParameter with value.
+    A WorkflowEngineParam is an EngineParameter with value.
 
     Note that the value is basically untyped, i.e. Optional[str]. The types are only known at
     run-time, which would require lots of `cast` etc. to get working. The untyped version seemed
