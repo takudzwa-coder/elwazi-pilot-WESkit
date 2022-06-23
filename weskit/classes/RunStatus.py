@@ -210,4 +210,5 @@ class RunStatus(enum.Enum):
         if self.allowed_to_progress_to(new_state):
             return new_state
         else:
-            raise RuntimeError(f"Forbidden state-change requested: `{self}' -/-> '{new_state}'")
+            raise RuntimeError(
+                f"Forbidden state-change requested: '{self.name}' -/-> '{new_state.name}'")

@@ -11,6 +11,7 @@ import os
 import yaml
 
 import weskit
+import weskit.serializer
 from weskit.tasks.CommandTask import run_command
 
 logger = logging.getLogger(__name__)

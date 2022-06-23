@@ -10,10 +10,10 @@ import uuid
 from typing import List, Optional, Callable, cast
 
 from bson.son import SON
-from pymongo import ReturnDocument, TEXT, MongoClient
-from pymongo.results import InsertOneResult
+from pymongo import ReturnDocument, MongoClient
 from pymongo.collection import Collection as MongoCollection
 from pymongo.database import Database as MongoDatabase
+from pymongo.results import InsertOneResult
 
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
@@ -48,7 +48,7 @@ class Database:
         db = client[self.database_name]
         runs = db["run"]
         # Create an index to enforce a uniqueness constraint.
-        runs.create_index([("run_id", TEXT)], unique=True)
+        runs.create_index("run_id", unique=True)
 
     def initialize(self):
         if self.__client is None:
@@ -139,6 +139,7 @@ class Database:
         # only if the db_version field is unchanged. This relies on that the find_one_and_replace
         # function is transactional. On every successful update the db_version counter is
         # incremented.
+        logger.debug(f"Trying to update run {run.id} in database (left tries = {max_tries})")
         updated_run_dict = \
             self._runs. \
             find_one_and_replace({"run_id": run.id, "db_version": run.db_version},

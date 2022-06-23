@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
-from celery.result import AsyncResult
 from pymongo.errors import PyMongoError
 from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
@@ -86,12 +85,6 @@ class Manager:
             pass
         return run
 
-    def _get_run_task(self, run: Run) -> Optional[AsyncResult]:
-        celery_task = self._run_task.AsyncResult(run.celery_task_id)
-        logger.debug("Run %s with state %s got Celery ID %s in Celery state '%s'" % (
-            run.id, run.status, run.celery_task_id, celery_task.state))
-        return celery_task
-
     def _update_run_results(self, run: Run, celery_task) -> Run:
         """
         For the semantics of Celery's built-in states, see
@@ -156,7 +149,9 @@ class Manager:
         """
         try:
             if run.celery_task_id is not None:
-                celery_task = self._get_run_task(run)
+                celery_task = self._run_task.AsyncResult(run.celery_task_id)
+                logger.debug("Run %s with status %s has Celery task %s in state '%s'" % (
+                    run.id, run.status.name, run.celery_task_id, celery_task.state))
                 run = self._update_run_results(run, celery_task)
 
             elif run.status.is_running or run.status == RunStatus.CANCELING:
@@ -175,17 +170,22 @@ class Manager:
     def update_runs(self,
                     run_id: Optional[str] = None,
                     max_tries: int = 1) -> List[Run]:
-        # Generally updating finished runs does not make much sense and creates problems with
-        # deleted runs. On the long run, with increasing numbers of runs there will also be
-        # a performance problem when updating accumulated finished runs.
+        """
+        Update all runs in a non-terminal state, or (always) the single run with the requested
+        run_id.
+        """
         query: dict
         if run_id is None:
+            # Generally updating finished runs does not make much sense and creates problems with
+            # deleted runs. On the long run, with increasing numbers of runs there will also be
+            # a performance problem when updating accumulated finished runs.
             query = {"run_status": {"$not": {"$in": [state.name
                                                      for state in RunStatus.TERMINAL_STATES()]}}}
         else:
             query = {"run_id": run_id}
 
         runs = self.database.get_runs(query)
+        logger.debug(f"Updating state of {len(runs)} runs")
         return list(map(lambda run: self.update_run(run, max_tries), runs))
 
     def create_and_insert_run(self, request, user_id)\
@@ -208,6 +208,8 @@ class Manager:
                         "request": request,
                         "user_id": user_id})
         self.database.insert_run(run)
+
+        logger.debug(f"Created run {run.id}")
         return run
 
     def get_run(self, run_id: str) -> Optional[Run]:
@@ -307,7 +309,7 @@ class Manager:
             files = ImmutableMultiDict()
 
         if run.status != RunStatus.INITIALIZING:
-            ex = RuntimeError("run.status not INITIALIZING but %s" % run.status)
+            ex = RuntimeError("run.status not INITIALIZING but %s" % run.status.name)
             raise self._record_error(run, ex, RunStatus.SYSTEM_ERROR)
 
         # Prepare run directory
