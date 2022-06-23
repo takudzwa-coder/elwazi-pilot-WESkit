@@ -89,7 +89,7 @@ def long_run(test_client,
     run = manager.execute(run)
     run = manager.database.update_run(run)
     start_time = time.time()
-    status = False
+    status = RunStatus.INITIALIZING
     while status != RunStatus.RUNNING:
         assert_within_timeout(start_time)
         status = run.status
