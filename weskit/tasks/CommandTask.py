@@ -19,6 +19,7 @@ from weskit.classes.executor.Executor import CommandResult, ExecutionSettings
 from weskit.tasks.EngineExecutor import get_executor, EngineExecutorType
 from weskit.utils import format_timestamp
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
+import weskit.serializer  # noqa
 
 logger = logging.getLogger(__name__)
 

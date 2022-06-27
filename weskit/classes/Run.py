@@ -49,6 +49,10 @@ class Run:
 
     @staticmethod
     def _merge_field(field_name: str, we: dict, them: dict, default_value):
+        """
+        Two values can be reconciled, if they are identical or if one of them is the default
+        value. If both values differ from the default, raise an exception.
+        """
         if we[field_name] == them[field_name]:
             return we[field_name]
         elif we[field_name] is default_value:
@@ -87,18 +91,28 @@ class Run:
         other is more progressed (the nature of concurrency). Therefore, select the more
         progressed state of the two Runs (i.e. ignore parameter order).
         """
-        a_maybe_before_b = status_b.allowed_to_progress_to(status_a)
-        b_maybe_before_a = status_a.allowed_to_progress_to(status_b)
-        if a_maybe_before_b and b_maybe_before_a:
+        if status_a == status_b:
+            return status_a
+
+        b_may_progress_to_a = status_b.allowed_to_progress_to(status_a)
+        a_may_progress_to_b = status_a.allowed_to_progress_to(status_b)
+        if b_may_progress_to_a and a_may_progress_to_b:
             # Reversible state transition. Take the one with higher precedence to disambiguate.
             if status_a.precedence > status_b.precedence:
                 return status_a
-            else:
+            elif status_a.precedence < status_b.precedence:
                 return status_b
-        elif a_maybe_before_b:
+            else:
+                raise RuntimeError("Bug! Different RunStatus with same precedence! "
+                                   f"{status_a.name} and {status_b.name}")
+        elif b_may_progress_to_a:
             return status_a
-        else:
+        elif a_may_progress_to_b:
             return status_b
+        else:
+            raise RuntimeError(
+                "No progression rules for status "
+                f"A = {status_a.name} and B = {status_b.name}")
 
     def merge(self, other: Run) -> Run:
         """
@@ -244,8 +258,8 @@ class Run:
         "fail early" principle.
         """
         if self.__status != run_status.name:
-            logger.info("Updating state of %s: %s -> %s" %
-                        (self.id, self.__status.name, run_status.name))
+            logger.debug("Updating state of %s: %s -> %s" %
+                         (self.id, self.__status.name, run_status.name))
             self.__status = self.__status.progress_to(run_status)
 
     @property

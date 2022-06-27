@@ -197,7 +197,7 @@ def RunWorkflow(*args, **kwargs):
 
         validator = current_app.request_validators["run_request"]
         validation_result = validator.validate(data)
-        logger.error(validation_result)
+        logger.debug(f"Validation result = {validation_result}")
         if isinstance(validation_result, list):
             return {
                 "msg": "Malformed request: {}".format(validation_result),
