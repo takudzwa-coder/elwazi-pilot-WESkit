@@ -123,7 +123,7 @@ class LsfCommandSet(CommandSet):
             result += ["-q", settings.queue] \
                 if settings.queue is not None else []
 
-            result += ["-c", str(settings.cores)] \
+            result += ["-n", str(settings.cores)] \
                 if settings.cores is not None else []
 
         # We always use a single host.
