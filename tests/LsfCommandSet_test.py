@@ -63,7 +63,7 @@ def test_lsf_submit_full_command():
         '-W', '121:34',
         '-G', "a group",
         '-q', 'test-queue',
-        '-c', '10',
+        '-n', '10',
         '-R', "span[hosts=1]",
         "bash -c 'echo \"hello. $someVar, $someOtherVar\"'"]
 
