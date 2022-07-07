@@ -11,22 +11,27 @@
 import logging
 import os
 import sys
+from logging.config import dictConfig
+from pathlib import Path
+from typing import cast
+
 import yaml
 from celery import Celery
 from flask_cors import CORS
-from logging.config import dictConfig
 
+import weskit.celeryconfig  # noqa F401
 from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.api.wes import bp as wes_bp
 from weskit.classes.Database import Database
+from weskit.classes.EngineExecutorType import EngineExecutorType
 from weskit.classes.ErrorCodes import ErrorCodes
 from weskit.classes.Manager import Manager
+from weskit.classes.PathContext import PathContext
 from weskit.classes.ServiceInfo import ServiceInfo
 from weskit.classes.WESApp import WESApp
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory
 from weskit.utils import create_validator
-import weskit.celeryconfig   # noqa F401
 
 logger = logging.getLogger(__name__)
 
@@ -70,23 +75,23 @@ def create_app(celery: Celery,
     logger.info(f"Process ID (create_app) = {os.getpid()}")
 
     if os.getenv("WESKIT_CONFIG") is not None:
-        config_file = os.getenv("WESKIT_CONFIG", "")
+        config_file = Path(cast(str, os.getenv("WESKIT_CONFIG")))
     else:
         raise ValueError("Cannot start WESkit: Environment variable WESKIT_CONFIG is undefined")
 
-    log_config_file = os.getenv(
+    log_config_file = Path(os.getenv(
         "WESKIT_LOG_CONFIG",
-        os.path.join("config", "log-config.yaml"))
+        os.path.join("config", "log-config.yaml"))).absolute()
 
-    validation_config_file = os.getenv(
+    validation_config_file = Path(os.getenv(
         "WESKIT_VALIDATION_CONFIG",
-        os.path.join("config", "validation.yaml"))
+        os.path.join("config", "validation.yaml"))).absolute()
 
-    workflows_base_dir = os.getenv(
+    workflows_base_dir = Path(os.getenv(
         "WESKIT_WORKFLOWS",
-        os.path.join(os.getcwd(), "workflows"))
+        os.path.join(os.getcwd(), "workflows"))).absolute()
 
-    weskit_data = os.getenv("WESKIT_DATA", "./tmp")
+    weskit_data = Path(os.getenv("WESKIT_DATA", "./tmp")).absolute()
 
     request_validation_config = \
         os.path.join("config", "request-validation.yaml")
@@ -94,16 +99,16 @@ def create_app(celery: Celery,
     with open(log_config_file, "r") as yaml_file:
         log_config = yaml.safe_load(yaml_file)
         dictConfig(log_config)
-        logger.info("Read log config from " + log_config_file)
+        logger.info("Read log config from " + str(log_config_file))
 
     with open(config_file, "r") as yaml_file:
         config = yaml.safe_load(yaml_file)
-        logger.info("Read config from " + config_file)
+        logger.info("Read config from " + str(config_file))
 
     with open(validation_config_file, "r") as yaml_file:
         validation = yaml.safe_load(yaml_file)
         logger.debug("Read validation specification from " +
-                     validation_config_file)
+                     str(validation_config_file))
 
     with open(request_validation_config, "r") as yaml_file:
         request_validation = yaml.safe_load(yaml_file)
@@ -111,23 +116,33 @@ def create_app(celery: Celery,
     # Validate configuration YAML.
     validation_result = create_validator(validation)(config)
     if isinstance(validation_result, list):
-        logger.error("Could not validate config.yaml: {}".
-                     format(validation_result))
+        logger.error(f"Could not validate '{config_file}': %s" % validation_result)
         sys.exit(ErrorCodes.CONFIGURATION_ERROR)
     else:
         # The validation result contains the normalized config (with default values set).
         config = validation_result
+
+    container_context = PathContext(data_dir=weskit_data,
+                                    workflows_dir=workflows_base_dir)
+
+    executor_config = config["executor"]
+    executor_type = EngineExecutorType.from_string(executor_config["type"])
+    if executor_type.needs_login_credentials:
+        executor_context = PathContext(data_dir=executor_config["remote_data_dir"],
+                                       workflows_dir=executor_config["remote_workflows_dir"])
+    else:
+        executor_context = container_context
 
     # Insert the "celery" section from the configuration file into the Celery config.
     celery.conf.update(**config.get("celery", {}))
     manager = \
         Manager(celery_app=celery,
                 database=database,
-                executor=config["executor"],
+                executor=executor_config,
                 workflow_engines=WorkflowEngineFactory.
                 create(config["static_service_info"]["default_workflow_engine_parameters"]),
-                workflows_base_dir=workflows_base_dir,
-                data_dir=weskit_data,
+                weskit_context=container_context,
+                executor_context=executor_context,
                 require_workdir_tag=config["require_workdir_tag"])
 
     service_info = ServiceInfo(config["static_service_info"],

@@ -5,15 +5,16 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+import json
+import time
 import uuid
 from typing import Dict, Optional
 
 import yaml
-import json
 
-from weskit.classes.RunStatus import RunStatus
 from weskit.classes.Run import Run
-import time
+from weskit.classes.RunStatus import RunStatus
+from weskit.utils import now
 
 
 def get_mock_run(workflow_url,
@@ -26,8 +27,8 @@ def get_mock_run(workflow_url,
         if workflow_engine_parameters is None\
         else workflow_engine_parameters
     data = {
-        "run_id": str(uuid.uuid4()),
-        "run_status": "INITIALIZING",
+        "id": uuid.uuid4(),
+        "status": RunStatus.INITIALIZING,
         "request_time": None,
         "user_id": user_id,
         "request": {
@@ -37,15 +38,14 @@ def get_mock_run(workflow_url,
             "workflow_params": {"text": "hello_world"},
             "workflow_engine_parameters": workflow_engine_parameters
         },
-        "execution_path": [],
-        "run_log": {},
+        "execution_log": {},
         "task_logs": [],
         "outputs": {},
         "celery_task_id": None,
     }
     if tags is not None:
         data["request"]["tags"] = tags
-    run = Run(data)
+    run = Run(**data)
     return run
 
 
@@ -83,3 +83,8 @@ def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]]
 
 def assert_status_is_not_failed(status: RunStatus):
     assert not is_run_failed(status), "Failing run status '{}'".format(status.name)
+
+
+def test_now_has_no_nanoseconds():
+    t = now().timestamp()   # time in POSIX format: float in microseconds
+    assert t - int(t) < 1

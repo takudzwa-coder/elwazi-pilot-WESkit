@@ -5,8 +5,9 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from __future__ import annotations
 from builtins import property, str
-from os import PathLike
+from pathlib import Path
 from typing import Dict, List, Optional
 
 
@@ -14,7 +15,7 @@ class ShellCommand:
 
     def __init__(self,
                  command: List[str],
-                 workdir: Optional[PathLike] = None,
+                 workdir: Optional[Path] = None,
                  environment: Dict[str, str] = None):
         self.command = command
         if environment is None:
@@ -22,6 +23,17 @@ class ShellCommand:
         else:
             self.environment = environment
         self.workdir = workdir
+
+    def encode_json(self):
+        return {
+            "command": self.command,
+            "environment": self.environment,
+            "workdir": self.workdir
+        }
+
+    @staticmethod
+    def decode_json(values: dict) -> ShellCommand:
+        return ShellCommand(**values)
 
     @property
     def command(self) -> List[str]:
@@ -40,11 +52,11 @@ class ShellCommand:
         self.__environment = environment
 
     @property
-    def workdir(self) -> Optional[PathLike]:
+    def workdir(self) -> Optional[Path]:
         return self.__workdir
 
     @workdir.setter
-    def workdir(self, workdir: Optional[PathLike]):
+    def workdir(self, workdir: Optional[Path]):
         self.__workdir = workdir
 
     def __repr__(self) -> str:

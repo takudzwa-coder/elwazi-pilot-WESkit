@@ -39,7 +39,7 @@ def GetRunLog(run_id):
                 "run_id": run.id,
                 "request": run.request,
                 "state": run.status.name,
-                "run_log": run.log,
+                "run_log": run.execution_log,
                 "task_logs": run.task_logs,
                 "outputs": run.outputs,
                 "user_id": run.user_id
@@ -170,9 +170,9 @@ def ListRuns(*args, **kwargs):
         ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
         runs = [{
-            "run_id": x["run_id"],
-            "state": x["run_status"]
-        } for x in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
+            "run_id": str(run_info["id"]),
+            "state": run_info["status"]
+        } for run_info in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
         return jsonify({
             "runs": runs,
             "next_page_token": ""

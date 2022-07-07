@@ -8,9 +8,8 @@
 
 import logging
 import tempfile
-from datetime import datetime
 from os import PathLike
-from pathlib import PurePath, Path
+from pathlib import Path
 from typing import Optional, Match
 
 import asyncssh
@@ -21,6 +20,7 @@ from weskit.classes.executor.Executor import \
 from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.slurm.SlurmCommandSet import SlurmCommandSet
+from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class SlurmExecutor(ClusterExecutor):
     def _extract_exit_code(self, match: Match[str]) -> str:
         return match.group(3)
 
-    def _create_command_script(self, command: ShellCommand) -> PurePath:
+    def _create_command_script(self, command: ShellCommand) -> Path:
         """
         We assume Bash is used on the remote side. The command (bash script) is written locally
         into a NamedTemporaryFile.
@@ -83,7 +83,7 @@ class SlurmExecutor(ClusterExecutor):
             if sub_command is not None:
                 for export in ["#!" + self._shell_interpreter, sub_command]:
                     print(export, end="\n", sep=" ", file=file)
-            return PurePath(file.name)
+            return Path(file.name)
 
     def execute(self,
                 command: ShellCommand,
@@ -114,7 +114,7 @@ class SlurmExecutor(ClusterExecutor):
                                                                stderr_file=stderr_file,
                                                                stdout_file=stdout_file,
                                                                stdin_file=stdin_file,
-                                                               start_time=datetime.now(),
+                                                               start_time=now(),
                                                                execution_status=execution_status))
             return process
 

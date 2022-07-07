@@ -6,10 +6,10 @@
 #
 #  Authors: The WESkit Team
 import logging
+
 import pytest
 
 from test_utils import get_workflow_data
-
 
 logger = logging.getLogger(__name__)
 

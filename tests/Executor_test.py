@@ -13,7 +13,7 @@ import uuid
 from abc import abstractmethod, ABCMeta
 from datetime import timedelta, datetime
 from os import PathLike
-from pathlib import PurePath, Path
+from pathlib import Path
 from typing import Optional, cast
 
 import pytest
@@ -31,6 +31,7 @@ from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 from weskit.memory_units import Memory, Unit
 from weskit.serializer import to_json, from_json
+from weskit.utils import now
 
 
 # Note that testing multiple executors cannot be done by a fixture yielding multiple times.
@@ -156,7 +157,7 @@ def test_execution_status():
 @pytest.mark.parametrize("executor,_", executors.values())
 def test_submit_failing_command(executor, _):
     command = ShellCommand(["bash", "-c", "nonexistingcommand"],
-                           workdir=PurePath("./"))
+                           workdir=Path("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
                                    job_name="weskit_test_submit_failing_command",
@@ -172,7 +173,7 @@ def test_submit_failing_command(executor, _):
 @pytest.mark.parametrize("executor,_", executors.values())
 def test_submit_nonexisting_command(executor, _):
     command = ShellCommand(["nonexistingcommand"],
-                           workdir=PurePath("./"))
+                           workdir=Path("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
                                    job_name="weskit_test_submit_nonexisting_command",
@@ -208,7 +209,7 @@ class ExecuteProcess(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def workdir(self) -> PurePath:
+    def workdir(self) -> Path:
         pass
 
     def execute(self, stdout_file, stderr_file) -> CommandResult:
@@ -277,15 +278,15 @@ class TestExecuteLocalProcess(ExecuteProcess):
         return LocalExecutor()
 
     @property
-    def workdir(self) -> PurePath:
+    def workdir(self) -> Path:
         return self._workdir
 
     @workdir.setter
-    def workdir(self, val: PurePath):
+    def workdir(self, val: Path):
         self._workdir = val
 
     def test_execute(self, temporary_dir):
-        self.workdir = PurePath(temporary_dir)
+        self.workdir = Path(temporary_dir)
         stderr_file = self.workdir / "stderr"
         stdout_file = self.workdir / "stdout"
 
@@ -326,7 +327,7 @@ class ExecuteProcessViaSsh(ExecuteProcess):
 
         result = self.execute(stdout_file, stderr_file)
 
-        local_temp = PurePath(temporary_dir)
+        local_temp = Path(temporary_dir)
         self.move_to_local(stdout_file, local_temp / f"{prefix}.stdout")
         self.move_to_local(stderr_file, local_temp / f"{prefix}.stderr")
 
@@ -354,8 +355,8 @@ class TestSubmitSshProcess(ExecuteProcessViaSsh):
         return self.executor.hostname
 
     @property
-    def workdir(self) -> PurePath:
-        return PurePath("/tmp")
+    def workdir(self) -> Path:
+        return Path("/tmp")
 
     def test_execute(self, temporary_dir):
         self.run_execute_test(temporary_dir)
@@ -387,10 +388,10 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
         return self.ssh_executor.hostname
 
     @property
-    def workdir(self) -> PurePath:
+    def workdir(self) -> Path:
         # Note: For this test, the workdir needs to be accessibly from the submission/ssh host
         #       and the compute nodes. Therefore, choose a location on a shared filesystem.
-        return PurePath(self.shared_workdir)
+        return Path(self.shared_workdir)
 
     def _assert_stdout(self, observed, expected):
         """
@@ -418,7 +419,7 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
 # This tests an internal feature of the LocalExecutor().
 @pytest.mark.parametrize("executor,_", [executors["local"]])
 def test_std_fds_are_closed(executor, _, temporary_dir):
-    workdir = PurePath(temporary_dir)
+    workdir = Path(temporary_dir)
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=workdir)
     process = executor.execute(command,
@@ -433,7 +434,7 @@ def test_std_fds_are_closed(executor, _, temporary_dir):
 def test_get_status(executor, _):
     command = ShellCommand(["sleep", "20" if isinstance(executor, (SlurmExecutor, LsfExecutor))
                             else "1"],
-                           workdir=PurePath("./"))
+                           workdir=Path("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
                                     job_name="weskit_test_get_status",
@@ -467,7 +468,7 @@ def test_update_process(executor, _):
         sleep_duration = 10
 
     command = ShellCommand(["sleep", str(sleep_duration)],
-                           workdir=PurePath("./"))
+                           workdir=Path("./"))
     process = executor.execute(command,
                                settings=ExecutionSettings(
                                    job_name="weskit_test_update_process",
@@ -554,7 +555,7 @@ class MockExecutor(Executor):
                                                         stderr_file=stderr_file,
                                                         stdout_file=stdout_file,
                                                         stdin_file=stdin_file,
-                                                        start_time=datetime.now()))
+                                                        start_time=now()))
 
 
 def test_executor_context_manager():
@@ -643,7 +644,7 @@ class TestLsfGetStatus:
                                        CommandResult(command, ProcessId(5432),
                                                      stdout_file, stderr_file, stdin_file,
                                                      ExecutionStatus(None),
-                                                     start_time=datetime.now()))
+                                                     start_time=now()))
 
             def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
                 return ExecutionStatus(0)
@@ -660,10 +661,10 @@ class TestLsfGetStatus:
                 self.update_process(process)
                 return process.result
 
-            def copy_file(self, source: PurePath, target: PurePath):
+            def copy_file(self, source: Path, target: Path):
                 pass
 
-            def remove_file(self, file: PurePath):
+            def remove_file(self, file: Path):
                 pass
 
         executor = LsfExecutor(MockInnerExecutor())

@@ -7,7 +7,7 @@
 #  Authors: The WESkit Team
 import shlex
 from datetime import timedelta
-from pathlib import PurePath
+from pathlib import Path
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -30,13 +30,13 @@ def test_slurm_submit_minimal_command():
 def test_slurm_submit_full_command():
     command = SlurmCommandSet().\
         submit(command=ShellCommand(["/tmp/tmp9xbcndui"],
-                                    workdir=PurePath("/some/dir"),
+                                    workdir=Path("/some/dir"),
                                     environment={
                                         "someVar": "someVal",
                                         "someOtherVar": "containing, a, comma"
                                     }),
-               stdout_file=PurePath("/path/to/stdout"),
-               stderr_file=PurePath("/another/pa   th/to/stderr"),
+               stdout_file=Path("/path/to/stdout"),
+               stderr_file=Path("/another/pa   th/to/stderr"),
                settings=ExecutionSettings(job_name="da job",
                                           accounting_name="my account",
                                           walltime=timedelta(days=5,

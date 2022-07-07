@@ -8,6 +8,7 @@
 import os
 import re
 import time
+from pathlib import Path
 
 import pytest
 from werkzeug.datastructures import FileStorage
@@ -53,7 +54,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
         manager.database.insert_run(run)
         run = manager.prepare_execution(run, files)
     assert run.status == RunStatus.INITIALIZING
-    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, wf_url))
+    assert run.workflow_path(manager.weskit_context).is_file()
 
     # 4.) set custom workdir
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -62,7 +63,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
                        tags={"run_dir": "sample1/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
     assert run.status == RunStatus.INITIALIZING
-    assert run.dir == "sample1/my_workdir"
+    assert run.sub_dir == Path("sample1/my_workdir")
 
 
 @pytest.mark.integration
@@ -88,14 +89,14 @@ def test_execute_snakemake(manager,
             run = manager.update_run(run)
         else:
             success = True
-    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
+    assert run.run_dir(manager.weskit_context) / "hello_world.txt"
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
-    assert run.log["env"] == {}
-    assert run.log["cmd"] == [
+    assert run.execution_log["env"] == {}
+    assert run.execution_log["cmd"] == [
         "snakemake",
         "--snakefile",
-        run.workflow_path,
+        str(run.rundir_rel_workflow_path),
         "--cores", "1",
         "--configfile",
         "config.yaml"
@@ -125,19 +126,19 @@ def test_execute_nextflow(manager,
             run = manager.update_run(run)
         else:
             success = True
-    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
+    assert run.run_dir(manager.weskit_context) / "hello_world.txt"
     hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
                                     run.outputs["workflow"]))
     assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
-    with open(os.path.join(manager.data_dir, run.dir, hello_world_files[0]), "r") as fh:
+    with open(run.run_dir(manager.weskit_context) / hello_world_files[0], "r") as fh:
         assert fh.readlines() == ["hello_world\n"]
 
-    assert run.log["env"] == {"NXF_OPTS": "-Xmx256m"}
-    assert run.log["cmd"] == [
+    assert run.execution_log["env"] == {"NXF_OPTS": "-Xmx256m"}
+    assert run.execution_log["cmd"] == [
         "nextflow",
         "-Djava.io.tmpdir=/tmp",
         "run",
-        run.workflow_path,
+        str(run.rundir_rel_workflow_path),
         "-params-file", "config.yaml",
         "-with-timeline",
         "-with-dag",

@@ -7,16 +7,15 @@
 #  Authors: The WESkit Team
 import logging
 import re
-from asyncssh import Error, ChannelOpenError
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-from datetime import datetime
 from os import PathLike
-from pathlib import PurePath
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception,\
+from asyncssh import Error, ChannelOpenError
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception, \
     retry_if_exception_type
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -25,6 +24,7 @@ from weskit.classes.executor.Executor import \
 from weskit.classes.executor.ExecutorException import \
     ExecutorException, ExecutionError, TimingError
 from weskit.classes.executor.SshExecutor import SshExecutor
+from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,8 @@ def execute(executor: Executor,
     with NamedTemporaryFile(encoding=encoding, mode="r") as stdout:
         with NamedTemporaryFile(encoding=encoding, mode="r") as stderr:
             proc = executor.execute(command,
-                                    stdout_file=PurePath(stdout.name),
-                                    stderr_file=PurePath(stderr.name),
+                                    stdout_file=Path(stdout.name),
+                                    stderr_file=Path(stderr.name),
                                     **kwargs)
             result = executor.wait_for(proc)
             yield result, stdout, stderr
@@ -102,10 +102,10 @@ class ClusterExecutor(Executor):
         """
         self._executor = executor
 
-    def copy_file(self, source: PurePath, target: PurePath):
+    def copy_file(self, source: Path, target: Path):
         self._executor.copy_file(source, target)
 
-    def remove_file(self, target: PurePath):
+    def remove_file(self, target: Path):
         self._executor.remove_file(target)
 
     @property
@@ -251,7 +251,7 @@ class ClusterExecutor(Executor):
             # could use `bjobs -o "finish_time"), because it is complex and configurable. See
             # e.g. the code in BatchEuphoria (https://tinyurl.com/27x44ndb). The following is the
             # cheap solution and sufficient for us, because we always call wait_for().
-            process.result.end_time = datetime.now()
+            process.result.end_time = now()
         return process
 
     @retry(wait=wait_exponential(multiplier=1, min=4, max=30),

@@ -7,10 +7,11 @@
 #  Authors: The WESkit Team
 import json
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from functools import singledispatch
 from importlib import import_module
 from json import JSONEncoder
+from pathlib import PosixPath
 from typing import Callable, Optional, Dict
 
 from kombu.serialization import register
@@ -214,6 +215,16 @@ def _(value):
     return timedelta(seconds=float(value))
 
 
+@encode_json.register(datetime)
+def _(obj: datetime):
+    return obj.isoformat()
+
+
+@decode_json.register("datetime.datetime")
+def _(obj) -> datetime:
+    return datetime.fromisoformat(obj)
+
+
 @encode_json.register(Memory)
 def _(obj: Memory):
     return str(obj)
@@ -222,6 +233,16 @@ def _(obj: Memory):
 @decode_json.register("weskit.memory_units.Memory")
 def _(value):
     return Memory.from_str(value)
+
+
+@encode_json.register(PosixPath)
+def _(obj: PosixPath):
+    return str(obj)
+
+
+@decode_json.register("pathlib.PosixPath")
+def _(obj) -> PosixPath:
+    return PosixPath(obj)
 
 
 # Register DispatchingEncoder via to_json() and corresponding from_json() with kombu (used by
