@@ -99,3 +99,7 @@ def mop(value: Optional[T], fun: Callable[[T], R]) -> Optional[R]:
         return fun(value)
     else:
         return None
+
+
+def identity(value):
+    return value

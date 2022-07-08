@@ -33,11 +33,20 @@ def test_run(test_client,
     This fixture creates a mock run as working state for accessing workflow results via the API.
     The tests will use the REST interface, but to circumvent authentication issues here, the
     run is created manually and the user_id is fixed to the value from the test keycloak DB.
+    Engine parameters are used to also test their serialization/deserialization.
     """
     manager = current_app.manager
     request = get_workflow_data(
         snakefile="file:tests/wf1/Snakefile",
-        config="tests/wf1/config.yaml")
+        config="tests/wf1/config.yaml",
+        engine_params={
+            "max-memory": "150m",
+            "max-runtime": "00:01:00",
+            "accounting-name": "projectX",
+            "job-name": "testjob",
+            "group": "testgroup",
+            "queue": "testqueue"
+        })
     run = manager.create_and_insert_run(request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run = manager.prepare_execution(run)

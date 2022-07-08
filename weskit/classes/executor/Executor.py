@@ -24,6 +24,7 @@ from os import PathLike
 from pathlib import PurePath
 from typing import Optional, Any, Union, IO
 
+from weskit.serializer import decode_json
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.memory_units import Memory
 
@@ -203,14 +204,19 @@ class ExecutionSettings:
             yield i
 
     def encode_json(self):
+        # Note that because of the registered encoders, the typed fields (Memory, timedelta) will
+        # be serialized by these. Here we return just the shallow encoding.
         return dict(self)
 
     @staticmethod
-    def from_json(json_string: str) -> ExecutionSettings:
-        args = json.loads(json_string)
-        args["walltime"] = timedelta(seconds=float(args["walltime"]))
-        args["memory"] = Memory.from_str(args["memory"])
+    def decode_json(args) -> ExecutionSettings:
+        args["walltime"] = decode_json(args["walltime"])
+        args["memory"] = decode_json(args["memory"])
         return ExecutionSettings(**args)
+
+    @staticmethod
+    def from_json(json_string: str) -> ExecutionSettings:
+        return ExecutionSettings.decode_json(json.loads(json_string))
 
 
 class ExecutedProcess(metaclass=abc.ABCMeta):

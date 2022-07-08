@@ -25,7 +25,8 @@ class RunRequestValidator(object):
                  data_dir: str,
                  require_workdir_tag: bool):
         """The syntax validator is a function that returns a string with
-         an error message, if there is an error, or None otherwise."""
+        an error message, if there is an error, or dictionary or list with the validated
+        and normalized data, otherwise."""
         self.syntax_validator = syntax_validator
         self.workflow_types_and_versions = workflow_types_and_versions
         self.data_dir = data_dir
