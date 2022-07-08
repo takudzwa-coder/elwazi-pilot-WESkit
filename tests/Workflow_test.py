@@ -92,7 +92,10 @@ def test_execute_snakemake(manager,
     assert run.run_dir(manager.weskit_context) / "hello_world.txt"
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
-    assert run.execution_log["env"] == {}
+    assert run.execution_log["env"] == {
+        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
+    }
     assert run.execution_log["cmd"] == [
         "snakemake",
         "--snakefile",
@@ -171,7 +174,11 @@ def test_execute_nextflow(manager,
     with open(run.run_dir(manager.weskit_context) / hello_world_files[0], "r") as fh:
         assert fh.readlines() == ["hello_world\n"]
 
-    assert run.execution_log["env"] == {"NXF_OPTS": "-Xmx256m"}
+    assert run.execution_log["env"] == {
+        "NXF_OPTS": "-Xmx256m",
+        "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
+        "WESKIT_WORKFLOW_PATH":  str(run.rundir_rel_workflow_path),
+    }
     assert run.execution_log["cmd"] == [
         "nextflow",
         "-Djava.io.tmpdir=/tmp",
