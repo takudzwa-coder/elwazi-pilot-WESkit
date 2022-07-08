@@ -23,9 +23,9 @@ def test_run_command(temporary_dir, test_config):
     context = PathContext(data_dir=Path(temporary_dir).parent,
                           workflows_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
-    commandObj = ShellCommand(command=command,
-                              workdir=workdir)
-    result = run_command(command=commandObj,
+    command_obj = ShellCommand(command=command,
+                               workdir=workdir)
+    result = run_command(command=command_obj,
                          worker_context=context,
                          executor_context=context,
                          executor_config=test_config['executor'],
@@ -52,10 +52,10 @@ def test_run_command_ssh(temporary_dir, test_config):
     context = PathContext(data_dir=Path(temporary_dir).parent,
                           workflows_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
-    commandObj = ShellCommand(command=command,
-                              workdir=workdir,
-                              environment={})
-    result = run_command(command=commandObj,
+    command_obj = ShellCommand(command=command,
+                               workdir=workdir,
+                               environment={})
+    result = run_command(command=command_obj,
                          worker_context=context,
                          executor_context=context,
                          execution_settings=ExecutionSettings(),
