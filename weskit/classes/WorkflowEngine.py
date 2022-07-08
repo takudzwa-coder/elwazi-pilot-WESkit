@@ -7,7 +7,6 @@
 #  Authors: The WESkit Team
 import math
 from abc import ABCMeta, abstractmethod
-from os import PathLike
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -25,6 +24,7 @@ from weskit.utils import mop
 class WorkflowEngine(metaclass=ABCMeta):
 
     def __init__(self,
+                 version: str,
                  default_params: List[ActualEngineParameter]):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
@@ -32,6 +32,19 @@ class WorkflowEngine(metaclass=ABCMeta):
             raise ValueError(f"Non-allowed default parameters for {type(self).name()}: " +
                              str(not_allowed))
         self.default_params = default_params
+        self._version = version
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    def _environment(self,
+                     workflow_path: Path,
+                     parameters: List[ActualEngineParameter]) -> Dict[str, str]:
+        return {
+            "WESKIT_WORKFLOW_ENGINE": self.name() + "=" + self.version,
+            "WESKIT_WORKFLOW_PATH": str(workflow_path)
+        }
 
     @classmethod
     @abstractmethod
@@ -132,9 +145,9 @@ class WorkflowEngine(metaclass=ABCMeta):
 
     @abstractmethod
     def command(self,
-                workflow_path: PathLike,
-                workdir: Optional[PathLike],
-                config_files: List[PathLike],
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files: List[Path],
                 engine_params: Dict[str, Optional[str]]) \
             -> ShellCommand:
         """
@@ -175,8 +188,9 @@ class WorkflowEngine(metaclass=ABCMeta):
 class Snakemake(WorkflowEngine):
 
     def __init__(self,
+                 version: str,
                  default_params: List[ActualEngineParameter]):
-        super().__init__(default_params)
+        super().__init__(version, default_params)
 
     @staticmethod
     def name():
@@ -191,9 +205,6 @@ class Snakemake(WorkflowEngine):
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
-    def _environment(self, parameters: List[ActualEngineParameter]) -> Dict[str, str]:
-        return {}
-
     def _command_params(self, parameters: List[ActualEngineParameter]) -> List[str]:
         result = []
         for param in parameters:
@@ -204,9 +215,9 @@ class Snakemake(WorkflowEngine):
         return result
 
     def command(self,
-                workflow_path: PathLike,
-                workdir: Optional[PathLike],
-                config_files: List[PathLike],
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files: List[Path],
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
@@ -217,14 +228,15 @@ class Snakemake(WorkflowEngine):
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
-                            environment=self._environment(parameters))
+                            environment=self._environment(workflow_path, parameters))
 
 
 class Nextflow(WorkflowEngine):
 
     def __init__(self,
+                 version: str,
                  default_params: List[ActualEngineParameter]):
-        super().__init__(default_params)
+        super().__init__(version, default_params)
 
     @staticmethod
     def name():
@@ -241,8 +253,10 @@ class Nextflow(WorkflowEngine):
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
 
-    def _environment(self, parameters: List[ActualEngineParameter]) -> Dict[str, str]:
-        result = {}
+    def _environment(self,
+                     workflow_path: Path,
+                     parameters: List[ActualEngineParameter]) -> Dict[str, str]:
+        result = super()._environment(workflow_path, parameters)
         for param in parameters:
             if param.param == self.known_parameters()["max-memory"]:
                 if param.value is None:
@@ -274,9 +288,9 @@ class Nextflow(WorkflowEngine):
         return result
 
     def command(self,
-                workflow_path: PathLike,
-                workdir: Optional[PathLike],
-                config_files: List[PathLike],
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files: List[Path],
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
@@ -290,4 +304,4 @@ class Nextflow(WorkflowEngine):
         command += self._run_command_params(parameters)
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
-                            environment=self._environment(parameters))
+                            environment=self._environment(workflow_path, parameters))

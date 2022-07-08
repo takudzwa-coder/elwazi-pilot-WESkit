@@ -154,7 +154,7 @@ class SshExecutor(Executor):
 
     async def _create_setup_script(self, command: ShellCommand) -> Path:
         """
-        We assume Bash is used on the remote side. Detection of the shell is tricky, if at all
+        We assume Bash is available on the remote side. Detection of the shell is tricky, if at all
         possible. Therefore, if you want to support other shells, make this configurable via a
         WESkit variable.
         """
@@ -163,6 +163,7 @@ class SshExecutor(Executor):
                 # Whatever command is executed later, make sure to catch all errors. This is also
                 # important for the `cd`, which may fail if the working directory is not
                 # accessible.
+                print("#!/bin/bash", file)
                 print("set -o pipefail -ue", file=file)
                 print(f"cd {shlex.quote(str(command.workdir))}", file=file)
             for export in [f"export {it[0]}={shlex.quote(it[1])}"
@@ -237,8 +238,8 @@ class SshExecutor(Executor):
         shell redirections).
 
         Note that if you want shell-variables present on the execution side (the shell started by
-        connecting via SSH), then you need to wrap the actual command into `bash -c`. Otherwise
-        variable references, such as `$someVar` are not evaluated in the remote shell. E.g. the
+        connecting via SSH), then you need to wrap the actual command into `bash -c`. Otherwise,
+        variable references such as `$someVar` are not evaluated in the remote shell. E.g. the
         following
 
           command = ["bash", "-c", "echo \"$someVar\""]
