@@ -110,7 +110,7 @@ def test_execution_setting_dict():
 
 
 def test_execution_setting_json():
-    setting = ExecutionSettings(job_name="name",
+    setting = ExecutionSettings(job_name=None,
                                 accounting_name="projectName",
                                 cores=1,
                                 walltime=timedelta(hours=1),
@@ -119,12 +119,13 @@ def test_execution_setting_json():
                                 group="some")
     assert to_json(setting) == \
            '{"__type__": "weskit.classes.executor.Executor.ExecutionSettings", "__data__": '\
-           '{"job_name": "name", "accounting_name": "projectName", "group": "some", '\
+           '{"job_name": null, "accounting_name": "projectName", "group": "some", '\
            '"walltime": {"__type__": "datetime.timedelta", "__data__": "3600.0"}, '\
            '"memory": {"__type__": "weskit.memory_units.Memory", "__data__": "1GB"}, '\
            '"queue": "devel", "cores": 1}}'
 
-    assert from_json(to_json(setting))
+    restored = from_json(to_json(setting))
+    assert setting == restored
 
 
 def test_execution_status():
