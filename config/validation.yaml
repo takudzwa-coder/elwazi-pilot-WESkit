@@ -46,6 +46,9 @@ executor:
           - ssh
           - ssh_slurm
           - ssh_lsf
+    environment_setup_script:
+      type: string
+      required: false
     login:
       type: dict
       required: false
