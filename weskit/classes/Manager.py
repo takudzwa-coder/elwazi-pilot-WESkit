@@ -227,7 +227,8 @@ class Manager:
     # check files, uploads and returns list of valid filenames
     def _process_workflow_attachment(self,
                                      run: Run,
-                                     files: "Optional[ImmutableMultiDict[str, FileStorage]]"):
+                                     files: "Optional[ImmutableMultiDict[str, FileStorage]]") \
+            -> List[Path]:
         if run.sub_dir is None:
             raise RuntimeError(f"Oops! run.subdir should be set: {run}")
         attachment_filenames = []
@@ -237,7 +238,7 @@ class Manager:
                 if attachment.filename is None:
                     raise ClientError("Attachment file without name")
                 else:
-                    filename = secure_filename(attachment.filename)
+                    filename = Path(secure_filename(attachment.filename))
                     # TODO could implement checks here
                     attachment_filenames.append(filename)
                     attachment.save(run.run_dir(self.weskit_context) / filename)  # type: ignore
@@ -245,7 +246,7 @@ class Manager:
 
     def _prepare_workflow_path(self,
                                run: Run,
-                               attachment_filenames: List[str]) \
+                               attachment_filenames: List[Path]) \
             -> Path:
         """
         After the call either the workflow is accessible via the returned path relative to the
@@ -276,7 +277,7 @@ class Manager:
             if os.path.isabs(workflow_url.path):
                 raise ClientError("Absolute workflow_url forbidden " +
                                   "(should be validated already): '%s'" % url)
-            elif workflow_url.path in attachment_filenames:
+            elif Path(workflow_url.path) in attachment_filenames:
                 # File should already be extracted to work-dir. The command is executed in the
                 # work-dir as the current work-dir, so we take it as it is.
                 workflow_path_rel = Path(secure_filename(workflow_url.path))
@@ -319,7 +320,8 @@ class Manager:
 
     def prepare_execution(self,
                           run: Run,
-                          files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None):
+                          files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None)\
+            -> Run:
         if files is None:
             files = ImmutableMultiDict()
 

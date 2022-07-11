@@ -122,7 +122,7 @@ class Database:
                 counts[status.name] = 0
         return counts
 
-    def create_run_id(self):
+    def create_run_id(self) -> uuid.UUID:
         run_id = uuid.uuid4()
         while not self.get_run(run_id) is None:
             run_id = uuid.uuid4()
