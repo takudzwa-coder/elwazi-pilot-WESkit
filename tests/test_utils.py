@@ -21,7 +21,8 @@ def get_mock_run(workflow_url,
                  workflow_type_version,
                  workflow_engine_parameters=None,
                  tags=None,
-                 user_id="test_id"):
+                 user_id="test_id",
+                 workflow_params=None):
     workflow_engine_parameters = {}\
         if workflow_engine_parameters is None\
         else workflow_engine_parameters
@@ -34,7 +35,8 @@ def get_mock_run(workflow_url,
             "workflow_url": workflow_url,
             "workflow_type": workflow_type,
             "workflow_type_version": workflow_type_version,
-            "workflow_params": {"text": "hello_world"},
+            "workflow_params": {"text": "hello_world"}
+            if workflow_params is None else workflow_params,
             "workflow_engine_parameters": workflow_engine_parameters
         },
         "execution_path": [],

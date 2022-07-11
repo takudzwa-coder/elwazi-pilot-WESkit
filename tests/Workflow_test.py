@@ -103,6 +103,44 @@ def test_execute_snakemake(manager,
 
 
 @pytest.mark.integration
+def test_fail_execute_snakemake(manager,
+                                celery_worker):
+    run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="6.10.0",
+                       workflow_engine_parameters={},
+                       workflow_params={"missing": "variable"})
+    run = manager.prepare_execution(run, files=[])
+    run = manager.execute(run)
+    manager.database.insert_run(run)
+
+    start_time = time.time()
+    success = False
+    while not success:
+        assert is_within_timeout(start_time), "Test timed out"
+        status = run.status
+        if status != RunStatus.EXECUTOR_ERROR:
+            print("Waiting ... (status=%s)" % status.name)
+            time.sleep(1)
+            run = manager.update_run(run)
+        else:
+            success = True
+    assert run.log["exit_code"] != 0
+    assert not os.path.exists(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
+    assert "hello_world.txt" not in to_filename(run.outputs["workflow"])
+
+    assert run.log["env"] == {}
+    assert run.log["cmd"] == [
+        "snakemake",
+        "--snakefile",
+        run.workflow_path,
+        "--cores", "1",
+        "--configfile",
+        "config.yaml"
+    ]
+
+
+@pytest.mark.integration
 def test_execute_nextflow(manager,
                           celery_worker):
     run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
