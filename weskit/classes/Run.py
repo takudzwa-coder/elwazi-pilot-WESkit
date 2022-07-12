@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Mapping
 from uuid import UUID
 
+from weskit.serializer import to_json, from_json
 from weskit.classes.PathContext import PathContext
 from weskit.classes.RunStatus import RunStatus
 from weskit.utils import format_timestamp, from_formatted_timestamp, updated
@@ -190,6 +191,7 @@ class Run:
         """
         result = dict(self)
         result = updated(result,
+                         execution_log=to_json(self.execution_log),
                          sub_dir=mop(result["sub_dir"], str),
                          rundir_rel_workflow_path=mop(result["rundir_rel_workflow_path"], str),
                          request_time=mop(result["request_time"], format_timestamp),
@@ -203,6 +205,7 @@ class Run:
         Construct Run from what was read from MongoDB.
         """
         args = updated(values,
+                       execution_log=from_json(values["execution_log"]),
                        sub_dir=mop(values["sub_dir"], Path),
                        rundir_rel_workflow_path=mop(values["rundir_rel_workflow_path"], Path),
                        request_time=mop(values["request_time"], from_formatted_timestamp),

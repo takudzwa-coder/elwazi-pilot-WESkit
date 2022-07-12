@@ -5,11 +5,10 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-import shlex
 from datetime import timedelta
 from pathlib import Path
 
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
 from weskit.memory_units import Memory
@@ -19,7 +18,7 @@ def test_lsf_submit_minimal_command():
     command = LsfCommandSet(). \
         submit(command=ShellCommand(["echo", "Hello, World"]),
                settings=ExecutionSettings())
-    assert command == [
+    assert command.command == [
         'bsub',
         '-env', 'LSB_EXIT_IF_CWD_NOTEXIST=Y',
         '-oo', '/dev/null',
@@ -48,8 +47,7 @@ def test_lsf_submit_full_command():
                                           memory=Memory.from_str("5G"),
                                           queue="test-queue",
                                           cores=10))
-    print(" ".join(list(map(shlex.quote, command))))
-    assert command == [
+    assert command.command == [
         'bsub',
         '-env',
         "LSB_EXIT_IF_CWD_NOTEXIST=Y, some='someVal', someOther='with, comma', space='here -> '",
@@ -70,15 +68,16 @@ def test_lsf_submit_full_command():
 
 def test_get_status():
     command = LsfCommandSet().get_status(["1234", "4567"])
-    assert command == ["bash", "-c", "bjobs -o 'jobid stat exit_code' 1234 4567 | tail -n +2"]
+    assert command.command == \
+           ["bjobs", "-o", "jobid stat exit_code", "1234", "4567", ss("|"), "tail", "-n", "+2"]
 
 
 def test_kill():
     ids = ["1234", "3456"]
     command = LsfCommandSet().kill(ids)
-    assert command == ["bkill", "-s", "TERM"] + ids
+    assert command.command == ["bkill", "-s", "TERM"] + ids
 
 
 def test_wait():
     command = LsfCommandSet().wait_for("1234")
-    assert command == ["bwait", "-t", "525600", "-w", "done(1234)"]
+    assert command.command == ["bwait", "-t", "525600", "-w", "done(1234)"]

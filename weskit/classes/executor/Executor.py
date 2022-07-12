@@ -304,11 +304,6 @@ class Executor(metaclass=abc.ABCMeta):
 
         The return value is a representation of the executed process.
 
-        References to environment variables in the command-line will not be evaluated. If you want
-        these variables to be evaluated, you need to wrap the command in a shell, e.g.
-
-           command = ["bash", "-c", "echo $someVar"]
-
         :param command: The command to be executed.
         :param stdout_file: A path to a file into which the standard output shall be written.
                             This can be a file-pattern, e.g. for LSF /path/to/file.o%J

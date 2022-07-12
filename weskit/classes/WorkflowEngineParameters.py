@@ -90,6 +90,7 @@ class ParameterIndex(Generic[P]):
 # the usage of similar parameter names for all workflows. We may, for instance, also add ontology
 # terms and term IDs.
 KNOWN_PARAMS = ParameterIndex([
+    EngineParameter({"engine-environment"}),
     EngineParameter({"trace"}),
     EngineParameter({"timeline"}),
     EngineParameter({"report"}),

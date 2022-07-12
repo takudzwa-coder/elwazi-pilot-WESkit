@@ -257,7 +257,7 @@ def swagger():
 
 def create_manager(celery_session_app, redis_container, test_config, test_database,
                    require_workdir_tag: bool):
-    workflows_base_dir = Path(os.getcwd()).absolute()
+    workflows_base_dir = Path("tests")
     os.environ["WESKIT_WORKFLOWS"] = str(workflows_base_dir)
     test_dir = Path("test-data")
     if not (test_dir.exists() and test_dir.is_dir()):

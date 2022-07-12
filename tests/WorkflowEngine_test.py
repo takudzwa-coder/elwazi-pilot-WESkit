@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from weskit.classes.ShellCommand import ss
 from weskit import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow
 from weskit.classes.WorkflowEngineParameters import \
@@ -228,7 +229,8 @@ def test_command_setting_non_api_parameter():
     engine2 = WorkflowEngineFactory.create_engine(
         Snakemake,
         "6.10.0",
-        [{"name": "cores", "value": "2", "api": False},
+        [{"name": "engine-environment", "value": None, "api": False},  # test: accept None value
+         {"name": "cores", "value": "2", "api": False},
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
          {"name": "profile", "value": "myprofile", "api": True}]
@@ -245,13 +247,15 @@ def test_create_nextflow():
         Nextflow,
         "21.04.0",
         # Note that different variants of `True` values are used.
-        [{"name": "max-memory", "value": "2G", "api": False},
+        [{"name": "engine-environment", "value": "/path/to/script", "api": False},
+         {"name": "max-memory", "value": "2G", "api": False},
          {"name": "trace", "value": "TRUE", "api": True},
          {"name": "report", "value": "T", "api": True},
          {"name": "graph", "value": "Y", "api": True},
          {"name": "timeline", "value": "True", "api": True}]
     )
     assert engine.default_params == [
+        ActualEngineParameter(EngineParameter({"engine-environment"}), "/path/to/script", False),
         ActualEngineParameter(EngineParameter({"max-memory"}), "2G", False),
         ActualEngineParameter(EngineParameter({"trace"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"report"}), "T", True),
@@ -264,7 +268,9 @@ def test_create_nextflow():
                               Path("/some/workdir"),
                               [Path("/some/config.yaml")],
                               {})
-    assert created1.command == ['nextflow', "run", "/some/path",
+    assert created1.command == ['source', '/path/to/script', ss("&&"),
+                                'set', '-eu', '-o', 'pipefail', ss('&&'),
+                                'nextflow', "run", "/some/path",
                                 '-params-file', '/some/config.yaml',
                                 '-with-trace',
                                 '-with-report',
@@ -285,7 +291,9 @@ def test_create_nextflow():
                                "timeline": "F",
                                "report": "N",
                                "trace": "FALSE"})
-    assert created2.command == ['nextflow', "run", "/some/path",
+    assert created2.command == ['source', '/path/to/script', ss('&&'),
+                                'set', '-eu', '-o', 'pipefail', ss('&&'),
+                                'nextflow', "run", "/some/path",
                                 '-params-file', '/the/config.file']
     assert created2.environment == {
         "NXF_OPTS": "-Xmx2048m",

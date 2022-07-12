@@ -8,11 +8,11 @@
 import math
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 from tempora import parse_timedelta
 
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -54,13 +54,31 @@ class WorkflowEngine(metaclass=ABCMeta):
 
         By default, all parameters related to ExecutionSettings are "known".
         """
-        return KNOWN_PARAMS.subset(frozenset({"job-name",
+        return KNOWN_PARAMS.subset(frozenset({"engine-environment",
+                                              "job-name",
                                               "max-memory",
                                               "max-runtime",
                                               "cores",
                                               "group",
                                               "queue",
                                               "accounting-name"}))
+
+    def _engine_environment_setup(self,
+                                  params: List[ActualEngineParameter]) \
+            -> List[Union[str, ShellSpecial]]:
+        """
+        Shell code for setting up a base environment in which to call the workflow engine. This is
+        *not* meant for setting up just environment variables. The environment variables should be
+        set via ShellCommand.environment, because they may be set via the command execution
+        mechanism.
+        """
+        candidates = [p.value
+                      for p in params
+                      if p.param == self.known_parameters()["engine-environment"]]
+        if len(candidates) > 0 and candidates[0] is not None:
+            return ["source", candidates[0], ss("&&"), "set", "-eu", "-o", "pipefail", ss("&&")]
+        else:
+            return []
 
     def _optional_param(self,
                         param: ActualEngineParameter,
@@ -221,9 +239,10 @@ class Snakemake(WorkflowEngine):
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
-        command = ["snakemake",
-                   "--snakefile", str(workflow_path)
-                   ] + self._command_params(parameters)
+        command = super()._engine_environment_setup(parameters)
+        command += ["snakemake",
+                    "--snakefile", str(workflow_path)
+                    ] + self._command_params(parameters)
         if len(config_files) > 0:
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
         return ShellCommand(command=command,
@@ -294,7 +313,8 @@ class Nextflow(WorkflowEngine):
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
-        command = ["nextflow"] +\
+        command = super()._engine_environment_setup(parameters)
+        command += ["nextflow"] +\
             self._command_params(parameters) +\
             ["run", str(workflow_path)]
         if len(config_files) == 1:

@@ -5,7 +5,6 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-import shlex
 from datetime import timedelta
 from pathlib import Path
 
@@ -19,7 +18,7 @@ def test_slurm_submit_minimal_command():
     command = SlurmCommandSet(). \
         submit(command=ShellCommand(["/tmp/tmp9xbcndui"]),
                settings=ExecutionSettings())
-    assert command == [
+    assert command.command == [
         'sbatch',
         '--export=NONE',
         '-o', '/dev/null',
@@ -46,8 +45,7 @@ def test_slurm_submit_full_command():
                                           memory=Memory.from_str("5G"),
                                           queue="test-queue",
                                           cores=10))
-    print(" ".join(list(map(shlex.quote, command))))
-    assert command == [
+    assert command.command == [
         'sbatch',
         '--export=someVar=someVal,someOtherVar=\'containing, a, comma\'',
         '-D', '/some/dir',
@@ -65,10 +63,11 @@ def test_slurm_submit_full_command():
 
 def test_get_status():
     command = SlurmCommandSet().get_status(["1234", "4567"])
-    assert command == ["bash", "-c", "sacct --format=JobID,State,ExitCode -j '1234,4567' -n -X"]
+    assert command.command == \
+           ["sacct", "--format=JobID,State,ExitCode", "-j", "1234,4567", "-n", "-X"]
 
 
 def test_kill():
     ids = ["1234", "3456"]
     command = SlurmCommandSet().kill(ids)
-    assert command == ["scancel", "-s", "TERM"] + ids
+    assert command.command == ["scancel", "-s", "TERM"] + ids

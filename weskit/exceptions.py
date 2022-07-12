@@ -8,18 +8,20 @@
 
 
 class WESkitError(Exception):
-    def __init__(self, message):
+
+    def __init__(self, message, *args):
         """
         :param message: Used as message in the REST response.
         """
-        self._message = message
+        super().__init__(message, *args)
+    #     self._message = message
 
     @property
     def message(self):
-        return self._message
+        return self.args[0]
 
-    def __str__(self):
-        return "%s: %s" % (self.__class__.__name__, self.message)
+    # def __str__(self):
+    #     return "%s: %s" % (self.__class__.__name__, self.message)
 
 
 class ClientError(WESkitError):

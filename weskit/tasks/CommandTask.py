@@ -14,7 +14,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Any
 
-import weskit.serializer  # noqa
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
@@ -50,8 +49,6 @@ def run_command(command: ShellCommand,
 
     "exit_code" is set to -1, if no result could be produced from the command, e.g. if a prior
     mkdir failed, or similar abnormal situations.
-
-    TODO: Simplify interface by using object de/serialization.
     """
     start_time = datetime.now()
 
@@ -127,7 +124,7 @@ def run_command(command: ShellCommand,
             exit_code = result.status.code
         execution_log = {
             "start_time": format_timestamp(start_time),
-            "cmd": command.command,
+            "cmd": [str(el) for el in command.command],   # Represent ShellSpecial as `ss(string)`.
             "env": command.environment,
             "workdir": str(workdir),
             "end_time": get_current_timestamp(),

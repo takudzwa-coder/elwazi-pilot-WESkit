@@ -112,6 +112,9 @@ static_service_info:
     default_workflow_engine_parameters:
       NFL:
         "21.04.0":
+          - name: "engine-environment"
+            value: null
+            api: false
           - name: "max-memory"
             value: "256m"
             # api: false       # By default `false`
@@ -144,6 +147,9 @@ static_service_info:
 
       SMK:
         "6.10.0":
+          - name: "engine-environment"
+            value: null
+            api: true
           - name: "cores"
             value: "1"
             api: false

@@ -86,10 +86,10 @@ class LsfExecutor(ClusterExecutor):
             logger.error("stdin_file is not supported in ClusterExecutor.execute()")
         # Note that there are at two shells involved: The environment on the submission host
         # and the environment on the compute node, on which the actual command is executed.
-        submission_command = ShellCommand(self._command_set.submit(command=command,
-                                                                   stdout_file=stdout_file,
-                                                                   stderr_file=stderr_file,
-                                                                   settings=settings))
+        submission_command = self._command_set.submit(command=command,
+                                                      stdout_file=stdout_file,
+                                                      stderr_file=stderr_file,
+                                                      settings=settings)
         # The actual submission is done quickly. We wait here for the
         # result and then use the cluster job ID returned from the submission command,
         # as process ID to query the cluster job status later.
@@ -101,6 +101,7 @@ class LsfExecutor(ClusterExecutor):
             start_time = now()
             if result.status.failed:
                 raise ExecutorException(f"Failed to submit cluster job: {result}, " +
+                                        f"status={result.status}, " +
                                         f"stdout={stdout_lines}, " +
                                         f"stderr={stderr_lines}")
             else:

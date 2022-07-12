@@ -9,7 +9,7 @@ import logging
 import uuid
 from typing import List, Optional, Callable, cast
 
-from bson import CodecOptions, UuidRepresentation
+from bson import CodecOptions, UuidRepresentation, InvalidDocument
 from bson.son import SON
 from pymongo import ReturnDocument, MongoClient
 from pymongo.collection import Collection as MongoCollection
@@ -148,44 +148,51 @@ class Database:
         # function is transactional. On every successful update the db_version counter is
         # incremented.
         logger.debug(f"Trying to update run {run.id} in database (left tries = {max_tries})")
-        updated_run_dict = \
-            self._runs. \
-            find_one_and_replace({"id": run.id, "db_version": run.db_version},
-                                 dict(run.to_bson_serializable(), db_version=run.db_version + 1),
-                                 return_document=ReturnDocument.AFTER,
-                                 projection={'_id': False})
-        if updated_run_dict is None:
-            # Nothing updated. Let's search the value that should have been replaced.
-            stored_run_dict = self._runs.find_one({"id": run.id},
-                                                  projection={"_id": False})
-            if stored_run_dict is None:
-                # The value is absent! An insert should be done before any update.
-                logger.warning(f"Attempted to update non-existing run '{run.id}'")
-                raise DatabaseOperationError(f"Attempted to update non-existing run '{run.id}'")
-            else:
-                if max_tries <= 1:
-                    # There is a value in the DB with a different version, but the maximum number
-                    # of retries is reached. Stop here.
-                    logger.warning(f"Concurrent modification! Finally failed to update '{run.id}'")
-                    raise ConcurrentModificationError(
-                        run.db_version,
-                        run,
-                        Run.from_bson_serializable(stored_run_dict))
+        try:
+            updated_run_dict = \
+                self._runs. \
+                find_one_and_replace({"id": run.id, "db_version": run.db_version},
+                                     dict(run.to_bson_serializable(),
+                                          db_version=run.db_version + 1),
+                                     return_document=ReturnDocument.AFTER,
+                                     projection={'_id': False})
+            if updated_run_dict is None:
+                # Nothing updated. Let's search the value that should have been replaced.
+                stored_run_dict = self._runs.find_one({"id": run.id},
+                                                      projection={"_id": False})
+                if stored_run_dict is None:
+                    # The value is absent! An insert should be done before any update.
+                    logger.warning(f"Attempted to update non-existing run '{run.id}'")
+                    raise DatabaseOperationError("Attempted to update non-existing run "
+                                                 f"'{run.id}'")
                 else:
-                    if resolution_fun is None:
-                        # max_tries > 1 but no resolution function is a bug. Thus, no
-                        # ConcurrentModificationError but ValueError.
-                        raise ValueError(f"Database version of Run '{run.id}' was concurrently "
-                                         "updated, but no resolution_fun is defined: db_version "
-                                         f"expected '{run.db_version}' != observed "
-                                         f"'{stored_run_dict['db_version']}'")
+                    if max_tries <= 1:
+                        # There is a value in the DB with a different version, but the maximum
+                        # number of retries is reached. Stop here.
+                        logger.warning("Concurrent modification! Finally failed to update "
+                                       f"'{run.id}'")
+                        raise ConcurrentModificationError(
+                            run.db_version,
+                            run,
+                            Run.from_bson_serializable(stored_run_dict))
                     else:
-                        logger.info(f"Trying to resolve concurrent modification of run '{run.id}'")
-                        merged_run = resolution_fun(run,
-                                                    Run.from_bson_serializable(stored_run_dict))
-                        return self._update_run(merged_run, resolution_fun, max_tries - 1)
-        else:
-            return Run.from_bson_serializable(updated_run_dict)
+                        if resolution_fun is None:
+                            # max_tries > 1 but no resolution function is a bug. Thus, no
+                            # ConcurrentModificationError but ValueError.
+                            raise ValueError(f"Database version of Run '{run.id}' was concurrently "
+                                             "updated, but no resolution_fun is defined: "
+                                             f"db_version expected '{run.db_version}' != observed "
+                                             f"'{stored_run_dict['db_version']}'")
+                        else:
+                            logger.info("Trying to resolve concurrent modification of run "
+                                        f"'{run.id}'")
+                            merged_run = resolution_fun(run,
+                                                        Run.from_bson_serializable(stored_run_dict))
+                            return self._update_run(merged_run, resolution_fun, max_tries - 1)
+            else:
+                return Run.from_bson_serializable(updated_run_dict)
+        except InvalidDocument as ex:
+            raise DatabaseOperationError(f"DB error with run {run.id}: {run}", ex)
 
     def update_run(self,
                    run: Run,

@@ -13,13 +13,13 @@ import pytest
 
 import Executor_test
 from weskit import PathContext
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.tasks.CommandTask import run_command
 
 
 def test_run_command(temporary_dir, test_config):
-    command = ["bash", "-c", "echo 'hello world' > x"]
+    command = ["echo", "hello world", ss(">"), "x"]
     context = PathContext(data_dir=Path(temporary_dir).parent,
                           workflows_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
@@ -30,16 +30,16 @@ def test_run_command(temporary_dir, test_config):
                          executor_context=context,
                          executor_config=test_config['executor'],
                          execution_settings=ExecutionSettings())
-    assert result["output_files"] == ["x"]
-    with open(os.path.join(temporary_dir, "x"), "r") as f:
-        assert f.readlines() == ["hello world\n"]
     with open(os.path.join(temporary_dir, result["log_file"]), "r") as f:
         command_result = json.load(f)
         assert command_result["workdir"] == str(workdir)
-        assert command_result["cmd"] == command
+        assert command_result["cmd"] == [str(el) for el in command]
         assert command_result["exit_code"] == 0
         assert command_result["start_time"]
         assert command_result["end_time"]
+    assert result["output_files"] == ["x"]
+    with open(os.path.join(temporary_dir, "x"), "r") as f:
+        assert f.readlines() == ["hello world\n"]
     with open(os.path.join(temporary_dir, result["stderr_file"]), "r") as f:
         assert len(f.readlines()) == 0
     with open(os.path.join(temporary_dir, result["stdout_file"]), "r") as f:
@@ -48,7 +48,7 @@ def test_run_command(temporary_dir, test_config):
 
 @pytest.mark.ssh
 def test_run_command_ssh(temporary_dir, test_config):
-    command = ["bash", "-c", "echo 'hello world' > x"]
+    command = ["echo", "hello world", ss(">"), "x"]
     context = PathContext(data_dir=Path(temporary_dir).parent,
                           workflows_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
@@ -65,16 +65,16 @@ def test_run_command_ssh(temporary_dir, test_config):
                             "remote_workflows_dir": "/tmp",
                             "login": Executor_test.remote_config["ssh"]  # "ssh" in remote.yaml
                          })
-    assert result["output_files"] == ["x"]
-    with open(os.path.join(temporary_dir, "x"), "r") as f:
-        assert f.readlines() == ["hello world\n"]
     with open(os.path.join(temporary_dir, result["log_file"]), "r") as f:
         command_result = json.load(f)
         assert command_result["workdir"] == str(workdir)
-        assert command_result["cmd"] == command
+        assert command_result["cmd"] == [str(el) for el in command]
         assert command_result["exit_code"] == 0
         assert command_result["start_time"]
         assert command_result["end_time"]
+    assert result["output_files"] == ["x"]
+    with open(os.path.join(temporary_dir, "x"), "r") as f:
+        assert f.readlines() == ["hello world\n"]
     with open(os.path.join(temporary_dir, result["stderr_file"]), "r") as f:
         assert len(f.readlines()) == 0
     with open(os.path.join(temporary_dir, result["stdout_file"]), "r") as f:

@@ -78,7 +78,7 @@ class SlurmExecutor(ClusterExecutor):
         We assume Bash is used on the remote side. The command (bash script) is written locally
         into a NamedTemporaryFile.
         """
-        sub_command = " ".join(command.command)
+        sub_command = command.command_expression
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             if sub_command is not None:
                 for export in ["#!" + self._shell_interpreter, sub_command]:
