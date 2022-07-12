@@ -20,9 +20,6 @@ class WESkitError(Exception):
     def message(self):
         return self.args[0]
 
-    # def __str__(self):
-    #     return "%s: %s" % (self.__class__.__name__, self.message)
-
 
 class ClientError(WESkitError):
     """
