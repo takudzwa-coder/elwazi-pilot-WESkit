@@ -7,7 +7,7 @@
 #  Authors: The WESkit Team
 import logging
 import uuid
-from typing import List, Optional, Callable, cast
+from typing import List, Optional, Callable, cast, Dict, Sequence, Mapping, Any
 
 from bson import CodecOptions, UuidRepresentation, InvalidDocument
 from bson.son import SON
@@ -93,7 +93,7 @@ class Database:
                 runs.append(Run.from_bson_serializable(run_data))
         return runs
 
-    def list_run_ids_and_states(self, user_id: str) -> list:
+    def list_run_ids_and_states(self, user_id: str) -> List[Dict[str, str]]:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
         return list(self._runs.find(
@@ -104,11 +104,11 @@ class Database:
                         },
             filter={"user_id": user_id}))
 
-    def count_states(self):
+    def count_states(self) -> Dict[str, int]:
         """
         Returns the statistics of all job-states ever, for all users.
         """
-        pipeline = [
+        pipeline: Sequence[Mapping[str, Any]] = [
             {"$unwind": "$status"},
             {"$group": {"_id": "$status", "count": {"$sum": 1}}},
             {"$sort": SON([("count", -1), ("_id", -1)])}
