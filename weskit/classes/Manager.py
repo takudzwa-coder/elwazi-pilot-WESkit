@@ -131,7 +131,7 @@ class Manager:
 
         Return the exception to simplify usage as `raise self._record_error(...)`.
         """
-        logger.error("%s during processing of run '%s'" % (new_state.name, run.id))
+        logger.info("%s during processing of run '%s'" % (new_state.name, run.id))
         run.status = new_state
         if not isinstance(exception, PyMongoError) and \
                 not isinstance(exception, ConcurrentModificationError):

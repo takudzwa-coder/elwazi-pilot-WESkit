@@ -162,15 +162,12 @@ class Database:
                                                       projection={"_id": False})
                 if stored_run_dict is None:
                     # The value is absent! An insert should be done before any update.
-                    logger.warning(f"Attempted to update non-existing run '{run.id}'")
                     raise DatabaseOperationError("Attempted to update non-existing run "
                                                  f"'{run.id}'")
                 else:
                     if max_tries <= 1:
                         # There is a value in the DB with a different version, but the maximum
                         # number of retries is reached. Stop here.
-                        logger.warning("Concurrent modification! Finally failed to update "
-                                       f"'{run.id}'")
                         raise ConcurrentModificationError(
                             run.db_version,
                             run,
@@ -184,8 +181,8 @@ class Database:
                                              f"db_version expected '{run.db_version}' != observed "
                                              f"'{stored_run_dict['db_version']}'")
                         else:
-                            logger.info("Trying to resolve concurrent modification of run "
-                                        f"'{run.id}'")
+                            logger.debug("Trying to resolve concurrent modification of run "
+                                         f"'{run.id}'")
                             merged_run = resolution_fun(run,
                                                         Run.from_bson_serializable(stored_run_dict))
                             return self._update_run(merged_run, resolution_fun, max_tries - 1)
