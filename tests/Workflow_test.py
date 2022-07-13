@@ -117,7 +117,7 @@ def test_execute_snakemake(manager,
 @pytest.mark.integration
 def test_fail_execute_snakemake(manager,
                                 celery_worker):
-    run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0",
                        workflow_engine_parameters={},
@@ -141,7 +141,10 @@ def test_fail_execute_snakemake(manager,
     assert not (manager.weskit_context.run_dir(run.sub_dir) / "hello_world.txt").exists()
     assert "hello_world.txt" not in to_filename(run.outputs["workflow"])
 
-    assert run.execution_log["env"] == {}
+    assert run.execution_log["env"] == {
+        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
+    }
     assert run.execution_log["cmd"] == [
         "snakemake",
         "--snakefile",
