@@ -126,15 +126,15 @@ def test_fail_execute_snakemake(manager,
             run = manager.update_run(run)
         else:
             success = True
-    assert run.log["exit_code"] != 0
-    assert not os.path.exists(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
+    assert run.execution_log["exit_code"] != 0
+    assert not (manager.weskit_context.run_dir(run.sub_dir) / "hello_world.txt").exists()
     assert "hello_world.txt" not in to_filename(run.outputs["workflow"])
 
-    assert run.log["env"] == {}
-    assert run.log["cmd"] == [
+    assert run.execution_log["env"] == {}
+    assert run.execution_log["cmd"] == [
         "snakemake",
         "--snakefile",
-        run.workflow_path,
+        str(run.rundir_rel_workflow_path),
         "--cores", "1",
         "--configfile",
         "config.yaml"
