@@ -50,6 +50,15 @@ test:
     - flake8
     - bandit -r weskit/ uwsgi_server/
     - python -m pytest -vvv --cov=weskit/ --cov-report term-missing -m "not slow and not ssh"
+  rules:
+    # Run the tests in merge-commits, and in all branches with new commits, unless they have an
+    # open merge request.
+    # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
 
 # See
 # https://docs.gitlab.com/ee/user/project/deploy_tokens/index.html
