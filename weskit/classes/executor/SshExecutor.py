@@ -105,7 +105,6 @@ class SshExecutor(Executor):
         else:
             self._retry_options = retry_options
 
-        self._event_loop = asyncio.get_event_loop()
         self._connect()
 
     def _reconnection_retry_options(self, **kwargs) -> dict:
