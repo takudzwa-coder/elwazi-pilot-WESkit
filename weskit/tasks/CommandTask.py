@@ -68,14 +68,14 @@ def run_command(command: ShellCommand,
         logger.info("Running command in {} (worker)/{} (command): {}".
                     format(worker_context.run_dir(workdir),
                            executor_context.run_dir(workdir),
-                           command.command))
+                           [repr(el) for el in command.command]))
     else:
         if worker_context != executor_context:
             raise RuntimeError("No remote, but distinct remote path context: "
                                f"{worker_context} != {executor_context}")
         logger.info("Running command in {} (worker): {}".
                     format(executor_context.run_dir(workdir),
-                           command.command))
+                           [repr(el) for el in command.command]))
 
     # Make a copy of the ShellCommand with appropriate for the (possibly remote) executor
     # environment.
@@ -124,7 +124,7 @@ def run_command(command: ShellCommand,
             exit_code = result.status.code
         execution_log = {
             "start_time": format_timestamp(start_time),
-            "cmd": [str(el) for el in command.command],   # Represent ShellSpecial as `ss(string)`.
+            "cmd": [str(el) for el in command.command],
             "env": command.environment,
             "workdir": str(workdir),
             "end_time": get_current_timestamp(),

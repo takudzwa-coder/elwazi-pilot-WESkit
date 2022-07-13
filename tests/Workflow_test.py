@@ -102,8 +102,8 @@ def test_execute_snakemake(manager,
         "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
     }
     assert run.execution_log["cmd"] == [
-        "source", str(engine_env_path), "ss(&&)",
-        "set", "-eu", "-o", "pipefail", "ss(&&)",
+        "source", str(engine_env_path), "&&",
+        "set", "-eu", "-o", "pipefail", "&&",
         "snakemake",
         "--snakefile",
         str(run.rundir_rel_workflow_path),

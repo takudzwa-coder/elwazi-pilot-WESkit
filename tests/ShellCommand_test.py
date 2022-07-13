@@ -27,6 +27,12 @@ def test_command_expression():
     assert cmd2.command_expression == "cat a > b"
 
 
+def test_print_shell_special():
+    ss1 = ss(">")
+    assert str(ss1) == ">"
+    assert repr(ss1) == "ss(>)"
+
+
 def test_eq_and_hash():
     ss0 = ss("x")
     ss1 = ss("a")

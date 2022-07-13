@@ -47,7 +47,16 @@ class ShellSpecial:
     def decode_json(value) -> ShellSpecial:
         return ShellSpecial(value)
 
+    def __str__(self) -> str:
+        """
+        Readable string representation, e.g. for users.
+        """
+        return self.__value
+
     def __repr__(self) -> str:
+        """
+        Technical string representation, e.g. for logs.
+        """
         return f"ss({self.__value})"
 
 
