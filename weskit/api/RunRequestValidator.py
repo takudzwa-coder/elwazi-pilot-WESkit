@@ -11,6 +11,8 @@ import json
 import logging
 import os
 import re
+from os.path import normpath, commonprefix
+from pathlib import Path
 from typing import List, Optional, Dict, Callable, TypeVar, Union
 from urllib.parse import urlparse
 
@@ -22,7 +24,7 @@ class RunRequestValidator(object):
     def __init__(self,
                  syntax_validator: Callable[[Dict[str, dict]], Union[Dict[str, dict], List[str]]],
                  workflow_types_and_versions: Dict[str, List[str]],
-                 data_dir: str,
+                 data_dir: Path,
                  require_workdir_tag: bool):
         """The syntax validator is a function that returns a string with
         an error message, if there is an error, or dictionary or list with the validated
@@ -91,9 +93,8 @@ class RunRequestValidator(object):
         Return whether the `path`, which may include multiple '..', points to a directory that
         is still in or below data_dir.
         """
-        from os.path import join, normpath, commonprefix
-        expected_path = normpath(join(self.data_dir, path))
-        return commonprefix([self.data_dir, expected_path]) != self.data_dir
+        expected_path = Path(normpath(self.data_dir / path))
+        return Path(commonprefix([self.data_dir, expected_path])) != self.data_dir
 
     def _validate_file_url_path(self, url: str) -> List[str]:
         result = []

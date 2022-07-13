@@ -6,6 +6,7 @@
 #
 #  Authors: The WESkit Team
 import os
+from pathlib import Path
 
 import pytest
 import yaml
@@ -27,7 +28,7 @@ def request_validation():
 def run_request_validator_rundir(request_validation, service_info):
     return RunRequestValidator(create_validator(request_validation["run_request"]),
                                service_info.workflow_engine_versions(),
-                               "test-data",
+                               Path("test-data"),
                                True)
 
 
@@ -35,7 +36,7 @@ def run_request_validator_rundir(request_validation, service_info):
 def run_request_validator(request_validation, service_info):
     return RunRequestValidator(create_validator(request_validation["run_request"]),
                                service_info.workflow_engine_versions(),
-                               "test-data",
+                               Path("test-data"),
                                False)
 
 

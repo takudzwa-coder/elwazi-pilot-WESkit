@@ -9,14 +9,14 @@ import logging
 import os
 import subprocess  # nosec B603 B404
 from builtins import int, super, open, property
-from datetime import datetime
 from os import PathLike
-from pathlib import PurePath
+from pathlib import Path
 from shutil import copyfile
 from typing import Optional, cast, IO
 
 import weskit.classes.executor.Executor as base
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class LocalExecutor(base.Executor):
         stdin = self._file_repr_to_io(stdin_file, "r")
         stderr = self._file_repr_to_io(stderr_file, "a")
         stdout = self._file_repr_to_io(stdout_file, "a")
-        start_time = datetime.now()
+        start_time = now()
 
         # Note that shell=False (default) to ensure that no shell injection can be done.
         # The turned-off security warning for bandit is unavoidable, because we need to
@@ -158,7 +158,7 @@ class LocalExecutor(base.Executor):
                                                           exit_code, message=e.strerror),
                                                       start_time=start_time))
 
-    def copy_file(self, source: PurePath, target: PurePath):
+    def copy_file(self, source: Path, target: Path):
         if source == target:
             raise ValueError("Identical source and target paths: '{source}'")
         else:
@@ -185,7 +185,7 @@ class LocalExecutor(base.Executor):
             return_code = process.handle.poll()
             if return_code is not None:
                 result.status = base.ExecutionStatus(return_code)
-                result.end_time = datetime.now()
+                result.end_time = now()
                 process.result = result
             return process
 

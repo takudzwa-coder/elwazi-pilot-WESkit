@@ -6,7 +6,6 @@
 #
 #  Authors: The WESkit Team
 import logging
-from datetime import datetime
 from os import PathLike
 from typing import Optional, Match
 
@@ -16,6 +15,7 @@ from weskit.classes.executor.Executor import \
 from weskit.classes.executor.ExecutorException import ExecutorException
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
+from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ class LsfExecutor(ClusterExecutor):
              as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
-            start_time = datetime.now()
+            start_time = now()
             if result.status.failed:
                 raise ExecutorException(f"Failed to submit cluster job: {result}, " +
                                         f"stdout={stdout_lines}, " +

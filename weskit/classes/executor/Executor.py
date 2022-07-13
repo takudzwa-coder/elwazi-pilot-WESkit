@@ -21,7 +21,7 @@ from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import PathLike
-from pathlib import PurePath
+from pathlib import Path
 from typing import Optional, Any, Union, IO
 
 from weskit.serializer import decode_json
@@ -362,7 +362,7 @@ class Executor(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def copy_file(self, source: PurePath,  target: PurePath):
+    def copy_file(self, source: Path,  target: Path):
         """
         Copy a file associated with the execution of a job from source to target. If the target is
         remote then this corresponds to a network transfer.
@@ -370,7 +370,7 @@ class Executor(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def remove_file(self, target: PurePath):
+    def remove_file(self, target: Path):
         """
         Remove the target file. The target can be remote.
         """

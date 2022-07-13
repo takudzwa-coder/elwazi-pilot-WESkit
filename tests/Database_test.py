@@ -14,6 +14,7 @@ from weskit.exceptions import DatabaseOperationError, ConcurrentModificationErro
 from test_utils import get_mock_run
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
+from weskit.utils import updated
 
 
 @pytest.mark.integration
@@ -64,7 +65,7 @@ def test_except_update_on_current_update(test_database):
     # Now simulate a concurrent run, by just changing the value before writing it to the database.
     # The only thing necessary is to modify the db_version counter. We don't do any content
     # comparisons.
-    modified_run = Run({**dict(run), "db_version": run.db_version + 1})
+    modified_run = Run(**updated(dict(run), db_version=run.db_version + 1))
     test_database.insert_run(modified_run)
 
     # Modify the run, to unsure an update is attempted.

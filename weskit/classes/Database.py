@@ -9,6 +9,7 @@ import logging
 import uuid
 from typing import List, Optional, Callable, cast
 
+from bson import CodecOptions, UuidRepresentation
 from bson.son import SON
 from pymongo import ReturnDocument, MongoClient
 from pymongo.collection import Collection as MongoCollection
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 class Database:
     """Database abstraction."""
 
-    def __init__(self, database_url: str, database_name: str):
+    def __init__(self, server_url: str, database_name: str):
         """
         Note that the constructor does not try to access the database via the client. It should
         note because otherwise the current thread -- which may be before a fork, e.g. in uWSGI --
@@ -34,25 +35,26 @@ class Database:
         Please initialize the database after the creation of the Flask application by calling
         db.setup(). It will ensure the database exists and is set up (indices, etc.).
         """
-        self.database_url = database_url
+        self.server_url = server_url
         self.database_name = database_name
 
-        self.setup_db()
         self.__client: Optional[MongoClient] = None
-
-    def setup_db(self):
-        """
-        Create the database, collections, and indices.
-        """
-        client = MongoClient(self.database_url)
-        db = client[self.database_name]
-        runs = db["run"]
-        # Create an index to enforce a uniqueness constraint.
-        runs.create_index("run_id", unique=True)
+        self.__db: Optional[MongoDatabase] = None
 
     def initialize(self):
         if self.__client is None:
-            self.__client = MongoClient(self.database_url)
+            # For encoding/decoding with bson see
+            # See https://pymongo.readthedocs.io/en/stable/examples/uuid.html#standard
+            # and https://pymongo.readthedocs.io/en/stable/examples/custom_type.html#custom-type-example  # noqa
+            # Philip: I tried this but then MongoDB converted every string to Path. Could not
+            #         figure out how to convert just the path-encoding strings back to Path.
+            self.__client = MongoClient(self.server_url)
+
+            self.__db = MongoDatabase(self.__client, self.database_name)
+
+            # Create an index to enforce a uniqueness constraint.
+            runs = self.__db["run"]
+            runs.create_index("id", unique=True)
 
     @property
     def client(self) -> MongoClient:
@@ -60,29 +62,35 @@ class Database:
         return cast(MongoClient, self.__client)
 
     @property
-    def _db(self) -> MongoDatabase:
-        return self.client[self.database_name]
+    def db(self) -> MongoDatabase:
+        self.initialize()
+        return cast(MongoDatabase, self.__db)
 
     @property
     def _runs(self) -> MongoCollection:
-        return self._db["run"]
+        return self.db.get_collection("run",
+                                      codec_options=CodecOptions(
+                                          uuid_representation=UuidRepresentation.STANDARD))
 
     def aggregate_runs(self, pipeline):
         return dict(self._runs.aggregate(pipeline))
 
-    def get_run(self, run_id: str, **kwargs) -> Optional[Run]:
+    def get_run(self, run_id: uuid.UUID, **kwargs) -> Optional[Run]:
         run_data = self._runs.find_one(
-            filter={"run_id": run_id}, **kwargs)
+            filter={"id": run_id},
+            projection={"_id": False},
+            **kwargs)
         if run_data is not None:
-            return Run(run_data)
+            return Run.from_bson_serializable(run_data)
         return None
 
     def get_runs(self, query) -> List[Run]:
         runs = []
-        runs_data = self._runs.find(query)
+        runs_data = self._runs.find(query,
+                                    projection={"_id": False})
         if runs_data is not None:
             for run_data in runs_data:
-                runs.append(Run(run_data))
+                runs.append(Run.from_bson_serializable(run_data))
         return runs
 
     def list_run_ids_and_states(self, user_id: str) -> list:
@@ -90,8 +98,8 @@ class Database:
             raise ValueError("Can only list runs for specific user.")
         return list(self._runs.find(
             projection={"_id": False,
-                        "run_id": True,
-                        "run_status": True,
+                        "id": True,
+                        "status": True,
                         "user_id": True
                         },
             filter={"user_id": user_id}))
@@ -101,8 +109,8 @@ class Database:
         Returns the statistics of all job-states ever, for all users.
         """
         pipeline = [
-            {"$unwind": "$run_status"},
-            {"$group": {"_id": "$run_status", "count": {"$sum": 1}}},
+            {"$unwind": "$status"},
+            {"$group": {"_id": "$status", "count": {"$sum": 1}}},
             {"$sort": SON([("count", -1), ("_id", -1)])}
             ]
         counts_data = list(self._runs.aggregate(pipeline))
@@ -114,15 +122,15 @@ class Database:
                 counts[status.name] = 0
         return counts
 
-    def create_run_id(self):
-        run_id = str(uuid.uuid4())
+    def create_run_id(self) -> uuid.UUID:
+        run_id = uuid.uuid4()
         while not self.get_run(run_id) is None:
-            run_id = str(uuid.uuid4())
+            run_id = uuid.uuid4()
         return run_id
 
     def insert_run(self, run: Run) -> None:
         try:
-            insert_result: InsertOneResult = self._runs.insert_one(dict(run))
+            insert_result: InsertOneResult = self._runs.insert_one(run.to_bson_serializable())
         except Exception as e:
             # Wrap the pymongo exception into a WESkitError
             raise DatabaseOperationError(f"Exception during insert_run for {run.id}: {str(e)}") \
@@ -142,12 +150,14 @@ class Database:
         logger.debug(f"Trying to update run {run.id} in database (left tries = {max_tries})")
         updated_run_dict = \
             self._runs. \
-            find_one_and_replace({"run_id": run.id, "db_version": run.db_version},
-                                 dict(dict(run), db_version=run.db_version + 1),
-                                 return_document=ReturnDocument.AFTER)
+            find_one_and_replace({"id": run.id, "db_version": run.db_version},
+                                 dict(run.to_bson_serializable(), db_version=run.db_version + 1),
+                                 return_document=ReturnDocument.AFTER,
+                                 projection={'_id': False})
         if updated_run_dict is None:
             # Nothing updated. Let's search the value that should have been replaced.
-            stored_run_dict = self._runs.find_one({"run_id": run.id})
+            stored_run_dict = self._runs.find_one({"id": run.id},
+                                                  projection={"_id": False})
             if stored_run_dict is None:
                 # The value is absent! An insert should be done before any update.
                 logger.warning(f"Attempted to update non-existing run '{run.id}'")
@@ -157,7 +167,10 @@ class Database:
                     # There is a value in the DB with a different version, but the maximum number
                     # of retries is reached. Stop here.
                     logger.warning(f"Concurrent modification! Finally failed to update '{run.id}'")
-                    raise ConcurrentModificationError(run.db_version, run, Run(stored_run_dict))
+                    raise ConcurrentModificationError(
+                        run.db_version,
+                        run,
+                        Run.from_bson_serializable(stored_run_dict))
                 else:
                     if resolution_fun is None:
                         # max_tries > 1 but no resolution function is a bug. Thus, no
@@ -168,10 +181,11 @@ class Database:
                                          f"'{stored_run_dict['db_version']}'")
                     else:
                         logger.info(f"Trying to resolve concurrent modification of run '{run.id}'")
-                        merged_run = resolution_fun(run, Run(stored_run_dict))
+                        merged_run = resolution_fun(run,
+                                                    Run.from_bson_serializable(stored_run_dict))
                         return self._update_run(merged_run, resolution_fun, max_tries - 1)
         else:
-            return Run(updated_run_dict)
+            return Run.from_bson_serializable(updated_run_dict)
 
     def update_run(self,
                    run: Run,
@@ -218,28 +232,28 @@ class Database:
             return self._update_run(run, resolution_fun, max_tries)
         else:
             # If the local run was not modified, return the current version from the database.
-            stored_run_dict = self._runs.find_one({"run_id": run.id})
+            stored_run_dict = self._runs.find_one({"id": run.id},
+                                                  projection={"_id": False})
             if stored_run_dict is None:
                 # The value is absent! An insert should be done before any update.
                 raise DatabaseOperationError(f"Attempted to update non-existing run '{run.id}'")
             else:
-                return Run(stored_run_dict)
+                return Run.from_bson_serializable(stored_run_dict)
 
     def delete_run(self, run: Run) -> bool:
         return self._runs \
-            .delete_one({"run_id": run.id}) \
+            .delete_one({"id": run.id}) \
             .acknowledged
 
     def list_run_ids_and_states_and_times(self, user_id: str) -> list:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
-        return list(self._runs.find(
-            projection={"_id": False,
-                        "run_id": True,
-                        "run_status": True,
-                        # "request_time": True,
-                        "start_time": True,
-                        "user_id": True,
-                        "request": True
-                        },
-            filter={"user_id": user_id}))
+        return list(map(
+            lambda r: {
+                "run_id": r["id"],
+                "run_status": r["status"],
+                "start_time": r["start_time"],
+                "user_id": r["user_id"],
+                "request": r["request"]
+            },
+            self._runs.find(filter={"user_id": user_id})))

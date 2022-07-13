@@ -7,7 +7,7 @@
 #  Authors: The WESkit Team
 import shlex
 from datetime import timedelta
-from pathlib import PurePath
+from pathlib import Path
 
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -30,14 +30,14 @@ def test_lsf_submit_minimal_command():
 def test_lsf_submit_full_command():
     command = LsfCommandSet().\
         submit(command=ShellCommand(["bash", "-c", "echo \"hello. $someVar, $someOtherVar\""],
-                                    workdir=PurePath("/some/dir"),
+                                    workdir=Path("/some/dir"),
                                     environment={
                                         "some": "someVal",
                                         "someOther": "with, comma",
                                         "space": "here -> "
                                     }),
-               stdout_file=PurePath("/path/to/stdout"),
-               stderr_file=PurePath("/another/pa   th/to/stderr"),
+               stdout_file=Path("/path/to/stdout"),
+               stderr_file=Path("/another/pa   th/to/stderr"),
                settings=ExecutionSettings(job_name="da job",
                                           accounting_name="my account",
                                           group="a group",

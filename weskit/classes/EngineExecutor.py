@@ -8,8 +8,8 @@
 from __future__ import annotations
 
 import logging
-from enum import Enum
 
+from weskit.classes.EngineExecutorType import EngineExecutorType
 from weskit.classes.executor.Executor import Executor
 from weskit.classes.executor.LocalExecutor import LocalExecutor
 from weskit.classes.executor.SshExecutor import SshExecutor
@@ -17,31 +17,6 @@ from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 
 logger = logging.getLogger(__name__)
-
-
-class EngineExecutorType(Enum):
-    LOCAL = "local"
-    LOCAL_LSF = "local_lsf"
-    LOCAL_SLURM = "local_slurm"
-    SSH = "ssh"
-    SSH_LSF = "ssh_lsf"
-    SSH_SLURM = "ssh_slurm"
-
-    @property
-    def executes_engine_locally(self) -> bool:
-        return self == EngineExecutorType.LOCAL
-
-    @property
-    def executes_engine_remotely(self) -> bool:
-        return not self.executes_engine_locally
-
-    @property
-    def needs_login_credentials(self) -> bool:
-        return self.value.startswith("ssh")
-
-    @staticmethod
-    def from_string(name: str) -> EngineExecutorType:
-        return EngineExecutorType[name.upper()]
 
 
 def get_executor(executor_type: EngineExecutorType,

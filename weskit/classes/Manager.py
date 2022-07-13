@@ -5,14 +5,14 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, cast, Union
 from typing import Optional, List
 from urllib.parse import urlparse
+from uuid import UUID
 
 import yaml
 from celery import Celery, Task
@@ -23,6 +23,7 @@ from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
 from weskit.classes.Database import Database
+from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
 from weskit.classes.RunStatus import RunStatus
 from weskit.classes.ShellCommand import ShellCommand
@@ -31,7 +32,7 @@ from weskit.classes.TrsWorkflowInstaller \
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.exceptions import ClientError, ConcurrentModificationError
 from weskit.tasks.CommandTask import run_command
-from weskit.utils import get_current_timestamp, return_pre_signed_url
+from weskit.utils import return_pre_signed_url, now
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +44,15 @@ class Manager:
                  database: Database,
                  executor: Dict[str, Any],
                  workflow_engines: dict,
-                 data_dir: str,
-                 workflows_base_dir: str,
+                 weskit_context: PathContext,
+                 executor_context: PathContext,
                  require_workdir_tag: bool) -> None:
         self.executor = executor
         self.workflow_engines = workflow_engines
-        self.data_dir = data_dir
+        self.weskit_context = weskit_context
+        self.executor_context = executor_context
         self.celery_app = celery_app
         self.database = database
-        self.workflows_base_dir = workflows_base_dir
         self.require_workdir_tag = require_workdir_tag
         # Register the relevant tasks with fully qualified name. The function needs to be static.
         self.celery_app.task(run_command)
@@ -102,14 +103,14 @@ class Manager:
                 run.outputs["S3"] = [return_pre_signed_url(outfile=out, workdir=result["workdir"])
                                      for out in result["output_files"]]
             run.outputs["workflow"] = result["output_files"]
-            run.log = result
+            run.execution_log = result
 
-            run_dir_abs = os.path.join(self.data_dir, result["workdir"])
+            run_dir_abs = run.run_dir(self.weskit_context)
             if run.exit_code != -1:     # Command (in Celery job) was executed (maybe error 0)
                 # WARNING: Updates of > 4 mb can be slow with MongoDB.
-                with open(os.path.join(run_dir_abs, result["stdout_file"]), "r") as f:
+                with open(run_dir_abs / result["stdout_file"], "r") as f:
                     run.stdout = f.readlines()
-                with open(os.path.join(run_dir_abs, result["stderr_file"]), "r") as f:
+                with open(run_dir_abs / result["stderr_file"], "r") as f:
                     run.stderr = f.readlines()
             else:
                 # run_command produces exit_code == -1 if there are technical errors during the
@@ -168,12 +169,14 @@ class Manager:
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
-                    run_id: Optional[str] = None,
+                    run_id: Optional[Union[UUID, str]] = None,
                     max_tries: int = 1) -> List[Run]:
         """
         Update all runs in a non-terminal state, or (always) the single run with the requested
         run_id.
         """
+        if isinstance(run_id, str):
+            run_id = UUID(run_id)
         query: dict
         if run_id is None:
             # Generally updating finished runs does not make much sense and creates problems with
@@ -202,26 +205,32 @@ class Manager:
         else:
             request["tags"] = None
 
-        run = Run(data={"run_id": self.database.create_run_id(),
-                        "run_status": RunStatus.INITIALIZING.name,
-                        "request_time": get_current_timestamp(),
-                        "request": request,
-                        "user_id": user_id})
+        run = Run(id=self.database.create_run_id(),
+                  status=RunStatus.INITIALIZING,
+                  request_time=now(),
+                  request=request,
+                  user_id=user_id)
         self.database.insert_run(run)
 
         logger.debug(f"Created run {run.id}")
         return run
 
-    def get_run(self, run_id: str) -> Optional[Run]:
+    def get_run(self, run_id: Union[UUID, str]) -> Optional[Run]:
         """
         Request the current version of the run from the database. No update of the state
         from Celery is done. Return None, if no Run with the run_id can be found in the DB.
         """
+        if isinstance(run_id, str):
+            run_id = UUID(run_id)
         return self.database.get_run(run_id)
 
     # check files, uploads and returns list of valid filenames
-    def _process_workflow_attachment(self, run,
-                                     files: "Optional[ImmutableMultiDict[str, FileStorage]]"):
+    def _process_workflow_attachment(self,
+                                     run: Run,
+                                     files: "Optional[ImmutableMultiDict[str, FileStorage]]") \
+            -> List[Path]:
+        if run.sub_dir is None:
+            raise RuntimeError(f"Oops! run.subdir should be set: {run}")
         attachment_filenames = []
         if files is not None and "workflow_attachment" in files:
             workflow_attachment_files = files.getlist("workflow_attachment")
@@ -229,23 +238,22 @@ class Manager:
                 if attachment.filename is None:
                     raise ClientError("Attachment file without name")
                 else:
-                    filename = secure_filename(attachment.filename)
+                    filename = Path(secure_filename(attachment.filename))
                     # TODO could implement checks here
                     attachment_filenames.append(filename)
-                    attachment.save(os.path.join(self.data_dir, run.dir, filename))
+                    attachment.save(run.run_dir(self.weskit_context) / filename)  # type: ignore
         return attachment_filenames
 
     def _prepare_workflow_path(self,
-                               run_dir: str,
-                               url: str,
-                               attachment_filenames: List[str]) \
-            -> str:
+                               run: Run,
+                               attachment_filenames: List[Path]) \
+            -> Path:
         """
         After the call either the workflow is accessible via the returned path relative to the
         run directory (could go outside the WESKIT_DATA base directory, e.g. for centrally
         installed workflows, or an exception is raised.
 
-        The call may install the workflow. TODO This may block. Make workflow installation async?
+        The call may install the workflow.
 
         Attached files are extracted to the run directory.
 
@@ -256,23 +264,30 @@ class Manager:
         * Absolute trs://-URIs
 
         """
+        if run.sub_dir is None:
+            raise RuntimeError(f"Can only prepare run with defined run.sub_dir: {run}")
+        else:
+            abs_run_dir = cast(Path, run.run_dir(self.weskit_context))
+
+        url = run.request["workflow_url"]
         workflow_url = urlparse(url)
-        workflow_path_rel: str
+        workflow_path_rel: Path
         if workflow_url.scheme in ["file", '']:
             # TODO Should we enforce the name/version/type structure also for manual workflows?
             if os.path.isabs(workflow_url.path):
                 raise ClientError("Absolute workflow_url forbidden " +
                                   "(should be validated already): '%s'" % url)
-            elif workflow_url.path in attachment_filenames:
+            elif Path(workflow_url.path) in attachment_filenames:
                 # File should already be extracted to work-dir. The command is executed in the
                 # work-dir as the current work-dir, so we take it as it is.
-                workflow_path_rel = secure_filename(workflow_url.path)
+                workflow_path_rel = Path(secure_filename(workflow_url.path))
 
             else:
                 # The file refers to an already installed workflow.
-                workflow_path_rel = os.path.join(
-                    os.path.relpath(self.workflows_base_dir, os.path.join(self.data_dir, run_dir)),
-                    workflow_url.path)
+                workflow_path_rel = \
+                    Path(os.path.relpath(self.weskit_context.workflows_dir,
+                                         abs_run_dir)) / \
+                    workflow_url.path
 
         elif workflow_url.scheme == "https":
             raise ClientError("https:// workflow_url is not implemented")
@@ -282,29 +297,31 @@ class Manager:
             installer = TrsWorkflowInstaller(
                 trs_client=TRSClient(uri=f"trs://{workflow_url.hostname}",
                                      port=workflow_url.port),
-                workflow_base_dir=Path(self.workflows_base_dir))
+                workflow_base_dir=Path(self.weskit_context.workflows_dir))
 
             workflow_meta: WorkflowInstallationMetadata = installer.install(workflow_info)
-            # TODO Is this what we want, installing TRS workflows centrally, for all users?
-            workflow_path_rel = os.path.relpath(
-                os.path.join(self.workflows_base_dir,
-                             workflow_meta.workflow_dir,
-                             workflow_meta.workflow_file),
-                os.path.join(self.data_dir, run_dir))
+            workflow_path_rel = Path(os.path.relpath(
+                self.weskit_context.workflows_dir /
+                workflow_meta.workflow_dir /
+                workflow_meta.workflow_file,
+                abs_run_dir))
 
         else:
             raise ClientError(f"Unknown scheme in workflow_url: '{url}'")
 
         # workflow_path_rel is always relative to the run_dir, even when referring to a centrally
         # installed workflow.
-        workflow_path_abs = os.path.join(self.data_dir, run_dir, workflow_path_rel)
-        if not os.path.exists(workflow_path_abs):
-            raise ClientError("Derived workflow path is not accessible: '%s'" % workflow_path_abs)
+        workflow_path_abs = abs_run_dir / workflow_path_rel
+        if not workflow_path_abs.exists():
+            raise ClientError("Derived workflow path is not accessible: '%s'" %
+                              str(workflow_path_abs))
 
         return workflow_path_rel
 
-    def prepare_execution(self, run,
-                          files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None):
+    def prepare_execution(self,
+                          run: Run,
+                          files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None)\
+            -> Run:
         if files is None:
             files = ImmutableMultiDict()
 
@@ -314,22 +331,22 @@ class Manager:
 
         # Prepare run directory
         if self.require_workdir_tag:
-            run.dir = run.request["tags"]["run_dir"]
+            run.sub_dir = Path(run.request["tags"]["run_dir"])
         else:
-            run.dir = os.path.join(run.id[0:4], run.id)
+            run.sub_dir = Path(str(run.id)[0:4]) / str(run.id)
 
         try:
-            run_dir_abs = os.path.abspath(os.path.join(self.data_dir, run.dir))
-            if not os.path.exists(run_dir_abs):
+            # Casting is safe, here. run.sub_dir is set.
+            run_dir_abs = cast(Path, run.run_dir(self.weskit_context))
+            if not run_dir_abs.exists():
                 os.makedirs(run_dir_abs, exist_ok=True)
 
-            with open(run_dir_abs + "/config.yaml", "w") as ff:
+            with open(run_dir_abs / "config.yaml", "w") as ff:
                 yaml.dump(run.request["workflow_params"], ff)
 
-            run.workflow_path = self._prepare_workflow_path(
-                run.dir,
-                run.request["workflow_url"],
-                self._process_workflow_attachment(run, files))
+            run.rundir_rel_workflow_path = self._prepare_workflow_path(
+                run, self._process_workflow_attachment(run, files))
+
         except (ClientError, OSError) as e:
             # Any error during preparation, also if caused by the client should result in the
             # run to be in SYSTEM_ERROR state.
@@ -367,32 +384,31 @@ class Manager:
                               ", ".join(self.workflow_engines[workflow_type].keys()))),
                 RunStatus.SYSTEM_ERROR)
 
-        if run.workflow_path is None:
+        if run.rundir_rel_workflow_path is None:
             raise self._record_error(run,
                                      RuntimeError(f"Workflow path of run is None: {run.id}"),
                                      RunStatus.SYSTEM_ERROR)
 
         # Execute run
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
-            command(workflow_path=run.workflow_path,
-                    workdir=Path(self.data_dir, str(run.dir)),
+            command(workflow_path=run.rundir_rel_workflow_path,
+                    workdir=run.sub_dir,
                     config_files=[Path("config.yaml")],
                     engine_params=run.request.get("workflow_engine_parameters", {}))
         execution_settings: ExecutionSettings = \
             self.workflow_engines[workflow_type][workflow_type_version].\
             execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
-        run.log["cmd"] = command.command
-        run.log["env"] = command.environment
-        run.start_time = get_current_timestamp()
+        run.execution_log["cmd"] = command.command
+        run.execution_log["env"] = command.environment
+        run.start_time = now()
         task = self._run_task.apply_async(
             args=[],
             kwargs={
-                "command": command.command,
+                "command": command,
+                "worker_context": self.weskit_context,
+                "executor_context": self.executor_context,
                 "execution_settings": execution_settings,
-                "environment": command.environment,
-                "local_base_workdir": self.data_dir,
-                "sub_workdir": run.dir,
-                "executor_parameters": self.executor
+                "executor_config": self.executor
             })
         run.celery_task_id = task.id
 

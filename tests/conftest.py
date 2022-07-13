@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import time
+from pathlib import Path
 from tempfile import mkdtemp
 
 import pytest
@@ -20,7 +21,7 @@ from testcontainers.mongodb import MongoDbContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.redis import RedisContainer
 
-from weskit import create_app, create_database, Manager, WorkflowEngineFactory
+from weskit import create_app, create_database, Manager, WorkflowEngineFactory, PathContext
 from weskit.utils import create_validator
 from weskit.classes.ServiceInfo import ServiceInfo
 
@@ -256,11 +257,13 @@ def swagger():
 
 def create_manager(celery_session_app, redis_container, test_config, test_database,
                    require_workdir_tag: bool):
-    workflows_base_dir = os.path.abspath(os.getcwd())
-    os.environ["WESKIT_WORKFLOWS"] = workflows_base_dir
-    test_dir = "test-data/"
-    if not os.path.isdir(test_dir):
-        os.mkdir(test_dir)
+    workflows_base_dir = Path(os.getcwd()).absolute()
+    os.environ["WESKIT_WORKFLOWS"] = str(workflows_base_dir)
+    test_dir = Path("test-data")
+    if not (test_dir.exists() and test_dir.is_dir()):
+        test_dir.mkdir()
+    common_context = PathContext(workflows_dir=workflows_base_dir,
+                                 data_dir=test_dir)
     return Manager(celery_app=celery_session_app,
                    database=test_database,
                    executor=test_config["executor"],
@@ -269,8 +272,8 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
                        test_config
                        ["static_service_info"]
                        ["default_workflow_engine_parameters"]),
-                   workflows_base_dir=workflows_base_dir,
-                   data_dir=test_dir,
+                   weskit_context=common_context,
+                   executor_context=common_context,
                    require_workdir_tag=require_workdir_tag)
 
 

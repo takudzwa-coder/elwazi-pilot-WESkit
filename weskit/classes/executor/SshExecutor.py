@@ -12,9 +12,8 @@ import shlex
 import tempfile
 import uuid
 from asyncio.subprocess import PIPE
-from datetime import datetime
 from os import PathLike
-from pathlib import PurePath
+from pathlib import Path
 from typing import Optional, Sequence
 
 import asyncssh
@@ -26,6 +25,7 @@ from weskit.classes.executor.Executor \
     import Executor, ExecutionSettings, ExecutedProcess, \
     CommandResult, ExecutionStatus, ProcessId, FileRepr
 from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
+from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class SshExecutor(Executor):
         # * https://asyncssh.readthedocs.io/en/latest/api.html#specifying-known-hosts
         # * https://asyncssh.readthedocs.io/en/latest/api.html#specifying-private-keys
         # * https://asyncssh.readthedocs.io/en/latest/api.html#sshclientconnectionoptions
-        ssh_keys: Sequence[SSHKey] = asyncssh.read_private_key_list(PurePath(self._keyfile),
+        ssh_keys: Sequence[SSHKey] = asyncssh.read_private_key_list(Path(self._keyfile),
                                                                     self._keyfile_passphrase)
         logger.info(f"Read private keys from {self._keyfile}. " +
                     f"sha256 fingerprints: {list(map(lambda k: k.get_fingerprint(), ssh_keys))}")
@@ -143,16 +143,16 @@ class SshExecutor(Executor):
         await asyncssh.scp(srcpaths=(self._connection, str(srcpath)),
                            dstpath=str(dstpath), **kwargs)
 
-    async def remote_rm(self, path: PurePath):
+    async def remote_rm(self, path: Path):
         await self._connection.run(f"rm {shlex.quote(str(path))}")
 
-    def _process_directory(self, process_id: uuid.UUID) -> PurePath:
-        return PurePath("/tmp/weskit/ssh") / str(self._executor_id) / str(process_id)  # nosec: B108
+    def _process_directory(self, process_id: uuid.UUID) -> Path:
+        return Path("/tmp/weskit/ssh") / str(self._executor_id) / str(process_id)  # nosec: B108
 
-    def _setup_script_path(self, process_id: uuid.UUID) -> PurePath:
+    def _setup_script_path(self, process_id: uuid.UUID) -> Path:
         return self._process_directory(process_id) / "wrapper.sh"
 
-    async def _create_setup_script(self, command: ShellCommand) -> PurePath:
+    async def _create_setup_script(self, command: ShellCommand) -> Path:
         """
         We assume Bash is used on the remote side. Detection of the shell is tricky, if at all
         possible. Therefore, if you want to support other shells, make this configurable via a
@@ -168,7 +168,7 @@ class SshExecutor(Executor):
             for export in [f"export {it[0]}={shlex.quote(it[1])}"
                            for it in command.environment.items()]:
                 print(export, file=file)
-            return PurePath(file.name)
+            return Path(file.name)
 
     async def _upload_setup_script(self, process_id: uuid.UUID, command: ShellCommand):
         """
@@ -204,7 +204,7 @@ class SshExecutor(Executor):
             await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
 
-    async def _upload_file(self, local_path: PurePath, remote_path: PurePath):
+    async def _upload_file(self, local_path: Path, remote_path: Path):
         """
         We can't assume that local and remote path are identical. Thus file upload
         has to go into a manually generated remote folder.
@@ -218,10 +218,10 @@ class SshExecutor(Executor):
         finally:
             os.unlink(local_path)
 
-    def copy_file(self, source: PurePath, target: PurePath):
+    def copy_file(self, source: Path, target: Path):
         self._event_loop.run_until_complete(self._upload_file(source, target))
 
-    def remove_file(self, target: PurePath):
+    def remove_file(self, target: Path):
         self._event_loop.run_until_complete(self.remote_rm(target))
 
     async def _execute(self,
@@ -255,7 +255,7 @@ class SshExecutor(Executor):
         :param settings:
         :return:
         """
-        start_time = datetime.now()
+        start_time = now()
         try:
             process_id = uuid.uuid4()
             # Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
@@ -309,7 +309,7 @@ class SshExecutor(Executor):
         return_code = process.handle.returncode
         if return_code is not None:
             result.status = ExecutionStatus(return_code)
-            result.end_time = datetime.now()
+            result.end_time = now()
             process.result = result
         return process
 

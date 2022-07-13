@@ -64,7 +64,7 @@ def test_run(test_client,
             run = current_app.manager.update_run(run)
             continue
         success = True
-    assert os.path.isfile(os.path.join(manager.data_dir, run.dir, "hello_world.txt"))
+    assert (run.run_dir(manager.weskit_context) / "hello_world.txt").is_file()
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
     yield run
 
@@ -311,10 +311,10 @@ class TestWithHeaderToken:
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         assert response.json["next_page_token"] == ""   # For now, everything on one page.
-        runs = [x for x in response.json["runs"] if x['run_id'] == test_run.id]
+        runs = [x for x in response.json["runs"] if x['run_id'] == str(test_run.id)]
         assert len(runs) == 1
         assert runs[0] == {
-            "run_id": test_run.id,
+            "run_id": str(test_run.id),
             "state": "COMPLETE"
         }
 
@@ -325,7 +325,7 @@ class TestWithHeaderToken:
                                             OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
-        assert len([x for x in response.json if x['run_id'] == test_run.id]) == 1
+        assert len([x for x in response.json if x['run_id'] == str(test_run.id)]) == 1
         assert response.json[0].keys() == \
                {"request", "run_id", "run_status", "start_time", "user_id"}
 
@@ -334,7 +334,7 @@ class TestWithHeaderToken:
                             test_client,
                             test_run,
                             OIDC_credentials):
-        run_id = test_run.id
+        run_id = str(test_run.id)
         response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
                                    headers=OIDC_credentials.headerToken)
         start_time = time.time()

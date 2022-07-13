@@ -5,7 +5,7 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-from weskit.tasks.EngineExecutor import EngineExecutorType
+from weskit.classes.EngineExecutor import EngineExecutorType
 
 
 def test_engine_executor_type_construction():

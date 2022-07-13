@@ -26,7 +26,17 @@ executor:
       required: false
       type: string
       default: local
-    remote_base_dir:
+    remote_data_dir:
+      type: string
+      required: false
+      dependencies:
+        type:
+          - local_slurm
+          - local_lsf
+          - ssh
+          - ssh_slurm
+          - ssh_lsf
+    remote_workflows_dir:
       type: string
       required: false
       dependencies:
