@@ -96,14 +96,27 @@ class SshExecutor(Executor):
         self._remote_tmp = remote_tmp_base
 
         if retry_options is None:
-            self._retry_options = {
-                # By default, do exponential backoff with jitter, to avoid synchronous reconnection
-                # attempts by synchronously affected connections.
-                "wait": wait_exponential(multiplier=1, min=4, max=30) + wait_random(0, 1),
-                "stop": stop_after_attempt(5)
+            retry_options = {
+                "wait_exponential": {
+                    "multiplier": 1,
+                    "min": 4,
+                    "max": 300
+                },
+                "wait_random": {
+                    "min": 0,
+                    "max": 1
+                },
+                "stop_after_attempt": 5
             }
-        else:
-            self._retry_options = retry_options
+        self._retry_options = {
+            # By default, do exponential backoff with jitter, to avoid synchronous reconnection
+            # attempts by synchronously affected connections.
+            "wait":
+                wait_exponential(**retry_options["wait_exponential"]) +
+                wait_random(**retry_options["wait_random"]),
+            "stop":
+                stop_after_attempt(retry_options["stop_after_attempt"])
+        }
 
         self._connect()
 
