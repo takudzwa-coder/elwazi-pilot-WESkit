@@ -141,7 +141,7 @@ class ShellCommand:
         The ampersands can be marked as kw("&&") when constructing the command. Then the quoted
         representation will by
 
-        'source' '/path/to/script/ && 'do' '--something'
+        'source' '/path/to/script/' && 'do' '--something'
 
         Strings that usually should be marked as non-quoted are, for instance, Bash's
         metacharacters and control operators

@@ -8,14 +8,13 @@
 
 import logging
 import math
-import shlex
 from datetime import timedelta
 from os import PathLike
 from typing import List, Optional, Dict, Union
 
-from weskit.classes.executor.cluster.ClusterExecutor import CommandSet
 from weskit.classes.ShellCommand import ShellCommand, ShellSpecial
 from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.classes.executor.cluster.ClusterExecutor import CommandSet
 from weskit.memory_units import Unit, Memory
 
 logger = logging.getLogger(__name__)
@@ -135,7 +134,7 @@ class SlurmCommandSet(CommandSet):
 
         # We always use a single host. Number of Nodes assigned to the job
         result += ["-N", "1"]
-        result += [shlex.quote(command.command_expression)]
+        result += [command.command_expression]
         return ShellCommand(result)
 
     def get_status(self, job_ids: List[str]) -> ShellCommand:
