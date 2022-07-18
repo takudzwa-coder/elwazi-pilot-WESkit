@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def execute(executor: Executor,
             command: ShellCommand,
-            encoding="utf-8",
+            encoding: Optional[str] = "utf-8",
             **kwargs) \
         -> Iterator[Tuple[CommandResult, IO[str], IO[str]]]:
     """
@@ -60,25 +60,25 @@ class CommandSet(metaclass=ABCMeta):
                stdout_file: Optional[PathLike] = None,
                stderr_file: Optional[PathLike] = None,
                # stdin_file: Optional[PathLike] = None,  # possible with `-i`, but not needed
-               settings: Optional[ExecutionSettings] = None) -> List[str]:
+               settings: Optional[ExecutionSettings] = None) -> ShellCommand:
         pass
 
     @abstractmethod
-    def get_status(self, job_ids: List[str]) -> List[str]:
+    def get_status(self, job_ids: List[str]) -> ShellCommand:
         """
         Get a command that lists the job states for the requested jobs.
         """
         pass
 
     @abstractmethod
-    def kill(self, job_ids: List[str], signal: str = "TERM") -> List[str]:
+    def kill(self, job_ids: List[str], signal: str = "TERM") -> ShellCommand:
         """
         Get the command to send a termination signal to the jobs.
         """
         pass
 
     @abstractmethod
-    def wait_for(self, job_id: str):
+    def wait_for(self, job_id: str) -> ShellCommand:
         """
         A command that blocks (up to a year), until the requested job ended.
         """
@@ -94,7 +94,8 @@ class ClusterExecutor(Executor):
     Execute job-management operations via shell commands issued on a local/remote host.
     """
     @abstractmethod
-    def __init__(self, executor: Executor):
+    def __init__(self,
+                 executor: Executor):
         """
         Provide an executor that is used to execute the cluster specific commands.
         E.g. if this the commands should run locally, you can use a command_executor.LocalExecutor.
@@ -199,7 +200,7 @@ class ClusterExecutor(Executor):
            stop=stop_after_attempt(4),
            retry=retry_if_exception(is_retryable_error))
     def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
-        status_command = ShellCommand(self._command_set.get_status([process.id.value]))
+        status_command = self._command_set.get_status([process.id.value])
         with execute(self._executor, status_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
@@ -260,7 +261,7 @@ class ClusterExecutor(Executor):
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
         if process.result.status.finished:
             return process.result
-        wait_command = ShellCommand(self._command_set.wait_for(process.id.value))
+        wait_command = self._command_set.wait_for(process.id.value)
         try:
             with execute(self._executor, wait_command) as (result, stdout, stderr):
                 error_message = stderr.readlines()
@@ -291,6 +292,7 @@ class ClusterExecutor(Executor):
                 stderr_file: Optional[FileRepr] = None,
                 stdin_file: Optional[FileRepr] = None,
                 settings: Optional[ExecutionSettings] = None,
+                shell: bool = True,
                 **kwargs) \
             -> ExecutedProcess:
         """

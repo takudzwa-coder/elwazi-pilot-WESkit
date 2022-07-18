@@ -12,10 +12,10 @@ from builtins import int, super, open, property
 from os import PathLike
 from pathlib import Path
 from shutil import copyfile
-from typing import Optional, cast, IO
+from typing import Optional, cast, IO, Union, List
 
 import weskit.classes.executor.Executor as base
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ShellSpecial
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
@@ -92,13 +92,22 @@ class LocalExecutor(base.Executor):
                 stderr_file: Optional[base.FileRepr] = None,
                 stdin_file: Optional[base.FileRepr] = None,
                 settings: Optional[base.ExecutionSettings] = None,
+                shell: bool = True,
                 **kwargs) \
             -> base.ExecutedProcess:
         """
         Execute the process in the background and return the process ID.
 
         Note, the LocalExecutor supports processing of IOBase objects as stderr, stdout, stdin.
+
+        If the ShellCommand contains shell specials it cannot be handled as pure command anymore.
+        In that case, you need to set `shell = True`, or you receive a ValueError because of
+        inconsistent settings.
         """
+        if command.needs_shell() and not shell:
+            ValueError("Command uses shell specials, but is not marked to be executed in shell: " +
+                       str(command))
+
         # In the following explicit cast is used to avoid mypy errors. Mypy cannot (yet) infer the
         # type from `isinstance` conditions.
         stdin = self._file_repr_to_io(stdin_file, "r")
@@ -106,19 +115,22 @@ class LocalExecutor(base.Executor):
         stdout = self._file_repr_to_io(stdout_file, "a")
         start_time = now()
 
-        # Note that shell=False (default) to ensure that no shell injection can be done.
-        # The turned-off security warning for bandit is unavoidable, because we need to
-        # execute an external command, here.
+        effective_command: List[Union[str, ShellSpecial]]
+        if shell:
+            effective_command = ["bash", "-c", command.command_expression]
+        else:
+            effective_command = command.command
+
         # Note : ClosingPopen ensures that in most situations the stderr and stdin are closed,
         #        as soon as Popen.returncode is not None.
         try:
-            process = ClosingPopen(command.command,
+            process = ClosingPopen(effective_command,
                                    cwd=command.workdir,
                                    stdout=stdout,
                                    stderr=stderr,
                                    stdin=stdin,
                                    env=command.environment,
-                                   shell=False,
+                                   shell=False,    # We wrap in Bash.
                                    **kwargs)
             logger.debug(f"Started process {process.pid}: {command.command}")
 
@@ -139,7 +151,7 @@ class LocalExecutor(base.Executor):
             if str(e).startswith(f"[Errno 2] No such file or directory: {repr(command.workdir)}"):
                 # cd /dir/does/not/exist: exit code 1
                 # Since somewhere between 3.7.9 and 3.10.4 the e.strerror does not contain the
-                # missing file anymore, which make it impossible to tell from the message, whether
+                # missing file anymore, which makes it impossible to tell from the message, whether
                 # the workdir is inaccessible, or the executed command.
                 exit_code = 1
             else:

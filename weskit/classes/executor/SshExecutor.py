@@ -14,13 +14,13 @@ import uuid
 from asyncio.subprocess import PIPE
 from os import PathLike
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union, List
 
 import asyncssh
 from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, ChannelOpenError, \
     ProcessError, SSHCompletedProcess
 
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.executor.Executor \
     import Executor, ExecutionSettings, ExecutedProcess, \
     CommandResult, ExecutionStatus, ProcessId, FileRepr
@@ -42,7 +42,8 @@ class SshExecutor(Executor):
     See https://docs.python.org/3/library/asyncio-dev.html#debug-mode.
     """
 
-    def __init__(self, username: str,
+    def __init__(self,
+                 username: str,
                  hostname: str,
                  keyfile: PathLike,
                  keyfile_passphrase: str,
@@ -149,28 +150,28 @@ class SshExecutor(Executor):
     def _process_directory(self, process_id: uuid.UUID) -> Path:
         return Path("/tmp/weskit/ssh") / str(self._executor_id) / str(process_id)  # nosec: B108
 
-    def _setup_script_path(self, process_id: uuid.UUID) -> Path:
+    def _wrapper_path(self, process_id: uuid.UUID) -> Path:
         return self._process_directory(process_id) / "wrapper.sh"
 
-    async def _create_setup_script(self, command: ShellCommand) -> Path:
+    async def _create_wrapper(self, command: ShellCommand) -> Path:
         """
-        We assume Bash is used on the remote side. Detection of the shell is tricky, if at all
+        We assume Bash is available on the remote side. Detection of the shell is tricky, if at all
         possible. Therefore, if you want to support other shells, make this configurable via a
         WESkit variable.
         """
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
+            print("#!/bin/bash", file=file)
+            print("set -o pipefail -ue", file=file)
             if command.workdir is not None:
                 # Whatever command is executed later, make sure to catch all errors. This is also
                 # important for the `cd`, which may fail if the working directory is not
                 # accessible.
-                print("set -o pipefail -ue", file=file)
                 print(f"cd {shlex.quote(str(command.workdir))}", file=file)
-            for export in [f"export {it[0]}={shlex.quote(it[1])}"
-                           for it in command.environment.items()]:
-                print(export, file=file)
+            for var_name, var_value in command.environment.items():
+                print(f"export {var_name}={shlex.quote(var_value)}", file=file)
             return Path(file.name)
 
-    async def _upload_setup_script(self, process_id: uuid.UUID, command: ShellCommand):
+    async def _upload_wrapper(self, process_id: uuid.UUID, command: ShellCommand):
         """
         SSH usually does not allow to set environment variables. Therefore, we create a little
         script that sets up the environment for the remote process.
@@ -181,17 +182,17 @@ class SshExecutor(Executor):
         :param command:
         :return:
         """
-        local_script_file = await self._create_setup_script(command)
+        local_wrapper_file = await self._create_wrapper(command)
         try:
             remote_dir = self._process_directory(process_id)
             await self._connection.\
                 run(f"set -ue; umask 0077; mkdir -p {shlex.quote(str(remote_dir))}", check=True)
 
             # We use run() rather than sftp, because sftp is not turned on all SSH servers.
-            await asyncssh.scp(local_script_file,
-                               (self._connection, self._setup_script_path(process_id)))
+            await asyncssh.scp(local_wrapper_file,
+                               (self._connection, self._wrapper_path(process_id)))
         finally:
-            os.unlink(local_script_file)
+            os.unlink(local_wrapper_file)
 
     async def _is_executable(self, path: PathLike) -> bool:
         """
@@ -236,16 +237,6 @@ class SshExecutor(Executor):
         output and error refer to remote files, then include them into the command (e.g. with
         shell redirections).
 
-        Note that if you want shell-variables present on the execution side (the shell started by
-        connecting via SSH), then you need to wrap the actual command into `bash -c`. Otherwise
-        variable references, such as `$someVar` are not evaluated in the remote shell. E.g. the
-        following
-
-          command = ["bash", "-c", "echo \"$someVar\""]
-          environment = { "someVar": "Hello, World" }
-
-        will result in the execution of `echo "Hello, World"` on the remote side.
-
         Note that the paths for the stdout, stderr, and stdin files are *remote* paths.
 
         :param command:
@@ -263,21 +254,21 @@ class SshExecutor(Executor):
             # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
             # we create a remote temporary file on the remote host, that is loaded before the
             # actual command is executed remotely.
-            await self._upload_setup_script(process_id, command)
+            await self._upload_wrapper(process_id, command)
 
             # SSH is always associated with a shell. Therefore, a string is processed by asyncssh,
             # rather than an executable with a sequence of parameters, all in a list (compare
             # subprocess.run/Popen).
             #
             # The environment setup script is `source`d.
+            source_prefix: List[Union[str, ShellSpecial]] =\
+                ["source", str(self._wrapper_path(process_id)), ss("&&")]
             effective_command = \
-                ["source", shlex.quote(str(self._setup_script_path(process_id))), "&&"] + \
-                list(map(shlex.quote, command.command))
+                command.copy(command=source_prefix + command.command)
 
-            final_command_str = " ".join(effective_command)
-            logger.debug(f"Executed command ({process_id}): {effective_command}")
+            logger.debug(f"Executed command ({process_id}): {effective_command.command_expression}")
             process: SSHClientProcess = await self._connection.\
-                create_process(command=final_command_str,
+                create_process(command=effective_command.command_expression,
                                stdin=PIPE if stdin_file is None else stdin_file,
                                stdout=PIPE if stdout_file is None else stdout_file,
                                stderr=PIPE if stderr_file is None else stderr_file,
@@ -317,7 +308,7 @@ class SshExecutor(Executor):
         try:
             await process.handle.wait()
             self.update_process(process)
-            setup_script_path = self._setup_script_path(process.id.value)
+            setup_script_path = self._wrapper_path(process.id.value)
             await self._connection.run(f"rm {shlex.quote(str(setup_script_path))}", check=True)
             process_dir = self._process_directory(process.id.value)
             await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)

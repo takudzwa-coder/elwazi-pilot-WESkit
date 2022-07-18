@@ -26,6 +26,7 @@ class WorkflowEngineFactory:
 
     @staticmethod
     def create_engine(engine_class,
+                      engine_version: str,
                       parameters: ConfParameters) \
             -> WorkflowEngine:
         """
@@ -43,7 +44,8 @@ class WorkflowEngineFactory:
             actual_params += [ActualEngineParameter(param,
                                                     None if value is None else str(value),
                                                     is_api_parameter)]
-        return engine_class(actual_params)
+        return engine_class(engine_version,
+                            actual_params)
 
     @staticmethod
     def _create_versions(engine_class, engine_params: ConfVersions) \
@@ -56,6 +58,7 @@ class WorkflowEngineFactory:
         return dict(map(lambda by_version: (by_version[0],
                                             WorkflowEngineFactory.
                                             create_engine(engine_class,
+                                                          by_version[0],
                                                           by_version[1])),
                         engine_params.items()))
 

@@ -8,14 +8,13 @@
 
 import logging
 import math
-import shlex
 from datetime import timedelta
 from os import PathLike
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 
-from weskit.classes.executor.cluster.ClusterExecutor import CommandSet
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ShellSpecial
 from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.classes.executor.cluster.ClusterExecutor import CommandSet
 from weskit.memory_units import Unit, Memory
 
 logger = logging.getLogger(__name__)
@@ -91,9 +90,9 @@ class SlurmCommandSet(CommandSet):
                stdout_file: Optional[PathLike] = None,
                stderr_file: Optional[PathLike] = None,
                # stdin_file: Optional[PathLike] = None,  # possible with `-i`, but not needed
-               settings: Optional[ExecutionSettings] = None) -> List[str]:
+               settings: Optional[ExecutionSettings] = None) -> ShellCommand:
         """
-        Create a sbatch command line for submitting an command to a cluster node. Note that the
+        Create a sbatch command line for submitting a command to a cluster node. Note that the
         submission command includes the remote working directory and the environment of the
         command. Since srun is interactive and waits for the job to be commlete, we submit jobs
         via sbatch -> sbatch [options] script. Therefore the script needs to be uploaded beforehand.
@@ -109,7 +108,7 @@ class SlurmCommandSet(CommandSet):
         """
 
         # Ensure the job exits, if the working directory does not exist.
-        result = ["sbatch"]
+        result: List[Union[str, ShellSpecial]] = ["sbatch"]
         result += self._environment_parameters(command.environment)
         result += ["-D", str(command.workdir)] \
             if command.workdir is not None else []
@@ -135,38 +134,35 @@ class SlurmCommandSet(CommandSet):
 
         # We always use a single host. Number of Nodes assigned to the job
         result += ["-N", "1"]
-        result += ["".join(list(map(shlex.quote, command.command)))]
-        return result
+        result += [command.command_expression]
+        return ShellCommand(result)
 
-    def get_status(self, job_ids: List[str]) -> List[str]:
+    def get_status(self, job_ids: List[str]) -> ShellCommand:
         """
         Get a command that lists the Slurm job states for the requested jobs. The command produces
         on standard output one line for each requested job ID, with two whitespace-separated
         columns, the first being the job ID, the second the status indicate of the cluster system
         (i.e. "DONE", etc.).
         """
-        # The reason to wrap the command into bash is that it contains a pipe. All command elements
-        # are quoted and the command shall be interpreted without a shell, but the '|' is a shell
-        # instruction.
-        result = ["bash", "-c",
-                  "sacct --format=JobID,State,ExitCode -j '" +
-                  ",".join(job_ids) +
-                  "' -n -X"]
-        return result
+        result: List[Union[str, ShellSpecial]] = \
+            ["sacct",  "--format=JobID,State,ExitCode", "-j", ",".join(job_ids), "-n", "-X"]
+        return ShellCommand(result)
 
-    def kill(self, job_ids: List[str], signal: str = "TERM") -> List[str]:
+    def kill(self, job_ids: List[str], signal: str = "TERM") -> ShellCommand:
         """
         Get the command to send a termination signal (SIGTERM) to the jobs.
         """
-        result = ["scancel", "-s", signal] + job_ids
-        return result
+        result: List[Union[str, ShellSpecial]] = ["scancel", "-s", signal]
+        result += job_ids
+        return ShellCommand(result)
 
-    def wait_for(self, job_id: str) -> List[str]:
+    def wait_for(self, job_id: str) -> ShellCommand:
         """
         A command that blocks, until the requested job ended.
         """
-        command = ["bash", "-c",
-                   f"""i=\"RUNNING\"; until [ $i != \"RUNNING\" ] &&"""
-                   f"""[ $i != \"PENDING\" ] ; do sleep 5; """
-                   f"""i=$(sacct --format=State -j {job_id} -n -X ); done"""]
-        return command
+        command: List[Union[str, ShellSpecial]] =\
+            ["bash", "-c",
+             f"i=\"RUNNING\"; until [ $i != \"RUNNING\" ] &&"
+             f"[ $i != \"PENDING\" ] ; do sleep 5; "
+             f"i=$(sacct --format=State -j {job_id} -n -X ); done"]
+        return ShellCommand(command)

@@ -6,14 +6,13 @@
 #
 #  Authors: The WESkit Team
 import math
-import shlex
 from datetime import timedelta
 from os import PathLike
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 
-from weskit.classes.executor.cluster.ClusterExecutor import CommandSet
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.classes.executor.cluster.ClusterExecutor import CommandSet
 from weskit.memory_units import Unit, Memory
 
 
@@ -81,7 +80,7 @@ class LsfCommandSet(CommandSet):
                stdout_file: Optional[PathLike] = None,
                stderr_file: Optional[PathLike] = None,
                # stdin_file: Optional[PathLike] = None,  # possible with `-i`, but not needed
-               settings: Optional[ExecutionSettings] = None) -> List[str]:
+               settings: Optional[ExecutionSettings] = None) -> ShellCommand:
         """
         Create a bsub command line for submitting a command to a cluster node. Note that the
         submission command includes the remote working directory and the environment of the
@@ -97,7 +96,7 @@ class LsfCommandSet(CommandSet):
         will evaluate to `echo "Hello, World"`
         """
         # Ensure the job exits, if the working directory does not exist.
-        result = ["bsub"]
+        result: List[Union[str, ShellSpecial]] = ["bsub"]
         result += self._environment_parameters(command.environment)
         result += ["-cwd", str(command.workdir)] \
             if command.workdir is not None else []
@@ -129,34 +128,32 @@ class LsfCommandSet(CommandSet):
         # We always use a single host.
         result += ["-R", "span[hosts=1]"]
 
-        result += [" ".join(list(map(shlex.quote, command.command)))]
-        return result
+        result += [command.command_expression]
+        return ShellCommand(result)
 
-    def get_status(self, job_ids: List[str]) -> List[str]:
+    def get_status(self, job_ids: List[str]) -> ShellCommand:
         """
         Get a command that lists the LSF job states for the requested jobs. The command produces
         on standard output one line for each requested job ID, with two whitespace-separated
         columns, the first being the job ID, the second the status indicate of the cluster system
         (i.e. "DONE", etc.).
         """
-        # The reason to wrap the command into bash is that it contains a pipe. All command elements
-        # are quoted and the command shall be interpreted without a shell, but the '|' is a shell
-        # instruction.
-        result = ["bash", "-c",
-                  "bjobs -o 'jobid stat exit_code' " +
-                  " ".join(job_ids) +
-                  " | tail -n +2"]
-        return result
+        result: List[Union[str, ShellSpecial]] = ["bjobs", "-o", "jobid stat exit_code"]
+        result += job_ids
+        result += [ss("|"), "tail", "-n", "+2"]
+        return ShellCommand(result)
 
-    def kill(self, job_ids: List[str], signal: str = "TERM") -> List[str]:
+    def kill(self, job_ids: List[str], signal: str = "TERM") -> ShellCommand:
         """
         Get the command to send a termination signal (SIGTERM) to the jobs.
         """
-        result = ["bkill", "-s", signal] + job_ids
-        return result
+        result: List[Union[str, ShellSpecial]] = ["bkill", "-s", signal]
+        result += job_ids
+        return ShellCommand(result)
 
-    def wait_for(self, job_id: str):
+    def wait_for(self, job_id: str) -> ShellCommand:
         """
         A command that blocks (up to a year), until the requested job ended.
         """
-        return ["bwait", "-t", "525600", "-w", f"done({job_id})"]
+        result: List[Union[str, ShellSpecial]] = ["bwait", "-t", "525600", "-w", f"done({job_id})"]
+        return ShellCommand(result)

@@ -103,6 +103,7 @@ def test_get_default_workflow_engine_parameters(service_info):
     case.assertDictEqual(default, {
         "SMK": {
             "6.10.0": [
+                {"name": "engine-environment", "default_value": None},
                 {"name": "max-memory", "default_value": "100m"},
                 {"name": "max-runtime", "default_value": "05:00"},
                 {"name": "accounting-name", "default_value": None},

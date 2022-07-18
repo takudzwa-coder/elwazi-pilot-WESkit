@@ -78,7 +78,7 @@ class SlurmExecutor(ClusterExecutor):
         We assume Bash is used on the remote side. The command (bash script) is written locally
         into a NamedTemporaryFile.
         """
-        sub_command = " ".join(command.command)
+        sub_command = command.command_expression
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             if sub_command is not None:
                 for export in ["#!" + self._shell_interpreter, sub_command]:
@@ -130,10 +130,10 @@ class SlurmExecutor(ClusterExecutor):
         # remove the (possibly remote) copy.
 
         command.command = [str(target_script)]
-        submission_command = ShellCommand(self._command_set.submit(command=command,
-                                                                   stdout_file=stdout_file,
-                                                                   stderr_file=stderr_file,
-                                                                   settings=settings))
+        submission_command = self._command_set.submit(command=command,
+                                                      stdout_file=stdout_file,
+                                                      stderr_file=stderr_file,
+                                                      settings=settings)
         # The actual submission is done quickly. We wait here for the
         # result and then use the cluster job ID returned from the submission command, as process
         # ID to query the cluster job status later.

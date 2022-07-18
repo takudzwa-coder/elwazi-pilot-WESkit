@@ -7,9 +7,9 @@
 #  Authors: The WESkit Team
 import logging
 import uuid
-from typing import List, Optional, Callable, cast
+from typing import List, Optional, Callable, cast, Dict, Sequence, Mapping, Any
 
-from bson import CodecOptions, UuidRepresentation
+from bson import CodecOptions, UuidRepresentation, InvalidDocument
 from bson.son import SON
 from pymongo import ReturnDocument, MongoClient
 from pymongo.collection import Collection as MongoCollection
@@ -93,7 +93,7 @@ class Database:
                 runs.append(Run.from_bson_serializable(run_data))
         return runs
 
-    def list_run_ids_and_states(self, user_id: str) -> list:
+    def list_run_ids_and_states(self, user_id: str) -> List[Dict[str, str]]:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
         return list(self._runs.find(
@@ -104,11 +104,11 @@ class Database:
                         },
             filter={"user_id": user_id}))
 
-    def count_states(self):
+    def count_states(self) -> Dict[str, int]:
         """
         Returns the statistics of all job-states ever, for all users.
         """
-        pipeline = [
+        pipeline: Sequence[Mapping[str, Any]] = [
             {"$unwind": "$status"},
             {"$group": {"_id": "$status", "count": {"$sum": 1}}},
             {"$sort": SON([("count", -1), ("_id", -1)])}
@@ -148,44 +148,48 @@ class Database:
         # function is transactional. On every successful update the db_version counter is
         # incremented.
         logger.debug(f"Trying to update run {run.id} in database (left tries = {max_tries})")
-        updated_run_dict = \
-            self._runs. \
-            find_one_and_replace({"id": run.id, "db_version": run.db_version},
-                                 dict(run.to_bson_serializable(), db_version=run.db_version + 1),
-                                 return_document=ReturnDocument.AFTER,
-                                 projection={'_id': False})
-        if updated_run_dict is None:
-            # Nothing updated. Let's search the value that should have been replaced.
-            stored_run_dict = self._runs.find_one({"id": run.id},
-                                                  projection={"_id": False})
-            if stored_run_dict is None:
-                # The value is absent! An insert should be done before any update.
-                logger.warning(f"Attempted to update non-existing run '{run.id}'")
-                raise DatabaseOperationError(f"Attempted to update non-existing run '{run.id}'")
-            else:
-                if max_tries <= 1:
-                    # There is a value in the DB with a different version, but the maximum number
-                    # of retries is reached. Stop here.
-                    logger.warning(f"Concurrent modification! Finally failed to update '{run.id}'")
-                    raise ConcurrentModificationError(
-                        run.db_version,
-                        run,
-                        Run.from_bson_serializable(stored_run_dict))
+        try:
+            updated_run_dict = \
+                self._runs. \
+                find_one_and_replace({"id": run.id, "db_version": run.db_version},
+                                     dict(run.to_bson_serializable(),
+                                          db_version=run.db_version + 1),
+                                     return_document=ReturnDocument.AFTER,
+                                     projection={'_id': False})
+            if updated_run_dict is None:
+                # Nothing updated. Let's search the value that should have been replaced.
+                stored_run_dict = self._runs.find_one({"id": run.id},
+                                                      projection={"_id": False})
+                if stored_run_dict is None:
+                    # The value is absent! An insert should be done before any update.
+                    raise DatabaseOperationError("Attempted to update non-existing run "
+                                                 f"'{run.id}'")
                 else:
-                    if resolution_fun is None:
-                        # max_tries > 1 but no resolution function is a bug. Thus, no
-                        # ConcurrentModificationError but ValueError.
-                        raise ValueError(f"Database version of Run '{run.id}' was concurrently "
-                                         "updated, but no resolution_fun is defined: db_version "
-                                         f"expected '{run.db_version}' != observed "
-                                         f"'{stored_run_dict['db_version']}'")
+                    if max_tries <= 1:
+                        # There is a value in the DB with a different version, but the maximum
+                        # number of retries is reached. Stop here.
+                        raise ConcurrentModificationError(
+                            run.db_version,
+                            run,
+                            Run.from_bson_serializable(stored_run_dict))
                     else:
-                        logger.info(f"Trying to resolve concurrent modification of run '{run.id}'")
-                        merged_run = resolution_fun(run,
-                                                    Run.from_bson_serializable(stored_run_dict))
-                        return self._update_run(merged_run, resolution_fun, max_tries - 1)
-        else:
-            return Run.from_bson_serializable(updated_run_dict)
+                        if resolution_fun is None:
+                            # max_tries > 1 but no resolution function is a bug. Thus, no
+                            # ConcurrentModificationError but ValueError.
+                            raise ValueError(f"Database version of Run '{run.id}' was concurrently "
+                                             "updated, but no resolution_fun is defined: "
+                                             f"db_version expected '{run.db_version}' != observed "
+                                             f"'{stored_run_dict['db_version']}'")
+                        else:
+                            logger.debug("Trying to resolve concurrent modification of run "
+                                         f"'{run.id}'")
+                            merged_run = resolution_fun(run,
+                                                        Run.from_bson_serializable(stored_run_dict))
+                            return self._update_run(merged_run, resolution_fun, max_tries - 1)
+            else:
+                return Run.from_bson_serializable(updated_run_dict)
+        except InvalidDocument as ex:
+            raise DatabaseOperationError(f"DB error with run {run.id}: {run}", ex)
 
     def update_run(self,
                    run: Run,

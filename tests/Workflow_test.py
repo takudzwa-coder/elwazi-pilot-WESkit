@@ -24,7 +24,7 @@ from weskit.utils import to_filename
 def test_snakemake_prepare_execution(manager, manager_rundir):
 
     # 1.) use workflow on server
-    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
+    run = get_mock_run(workflow_url="wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
     manager.database.insert_run(run)
@@ -33,7 +33,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
 
     # 2.) workflow does neither exist on server nor in attachment
     #     -> error message outputs execution
-    run = get_mock_run(workflow_url="tests/wf1/Filesnake",
+    run = get_mock_run(workflow_url="wf1/Filesnake",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
     try:
@@ -45,7 +45,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
 
     # 3.) copy attached workflow to workdir
     wf_url = "wf_1.smk"
-    with open(os.path.join(os.getcwd(), "tests/wf1/Snakefile"), "rb") as fp:
+    with open(manager.weskit_context.workflows_dir / "wf1/Snakefile", "rb") as fp:
         wf_file = FileStorage(fp, filename=wf_url)
         files = ImmutableMultiDict({"workflow_attachment": [wf_file]})
         run = get_mock_run(workflow_url=wf_url,
@@ -57,7 +57,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     assert run.workflow_path(manager.weskit_context).is_file()
 
     # 4.) set custom workdir
-    run = get_mock_run(workflow_url="tests/wf1/Snakefile",
+    run = get_mock_run(workflow_url="wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0",
                        tags={"run_dir": "sample1/my_workdir"})
@@ -69,10 +69,15 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
 @pytest.mark.integration
 def test_execute_snakemake(manager,
                            celery_worker):
-    run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
+    # No path-processing is done on the engine environment path. Therefore, it has to be an
+    # absolute path, or a path relative to the run directory -- both in the execution environment.
+    engine_env_path = manager.executor_context.workflows_dir.absolute() / "wf1" / "env.sh"
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0",
-                       workflow_engine_parameters={})
+                       workflow_engine_parameters={
+                           "engine-environment": str(engine_env_path)
+                       })
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
     manager.database.insert_run(run)
@@ -92,8 +97,13 @@ def test_execute_snakemake(manager,
     assert run.run_dir(manager.weskit_context) / "hello_world.txt"
     assert "hello_world.txt" in to_filename(run.outputs["workflow"])
 
-    assert run.execution_log["env"] == {}
+    assert run.execution_log["env"] == {
+        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
+    }
     assert run.execution_log["cmd"] == [
+        "source", str(engine_env_path), "&&",
+        "set", "-eu", "-o", "pipefail", "&&",
         "snakemake",
         "--snakefile",
         str(run.rundir_rel_workflow_path),
@@ -101,12 +111,13 @@ def test_execute_snakemake(manager,
         "--configfile",
         "config.yaml"
     ]
+    assert run.stderr[0] == "environment setup\n"
 
 
 @pytest.mark.integration
 def test_fail_execute_snakemake(manager,
                                 celery_worker):
-    run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0",
                        workflow_engine_parameters={},
@@ -130,7 +141,10 @@ def test_fail_execute_snakemake(manager,
     assert not (manager.weskit_context.run_dir(run.sub_dir) / "hello_world.txt").exists()
     assert "hello_world.txt" not in to_filename(run.outputs["workflow"])
 
-    assert run.execution_log["env"] == {}
+    assert run.execution_log["env"] == {
+        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
+    }
     assert run.execution_log["cmd"] == [
         "snakemake",
         "--snakefile",
@@ -144,7 +158,7 @@ def test_fail_execute_snakemake(manager,
 @pytest.mark.integration
 def test_execute_nextflow(manager,
                           celery_worker):
-    run = get_mock_run(workflow_url="file:tests/wf3/helloworld.nf",
+    run = get_mock_run(workflow_url="file:wf3/helloworld.nf",
                        workflow_type="NFL",
                        workflow_type_version="21.04.0",
                        workflow_engine_parameters={"trace": "False"})
@@ -171,7 +185,11 @@ def test_execute_nextflow(manager,
     with open(run.run_dir(manager.weskit_context) / hello_world_files[0], "r") as fh:
         assert fh.readlines() == ["hello_world\n"]
 
-    assert run.execution_log["env"] == {"NXF_OPTS": "-Xmx256m"}
+    assert run.execution_log["env"] == {
+        "NXF_OPTS": "-Xmx256m",
+        "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
+        "WESKIT_WORKFLOW_PATH":  str(run.rundir_rel_workflow_path),
+    }
     assert run.execution_log["cmd"] == [
         "nextflow",
         "-Djava.io.tmpdir=/tmp",
@@ -191,7 +209,7 @@ def test_execute_nextflow(manager,
 # tasks!
 @pytest.mark.skip
 def test_cancel_workflow(manager, celery_worker):
-    run = get_mock_run(workflow_url="tests/wf2/Snakefile",
+    run = get_mock_run(workflow_url="wf2/Snakefile",
                        workflow_type="SMK")
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
@@ -205,7 +223,7 @@ def test_cancel_workflow(manager, celery_worker):
 @pytest.mark.integration
 def test_update_all_runs(manager,
                          celery_worker):
-    run = get_mock_run(workflow_url="file:tests/wf1/Snakefile",
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
     manager.database.insert_run(run)

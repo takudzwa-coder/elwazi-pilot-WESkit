@@ -74,6 +74,7 @@ executor:
           type: string
           required: false
 
+
 static_service_info:
   type: dict
   required: true
