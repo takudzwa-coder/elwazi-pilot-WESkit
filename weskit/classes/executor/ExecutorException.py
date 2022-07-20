@@ -25,3 +25,11 @@ class TimingError(ExecutorException):
     Command execution was partially successful i.e. command execution returned no output
     """
     pass
+
+
+class ConnectionError(ExecutorException):
+    """
+    A connection error prevented the operation to succeed. This should be used e.g. if channels
+    cannot be opened or connections are interrupted.
+    """
+    pass

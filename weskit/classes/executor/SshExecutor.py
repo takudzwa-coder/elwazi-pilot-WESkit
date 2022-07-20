@@ -27,7 +27,8 @@ from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.executor.Executor \
     import Executor, ExecutionSettings, ExecutedProcess, \
     CommandResult, ExecutionStatus, ProcessId, FileRepr
-from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
+from weskit.classes.executor.ExecutorException import \
+    ExecutorException, ExecutionError, ConnectionError
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
@@ -148,9 +149,9 @@ class SshExecutor(Executor):
                 with attempt:
                     yield self
         except asyncssh.DisconnectError as e:
-            raise ExecutorException("Connection error (disconnect)", e)
+            raise ConnectionError("Disconnected", e)
         except asyncssh.ChannelOpenError as ex:
-            raise ExecutorException("Connection error", ex)
+            raise ConnectionError("Channel open failed", ex)
         except asyncssh.Error as ex:
             raise ExecutorException("SSH error", ex)
 
