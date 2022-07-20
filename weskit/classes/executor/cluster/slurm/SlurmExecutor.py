@@ -12,8 +12,6 @@ from os import PathLike
 from pathlib import Path
 from typing import Optional, Match
 
-import asyncssh
-
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
@@ -122,7 +120,7 @@ class SlurmExecutor(ClusterExecutor):
         target_script = Path(str(command.workdir), ".weskit_submitted_command.sh")
         try:
             self.copy_file(source_script, target_script)
-        except asyncssh.SFTPError:
+        except ExecutorException:
             return _create_process(job_id=ProcessId(0),
                                    execution_status=ExecutionStatus(1, "EXIT"))
 

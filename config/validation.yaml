@@ -73,6 +73,33 @@ executor:
         keyfile_passphrase:
           type: string
           required: false
+        retry_options:
+          type: dict
+          schema:
+            wait_exponential:
+              type: dict
+              schema:
+                multiplier:
+                  type: float
+                  default: 1.0
+                min:
+                  type: float
+                  default: 1.0
+                max:
+                  type: float
+                  default: 300
+            wait_random:
+              type: dict
+              schema:
+                min:
+                  type: float
+                  default: 0
+                max:
+                  type: float
+                  default: 1
+            stop_after_attempt:
+               type: float
+               default: 5
 
 
 static_service_info:

@@ -12,26 +12,31 @@ import shlex
 import tempfile
 import uuid
 from asyncio.subprocess import PIPE
+from contextlib import asynccontextmanager
 from os import PathLike
 from pathlib import Path
 from typing import Optional, Sequence, Union, List
 
 import asyncssh
-from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, ChannelOpenError, \
+from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, \
     ProcessError, SSHCompletedProcess
+from tenacity import \
+    wait_exponential, stop_after_attempt, wait_random, AsyncRetrying, retry_if_exception
 
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.executor.Executor \
     import Executor, ExecutionSettings, ExecutedProcess, \
     CommandResult, ExecutionStatus, ProcessId, FileRepr
-from weskit.classes.executor.ExecutorException import ExecutorException, ExecutionError
+from weskit.classes.executor.ExecutorException import \
+    ExecutorException, ExecutionError, ConnectionError
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
 
-def is_retryable_error(exception: BaseException) -> bool:
-    return isinstance(exception, ExecutionError)
+def is_connection_interrupted(exception: BaseException) -> bool:
+    return isinstance(exception, asyncssh.ChannelOpenError) and \
+           exception.reason in ["SSH connection closed", "SSH connection lost"]
 
 
 class SshExecutor(Executor):
@@ -51,7 +56,9 @@ class SshExecutor(Executor):
                  connection_timeout: str = "2m",
                  keepalive_interval: str = "0",
                  keepalive_count_max: int = 3,
-                 port: int = 22):
+                 port: int = 22,
+                 retry_options: dict = None,
+                 remote_tmp_base: Path = Path("/tmp/weskit/ssh")):  # nosec B108
         """
         Keepalive: This is for a server application. The default is to have a keep-alive, but one
                    that allows recovery after even a long downtime of the remote host.
@@ -86,7 +93,67 @@ class SshExecutor(Executor):
                 asyncio.set_event_loop(self._event_loop)
             else:
                 raise ex
+
+        self._remote_tmp = remote_tmp_base
+
+        if retry_options is None:
+            retry_options = {
+                "wait_exponential": {
+                    "multiplier": 1,
+                    "min": 4,
+                    "max": 300
+                },
+                "wait_random": {
+                    "min": 0,
+                    "max": 1
+                },
+                "stop_after_attempt": 5
+            }
+        self._retry_options = {
+            # By default, do exponential backoff with jitter, to avoid synchronous reconnection
+            # attempts by synchronously affected connections.
+            "wait":
+                wait_exponential(**retry_options["wait_exponential"]) +
+                wait_random(**retry_options["wait_random"]),
+            "stop":
+                stop_after_attempt(retry_options["stop_after_attempt"])
+        }
+
         self._connect()
+
+    def _reconnection_retry_options(self, **kwargs) -> dict:
+        """
+        All retries should wrap around external asynchronous calls, such as asyncssh, or
+        async functions that themselves do no retry, because errors are simply re-raised.
+        Thus, if the same error is causing a retry at different levels, retry attempts multiply!
+        """
+        return {**self._retry_options,
+                "reraise": True,
+                "retry": retry_if_exception(is_connection_interrupted),
+                "after": self._connection,
+                **kwargs}
+
+    @asynccontextmanager
+    async def _retryable_connection(self, **kwargs):
+        """
+        A context manager that simplifies the calling of SSH operations with retry. You can add
+        parameters to tenacity.AsyncRetrying to override any defaults.
+
+        with self._retryable_connection():
+            do_ssh_ap()
+
+        Exceptions raised by asyncssh are wrapped in an ExecutorException.
+        """
+        try:
+            async for attempt in AsyncRetrying(**self._reconnection_retry_options(**kwargs)):
+                with attempt:
+                    yield self
+        except asyncssh.DisconnectError as e:
+            raise ConnectionError("Disconnected", e)
+        except asyncssh.ChannelOpenError as ex:
+            raise ConnectionError("Channel open failed", ex)
+        except asyncssh.Error as ex:
+            raise ExecutorException("SSH error", ex)
 
     @property
     def username(self) -> str:
@@ -108,7 +175,7 @@ class SshExecutor(Executor):
     def keyfile(self) -> PathLike:
         return self._keyfile
 
-    def _connect(self):
+    def _connect(self) -> None:
         # Some related docs:
         # * https://asyncssh.readthedocs.io/en/latest/api.html#specifying-known-hosts
         # * https://asyncssh.readthedocs.io/en/latest/api.html#specifying-private-keys
@@ -129,7 +196,8 @@ class SshExecutor(Executor):
                                      keepalive_interval=self._keepalive_interval,
                                      keepalive_count_max=self._keepalive_count_max,
                                      # By default do not forward the local environment.
-                                     env={}, send_env={}))
+                                     env={},
+                                     send_env={}))
             logger.debug(f"Connected to {self._remote_name}")
         except asyncssh.DisconnectError as e:
             raise ExecutorException("Connection error (disconnect)", e)
@@ -137,18 +205,21 @@ class SshExecutor(Executor):
             raise ExecutorException("Connection error (timeout)", e)
 
     async def put(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
-        await asyncssh.scp(srcpaths=str(srcpath),
-                           dstpath=(self._connection, str(dstpath)), **kwargs)
+        async with self._retryable_connection():
+            await asyncssh.scp(srcpaths=str(srcpath),
+                               dstpath=(self._connection, str(dstpath)), **kwargs)
 
     async def get(self, srcpath: PathLike, dstpath: PathLike, **kwargs):
-        await asyncssh.scp(srcpaths=(self._connection, str(srcpath)),
-                           dstpath=str(dstpath), **kwargs)
+        async with self._retryable_connection():
+            await asyncssh.scp(srcpaths=(self._connection, str(srcpath)),
+                               dstpath=str(dstpath), **kwargs)
 
     async def remote_rm(self, path: Path):
-        await self._connection.run(f"rm {shlex.quote(str(path))}")
+        async with self._retryable_connection():
+            await self._connection.run(f"rm {shlex.quote(str(path))}")
 
     def _process_directory(self, process_id: uuid.UUID) -> Path:
-        return Path("/tmp/weskit/ssh") / str(self._executor_id) / str(process_id)  # nosec: B108
+        return self._remote_tmp / str(self._executor_id) / str(process_id)  # nosec: B108
 
     def _wrapper_path(self, process_id: uuid.UUID) -> Path:
         return self._process_directory(process_id) / "wrapper.sh"
@@ -183,14 +254,15 @@ class SshExecutor(Executor):
         :return:
         """
         local_wrapper_file = await self._create_wrapper(command)
+        remote_dir = self._process_directory(process_id)
         try:
-            remote_dir = self._process_directory(process_id)
-            await self._connection.\
-                run(f"set -ue; umask 0077; mkdir -p {shlex.quote(str(remote_dir))}", check=True)
+            async with self._retryable_connection():
+                await self._connection.\
+                    run(f"set -ue; umask 0077; mkdir -p {shlex.quote(str(remote_dir))}", check=True)
 
-            # We use run() rather than sftp, because sftp is not turned on all SSH servers.
-            await asyncssh.scp(local_wrapper_file,
-                               (self._connection, self._wrapper_path(process_id)))
+                # We use run() rather than sftp, because sftp is not turned on all SSH servers.
+                await asyncssh.scp(local_wrapper_file,
+                                   (self._connection, self._wrapper_path(process_id)))
         finally:
             os.unlink(local_wrapper_file)
 
@@ -201,8 +273,9 @@ class SshExecutor(Executor):
         """
         # `which` only returns exit code 0, if the provided argument -- with or without path --
         # is executable.
-        result: SSHCompletedProcess = \
-            await self._connection.run(f"which {shlex.quote(str(path))}")
+        async with self._retryable_connection():
+            result: SSHCompletedProcess = \
+                await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
 
     async def _upload_file(self, local_path: Path, remote_path: Path):
@@ -215,7 +288,8 @@ class SshExecutor(Executor):
         :return:
         """
         try:
-            await asyncssh.scp(str(local_path), (self._connection, str(remote_path)))
+            async with self._retryable_connection():
+                await asyncssh.scp(str(local_path), (self._connection, str(remote_path)))
         finally:
             os.unlink(local_path)
 
@@ -247,34 +321,33 @@ class SshExecutor(Executor):
         :return:
         """
         start_time = now()
-        try:
-            process_id = uuid.uuid4()
-            # Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
-            # the server, environment variables to be set for the target process cannot be used
-            # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
-            # we create a remote temporary file on the remote host, that is loaded before the
-            # actual command is executed remotely.
-            await self._upload_wrapper(process_id, command)
+        process_id = uuid.uuid4()
 
-            # SSH is always associated with a shell. Therefore, a string is processed by asyncssh,
-            # rather than an executable with a sequence of parameters, all in a list (compare
-            # subprocess.run/Popen).
-            #
-            # The environment setup script is `source`d.
-            source_prefix: List[Union[str, ShellSpecial]] =\
-                ["source", str(self._wrapper_path(process_id)), ss("&&")]
-            effective_command = \
-                command.copy(command=source_prefix + command.command)
+        # Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
+        # the server, environment variables to be set for the target process cannot be used
+        # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
+        # we create a remote temporary file on the remote host, that is sourced before the
+        # actual command is executed remotely.
+        await self._upload_wrapper(process_id, command)
 
-            logger.debug(f"Executed command ({process_id}): {effective_command.command_expression}")
+        # SSH is always associated with a shell. Therefore, a string is processed by asyncssh,
+        # rather than an executable with a sequence of parameters, all in a list (compare
+        # subprocess.run/Popen).
+        #
+        # The environment setup script is `source`d.
+        source_prefix: List[Union[str, ShellSpecial]] = \
+            ["source", str(self._wrapper_path(process_id)), ss("&&")]
+        effective_command = \
+            command.copy(command=source_prefix + command.command)
+
+        async with self._retryable_connection():
             process: SSHClientProcess = await self._connection.\
                 create_process(command=effective_command.command_expression,
                                stdin=PIPE if stdin_file is None else stdin_file,
                                stdout=PIPE if stdout_file is None else stdout_file,
                                stderr=PIPE if stderr_file is None else stderr_file,
                                **kwargs)
-        except ChannelOpenError as e:
-            raise ExecutionError("Couldn't execute process", e)
+        logger.debug(f"Executed command ({process_id}): {effective_command.command_expression}")
 
         return ExecutedProcess(executor=self,
                                process_handle=process,
@@ -306,12 +379,13 @@ class SshExecutor(Executor):
 
     async def _wait_for(self, process: ExecutedProcess) -> CommandResult:
         try:
-            await process.handle.wait()
-            self.update_process(process)
-            setup_script_path = self._wrapper_path(process.id.value)
-            await self._connection.run(f"rm {shlex.quote(str(setup_script_path))}", check=True)
-            process_dir = self._process_directory(process.id.value)
-            await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)
+            async with self._retryable_connection():
+                await process.handle.wait()
+                self.update_process(process)
+                wrapper_path = self._wrapper_path(process.id.value)
+                await self._connection.run(f"rm {shlex.quote(str(wrapper_path))}", check=True)
+                process_dir = self._process_directory(process.id.value)
+                await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)
         except TimeoutError as e:
             raise ExecutionError(f"Process {process.id.value} timed out:" +
                                  str(process.command.command), e)
