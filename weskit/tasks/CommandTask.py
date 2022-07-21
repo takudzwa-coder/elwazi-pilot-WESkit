@@ -47,8 +47,12 @@ def run_command(command: ShellCommand,
     except for the workdir, which is the relative path beneath the local_base_workdir directory
     (that should be the WESKIT_DATA directory).
 
-    "exit_code" is set to -1, if no result could be produced from the command, e.g. if a prior
-    mkdir failed, or similar abnormal situations.
+    "exit_code" is set to negative values for system errors
+
+      * -1: No result could be produced from the command, e.g. if a prior
+            mkdir failed, or similar abnormal situations.
+      * -2: The process was waited for without timeout, but no valid exit-code was produced
+            (Executor.wait_for() should always result in an exit-code != None).
     """
     start_time = datetime.now()
 
@@ -119,9 +123,11 @@ def run_command(command: ShellCommand,
             # result may be None, if the execution failed because the command does not exist.
             exit_code = -1
         else:
-            # result.status should not be None, unless the process did not finish, which would be
-            # a bug at this place. This is guaranteed by tests (Executor_test.py).
             exit_code = result.status.code
+            if exit_code is None:
+                # result.status should not be None if wait_for() was run. Let's not terminate the
+                # worker, but just return some exit code value that indicates a system error.
+                exit_code = -2
         execution_log = {
             "start_time": format_timestamp(start_time),
             "cmd": [str(el) for el in command.command],

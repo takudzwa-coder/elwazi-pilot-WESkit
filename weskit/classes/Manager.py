@@ -106,7 +106,8 @@ class Manager:
             run.execution_log = result
 
             run_dir_abs = run.run_dir(self.weskit_context)
-            if run.exit_code != -1:     # Command (in Celery job) was executed (maybe error 0)
+            if run.exit_code is not None and run.exit_code >= 0:
+                # Command (in Celery job) was executed (successfully or not)
                 # WARNING: Updates of > 4 mb can be slow with MongoDB.
                 with open(run_dir_abs / result["stdout_file"], "r") as f:
                     run.stdout = f.readlines()

@@ -113,7 +113,9 @@ class RunStatus(enum.Enum):
         }
         if celery_state_name == "SUCCESS":
             if exit_code is None:
-                raise RuntimeError("Oops! Celery state SUCCESS but no exit code")
+                # The exit_code returned from the worker should always be an integer, if the
+                # Celery worker gets into the SUCCESS state.
+                return RunStatus.SYSTEM_ERROR
             elif exit_code > 0:
                 return RunStatus.EXECUTOR_ERROR
             elif exit_code < 0:  # System error in task not resulting in Celery task FAILURE

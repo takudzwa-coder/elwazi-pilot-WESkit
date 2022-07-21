@@ -208,8 +208,11 @@ class LocalExecutor(base.Executor):
 
     def wait_for(self, process: base.ExecutedProcess, timeout: Optional[float] = None)\
             -> base.CommandResult:
-        status = self.get_status(process)
-        if not status.finished:
-            logger.debug(f"Waiting for process {process.id}")
-            process.handle.wait(timeout)
-        return self.update_process(process).result
+        if not process.result.status.finished:
+            return_code = process.handle.wait(timeout)
+            if return_code is None:
+                raise RuntimeError(
+                    f"subprocess.wait() should not return None (pid={process.handle.pid})")
+            process.result.status = base.ExecutionStatus(return_code)
+            process.result.end_time = now()
+        return process.result
