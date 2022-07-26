@@ -54,10 +54,13 @@ test:
     # Run the tests in merge-commits, and in all branches with new commits, unless they have an
     # open merge request.
     # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"    # yes, on merge request pipeline
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS    # not, if there is on open MR
       when: never
-    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_BRANCH                               # yes, on new commits
+    - if: $CI_COMMIT_REF_PROTECTED                        # not, if this is a protected branch
+      when: never                                         #      because tested already in merge
+                                                          #      result pipeline
 
 
 # See
