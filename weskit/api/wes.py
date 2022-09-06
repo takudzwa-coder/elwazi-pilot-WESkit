@@ -13,7 +13,7 @@ from flask import current_app, jsonify, request
 from flask_jwt_extended import current_user
 from rfc3339 import rfc3339
 
-from weskit.api.Helper import Helper
+from weskit.api.Helper import Helper, run_log
 from weskit.exceptions import ClientError
 from weskit.oidc.Decorators import login_required
 
@@ -35,15 +35,7 @@ def GetRunLog(run_id):
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
-            return {
-                "run_id": run.id,
-                "request": run.request,
-                "state": run.status.name,
-                "run_log": run.execution_log,
-                "task_logs": run.task_logs,
-                "outputs": run.outputs,
-                "user_id": run.user_id
-            }, 200
+            return run_log(run), 200
         else:
             return access_denied_response
 

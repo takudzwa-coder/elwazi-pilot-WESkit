@@ -7,8 +7,9 @@
 #  Authors: The WESkit Team
 
 import logging
-import os
 import time
+from datetime import datetime
+from urllib.parse import urlparse
 
 import pytest
 import requests
@@ -65,7 +66,7 @@ def test_run(test_client,
             continue
         success = True
     assert (run.run_dir(manager.weskit_context) / "hello_world.txt").is_file()
-    assert "hello_world.txt" in to_filename(run.outputs["workflow"])
+    assert "hello_world.txt" in to_filename(run.outputs["filesystem"])
     yield run
 
 
@@ -265,10 +266,9 @@ class TestWithHeaderToken:
     """
 
     @pytest.mark.integration
-    def test_submit_workflow_header_upload(self,
-                                           test_client,
-                                           test_run,
-                                           OIDC_credentials):
+    def test_submit_workflow_upload(self,
+                                    test_client,
+                                    OIDC_credentials):
 
         data = {}
         data["workflow_params"] = '{"text": "hello world"}'
@@ -287,27 +287,147 @@ class TestWithHeaderToken:
         assert response.status_code == 200
 
     @pytest.mark.integration
-    def test_accept_run_workflow_header(self,
-                                        test_client,
-                                        test_run,
-                                        OIDC_credentials):
-
-        # test that outputs are relative
-        response = test_client.get(
-            "/ga4gh/wes/v1/runs/{}".format(test_run.id),
+    def test_get_run(self,
+                     test_client,
+                     OIDC_credentials):
+        # Submit a new workflow. The test should be end-to-end, i.e. also the processing of the
+        # string-formatted parameters in the upload into a dict structure in the RunLog is tested.
+        data = {}
+        data["workflow_params"] = '{"text": "hello world"}'
+        data["workflow_url"] = "file:tests/wf1/Snakefile"
+        data["workflow_type"] = "SMK"
+        data["workflow_type_version"] = "6.10.0"
+        data["workflow_engine_parameters"] = """
+        {
+            "max-memory": "150m",
+            "max-runtime": "00:01:00",
+            "accounting-name": "projectX",
+            "job-name": "testjob",
+            "group": "testgroup",
+            "queue": "testqueue"
+        }
+        """
+        submission_response = test_client.post(
+            "/ga4gh/wes/v1/runs",
+            data=data,
+            content_type="multipart/form-data",
             headers=OIDC_credentials.headerToken)
-        assert response.status_code == 200, response.json
-        for output in response.json["outputs"]["workflow"]:
-            assert not os.path.isabs(output)
-        # test that s3 outputs are valid urls
-        for output_url in response.json["outputs"]["S3"]:
+        assert submission_response.status_code == 200
+
+        run_id = submission_response.json["run_id"]
+
+        # Status request.
+        status_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
+                                          headers=OIDC_credentials.headerToken)
+        status_start_time = time.time()
+        while status_response.json["state"] != "COMPLETE":
+            # workflow still running
+            assert is_within_timeout(status_start_time, 20), "Timeout requesting status"
+            time.sleep(1)
+            status_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
+                                              headers=OIDC_credentials.headerToken)
+
+        # Now, retrieve the RunLog.
+        log_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}",
+                                       headers=OIDC_credentials.headerToken)
+
+        assert log_response.status_code == 200, log_response.json
+        assert log_response.json["run_id"] == run_id
+
+        assert log_response.json["request"] == {
+            # Note that the workflow_params and workflow_engine_parameters are uploaded as string
+            # form-data, but are expected to be JSON in the RunLog response (i.e. not represented
+            # as string).
+            "workflow_params": {
+                "text": "hello world"
+            },
+            "workflow_engine_parameters": {
+                "max-memory": "150m",
+                "max-runtime": "00:01:00",
+                "accounting-name": "projectX",
+                "job-name": "testjob",
+                "group": "testgroup",
+                "queue": "testqueue"
+            },
+            "workflow_type": "SMK",
+            "workflow_type_version": "6.10.0",
+            # tags should be a string of JSON text. JSON "null" is mapped to None in Python and
+            # valid JSON. This is what we return, if no tags were provided at submission.
+            "tags": None,
+            "workflow_url": "file:tests/wf1/Snakefile"
+        }
+
+        assert log_response.json["state"] == "COMPLETE"
+
+        assert log_response.json["run_log"].keys() == {
+            "name", "cmd", "exit_code", "start_time", "end_time", "stdout", "stderr"
+        }
+
+        # It is not clear from the documentation or discussion what the "workflow name" should be
+        # We use the path to the workflow file (workflow_url) for now.
+        assert log_response.json["run_log"]["name"] == log_response.json["request"]["workflow_url"]
+        assert log_response.json["run_log"]["cmd"] == [
+            'snakemake',
+            '--snakefile',
+            '../../../tests/wf1/Snakefile',
+            '--cores',
+            '1',
+            '--configfile',
+            'config.yaml'
+        ]
+        assert log_response.json["run_log"]["exit_code"] == 0
+        start_time = log_response.json["run_log"]["start_time"]
+        assert datetime.fromisoformat(start_time)
+
+        end_time = log_response.json["run_log"]["end_time"]
+        assert datetime.fromisoformat(end_time)
+
+        stdout = log_response.json["run_log"]["stdout"]
+        stdout_parsed = urlparse(stdout)
+        assert stdout_parsed.path == f".weskit/{start_time}/stdout"
+
+        stderr = log_response.json["run_log"]["stderr"]
+        stderr_parsed = urlparse(stderr)
+        assert stderr_parsed.path == f".weskit/{start_time}/stderr"
+
+        # At the time, the structure of the "outputs" field is not defined, except that it should
+        # be a dictionary. See specification 1.0.0 and mentioning in this discussion:
+        # https://github.com/ga4gh/workflow-execution-service-schemas/issues/176
+        assert "hello_world.txt" in log_response.json["outputs"]["filesystem"]
+        assert "config.yaml" in log_response.json["outputs"]["filesystem"]
+        # Not checking the log files, though.
+
+        # Test that S3 outputs are valid URLs
+        for output_url in log_response.json["outputs"]["S3"]:
             assert validate_url(output_url)
 
+        # Files in the S3 output should be the same, and in the same order as in the filesystem.
+        for idx in range(0, len(log_response.json["outputs"]["filesystem"])):
+            path = urlparse(log_response.json["outputs"]["filesystem"][idx]).path
+            s3 = urlparse(log_response.json["outputs"]["S3"][idx]).path
+            assert path in s3
+
+        assert log_response.json["task_logs"] == []
+        # TODO Implement for issue #95 and #266.
+        # "task_logs": [
+        #   {
+        #     "name": "string",
+        #     "cmd": [
+        #       "string"
+        #     ],
+        #     "start_time": "string",
+        #     "end_time": "string",
+        #     "stdout": "string",
+        #     "stderr": "string",
+        #     "exit_code": 0
+        #   }
+        # ],
+
     @pytest.mark.integration
-    def test_accept_get_runs_header(self,
-                                    test_client,
-                                    test_run,
-                                    OIDC_credentials):
+    def test_get_runs(self,
+                      test_client,
+                      test_run,
+                      OIDC_credentials):
         response = test_client.get("/ga4gh/wes/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         assert response.json["next_page_token"] == ""   # For now, everything on one page.
@@ -319,10 +439,10 @@ class TestWithHeaderToken:
         }
 
     @pytest.mark.integration
-    def test_list_runs_extended_with_header(self,
-                                            test_client,
-                                            test_run,
-                                            OIDC_credentials):
+    def test_list_runs_extended(self,
+                                test_client,
+                                test_run,
+                                OIDC_credentials):
         response = test_client.get("/weskit/v1/runs", headers=OIDC_credentials.headerToken)
         assert response.status_code == 200, response.json
         assert len([x for x in response.json if x['run_id'] == str(test_run.id)]) == 1
@@ -359,18 +479,18 @@ class TestWithHeaderToken:
         assert response.status_code == 404
 
     @pytest.mark.integration
-    def test_get_run(self,
-                     test_client,
-                     OIDC_credentials):
+    def test_get_nonexisting_run(self,
+                                 test_client,
+                                 OIDC_credentials):
         response = test_client.get("/weskit/v1/runs/nonExistingRun",
                                    headers=OIDC_credentials.headerToken)
         assert response.status_code == 404
 
     @pytest.mark.integration
-    def test_get_run_stderr_with_header(self,
-                                        test_client,
-                                        test_run,
-                                        OIDC_credentials):
+    def test_get_run_stderr(self,
+                            test_client,
+                            test_run,
+                            OIDC_credentials):
         run_id = test_run.id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
                                    headers=OIDC_credentials.headerToken)
@@ -386,10 +506,10 @@ class TestWithHeaderToken:
         assert "content" in response.json
 
     @pytest.mark.integration
-    def test_get_run_stdout_with_header(self,
-                                        test_client,
-                                        test_run,
-                                        OIDC_credentials):
+    def test_get_run_stdout(self,
+                            test_client,
+                            test_run,
+                            OIDC_credentials):
         run_id = test_run.id
         response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
                                    headers=OIDC_credentials.headerToken)

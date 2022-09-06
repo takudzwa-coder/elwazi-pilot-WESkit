@@ -102,7 +102,7 @@ class Manager:
             if "WESKIT_S3_ENDPOINT" in os.environ:
                 run.outputs["S3"] = [return_pre_signed_url(outfile=out, workdir=result["workdir"])
                                      for out in result["output_files"]]
-            run.outputs["workflow"] = result["output_files"]
+            run.outputs["filesystem"] = result["output_files"]
             run.execution_log = result
 
             run_dir_abs = run.run_dir(self.weskit_context)

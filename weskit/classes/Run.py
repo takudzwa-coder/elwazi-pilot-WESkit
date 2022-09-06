@@ -42,10 +42,12 @@ class Run:
                  execution_log: Optional[Dict[str, Any]] = None,
                  status: RunStatus = RunStatus.INITIALIZING,
                  start_time: Optional[datetime] = None,
-                 task_logs: Optional[list] = None,
+                 task_logs: list = None,
                  stdout: Optional[List[str]] = None,
                  stderr: Optional[List[str]] = None
                  ) -> None:
+        if task_logs is None:
+            task_logs = []
         # WARNING: If you add fields don't forget to add them to __iter__ and merge() and explain
         #          in the code why, in case the field was not added there.
         self.__id = id

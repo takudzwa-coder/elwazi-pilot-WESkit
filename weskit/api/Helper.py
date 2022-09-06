@@ -80,3 +80,29 @@ class Helper:
         msg = RunRequestValidator.invalid_run_id(run_id)
         if msg:
             raise ClientError("Syntactically invalid run ID: '%s'" % run_id)
+
+
+def run_log(run: Run) -> dict:
+    return {
+        "run_id": run.id,
+        "request": run.request,
+        "state": run.status.name,
+        "run_log": execution_log_to_run_log(run),
+        "task_logs": run.task_logs,
+        "outputs": run.outputs,
+        "user_id": run.user_id
+    }
+
+
+def execution_log_to_run_log(run: Run) -> dict:
+    return {
+        # It is not clear from the documentation or discussion what the "workflow name" should be
+        # We use the path to the workflow file (workflow_url) for now.
+        "name": run.request["workflow_url"],
+        "cmd": run.execution_log["cmd"],
+        "stdout": run.execution_log["stdout_file"],
+        "stderr": run.execution_log["stderr_file"],
+        "exit_code": run.execution_log["exit_code"],
+        "start_time": run.execution_log["start_time"],
+        "end_time": run.execution_log["end_time"],
+    }

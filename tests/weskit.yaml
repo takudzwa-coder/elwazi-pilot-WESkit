@@ -52,7 +52,7 @@ static_service_info:
     # Name of this service. Should be human-readable.
     name: "WESkit"
 
-    # Type of a GA4GH service
+    # Type of GA4GH service
     type:
       # Namespace in reverse domain name format. Use org.ga4gh for implementations compliant with
       # official GA4GH specifications. For services with custom APIs not standardized by GA4GH, or
