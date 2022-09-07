@@ -311,8 +311,8 @@ def test_create_nextflow():
 
 def test_create_engines():
     engines = WorkflowEngineFactory.create({
-        "NFL": {"vers1": [{"name": "max-memory", "value": "50gb"}]},
-        "SMK": {"vers2": [{"name": "cores", "value": "100"}]}
+        "NFL": {"vers1": {"default_parameters": [{"name": "max-memory", "value": "50gb"}]}},
+        "SMK": {"vers2": {"default_parameters": [{"name": "cores", "value": "100"}]}}
     })
 
     assert engines["NFL"]["vers1"].name() == "NFL"

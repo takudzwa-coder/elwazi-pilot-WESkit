@@ -215,8 +215,99 @@ class TestOpenEndpoint:
     """
     @pytest.mark.integration
     def test_get_service_info(self, test_client):
+        """
+        Test that the response conforms to the specification according to the Swagger file.
+        """
         response = test_client.get("/ga4gh/wes/v1/service-info")
         assert response.status_code == 200, response.json
+        assert set(response.json.keys()) == {
+            "workflow_type_versions", "supported_wes_versions",
+            "supported_filesystem_protocols", "workflow_engine_versions",
+            "default_workflow_engine_parameters", "system_state_counts",
+            "auth_instructions_url", "contact_info_url", "tags"
+        }
+        assert response.json["workflow_type_versions"] == {
+            "NFL": {
+              "workflow_type_version": [
+                "21.04.0"
+              ]
+            },
+            "SMK": {
+              "workflow_type_version": [
+                "6.10.0"
+              ]
+            }
+          }
+        assert response.json["supported_wes_versions"] == ["1.0.0"]
+        assert response.json["supported_filesystem_protocols"] == ["file", "S3"]
+        assert response.json["workflow_engine_versions"] == {
+            "NFL": "21.04.0",
+            "SMK": "6.10.0"
+          }
+
+        def as_dict(params: list):
+            """Used to make get to dictionaries that are comparable by ==."""
+            return {p["name"]: p for p in params}
+        assert as_dict(response.json["default_workflow_engine_parameters"]) == as_dict([
+              {"name": "SMK|6.10.0|engine-environment",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "SMK|6.10.0|max-memory",
+               "default_value": "100m",
+               "type": "Optional[str validFor Python.memory_units.Memory.from_str($)]"},
+              {"name": "SMK|6.10.0|max-runtime",
+               "default_value": "05:00",
+               "type": "Optional[str validFor Python.tempora.parse_timedelta($)]"},
+              {"name": "SMK|6.10.0|accounting-name",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "SMK|6.10.0|job-name",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "SMK|6.10.0|group",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "SMK|6.10.0|queue",
+               "default_value": None,
+               "type": "Optional[str]"},
+
+              {"name": "NFL|21.04.0|accounting-name",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "NFL|21.04.0|job-name",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "NFL|21.04.0|group",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "NFL|21.04.0|queue",
+               "default_value": None,
+               "type": "Optional[str]"},
+              {"name": "NFL|21.04.0|trace",
+               "default_value": "true",
+               "type": "bool"},
+              {"name": "NFL|21.04.0|timeline",
+               "default_value": "true",
+               "type": "bool"},
+              {"name": "NFL|21.04.0|graph",
+               "default_value": "true",
+               "type": "bool"},
+              {"name": "NFL|21.04.0|report",
+               "default_value": "true",
+               "type": "bool"}
+          ])
+        assert response.json["auth_instructions_url"] == "https://somewhere.org"
+        assert response.json["contact_info_url"] == "mailto:your@email.de"
+        assert response.json["tags"] == {
+              "tag1": "value1",
+              "tag2": "value2"
+          }
+        assert set(response.json["system_state_counts"].keys()) == {
+            'CANCELED', 'CANCELING', 'COMPLETE', 'EXECUTOR_ERROR',
+            'INITIALIZING', 'PAUSED', 'QUEUED', 'RUNNING', 'SYSTEM_ERROR'
+        }
+        for v in response.json["system_state_counts"].values():
+            assert type(v) is int
 
 
 class TestWithoutLogin:

@@ -140,12 +140,13 @@ def create_app(celery: Celery,
                 database=database,
                 executor=executor_config,
                 workflow_engines=WorkflowEngineFactory.
-                create(config["static_service_info"]["default_workflow_engine_parameters"]),
+                create(config["workflow_engines"]),
                 weskit_context=container_context,
                 executor_context=executor_context,
                 require_workdir_tag=config["require_workdir_tag"])
 
     service_info = ServiceInfo(config["static_service_info"],
+                               config["workflow_engines"],
                                read_swagger(),
                                database)
 
@@ -155,7 +156,7 @@ def create_app(celery: Celery,
     request_validators = {
         "run_request": RunRequestValidator(create_validator(
             request_validation["run_request"]),
-            service_info.workflow_engine_versions(),
+            service_info.workflow_engine_versions_dict(),
             data_dir=weskit_data,
             require_workdir_tag=manager.require_workdir_tag)
     }

@@ -5,13 +5,13 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
 
 # Type aliases to simplify the signature of the type annotations.
-ConfParameter = Dict[str, Union[str, bool]]
+ConfParameter = Dict[str, Optional[Union[str, bool]]]
 ConfParameters = List[ConfParameter]
 ConfVersions = Dict[str, ConfParameters]
 
@@ -64,7 +64,7 @@ class WorkflowEngineFactory:
 
     @staticmethod
     def _maybe_engine(engine_class,
-                      engine_params: Dict[str, ConfVersions]) \
+                      engine_params: Dict[str, Dict[str, ConfVersions]]) \
             -> Dict[str, Dict[str, WorkflowEngine]]:
         """
         Create a WorkflowEngine entry, if the engine is defined in the configuration.
@@ -78,12 +78,15 @@ class WorkflowEngineFactory:
         if engine_is_defined() and some_version_is_defined():
             return {engine_class.name(): WorkflowEngineFactory.
                     _create_versions(engine_class,
-                                     engine_params[engine_class.name()])}
+                                     {version: configuration_option["default_parameters"]
+                                      for version, configuration_option
+                                      in engine_params[engine_class.name()].items()
+                                      })}
         else:
             return {}
 
     @staticmethod
-    def create(engine_params: Dict[str, ConfVersions]) -> \
+    def create(engine_params: Dict[str, Dict[str, ConfVersions]]) -> \
             Dict[str, Dict[str, WorkflowEngine]]:
         """
         Return a dictionary of all WorkflowEngines mapping workflow_engine to

@@ -242,6 +242,7 @@ def celery_config(redis_container):
 def service_info(test_config, swagger, test_database):
     yield ServiceInfo(
         test_config["static_service_info"],
+        test_config["workflow_engines"],
         swagger,
         test_database
     )
@@ -268,10 +269,7 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
                    database=test_database,
                    executor=test_config["executor"],
                    workflow_engines=WorkflowEngineFactory.
-                   create(
-                       test_config
-                       ["static_service_info"]
-                       ["default_workflow_engine_parameters"]),
+                   create(test_config["workflow_engines"]),
                    weskit_context=common_context,
                    executor_context=common_context,
                    require_workdir_tag=require_workdir_tag)

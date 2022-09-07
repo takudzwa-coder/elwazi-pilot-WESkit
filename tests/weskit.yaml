@@ -44,149 +44,71 @@ executor:
 
 static_service_info:
 
-    # Unique ID of this service. Reverse domain name notation is recommended, though not required.
-    # The identifier should attempt to be globally unique, so it can be used in downstream
-    # aggregator services e.g. Service Registry.
-    id: "weskit.api"
-
-    # Name of this service. Should be human-readable.
-    name: "WESkit"
-
-    # Type of GA4GH service
-    type:
-      # Namespace in reverse domain name format. Use org.ga4gh for implementations compliant with
-      # official GA4GH specifications. For services with custom APIs not standardized by GA4GH, or
-      # implementations diverging from official GA4GH specifications, use a different namespace
-      # (e.g. your organization's reverse domain name).
-      group: "weskit.api"
-      # Name of the API or GA4GH specification implemented. Official GA4GH types should be
-      # assigned as part of standards approval process. Custom artifacts are supported.
-      artifact: "registry.gitlab.com/one-touch-pipeline/weskit/api"
-      # Version of the API or specification. GA4GH specifications use semantic versioning.
-      version: 1.0.0
-
-    # Description of the service. Should be human-readable and provide information about the
-    # service.
-    description: "WESkit - A GA4GH Compliant Workflow Execution Server"
-
-    organization:
-      # Name of the organization responsible for the service.
-      name: "My Org"
-      # URL of the website of the organization (RFC 3986 format).
-      url: "https://my.org"
+# Commented out fields irrelevant for the ServiceInfo according to the Swagger file 1.0.0.
+#
+#    # Unique ID of this service. Reverse domain name notation is recommended, though not required.
+#    # The identifier should attempt to be globally unique, so it can be used in downstream
+#    # aggregator services e.g. Service Registry.
+#    id: "weskit.api"
+#
+#    # Name of this service. Should be human-readable.
+#    name: "WESkit"
+#
+#    # Type of GA4GH service
+#    type:
+#      # Namespace in reverse domain name format. Use org.ga4gh for implementations compliant with
+#      # official GA4GH specifications. For services with custom APIs not standardized by GA4GH, or
+#      # implementations diverging from official GA4GH specifications, use a different namespace
+#      # (e.g. your organization's reverse domain name).
+#      group: "weskit.api"
+#      # Name of the API or GA4GH specification implemented. Official GA4GH types should be
+#      # assigned as part of standards approval process. Custom artifacts are supported.
+#      artifact: "registry.gitlab.com/one-touch-pipeline/weskit/api"
+#      # Version of the API or specification. GA4GH specifications use semantic versioning.
+#      version: 1.0.0
+#
+#    # Description of the service. Should be human-readable and provide information about the
+#    # service.
+#    description: "WESkit - A GA4GH Compliant Workflow Execution Server"
+#
+#    organization:
+#      # Name of the organization responsible for the service.
+#      name: "My Org"
+#      # URL of the website of the organization (RFC 3986 format).
+#      url: "https://my.org"
+#
+#    # URL of the documentation of this service (RFC 3986 format). This should help someone to learn
+#    # how to use your service, including any specifics required to access data, e.g.
+#    # authentication.
+#    documentation_url:
+#      https://gitlab.com/one-touch-pipeline/weskit/documentation/
+#
+#  # Timestamp describing when the service was first deployed and available (RFC 3339 format).
+#  # Example: 2019-06-04T12:58:19Z
+#  created_at: 2021-06-04T12:58:19Z
+#
+#  # Timestamp describing when the service was last updated (RFC 3339 format).
+#  # TODO Set this during deployment?
+#  updated_at: 2021-06-04T12:58:19Z
+#
+#  # Version of the service being described. Semantic versioning is recommended, but other
+#  # identifiers, such as dates or commit hashes, are also allowed. The version should be changed
+#  # whenever the service is updated.
+#  version: 0.0.0
+#
+#  # Environment the service is running in. Use this to distinguish between production,
+#  # development and testing/staging deployments. Suggested values are prod, test, dev, staging.
+#  # However this is advised and not enforced.
+#  environment: *environment
 
     # URL of the contact for the provider of this service, e.g. a link to a contact form (RFC 3986
     # format), or an email (RFC 2368 format).
     contact_url:
       mailto:your@email.de
 
-    # URL of the documentation of this service (RFC 3986 format). This should help someone to learn
-    # how to use your service, including any specifics required to access data, e.g.
-    # authentication.
-    documentation_url:
-      https://gitlab.com/one-touch-pipeline/weskit/documentation/
-
-    # Timestamp describing when the service was first deployed and available (RFC 3339 format).
-    # Example: 2019-06-04T12:58:19Z
-    created_at: 2021-06-04T12:58:19Z
-
-    # Timestamp describing when the service was last updated (RFC 3339 format).
-    # TODO Set this during deployment?
-    updated_at: 2021-06-04T12:58:19Z
-
-    # Environment the service is running in. Use this to distinguish between production,
-    # development and testing/staging deployments. Suggested values are prod, test, dev, staging.
-    # However this is advised and not enforced.
-    environment: *environment
-
-    # Version of the service being described. Semantic versioning is recommended, but other
-    # identifiers, such as dates or commit hashes, are also allowed. The version should be changed
-    # whenever the service is updated.
-    version: 0.0.0
-
     supported_filesystem_protocols:
-      - s3
       - file
-
-    # The identifiers used in workflow_engine_versions correspond to versions
-    # of the workflows available in WESkit. Currently, there are Snakemake
-    # and Nextflow Workflow-instances that identify as "SMK" and "NFL",
-    # respectively. Only these identifiers (Workflow.name) can be used here.
-    # These are also the versions-strings that WESkit accepts via its REST-API.
-    workflow_engine_versions:
-        SMK: "6.10.0"
-        NFL: "21.04.0"
-
-    # The first two levels of keys are the workflow_type and the workflow_type_version.
-    # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
-    default_workflow_engine_parameters:
-      NFL:
-        "21.04.0":
-          - name: "engine-environment"
-            value: null
-            api: false
-          - name: "max-memory"
-            value: "256m"
-            # api: false       # By default `false`
-          - name: "max-runtime"
-            value: "05:00"
-            api: false
-          - name: "accounting-name"
-            api: true
-          - name: "job-name"
-            api: true
-          - name: "group"
-            api: true
-          - name: "queue"
-            api: true
-          - name: "tempdir"
-            value: "/tmp"
-            api: false
-          - name: "trace"
-            value: "true"
-            api: true
-          - name: "timeline"
-            value: "true"
-            api: true
-          - name: "graph"
-            value: "true"
-            api: true
-          - name: "report"
-            value: "true"
-            api: true
-
-      SMK:
-        "6.10.0":
-          - name: "engine-environment"
-            value: null
-            api: true
-          - name: "cores"
-            value: "1"
-            api: false
-          - name: "max-memory"
-            value: "100m"
-            api: true
-          - name: "max-runtime"
-            value: "05:00"
-            api: true
-          - name: "accounting-name"
-            api: true
-          - name: "job-name"
-            api: true
-          - name: "group"
-            api: true
-          - name: "queue"
-            api: true
-
-    # Currently, the workflow_type_versions need to be among the workflow_engine_versions.
-    # TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91
-    workflow_type_versions:
-      SMK:
-        workflow_type_version:
-          - "6.10.0"
-      NFL:
-        workflow_type_version:
-          - "21.04.0"
+      - S3
 
     # A web page URL with human-readable instructions on how to get an authorization token for use
     # with a specific WES endpoint.
@@ -195,6 +117,109 @@ static_service_info:
     tags:
         tag1: value1
         tag2: value2
+
+
+workflow_engines:
+
+  # Note the "type" fields for the default parameters are optional and free text string. To express
+  # the accepted value range for the parameter for the client, however, the existing examples use
+  # the following syntax:
+  #
+  # * Use Python type annotation syntax.
+  # * The default, if the "type" field is omitted here, is "str", which means unparsed.
+  # * Strings to be accepted by specific processing are suggested to be written as
+  #   `str validFor Python.fully.qualified.processing_function($)`
+  #   where the `$` denotes the parameter that will be used to process the parameter. The `$`
+  #   can be omitted if the parse function takes the string as first or only parameter.
+  # * A regular expression matching exactly the allowed values.
+  #
+  # Valid parameter values:
+  # * `Optional[str]`: null (JSON, YAML) or any string
+  # * `Optional[str valid for Python.pathlib.Path]`: null or a string that is understood by Path
+  #
+  # The code that does the processing can be found in the `WorkflowEngine` subclasses. It is not
+  # interpreted in any way.
+  #
+  NFL:
+    "21.04.0":
+      default_parameters:
+        - name: "engine-environment"
+          value: null
+          api: false
+          type: "Optional[str]"
+        - name: "max-memory"
+          value: "256m"
+          # api: false       # By default `false`
+          type: "Optional[str validFor Python.memory_units.Memory.from_str]"
+        - name: "max-runtime"
+          value: "05:00"
+          api: false
+          type: "Optional[str validFor Python.tempora.parse_timedelta]"
+        - name: "accounting-name"
+          api: true
+          type: "Optional[str]"
+        - name: "job-name"
+          api: true
+          type: "Optional[str]"
+        - name: "group"
+          api: true
+          type: "Optional[str]"
+        - name: "queue"
+          api: true
+          type: "Optional[str]"
+        - name: "tempdir"
+          value: "/tmp"
+          api: false
+          type: "str validFor Python.pathlib.Path"
+        - name: "trace"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "timeline"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "graph"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "report"
+          value: "true"
+          api: true
+          type: "bool"
+
+  SMK:
+    "6.10.0":
+      default_parameters:
+        - name: "engine-environment"
+          value: null
+          api: true
+          type: "Optional[str]"
+        - name: "cores"
+          value: "1"
+          api: false
+          type: "Optional[int]"
+        - name: "max-memory"
+          value: "100m"
+          api: true
+          type: "Optional[str validFor Python.memory_units.Memory.from_str($)]"
+        - name: "max-runtime"
+          value: "05:00"
+          api: true
+          type: "Optional[str validFor Python.tempora.parse_timedelta($)]"
+        - name: "accounting-name"
+          api: true
+          type: "Optional[str]"
+        - name: "job-name"
+          api: true
+          type: "Optional[str]"
+        - name: "group"
+          api: true
+          type: "Optional[str]"
+        - name: "queue"
+          api: true
+          type: "Optional[str]"
+
 
 cors:
   enabled: false
