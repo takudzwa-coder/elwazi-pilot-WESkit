@@ -106,98 +106,91 @@ static_service_info:
   type: dict
   required: true
   schema:
-    id:
-      type: string
-      required: true
-    name:
-      type: string
-      required: true
-    type:
-      type: dict
-      required: true
-      schema:
-        group:
-          type: string
-          required: true
-        artifact:
-          type: string
-          required: true
-        version:
-          type: string
-          required: true
-    description:
-      type: string
-      required: false
-      default: ""
-    organization:
-      type: dict
-      required: true
-      schema:
-        name:
-          type: string
-          required: true
-        url:
-          type: string
-          required: true
+#    id:
+#      type: string
+#      required: true
+#    name:
+#      type: string
+#      required: true
+#    type:
+#      type: dict
+#      required: true
+#      schema:
+#        group:
+#          type: string
+#          required: true
+#        artifact:
+#          type: string
+#          required: true
+#        version:
+#          type: string
+#          required: true
+#    description:
+#      type: string
+#      required: false
+#      default: ""
+#    organization:
+#      type: dict
+#      required: true
+#      schema:
+#        name:
+#          type: string
+#          required: true
+#        url:
+#          type: string
+#          required: true
+#    documentation_url:
+#      type: string
+#      required: false
+#      default: "https://gitlab.com/one-touch-pipeline/weskit/documentation/-/wikis/home"
+#    created_at:
+#      type: datetime
+#      required: false
+#      default: 2021-01-01
+#    updated_at:
+#      type: datetime
+#      required: false
+#      default: 2021-01-01
+#    version:
+#      type: string
+#      required: true
+#    environment:
+#      type: string
+#      required: false
+#      default: unknown
     contact_url:
       type: string
       required: false
       default: "mailto:unknown"
-    documentation_url:
-      type: string
-      required: false
-      default: "https://gitlab.com/one-touch-pipeline/weskit/documentation/-/wikis/home"
-    created_at:
-      type: datetime
-      required: false
-      default: 2021-01-01
-    updated_at:
-      type: datetime
-      required: false
-      default: 2021-01-01
-    environment:
-      type: string
-      required: false
-      default: unknown
-    version:
-      type: string
-      required: true
-    workflow_type_versions:
-      type: dict
-      required: true
-      valuesrules:
-        type: dict
-        required: true
-        schema:
-          workflow_type_version:
-              type: list
-              required: true
-              schema:
-                type: string
     supported_filesystem_protocols:
       type: list
       required: true
       schema:
         type: string
-    workflow_engine_versions:
-      type: dict
+    auth_instructions_url:
+      type: string
       required: true
-      schema:
-        SMK:
-          type: string
-        NFL:
-          type: string
-    default_workflow_engine_parameters:
-      type: dict           # workflow engine names
+    tags:
+      type: dict
       required: false
-      schema:
-        NFL: &default_workflow_engine_parameters
-          type: dict       # engine version tags
-          required: false
-          valuesrules:
+      valuesrules:
+        type: string
+
+
+workflow_engines:
+  type: dict         # workflow engine names
+  required: true
+  schema:
+    NFL: &default_workflow_engine_parameters
+      type: dict       # engine version tags
+      required: false
+      valuesrules:
+        type: dict
+        schema:
+          default_parameters:
             type: list
             default: []
-            schema:        # engine parameter
+            schema: # engine parameter
               type: dict
               schema:
                 name:
@@ -210,15 +203,10 @@ static_service_info:
                 api:
                   type: boolean
                   default: false
-        SMK: *default_workflow_engine_parameters
-    auth_instructions_url:
-      type: string
-      required: true
-    tags:
-      type: dict
-      required: false
-      valuesrules:
-        type: string
+                type:
+                  type: string
+                  default: "str"
+    SMK: *default_workflow_engine_parameters
 
 
 cors:

@@ -104,7 +104,7 @@ def test_execute_snakemake(manager,
         else:
             success = True
     assert run.run_dir(manager.weskit_context) / "hello_world.txt"
-    assert "hello_world.txt" in to_filename(run.outputs["workflow"])
+    assert "hello_world.txt" in to_filename(run.outputs["filesystem"])
 
     assert run.execution_log["env"] == {
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
@@ -148,7 +148,7 @@ def test_fail_execute_snakemake(manager,
             success = True
     assert run.execution_log["exit_code"] != 0
     assert not (manager.weskit_context.run_dir(run.sub_dir) / "hello_world.txt").exists()
-    assert "hello_world.txt" not in to_filename(run.outputs["workflow"])
+    assert "hello_world.txt" not in to_filename(run.outputs["filesystem"])
 
     assert run.execution_log["env"] == {
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
@@ -189,7 +189,7 @@ def test_execute_nextflow(manager,
             success = True
     assert run.run_dir(manager.weskit_context) / "hello_world.txt"
     hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
-                                    run.outputs["workflow"]))
+                                    run.outputs["filesystem"]))
     assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
     with open(run.run_dir(manager.weskit_context) / hello_world_files[0], "r") as fh:
         assert fh.readlines() == ["hello_world\n"]

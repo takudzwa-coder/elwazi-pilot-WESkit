@@ -11,9 +11,8 @@ import logging
 from flask import Blueprint
 from flask import current_app, jsonify, request
 from flask_jwt_extended import current_user
-from rfc3339 import rfc3339
 
-from weskit.api.Helper import Helper
+from weskit.api.Helper import Helper, run_log
 from weskit.exceptions import ClientError
 from weskit.oidc.Decorators import login_required
 
@@ -35,15 +34,7 @@ def GetRunLog(run_id):
         access_denied_response = ctx.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
-            return {
-                "run_id": run.id,
-                "request": run.request,
-                "state": run.status.name,
-                "run_log": run.execution_log,
-                "task_logs": run.task_logs,
-                "outputs": run.outputs,
-                "user_id": run.user_id
-            }, 200
+            return run_log(run), 200
         else:
             return access_denied_response
 
@@ -116,24 +107,31 @@ def GetServiceInfo(*args, **kwargs):
     try:
         current_app.manager.update_runs()
         response = {
-            "id":
-                current_app.service_info.id(),
-            "name":
-                current_app.service_info.name(),
-            "type":
-                current_app.service_info.type(),
-            "description":
-                current_app.service_info.description(),
-            "organization":
-                current_app.service_info.organization(),
-            "documentationUrl":
-                current_app.service_info.documentation_url(),
-            "contactUrl":
+            # Note that there is a deviation between the Swagger file and the model reported at
+            # https://ga4gh.github.io/workflow-execution-service-schemas/docs
+            # This latter version seems to fit to no file in the repository (e.g. no "organization"
+            # field is mentioned anywhere in the repository!). Furthermore, the Swagger is used to
+            # autogenerate client APIs. Therefore, we consider the Swagger to represent the
+            # standard
+
+            # "id":
+            #     current_app.service_info.id(),
+            # "name":
+            #     current_app.service_info.name(),
+            # "type":
+            #     current_app.service_info.type(),
+            # "description":
+            #     current_app.service_info.description(),
+            # "organization":
+            #     current_app.service_info.organization(),
+            # "documentationUrl":
+            #     current_app.service_info.documentation_url(),
+            "contact_info_url":
                 current_app.service_info.contact_url(),
-            "createdAt":
-                rfc3339(current_app.service_info.created_at()),
-            "updatedAt":
-                rfc3339(current_app.service_info.updated_at()),
+            # "createdAt":
+            #     rfc3339(current_app.service_info.created_at()),
+            # "updatedAt":
+            #     rfc3339(current_app.service_info.updated_at()),
             "workflow_type_versions":
                 current_app.service_info.workflow_type_versions(),
             "supported_wes_versions":
@@ -141,12 +139,7 @@ def GetServiceInfo(*args, **kwargs):
             "supported_filesystem_protocols":
                 current_app.service_info.supported_filesystem_protocols(),
             "workflow_engine_versions":
-                # Specs says this should be Dict[str, str], but it should better be
-                # Dict[str, List[str]]. Let's return the multiple versions as string, but of
-                # a comma-separated list. For some time we anyway will only have a single version
-                # of each workflow engine.
-                dict(map(lambda kv: (kv[0], ",".join(kv[1])),
-                         current_app.service_info.workflow_engine_versions().items())),
+                current_app.service_info.workflow_engine_versions(),
             "default_workflow_engine_parameters":
                 current_app.service_info.default_workflow_engine_parameters(),
             "system_state_counts":

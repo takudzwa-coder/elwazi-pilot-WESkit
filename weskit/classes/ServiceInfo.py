@@ -8,18 +8,24 @@
 import datetime
 from typing import Dict, List
 
-from weskit.classes.WorkflowEngineFactory import ConfParameters
 from weskit.classes.Database import Database
+from weskit.classes.WorkflowEngineFactory import ConfParameters
 
 
 class ServiceInfo:
     """Note that the static_service_info is not validated in here. External
     validation is required. ServiceInfo returns whatever it gets as static
     service info."""
-    def __init__(self, static_service_info, swagger, database: Database):
+    def __init__(self,
+                 static_service_info: dict,
+                 engines_config: dict,
+                 swagger,
+                 database: Database):
         self._static_service_info = static_service_info
+        self._engine_configuration = engines_config
         self._db = database
         self._swagger = swagger
+        self._metadata_separator = "|"
 
     def id(self) -> str:
         return self._static_service_info["id"]
@@ -55,7 +61,13 @@ class ServiceInfo:
         return self._static_service_info["version"]
 
     def workflow_type_versions(self) -> Dict[str, Dict[str, List[str]]]:
-        return self._static_service_info["workflow_type_versions"]
+        """
+        Currently, the workflow_type_versions are just the workflow_engine_versions.
+        TODO: Compare https://gitlab.com/one-touch-pipeline/weskit/-/issues/91
+        """
+        return {engine: {"workflow_type_version": list(by_version.keys())}
+                for engine, by_version
+                in self._engine_configuration.items()}
 
     def supported_wes_versions(self) -> List[str]:
         return [self._swagger["info"]["version"]]
@@ -63,23 +75,58 @@ class ServiceInfo:
     def supported_filesystem_protocols(self) -> List[str]:
         return self._static_service_info["supported_filesystem_protocols"]
 
-    def workflow_engine_versions(self) -> Dict[str, List[str]]:
-        return dict(map(lambda k: (k, list(self.default_workflow_engine_parameters()[k].keys())),
-                        self.default_workflow_engine_parameters().keys()))
+    def workflow_engine_versions_dict(self) -> Dict[str, List[str]]:
+        return {engine: list(versions.keys())
+                for engine, versions in self._raw_api_default_workflow_engine_parameters().items()}
 
-    def default_workflow_engine_parameters(self) \
+    def workflow_engine_versions(self) -> Dict[str, str]:
+        """
+        Specs says this should be Dict[str, str], but it should better be
+        Dict[str, List[str]]. Let's return the multiple versions as string, but as
+        a comma-separated list. For some time we anyway will only have a single version
+        of each workflow engine.
+        """
+        return dict(map(lambda kv: (kv[0], ",".join(kv[1])),
+                        self.workflow_engine_versions_dict().items()))
+
+    def _raw_api_default_workflow_engine_parameters(self) \
             -> Dict[str, Dict[str, ConfParameters]]:
         """
         We use the "api" field internally, to configure in the server which parameters are allowed
-        to be set via the REST API. Forbidden parameters are not reported via the ServiceInfo
+        to be set via the REST API. Forbidden parameters are not reported via the ServiceInfo.
         """
         return {engine: {version: [{"name": parameter["name"],
-                                    "default_value": parameter.get("value")}
-                                   for parameter in parameters
+                                    "default_value": parameter.get("value"),
+                                    "type": parameter["type"]}
+                                   for parameter in engine_options["default_parameters"]
                                    if parameter["api"]]
-                         for version, parameters in by_version.items()}
+                         for version, engine_options in by_version.items()}
                 for engine, by_version
-                in self._static_service_info["default_workflow_engine_parameters"].items()}
+                in self._engine_configuration.items()}
+
+    def default_workflow_engine_parameters(self) \
+            -> ConfParameters:
+        """
+        The default workflow engine parameters as reported by the service info endpoint.
+
+        Note that the 1.0.0 version of the API does not support structurally encoding parameters
+        per workflow engine and engine version. Therefore, here we encode this information as
+        obligatory fields in the parameter names, like "engine|version|parameter".
+        The fields are separated by pipes `|`.
+        """
+        raw_params = self._raw_api_default_workflow_engine_parameters()
+        result: ConfParameters = []
+        for engine, versions in raw_params.items():
+            for version, parameters in versions.items():
+                for parameter in parameters:
+                    result.append({
+                        "name": self._metadata_separator.join([engine,
+                                                               version,
+                                                               str(parameter["name"])]),
+                        "default_value": parameter["default_value"],
+                        "type": parameter["type"]
+                    })
+        return result
 
     def system_state_counts(self) -> Dict[str, int]:
         return self._db.count_states()

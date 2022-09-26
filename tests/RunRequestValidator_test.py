@@ -27,7 +27,7 @@ def request_validation():
 @pytest.fixture(scope="session")
 def run_request_validator_rundir(request_validation, service_info):
     return RunRequestValidator(create_validator(request_validation["run_request"]),
-                               service_info.workflow_engine_versions(),
+                               service_info.workflow_engine_versions_dict(),
                                Path("test-data"),
                                True)
 
@@ -35,7 +35,7 @@ def run_request_validator_rundir(request_validation, service_info):
 @pytest.fixture(scope="session")
 def run_request_validator(request_validation, service_info):
     return RunRequestValidator(create_validator(request_validation["run_request"]),
-                               service_info.workflow_engine_versions(),
+                               service_info.workflow_engine_versions_dict(),
                                Path("test-data"),
                                False)
 
