@@ -65,6 +65,15 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     assert run.status == RunStatus.INITIALIZING
     assert run.sub_dir == Path("sample1/my_workdir")
 
+    # 5.) check relative "file:" scheme on custom workdir
+    run = get_mock_run(workflow_url="wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="6.10.0",
+                       tags={"run_dir": "file:sample2/my_workdir"})
+    run = manager_rundir.prepare_execution(run, files=[])
+    assert run.status == RunStatus.INITIALIZING
+    assert run.sub_dir == Path("sample2/my_workdir")
+
 
 @pytest.mark.integration
 def test_execute_snakemake(manager,

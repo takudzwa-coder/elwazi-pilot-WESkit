@@ -332,7 +332,8 @@ class Manager:
 
         # Prepare run directory
         if self.require_workdir_tag:
-            run.sub_dir = Path(run.request["tags"]["run_dir"])
+            run_dir_url = urlparse(run.request["tags"]["run_dir"]).path
+            run.sub_dir = Path(run_dir_url)
         else:
             run.sub_dir = Path(str(run.id)[0:4]) / str(run.id)
 
