@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Any
@@ -21,12 +22,31 @@ from weskit.classes.executor.Executor import CommandResult, ExecutionSettings
 from weskit.utils import format_timestamp
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
 
+ConfigParams = Dict[str, Dict[str, Any]]
+
 logger = logging.getLogger(__name__)
+
+
+def loadExecutor(config, executor_type):
+    if not config["TESTING"]:
+        if os.getenv("WESKIT_CONFIG") is not None:
+            config_file = os.getenv("WESKIT_CONFIG", "")
+        else:
+            raise ValueError("Cannot start WESkit: Environment variable WESKIT_CONFIG is undefined")
+
+        with open(config_file, "r") as yaml_file:
+            config = yaml.safe_load(yaml_file)
+            logger.info("Read config from " + config_file)
+
+    executor = get_executor(executor_type,
+                            login_parameters=config["executor"]["login"]
+                            if executor_type.needs_login_credentials else None)
+    return executor
 
 
 def run_command(command: ShellCommand,
                 execution_settings: ExecutionSettings,
-                executor_config: Dict[str, Any],
+                config: ConfigParams,
                 worker_context: PathContext,
                 executor_context: PathContext):
     """
@@ -56,9 +76,7 @@ def run_command(command: ShellCommand,
     """
     start_time = datetime.now()
 
-    executor_type = EngineExecutorType.from_string(executor_config["type"])
-    executor = get_executor(executor_type,
-                            login_parameters=executor_config.get("login", {}))
+    executor_type = EngineExecutorType.from_string(config["executor"]["type"])
 
     # It's a bug do have workdir not defined here!
     if command.workdir is None:
@@ -93,7 +111,7 @@ def run_command(command: ShellCommand,
         logger.info("Creating log-dir %s" % str(log_dir))
         os.makedirs(log_dir)
         if executor_type.executes_engine_locally or \
-           executor_config["login"]["hostname"] == "localhost":
+           config["executor"]["login"]["hostname"] == "localhost":
             # A locally executing engine needs the local environment, e.g. for Conda.
             shell_command.environment = {**dict(os.environ), **shell_command.environment}
         else:
@@ -102,6 +120,7 @@ def run_command(command: ShellCommand,
             # needed.
             pass
 
+        executor = loadExecutor(config, executor_type)
         process = executor.execute(shell_command,
                                    stdout_file=executor_context.stdout_file(workdir, start_time),
                                    stderr_file=executor_context.stderr_file(workdir, start_time),

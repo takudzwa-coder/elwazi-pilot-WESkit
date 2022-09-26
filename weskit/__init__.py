@@ -125,11 +125,10 @@ def create_app(celery: Celery,
     container_context = PathContext(data_dir=weskit_data,
                                     workflows_dir=workflows_base_dir)
 
-    executor_config = config["executor"]
-    executor_type = EngineExecutorType.from_string(executor_config["type"])
+    executor_type = EngineExecutorType.from_string(config["executor"]["type"])
     if executor_type.needs_login_credentials:
-        executor_context = PathContext(data_dir=executor_config["remote_data_dir"],
-                                       workflows_dir=executor_config["remote_workflows_dir"])
+        executor_context = PathContext(data_dir=config["executor"]["remote_data_dir"],
+                                       workflows_dir=config["executor"]["remote_workflows_dir"])
     else:
         executor_context = container_context
 
@@ -138,7 +137,7 @@ def create_app(celery: Celery,
     manager = \
         Manager(celery_app=celery,
                 database=database,
-                executor=executor_config,
+                config=config,
                 workflow_engines=WorkflowEngineFactory.
                 create(config["workflow_engines"]),
                 weskit_context=container_context,

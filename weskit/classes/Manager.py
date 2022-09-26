@@ -34,6 +34,8 @@ from weskit.exceptions import ClientError, ConcurrentModificationError
 from weskit.tasks.CommandTask import run_command
 from weskit.utils import return_pre_signed_url, now
 
+ConfigParams = Dict[str, Dict[str, Any]]
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,12 +44,12 @@ class Manager:
     def __init__(self,
                  celery_app: Celery,
                  database: Database,
-                 executor: Dict[str, Any],
+                 config: ConfigParams,
                  workflow_engines: dict,
                  weskit_context: PathContext,
                  executor_context: PathContext,
                  require_workdir_tag: bool) -> None:
-        self.executor = executor
+        self.config = config
         self.workflow_engines = workflow_engines
         self.weskit_context = weskit_context
         self.executor_context = executor_context
@@ -410,7 +412,7 @@ class Manager:
                 "worker_context": self.weskit_context,
                 "executor_context": self.executor_context,
                 "execution_settings": execution_settings,
-                "executor_config": self.executor
+                "config": self.config
             })
         run.celery_task_id = task.id
 

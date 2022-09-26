@@ -28,7 +28,7 @@ def test_run_command(temporary_dir, test_config):
     result = run_command(command=command_obj,
                          worker_context=context,
                          executor_context=context,
-                         executor_config=test_config['executor'],
+                         config=test_config,
                          execution_settings=ExecutionSettings())
     with open(os.path.join(temporary_dir, result["log_file"]), "r") as f:
         command_result = json.load(f)
@@ -59,12 +59,12 @@ def test_run_command_ssh(temporary_dir, test_config):
                          worker_context=context,
                          executor_context=context,
                          execution_settings=ExecutionSettings(),
-                         executor_config={
+                         config={"executor": {
                             "type": "ssh",
                             "remote_data_dir": "/tmp",
                             "remote_workflows_dir": "/tmp",
                             "login": Executor_test.remote_config["ssh"]  # "ssh" in remote.yaml
-                         })
+                         }})
     with open(os.path.join(temporary_dir, result["log_file"]), "r") as f:
         command_result = json.load(f)
         assert command_result["workdir"] == str(workdir)

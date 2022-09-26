@@ -267,7 +267,7 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
                                  data_dir=test_dir)
     return Manager(celery_app=celery_session_app,
                    database=test_database,
-                   executor=test_config["executor"],
+                   config=test_config,
                    workflow_engines=WorkflowEngineFactory.
                    create(test_config["workflow_engines"]),
                    weskit_context=common_context,
