@@ -378,6 +378,53 @@ class TestWithHeaderToken:
         assert response.status_code == 200
 
     @pytest.mark.integration
+    def test_fails_requests(self,
+                            test_client,
+                            OIDC_credentials):
+
+        test_client.post("/ga4gh/wes/v1/runs",
+                         headers=OIDC_credentials.headerToken)
+        fake_run_id = "fds-fsd,"
+
+        # Retrieve the status of non-existing run
+        status_response = test_client.get(f"/ga4gh/wes/v1/runs/{fake_run_id}/status",
+                                          headers=OIDC_credentials.headerToken)
+        assert status_response.status_code == 500
+
+        # Retrieve the RunLog of non-existing run
+        log_response = test_client.get(f"/ga4gh/wes/v1/runs/{fake_run_id}",
+                                       headers=OIDC_credentials.headerToken)
+        assert log_response.status_code == 500
+
+        # Cancel nonexisting run
+        cancel_response_fail = test_client.post(f"/ga4gh/wes/v1/runs/{fake_run_id}/cancel",
+                                                headers=OIDC_credentials.headerToken)
+        assert cancel_response_fail.status_code == 500
+
+    @pytest.mark.integration
+    def test_fails_submit_data(self,
+                               test_client,
+                               OIDC_credentials):
+
+        # Submit empty data
+        data = {}
+        response = test_client.post(
+            "/ga4gh/wes/v1/runs",
+            data=data,
+            content_type="multipart/form-data",
+            headers=OIDC_credentials.headerToken)
+        assert response.status_code == 400
+
+        # Submit wrong data structure
+        data["workflow_url"] = {"bla": {"Snakefile"}}
+        response_corrup = test_client.post(
+            "/ga4gh/wes/v1/runs",
+            data=data,
+            content_type="multipart/form-data",
+            headers=OIDC_credentials.headerToken)
+        assert response_corrup.status_code == 400
+
+    @pytest.mark.integration
     def test_get_run(self,
                      test_client,
                      OIDC_credentials):
@@ -632,3 +679,60 @@ class TestManagerRaiseError:
     def test_fails_prepare_execution(self, long_run):
         with pytest.raises(RuntimeError):
             current_app.manager.prepare_execution(long_run)
+
+
+class TestExceptionError:
+
+    def raise_error(self, client, wes_route, OIDC_credentials):
+        with pytest.raises(AttributeError):
+            client.get(wes_route, headers=OIDC_credentials.headerToken)
+
+    @pytest.mark.integration
+    def test_raise_error(self,
+                         test_client,
+                         test_run,
+                         OIDC_credentials):
+
+        run_id = test_run.id
+        current_app.manager = None
+
+        # fails to get run log
+        self.raise_error(test_client, f"/ga4gh/wes/v1/runs/{run_id}", OIDC_credentials)
+
+        # fails to get run status
+        self.raise_error(test_client, f"/ga4gh/wes/v1/runs/{run_id}/status", OIDC_credentials)
+
+        # fails to get serviceInfo
+        self.raise_error(test_client, "/ga4gh/wes/v1/service-info", OIDC_credentials)
+
+        # fails to list runs
+        self.raise_error(test_client, "/ga4gh/wes/v1/runs", OIDC_credentials)
+
+        # fails to list runs extended
+        self.raise_error(test_client, "/weskit/v1/runs", OIDC_credentials)
+
+        # fails to get stderr
+        self.raise_error(test_client, f"/weskit/v1/runs/{run_id}/stderr", OIDC_credentials)
+
+        # fails to get stdout
+        self.raise_error(test_client, f"/weskit/v1/runs/{run_id}/stdout", OIDC_credentials)
+
+
+class TestOICDValidationError:
+
+    @pytest.mark.integration
+    def test_raise_OICD_validataion_error(self,
+                                          test_client,
+                                          test_run,
+                                          OIDC_credentials):
+
+        current_app.config["userinfo_validation_value"] = "XXX"
+        response = test_client.post("/ga4gh/wes/v1/runs",
+                                    headers=OIDC_credentials.headerToken)
+        response.status_code == 401
+
+        current_app.oidc_login.client_id = " "
+        current_app.oidc_login.client_secret = " "
+        response = test_client.post("/ga4gh/wes/v1/runs",
+                                    headers=OIDC_credentials.headerToken)
+        response.status_code == 401
