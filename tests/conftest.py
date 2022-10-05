@@ -73,11 +73,11 @@ def mysql_keycloak_container():
 def _setup_test_app(redis_container,
                     celery_session_app,
                     test_database,
-                    config):
+                    config_file):
     os.environ["BROKER_URL"] = get_redis_url(redis_container)
     os.environ["CELERY_RESULT_BACKEND"] = get_redis_url(redis_container)
     os.environ["WESKIT_LOG_CONFIG"] = os.path.join("config", "devel-log-config.yaml")
-    os.environ["WESKIT_CONFIG"] = config
+    os.environ["WESKIT_CONFIG"] = config_file
     os.environ["WESKIT_DATA"] = "test-data/"
     os.environ["WESKIT_WORKFLOWS"] = os.getcwd()
     os.environ["WESKIT_S3_ENDPOINT"] = "http://localhost:9000"
@@ -99,7 +99,7 @@ def login_app(redis_container,
     yield _setup_test_app(redis_container,
                           celery_session_app,
                           test_database,
-                          config="tests/weskit.yaml")
+                          config_file="tests/weskit.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -109,7 +109,7 @@ def nologin_app(redis_container,
     yield _setup_test_app(redis_container,
                           celery_session_app,
                           test_database,
-                          config="tests/weskit_nologin.yaml")
+                          config_file="tests/weskit_nologin.yaml")
 
 
 @pytest.fixture(scope="session")
@@ -185,10 +185,13 @@ def test_validation():
 @pytest.fixture(scope="session")
 def test_config(test_validation):
     # This uses a dedicated test configuration YAML.
-    with open("tests/weskit.yaml", "r") as ff:
+    config_file = "tests/weskit.yaml"
+    with open(config_file, "r") as ff:
         raw_config = yaml.load(ff, Loader=yaml.FullLoader)
     validation_result = create_validator(test_validation)(raw_config)
     assert isinstance(validation_result, dict)
+    # Tests of the command task need this variable.
+    os.environ["WESKIT_CONFIG"] = config_file
     yield validation_result
 
 

@@ -31,7 +31,6 @@ from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.exceptions import ClientError, ConcurrentModificationError
-from weskit.tasks.CommandTask import run_command
 from weskit.utils import return_pre_signed_url, now
 
 ConfigParams = Dict[str, Dict[str, Any]]
@@ -56,8 +55,6 @@ class Manager:
         self.celery_app = celery_app
         self.database = database
         self.require_workdir_tag = require_workdir_tag
-        # Register the relevant tasks with fully qualified name. The function needs to be static.
-        self.celery_app.task(run_command)
 
     @property
     def _run_task(self) -> Task:
@@ -411,8 +408,7 @@ class Manager:
                 "command": command,
                 "worker_context": self.weskit_context,
                 "executor_context": self.executor_context,
-                "execution_settings": execution_settings,
-                "config": self.config
+                "execution_settings": execution_settings
             })
         run.celery_task_id = task.id
 
