@@ -17,10 +17,10 @@ import Executor_test
 from weskit import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.tasks.CommandTask import run_command
 
 
 def test_run_command(temporary_dir, test_config):
-    from weskit.tasks.CommandTask import run_command
     command = ["echo", "hello world", ss(">"), "x"]
     context = PathContext(data_dir=Path(temporary_dir).parent,
                           workflows_dir=Path(temporary_dir))
@@ -61,8 +61,6 @@ def test_run_command_ssh(temporary_dir, test_config):
         print(yaml.dump(config), file=config_file)
         os.environ["WESKIT_CONFIG"] = config_file.name
 
-        # The run_command method is declared in a context that needs WESKIT_CONFIG.
-        from weskit.tasks.CommandTask import run_command
         command = ["echo", "hello world", ss(">"), "x"]
         context = PathContext(data_dir=Path(temporary_dir).parent,
                               workflows_dir=Path(temporary_dir))
