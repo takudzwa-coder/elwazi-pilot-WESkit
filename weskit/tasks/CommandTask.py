@@ -22,11 +22,9 @@ from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import CommandResult, ExecutionSettings, Executor
-from weskit.tasks.config import read_config
 from weskit.utils import format_timestamp
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
-from weskit.tasks.celery_worker import celery_app
-
+from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +32,20 @@ logger = logging.getLogger(__name__)
 class CommandTask(Task, metaclass=ABCMeta):
     """
     Process-global state for all run_command tasks. Use this for sockets and network connections,
-    e.g. for SSH, Database, etc.
+    etc. This allows to share resources between tasks:
+
+    - SSH connection
+    - asyncio event-loop
+    - database connection
 
     See https://celery-safwan.readthedocs.io/en/latest/userguide/tasks.html#instantiation
     """
 
     @cached_property
     def config(self):
-        return read_config()
+        config = read_config()
+        update_celery_config_from_env()
+        return config
 
     @cached_property
     def executor_type(self) -> EngineExecutorType:
@@ -50,7 +54,7 @@ class CommandTask(Task, metaclass=ABCMeta):
     @cached_property
     def executor(self) -> Executor:
         return get_executor(self.executor_type,
-                            login_parameters=self.config()["executor"]["login"]
+                            login_parameters=self.config["executor"]["login"]
                             if self.executor_type.needs_login_credentials else None)
 
 
@@ -86,7 +90,7 @@ def run_command(command: ShellCommand,
     """
     start_time = datetime.now()
 
-    # It's a bug do have workdir not defined here!
+    # It's a bug to have workdir not defined here!
     if command.workdir is None:
         raise RuntimeError("No working directory defined for command: %s" % str(command))
     else:

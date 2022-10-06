@@ -5,11 +5,11 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-import weskit.serializer
-from weskit.tasks.config import read_config
+import weskit.celery_app
+from weskit.celery_app import update_celery_config_from_env
 
-celery_app = weskit.create_celery()
-# Insert the "celery" section from the configuration file into the Celery config.
-celery_app.conf.update(**read_config().get("celery", {}))
+update_celery_config_from_env()
 
-# Note: No task registration here. The tasks are registered later by `@celery_app.taks`.
+celery_app = weskit.celery_app.celery_app
+
+# A start script to be used when starting workers.

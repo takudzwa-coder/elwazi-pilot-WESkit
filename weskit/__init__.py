@@ -19,7 +19,6 @@ import yaml
 from celery import Celery
 from flask_cors import CORS
 
-import weskit.celeryconfig  # noqa F401
 from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.api.wes import bp as wes_bp
 from weskit.classes.Database import Database
@@ -34,20 +33,6 @@ from weskit.oidc import Factory as OIDCFactory
 from weskit.utils import create_validator
 
 logger = logging.getLogger(__name__)
-
-
-def create_celery(**kwargs):
-    broker_url = os.environ.get("BROKER_URL")
-    # Provide RESULT_BACKEND as lower-priority variable than the native CELERY_RESULT_BACKEND.
-    backend_url = os.environ.get("CELERY_RESULT_BACKEND",
-                                 os.environ.get("RESULT_BACKEND"))
-    celery = Celery(
-        app="WESkit",
-        broker=broker_url,
-        backend=backend_url)
-    celery.config_from_object(celeryconfig)   # noqa F821
-    celery.conf.update(**kwargs)
-    return celery
 
 
 def read_swagger():

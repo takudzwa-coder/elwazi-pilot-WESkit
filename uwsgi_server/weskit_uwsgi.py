@@ -8,7 +8,9 @@
 #
 #  Authors: The WESkit Team
 
-from weskit import create_app, create_celery, create_database
+from weskit import create_app, create_database
+from weskit.celery_app import celery_app, update_celery_config_from_env
 
-app = create_app(create_celery(),
+update_celery_config_from_env()
+app = create_app(celery_app,
                  create_database())

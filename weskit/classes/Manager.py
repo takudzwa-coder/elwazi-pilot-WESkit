@@ -22,6 +22,7 @@ from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
+from weskit.tasks.CommandTask import run_command
 from weskit.classes.Database import Database
 from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
@@ -55,6 +56,9 @@ class Manager:
         self.celery_app = celery_app
         self.database = database
         self.require_workdir_tag = require_workdir_tag
+        # Register the relevant tasks with fully qualified name (see import).
+        # The function needs to be static.
+        self.celery_app.task(run_command)
 
     @property
     def _run_task(self) -> Task:
