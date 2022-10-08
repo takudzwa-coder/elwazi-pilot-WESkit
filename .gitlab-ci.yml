@@ -49,6 +49,7 @@ test:
     - mypy --install-types --non-interactive weskit/ tests/
     - flake8
     - bandit -r weskit/ uwsgi_server/
+    - cp tests/remote-template.yaml tests/remote.yaml
     - python -m pytest -vvv --cov=weskit/ --cov-report term-missing -m "not slow and not ssh"
   rules:
     # Run the tests in merge-commits, and in all branches with new commits, unless they have an
