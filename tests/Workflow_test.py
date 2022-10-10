@@ -118,7 +118,7 @@ def test_execute_snakemake(manager,
         str(run.rundir_rel_workflow_path),
         "--cores", "1",
         "--configfile",
-        "config.yaml"
+        f"{run.id}.yaml"
     ]
     assert run.stderr[0] == "environment setup\n"
 
@@ -160,7 +160,7 @@ def test_fail_execute_snakemake(manager,
         str(run.rundir_rel_workflow_path),
         "--cores", "1",
         "--configfile",
-        "config.yaml"
+        f"{run.id}.yaml"
     ]
 
 
@@ -204,7 +204,7 @@ def test_execute_nextflow(manager,
         "-Djava.io.tmpdir=/tmp",
         "run",
         str(run.rundir_rel_workflow_path),
-        "-params-file", "config.yaml",
+        "-params-file", f"{run.id}.yaml",
         "-with-timeline",
         "-with-dag",
         "-with-report"

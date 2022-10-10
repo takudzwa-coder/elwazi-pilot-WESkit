@@ -48,7 +48,7 @@ def test_run(test_client,
             "group": "testgroup",
             "queue": "testqueue"
         })
-    run = manager.create_and_insert_run(request=request,
+    run = manager.create_and_insert_run(validated_request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run = manager.prepare_execution(run)
     run = manager.execute(run)
@@ -77,7 +77,7 @@ def incomplete_run(test_client,
     request = get_workflow_data(
         snakefile="file:tests/wf1/Snakefile",
         config="tests/wf2/config.yaml")
-    run = manager.create_and_insert_run(request=request,
+    run = manager.create_and_insert_run(validated_request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run.request["workflow_params"]["duration"] = 1
     run = manager.prepare_execution(run)
@@ -92,7 +92,7 @@ def long_run(test_client,
     request = get_workflow_data(
         snakefile="file:tests/wf2/Snakefile",
         config="tests/wf2/config.yaml")
-    run = manager.create_and_insert_run(request=request,
+    run = manager.create_and_insert_run(validated_request=request,
                                         user_id="6bd12400-6fc4-402c-9180-83bddbc30526")
     run.request["workflow_params"]["duration"] = 10
     run = manager.prepare_execution(run)
@@ -511,8 +511,9 @@ class TestWithHeaderToken:
             '--cores',
             '1',
             '--configfile',
-            'config.yaml'
+            f"{run_id}.yaml"
         ]
+
         assert log_response.json["run_log"]["exit_code"] == 0
         start_time = log_response.json["run_log"]["start_time"]
         assert datetime.fromisoformat(start_time)
@@ -532,7 +533,7 @@ class TestWithHeaderToken:
         # be a dictionary. See specification 1.0.0 and mentioning in this discussion:
         # https://github.com/ga4gh/workflow-execution-service-schemas/issues/176
         assert "hello_world.txt" in log_response.json["outputs"]["filesystem"]
-        assert "config.yaml" in log_response.json["outputs"]["filesystem"]
+        assert f"{run_id}.yaml" in log_response.json["outputs"]["filesystem"]
         # Not checking the log files, though.
 
         # Test that S3 outputs are valid URLs

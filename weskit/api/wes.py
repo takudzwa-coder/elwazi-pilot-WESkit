@@ -198,7 +198,7 @@ def RunWorkflow(*args, **kwargs):
             }, 400
         else:
             run = current_app.manager.\
-                create_and_insert_run(request=validation_result,
+                create_and_insert_run(validated_request=validation_result,
                                       user_id=ctx.user.id)
             logger.info("Created run %s" % run.id)
 
