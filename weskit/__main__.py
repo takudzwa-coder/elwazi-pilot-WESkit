@@ -6,10 +6,12 @@
 #
 #  Authors: The WESkit Team
 
-from weskit import create_database, create_celery, create_app
+from weskit import create_database, create_app
+from weskit.celery_app import celery_app, update_celery_config_from_env
 
 
 def main():
-    app = create_app(create_celery(),
+    update_celery_config_from_env()
+    app = create_app(celery_app,
                      create_database())
     app.run(host="127.0.0.1", port=5000)

@@ -88,7 +88,7 @@ class SshExecutor(Executor):
         except RuntimeError as ex:
             # Compare StackOverflow: https://tinyurl.com/yckkwbew
             if str(ex).startswith('There is no current event loop in thread'):
-                logger.warning("Using a fresh asyncio event-loop", exc_info=ex)
+                logger.warning("Using a fresh asyncio event-loop")
                 self._event_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(self._event_loop)
             else:

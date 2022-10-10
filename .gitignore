@@ -22,3 +22,4 @@ test-data/
 testfile
 uwsgi_server/certs
 !uwsgi_server/certs/.keep
+tests/remote.yaml

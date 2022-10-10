@@ -1,4 +1,4 @@
-#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+#  Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
 #
 #  Distributed under the MIT License. Full text at
 #
@@ -10,23 +10,57 @@ from __future__ import annotations
 import json
 import logging
 import os
+from abc import ABCMeta
 from datetime import datetime
+from werkzeug.utils import cached_property
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Optional
+
+from celery import Task
 
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.Executor import CommandResult, ExecutionSettings
+from weskit.classes.executor.Executor import CommandResult, ExecutionSettings, Executor
 from weskit.utils import format_timestamp
 from weskit.utils import get_current_timestamp, collect_relative_paths_from
+from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 
 logger = logging.getLogger(__name__)
 
 
+class CommandTask(Task, metaclass=ABCMeta):
+    """
+    Process-global state for all run_command tasks. Use this for sockets and network connections,
+    etc. This allows to share resources between tasks:
+
+    - SSH connection
+    - asyncio event-loop
+    - database connection
+
+    See https://celery-safwan.readthedocs.io/en/latest/userguide/tasks.html#instantiation
+    """
+
+    @cached_property
+    def config(self):
+        config = read_config()
+        update_celery_config_from_env()
+        return config
+
+    @cached_property
+    def executor_type(self) -> EngineExecutorType:
+        return EngineExecutorType.from_string(self.config["executor"]["type"])
+
+    @cached_property
+    def executor(self) -> Executor:
+        return get_executor(self.executor_type,
+                            login_parameters=self.config["executor"]["login"]
+                            if self.executor_type.needs_login_credentials else None)
+
+
+@celery_app.task(base=CommandTask)
 def run_command(command: ShellCommand,
                 execution_settings: ExecutionSettings,
-                executor_config: Dict[str, Any],
                 worker_context: PathContext,
                 executor_context: PathContext):
     """
@@ -56,11 +90,7 @@ def run_command(command: ShellCommand,
     """
     start_time = datetime.now()
 
-    executor_type = EngineExecutorType.from_string(executor_config["type"])
-    executor = get_executor(executor_type,
-                            login_parameters=executor_config.get("login", {}))
-
-    # It's a bug do have workdir not defined here!
+    # It's a bug to have workdir not defined here!
     if command.workdir is None:
         raise RuntimeError("No working directory defined for command: %s" % str(command))
     else:
@@ -68,7 +98,7 @@ def run_command(command: ShellCommand,
 
     # The command context is the context needed by the command, which may be local or remote,
     # dependent on the executor type.
-    if executor_type.executes_engine_remotely:
+    if run_command.executor_type.executes_engine_remotely:
         logger.info("Running command in {} (worker)/{} (command): {}".
                     format(worker_context.run_dir(workdir),
                            executor_context.run_dir(workdir),
@@ -81,8 +111,7 @@ def run_command(command: ShellCommand,
                     format(executor_context.run_dir(workdir),
                            [repr(el) for el in command.command]))
 
-    # Make a copy of the ShellCommand with appropriate for the (possibly remote) executor
-    # environment.
+    # Make a copy of the ShellCommand appropriate for the (possibly remote) executor environment.
     shell_command = ShellCommand(command=command.command,
                                  workdir=executor_context.workdir(workdir),
                                  environment=command.environment)
@@ -92,8 +121,8 @@ def run_command(command: ShellCommand,
         log_dir = worker_context.log_dir(workdir, start_time)
         logger.info("Creating log-dir %s" % str(log_dir))
         os.makedirs(log_dir)
-        if executor_type.executes_engine_locally or \
-           executor_config["login"]["hostname"] == "localhost":
+        if run_command.executor_type.executes_engine_locally or \
+           run_command.config["executor"]["login"]["hostname"] == "localhost":
             # A locally executing engine needs the local environment, e.g. for Conda.
             shell_command.environment = {**dict(os.environ), **shell_command.environment}
         else:
@@ -102,11 +131,13 @@ def run_command(command: ShellCommand,
             # needed.
             pass
 
-        process = executor.execute(shell_command,
-                                   stdout_file=executor_context.stdout_file(workdir, start_time),
-                                   stderr_file=executor_context.stderr_file(workdir, start_time),
-                                   settings=execution_settings)
-        result = executor.wait_for(process)
+        process =\
+            run_command.executor.execute(
+                shell_command,
+                stdout_file=executor_context.stdout_file(workdir, start_time),
+                stderr_file=executor_context.stderr_file(workdir, start_time),
+                settings=execution_settings)
+        result = run_command.executor.wait_for(process)
 
     finally:
         # The execution context is the run-directory. It is used to create all paths to be reported

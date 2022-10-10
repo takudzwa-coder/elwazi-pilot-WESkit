@@ -22,6 +22,7 @@ from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
+from weskit.tasks.CommandTask import run_command
 from weskit.classes.Database import Database
 from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
@@ -31,8 +32,9 @@ from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.exceptions import ClientError, ConcurrentModificationError
-from weskit.tasks.CommandTask import run_command
 from weskit.utils import return_pre_signed_url, now
+
+ConfigParams = Dict[str, Dict[str, Any]]
 
 logger = logging.getLogger(__name__)
 
@@ -42,19 +44,20 @@ class Manager:
     def __init__(self,
                  celery_app: Celery,
                  database: Database,
-                 executor: Dict[str, Any],
+                 config: ConfigParams,
                  workflow_engines: dict,
                  weskit_context: PathContext,
                  executor_context: PathContext,
                  require_workdir_tag: bool) -> None:
-        self.executor = executor
+        self.config = config
         self.workflow_engines = workflow_engines
         self.weskit_context = weskit_context
         self.executor_context = executor_context
         self.celery_app = celery_app
         self.database = database
         self.require_workdir_tag = require_workdir_tag
-        # Register the relevant tasks with fully qualified name. The function needs to be static.
+        # Register the relevant tasks with fully qualified name (see import).
+        # The function needs to be static.
         self.celery_app.task(run_command)
 
     @property
@@ -409,8 +412,7 @@ class Manager:
                 "command": command,
                 "worker_context": self.weskit_context,
                 "executor_context": self.executor_context,
-                "execution_settings": execution_settings,
-                "executor_config": self.executor
+                "execution_settings": execution_settings
             })
         run.celery_task_id = task.id
 
