@@ -14,8 +14,8 @@ import pytest
 from werkzeug.datastructures import FileStorage
 from werkzeug.datastructures import ImmutableMultiDict
 
-from test_utils import get_mock_run, is_within_timeout, assert_status_is_not_failed
-from weskit.classes.RunStatus import RunStatus
+from test_utils import get_mock_run, is_within_timeout, assert_stage_is_not_failed
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.exceptions import ClientError
 from weskit.utils import to_filename
 
@@ -29,7 +29,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
                        workflow_type_version="6.10.0")
     manager.database.insert_run(run)
     run = manager.prepare_execution(run, files=[])
-    assert run.status == RunStatus.INITIALIZING
+    assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
 
     # 2.) workflow does neither exist on server nor in attachment
     #     -> error message outputs execution
@@ -53,7 +53,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
                            workflow_type_version="6.10.0")
         manager.database.insert_run(run)
         run = manager.prepare_execution(run, files)
-    assert run.status == RunStatus.INITIALIZING
+    assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
     assert run.workflow_path(manager.weskit_context).is_file()
 
     # 4.) set custom workdir
@@ -62,7 +62,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
                        workflow_type_version="6.10.0",
                        tags={"run_dir": "sample1/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
-    assert run.status == RunStatus.INITIALIZING
+    assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
     assert run.sub_dir == Path("sample1/my_workdir")
 
     # 5.) check relative "file:" scheme on custom workdir
@@ -71,7 +71,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
                        workflow_type_version="6.10.0",
                        tags={"run_dir": "file:sample2/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
-    assert run.status == RunStatus.INITIALIZING
+    assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
     assert run.sub_dir == Path("sample2/my_workdir")
 
 
@@ -95,10 +95,10 @@ def test_execute_snakemake(manager,
     success = False
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
-        status = run.status
-        if status != RunStatus.COMPLETE:
-            assert_status_is_not_failed(status)
-            print("Waiting ... (status=%s)" % status.name)
+        stage = run.processing_stage
+        if stage != ProcessingStage.FINISHED_EXECUTION:
+            assert_stage_is_not_failed(stage)
+            print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = manager.update_run(run)
         else:
@@ -132,16 +132,17 @@ def test_fail_execute_snakemake(manager,
                        workflow_engine_parameters={},
                        workflow_params={"missing": "variable"})
     run = manager.prepare_execution(run, files=[])
-    run = manager.execute(run)
     manager.database.insert_run(run)
+    run = manager.execute(run)
 
     start_time = time.time()
     success = False
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
-        status = run.status
-        if status != RunStatus.EXECUTOR_ERROR:
-            print("Waiting ... (status=%s)" % status.name)
+        stage = run.processing_stage
+        print(stage)
+        if stage != ProcessingStage.EXECUTOR_ERROR:
+            print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = manager.update_run(run)
         else:
@@ -179,10 +180,10 @@ def test_execute_nextflow(manager,
     success = False
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
-        status = run.status
-        if status != RunStatus.COMPLETE:
-            assert_status_is_not_failed(status)
-            print("Waiting ... (status=%s)" % status.name)
+        stage = run.processing_stage
+        if stage != ProcessingStage.FINISHED_EXECUTION:
+            assert_stage_is_not_failed(stage)
+            print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = manager.update_run(run)
         else:
@@ -226,7 +227,7 @@ def test_cancel_workflow(manager, celery_worker):
     # Cancellation of the preparation is not implemented.
     time.sleep(5)
     manager.cancel(run)
-    assert run.run_status == RunStatus.CANCELED
+    assert run.run_stage == ProcessingStage.CANCELED
 
 
 @pytest.mark.integration
@@ -244,10 +245,10 @@ def test_update_all_runs(manager,
     success = False
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
-        status = run.status
-        print("Waiting ... (status=%s)" % status.name)
-        if status != RunStatus.COMPLETE:
-            assert_status_is_not_failed(status)
+        stage = run.processing_stage
+        print("Waiting ... (status=%s)" % stage.name)
+        if stage != ProcessingStage.FINISHED_EXECUTION:
+            assert_stage_is_not_failed(stage)
             time.sleep(1)
             run = manager.update_run(run)
         else:
@@ -256,4 +257,4 @@ def test_update_all_runs(manager,
     manager.update_runs()
     db_run = manager.get_run(run.id)
     assert db_run is not None
-    assert db_run.status == RunStatus.COMPLETE
+    assert db_run.processing_stage == ProcessingStage.FINISHED_EXECUTION

@@ -13,7 +13,7 @@ import pytest
 from weskit.exceptions import DatabaseOperationError, ConcurrentModificationError
 from test_utils import get_mock_run
 from weskit.classes.Run import Run
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.utils import updated
 
 
@@ -47,13 +47,13 @@ def test_update_run(test_database):
                        workflow_type_version="6.10.0")
     test_database.insert_run(run)
     new_run = copy.copy(run)
-    # Runs in state RUNNING must have a celery_task_id.
+    # Runs in processing stage SUBMITTED_EXECUTION must have a celery_task_id.
     # Not nice: Interaction with test_update_all_runs via to DB.
     new_run.celery_task_id = "1245"
-    new_run.status = RunStatus.RUNNING
+    new_run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
     test_database.update_run(new_run)
-    assert new_run.status == RunStatus.RUNNING
-    assert run.status == RunStatus.INITIALIZING
+    assert new_run.processing_stage == ProcessingStage.SUBMITTED_EXECUTION
+    assert run.processing_stage == ProcessingStage.RUN_CREATED
 
 
 @pytest.mark.integration
@@ -69,7 +69,7 @@ def test_except_update_on_current_update(test_database):
     test_database.insert_run(modified_run)
 
     # Modify the run, to unsure an update is attempted.
-    run.status = RunStatus.RUNNING
+    run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
 
     # The old run and the modified run should be divergent now.
     with pytest.raises(ConcurrentModificationError):
@@ -82,7 +82,7 @@ def test_except_update_on_missing_run(test_database):
                        workflow_type="SMK",
                        workflow_type_version="6.10.0")
     # Modify the run, to ensure an update is attempted.
-    run.status = RunStatus.RUNNING
+    run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
     with pytest.raises(DatabaseOperationError):
         test_database.update_run(run)
 
@@ -98,8 +98,8 @@ def test_get_runs(test_database):
 @pytest.mark.integration
 def test_count_states(test_database):
     counts = test_database.count_states()
-    for status in RunStatus:
-        assert status.name in counts.keys()
+    for processing_stage in ProcessingStage:
+        assert processing_stage.name in counts.keys()
 
 
 @pytest.mark.integration

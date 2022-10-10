@@ -13,7 +13,7 @@ from typing import Dict, Optional
 import yaml
 
 from weskit.classes.Run import Run
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.utils import now
 
 
@@ -29,7 +29,7 @@ def get_mock_run(workflow_url,
         else workflow_engine_parameters
     data = {
         "id": uuid.uuid4(),
-        "status": RunStatus.INITIALIZING,
+        "processing_stage": ProcessingStage.RUN_CREATED,
         "request_time": None,
         "user_id": user_id,
         "request": {
@@ -59,13 +59,8 @@ def assert_within_timeout(start_time, timeout=30):
     assert is_within_timeout(start_time, timeout), "Test timed out"
 
 
-def is_run_failed(status: RunStatus) -> bool:
-    return status in [
-        RunStatus.EXECUTOR_ERROR,
-        RunStatus.SYSTEM_ERROR,
-        RunStatus.CANCELED,
-        RunStatus.CANCELING
-    ]
+def is_run_failed(stage: ProcessingStage) -> bool:
+    return stage in [ProcessingStage.ERROR]
 
 
 def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]] = None):
@@ -83,8 +78,8 @@ def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]]
     return data
 
 
-def assert_status_is_not_failed(status: RunStatus):
-    assert not is_run_failed(status), "Failing run status '{}'".format(status.name)
+def assert_stage_is_not_failed(stage: ProcessingStage):
+    assert not is_run_failed(stage), "Failing run stage '{}'".format(stage.name)
 
 
 def test_now_has_no_nanoseconds():

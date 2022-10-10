@@ -59,7 +59,7 @@ class TestWithoutLogin:
         assert response.status_code == 200, response.data
 
     @pytest.mark.integration
-    def test_get_run_status(self,
-                            test_client_nologin):
+    def test_get_run_stage(self,
+                           test_client_nologin):
         response = test_client_nologin.get("/weskit/v1/runs/nonExistingRun/status")
         assert response.status_code == 404, response.data

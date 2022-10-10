@@ -14,12 +14,12 @@ from bson import CodecOptions, UuidRepresentation
 from pymongo import MongoClient
 
 from weskit.classes.Run import Run
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.utils import updated, now
 
 mock_run_data = {
     "id": uuid.uuid4(),
-    "status": RunStatus.INITIALIZING,
+    "processing_stage": ProcessingStage.RUN_CREATED,
     "request_time": None,
     "user_id": "test_id",
     "request": {
@@ -44,7 +44,7 @@ mock_run_data = {
 @pytest.mark.integration
 def test_create_and_load_run(database_container):
     new_run = Run(**mock_run_data)
-    new_run.status = RunStatus.RUNNING
+    new_run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
     client = MongoClient(database_container.get_connection_url())
     db = client["WES"]
     collection = db.get_collection("test_runs",
@@ -62,8 +62,9 @@ def test_run_modification():
     run = Run(**mock_run_data)
     assert not run.modified
 
-    run.status = RunStatus.RUNNING
-    assert run.modified
+    another_run = Run(**mock_run_data)
+    another_run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
+    assert another_run.modified
 
 
 def test_run_merge_throws_incompatbile_runs():
@@ -157,23 +158,39 @@ def test_run_merge_merges_outputs():
     }
 
 
-def test_run_merge_progresses_state():
+def test_run_merge_processing_stage():
     init = Run(**mock_run_data)
-    queued = Run(**updated(mock_run_data, status=RunStatus.QUEUED))
-    running = Run(**updated(mock_run_data, status=RunStatus.RUNNING))
-    completed = Run(**updated(mock_run_data, status=RunStatus.COMPLETE))
-    system_error = Run(**updated(mock_run_data, status=RunStatus.SYSTEM_ERROR))
-    paused = Run(**updated(mock_run_data, status=RunStatus.PAUSED))
+    prepared_dir = Run(**updated(mock_run_data, processing_stage=ProcessingStage.PREPARED_DIR))
+    prepared_execution = Run(**updated(mock_run_data,
+                             processing_stage=ProcessingStage.PREPARED_EXECUTION))
+    submitted_execution = Run(**updated(mock_run_data,
+                              processing_stage=ProcessingStage.SUBMITTED_EXECUTION))
+    finished = Run(**updated(mock_run_data, processing_stage=ProcessingStage.FINISHED_EXECUTION))
+    paused = Run(**updated(mock_run_data, processing_stage=ProcessingStage.PAUSED))
+    error = Run(**updated(mock_run_data, processing_stage=ProcessingStage.ERROR))
+    canceled = Run(**updated(mock_run_data, processing_stage=ProcessingStage.CANCELED))
 
-    assert init.merge(queued).status == RunStatus.QUEUED
-    assert init.merge(running).status == RunStatus.RUNNING
-    assert init.merge(completed).status == RunStatus.COMPLETE
-    assert init.merge(system_error).status == RunStatus.SYSTEM_ERROR
-    assert init.merge(paused).status == RunStatus.PAUSED
+    assert init.merge(prepared_dir).processing_stage == ProcessingStage.PREPARED_DIR
+    assert init.merge(prepared_execution).processing_stage == ProcessingStage.PREPARED_EXECUTION
+    assert init.merge(submitted_execution).processing_stage == ProcessingStage.SUBMITTED_EXECUTION
+    assert init.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
+    assert init.merge(error).processing_stage == ProcessingStage.ERROR
 
-    assert queued.merge(init).status == RunStatus.QUEUED, "Symmetric merge"
-    assert system_error.merge(completed).status == RunStatus.SYSTEM_ERROR, "Symmetric merge"
+    assert finished.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
+    assert submitted_execution.merge(error).processing_stage == ProcessingStage.ERROR
+    assert submitted_execution.merge(paused).processing_stage == ProcessingStage.PAUSED
+    assert prepared_dir.merge(submitted_execution).processing_stage == \
+        ProcessingStage.SUBMITTED_EXECUTION
+    assert prepared_execution.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
+    assert submitted_execution.merge(canceled).processing_stage == \
+        ProcessingStage.CANCELED
 
-    assert running.merge(paused).status == RunStatus.PAUSED, "Higher precedence used"
-    assert running.merge(queued).status == RunStatus.RUNNING, "Higher precedence used"
-    assert queued.merge(paused).status == RunStatus.PAUSED, "Higher precedence used"
+
+# test higher precedence
+    assert prepared_dir.merge(init).processing_stage == ProcessingStage.PREPARED_DIR
+    assert prepared_dir.merge(prepared_execution).processing_stage == \
+        ProcessingStage.PREPARED_EXECUTION
+    assert prepared_execution.merge(submitted_execution).processing_stage == \
+        ProcessingStage.SUBMITTED_EXECUTION
+    assert submitted_execution.merge(finished).processing_stage == \
+        ProcessingStage.FINISHED_EXECUTION
