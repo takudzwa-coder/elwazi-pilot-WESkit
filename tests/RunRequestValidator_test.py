@@ -14,6 +14,8 @@ import yaml
 from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.utils import create_validator
 
+from werkzeug.datastructures import FileStorage, ImmutableMultiDict
+
 
 @pytest.fixture(scope="session")
 def request_validation():
@@ -140,3 +142,12 @@ def test_multiple_validations(run_request_validator_rundir):
     )) == \
            ["Not a relative path: '/absolute/path'",
             "'run_dir' tag is required but tags field is missing"]
+
+
+def test_validate_attachment(run_request_validator):
+    with open(os.path.join(os.getcwd(), "tests/wf5/.Snakemake"), "rb") as fp1:
+        wf_file1 = FileStorage(fp1)
+        wf_file1.filename = os.path.basename(wf_file1.filename)
+        files = ImmutableMultiDict({"workflow_attachment": [wf_file1]})
+        assert run_request_validator.validate(request(workflow_attachment=files)) == \
+            ["At least one attachment filename is forbidden. Forbidden are: .nextflow, .snakemake"]

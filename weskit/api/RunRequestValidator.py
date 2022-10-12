@@ -11,10 +11,13 @@ import json
 import logging
 import os
 import re
+from copy import deepcopy
 from os.path import normpath, commonprefix
 from pathlib import Path
 from typing import List, Optional, Dict, Callable, TypeVar, Union
 from urllib.parse import urlparse
+
+from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 
 logger = logging.Logger(__file__)
 
@@ -34,6 +37,17 @@ class RunRequestValidator(object):
         self.data_dir = data_dir
         self.require_rundir_tag = require_workdir_tag
 
+    def validate_attachment(self, data: ImmutableMultiDict[str, FileStorage]) -> List[str]:
+        forbidden_filenames = (".nextflow", ".snakemake")
+        workflow_attachment_files = data.getlist("workflow_attachment")
+        for attachment in workflow_attachment_files:
+            norm_filenames = os.path.normpath(str(attachment.filename))
+            if str(norm_filenames).lower() in forbidden_filenames:
+                return ["At least one attachment filename is forbidden. Forbidden are: " +
+                        ", ".join(forbidden_filenames)]
+        else:
+            return []
+
     def validate(self,
                  data: dict) \
             -> Union[dict, List[str]]:
@@ -50,11 +64,18 @@ class RunRequestValidator(object):
             else:
                 return []
 
+        if data is not None and "workflow_attachment" in data:
+            workflow_attachment_errors = self.validate_attachment(data["workflow_attachment"])
+        else:
+            workflow_attachment_errors = []
+
+        # copy request data without "workflow_attachment"
+        request_data = deepcopy({x: data[x] for x in data if x != "workflow_attachment"})
+        syntax_validation_result = self._validate_and_normalize_syntax(request_data)
         stx_errors: List[str] = []
-        syntax_validation_result = self._validate_and_normalize_syntax(data)
         if isinstance(syntax_validation_result, list):
             stx_errors += syntax_validation_result
-            normalized_data = data
+            normalized_data = request_data
         else:
             normalized_data = syntax_validation_result
 
@@ -66,7 +87,8 @@ class RunRequestValidator(object):
         workdir_tag_errors = self._validate_rundir_tag(
             normalized_data.get("tags", None))
 
-        all_errors = stx_errors + wtnv_errors + url_errors + workdir_tag_errors
+        all_errors = stx_errors + wtnv_errors + url_errors + \
+            workdir_tag_errors + workflow_attachment_errors
 
         if len(all_errors) > 0:
             return list(filter(lambda v: v != [] and v is not None, all_errors))

@@ -195,24 +195,24 @@ class Manager:
         logger.debug(f"Updating state of {len(runs)} runs")
         return list(map(lambda run: self.update_run(run, max_tries), runs))
 
-    def create_and_insert_run(self, request, user_id)\
+    def create_and_insert_run(self, validated_request, user_id)\
             -> Optional[Run]:
 
-        request["workflow_params"] = json.loads(request["workflow_params"])
+        validated_request["workflow_params"] = json.loads(validated_request["workflow_params"])
 
-        if "workflow_engine_parameters" in request.keys():
-            request["workflow_engine_parameters"] = \
-                json.loads(request["workflow_engine_parameters"])
+        if "workflow_engine_parameters" in validated_request.keys():
+            validated_request["workflow_engine_parameters"] = \
+                json.loads(validated_request["workflow_engine_parameters"])
 
-        if "tags" in request.keys():
-            request["tags"] = json.loads(request["tags"])
+        if "tags" in validated_request.keys():
+            validated_request["tags"] = json.loads(validated_request["tags"])
         else:
-            request["tags"] = None
+            validated_request["tags"] = None
 
         run = Run(id=self.database.create_run_id(),
                   status=RunStatus.INITIALIZING,
                   request_time=now(),
-                  request=request,
+                  request=validated_request,
                   user_id=user_id)
         self.database.insert_run(run)
 
@@ -346,7 +346,7 @@ class Manager:
             if not run_dir_abs.exists():
                 os.makedirs(run_dir_abs, exist_ok=True)
 
-            with open(run_dir_abs / "config.yaml", "w") as ff:
+            with open(run_dir_abs / f"{run.id}.yaml", "w") as ff:
                 yaml.dump(run.request["workflow_params"], ff)
 
             run.rundir_rel_workflow_path = self._prepare_workflow_path(
@@ -398,7 +398,7 @@ class Manager:
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
-                    config_files=[Path("config.yaml")],
+                    config_files=[Path(f"{run.id}.yaml")],
                     engine_params=run.request.get("workflow_engine_parameters", {}))
         execution_settings: ExecutionSettings = \
             self.workflow_engines[workflow_type][workflow_type_version].\
