@@ -100,9 +100,9 @@ def execution_log_to_run_log(run: Run) -> dict:
         # We use the path to the workflow file (workflow_url) for now.
         "name": run.request["workflow_url"],
         "cmd": run.execution_log["cmd"],
-        "stdout": run.execution_log["stdout_file"],
-        "stderr": run.execution_log["stderr_file"],
-        "exit_code": run.execution_log["exit_code"],
         "start_time": run.execution_log["start_time"],
         "end_time": run.execution_log["end_time"],
+        "stdout": run.execution_log["stdout_file"],
+        "stderr": run.execution_log["stderr_file"],
+        "exit_code": run.execution_log["exit_code"]
     }
