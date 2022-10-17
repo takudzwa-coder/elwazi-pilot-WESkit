@@ -27,3 +27,4 @@ test-data/
 git-hooks/
 .mypy*
 workflows/
+tests/remote.yaml
