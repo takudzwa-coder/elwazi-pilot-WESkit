@@ -4,8 +4,7 @@
 @cibin345 Cibin s b
 @alexanderkanitz  Alexander Kanitz
 @benwulf    Ben Wulf
-@jansa2708   jansa2708
-@pipaj97    pipaj97
+@jansa2708   Jan Sahrhage
+@pipaj97    Julian Pipart
 @krish8484  Krish Agarwal
-Elisabeth Bürger
-Julian Pipart
+@elleb Elisabeth Bürger
