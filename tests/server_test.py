@@ -229,7 +229,7 @@ class TestOpenEndpoint:
         assert response.json["workflow_type_versions"] == {
             "NFL": {
               "workflow_type_version": [
-                "21.04.0"
+                "22.10.0"
               ]
             },
             "SMK": {
@@ -241,7 +241,7 @@ class TestOpenEndpoint:
         assert response.json["supported_wes_versions"] == ["1.0.0"]
         assert response.json["supported_filesystem_protocols"] == ["file", "S3"]
         assert response.json["workflow_engine_versions"] == {
-            "NFL": "21.04.0",
+            "NFL": "22.10.0",
             "SMK": "6.10.0"
           }
 
@@ -271,28 +271,28 @@ class TestOpenEndpoint:
                "default_value": None,
                "type": "Optional[str]"},
 
-              {"name": "NFL|21.04.0|accounting-name",
+              {"name": "NFL|22.10.0|accounting-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|21.04.0|job-name",
+              {"name": "NFL|22.10.0|job-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|21.04.0|group",
+              {"name": "NFL|22.10.0|group",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|21.04.0|queue",
+              {"name": "NFL|22.10.0|queue",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|21.04.0|trace",
+              {"name": "NFL|22.10.0|trace",
                "default_value": "true",
                "type": "bool"},
-              {"name": "NFL|21.04.0|timeline",
+              {"name": "NFL|22.10.0|timeline",
                "default_value": "true",
                "type": "bool"},
-              {"name": "NFL|21.04.0|graph",
+              {"name": "NFL|22.10.0|graph",
                "default_value": "true",
                "type": "bool"},
-              {"name": "NFL|21.04.0|report",
+              {"name": "NFL|22.10.0|report",
                "default_value": "true",
                "type": "bool"}
           ])

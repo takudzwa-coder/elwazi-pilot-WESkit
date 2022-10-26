@@ -69,10 +69,15 @@ def ss(arg0) -> ShellSpecial:
     return ShellSpecial(arg0)
 
 
+# A `ShellSegment` is basically a string that the shell identifies during parsing as a unit.
+# Usually, these are command or function names and arguments.
+CommandSegment = Union[str, ShellSpecial]
+
+
 class ShellCommand:
 
     def __init__(self,
-                 command: List[Union[str, ShellSpecial]],
+                 command: List[CommandSegment],
                  workdir: Optional[Path] = None,
                  environment: Dict[str, str] = None):
         self.command = command
@@ -83,7 +88,7 @@ class ShellCommand:
         self.workdir = workdir
 
     def copy(self,
-             command: Optional[List[Union[str, ShellSpecial]]] = None,
+             command: Optional[List[CommandSegment]] = None,
              workdir: Optional[Path] = None,
              environment: Optional[Dict[str, str]] = None):
         return ShellCommand(deepcopy(self.command) if command is None else command,
@@ -102,11 +107,11 @@ class ShellCommand:
         return ShellCommand(**values)
 
     @property
-    def command(self) -> List[Union[str, ShellSpecial]]:
+    def command(self) -> List[CommandSegment]:
         return self.__command
 
     @command.setter
-    def command(self, command: List[Union[str, ShellSpecial]]):
+    def command(self, command: List[CommandSegment]):
         self.__command = command
 
     @property

@@ -169,7 +169,7 @@ def test_execute_nextflow(manager,
                           celery_worker):
     run = get_mock_run(workflow_url="file:wf3/helloworld.nf",
                        workflow_type="NFL",
-                       workflow_type_version="21.04.0",
+                       workflow_type_version="22.10.0",
                        workflow_engine_parameters={"trace": "False"})
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
@@ -196,7 +196,7 @@ def test_execute_nextflow(manager,
 
     assert run.execution_log["env"] == {
         "NXF_OPTS": "-Xmx256m",
-        "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
+        "WESKIT_WORKFLOW_ENGINE": "NFL=22.10.0",
         "WESKIT_WORKFLOW_PATH":  str(run.rundir_rel_workflow_path),
     }
     assert run.execution_log["cmd"] == [

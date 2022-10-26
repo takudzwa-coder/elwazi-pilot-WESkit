@@ -95,10 +95,11 @@ class Manager:
 
             https://docs.celeryq.dev/en/stable/userguide/tasks.html#built-in-states
 
-        For a run with SUCCESSFUL Celery state, update the Run with information from the
-        Celery task.
+        For a run that is not yet in a terminal state (e.g. some ERROR state, because of some
+        other conditions or because of previous query results) with SUCCESSFUL Celery state,
+        update the Run with information from the Celery task.
         """
-        if celery_task.status == "SUCCESS":
+        if not run.status.is_terminal and celery_task.status == "SUCCESS":
             # The command itself may have failed, though, because run_command catches execution
             # errors of the command and lets the Celery job succeed.
             result = celery_task.get()
@@ -135,7 +136,7 @@ class Manager:
 
         Return the exception to simplify usage as `raise self._record_error(...)`.
         """
-        logger.info("%s during processing of run '%s'" % (new_state.name, run.id))
+        logger.debug("%s during processing of run '%s'" % (new_state.name, run.id))
         run.status = new_state
         if not isinstance(exception, PyMongoError) and \
                 not isinstance(exception, ConcurrentModificationError):
@@ -148,9 +149,8 @@ class Manager:
                    run: Run,
                    max_tries: int = 1) -> Run:
         """
-        Given an old Run and a new Run (that may or may not differ from the old Run version),
-        retrieve the status information from Celery and update the run. Then, if there is a change
-        compared to the old Run, update the run in the database.
+        For a given Run, try to retrieve its status from Celery. If it exists, try to retrieve
+        its result information and update all in the database. Return the up-to-data Run.
         """
         try:
             if run.celery_task_id is not None:

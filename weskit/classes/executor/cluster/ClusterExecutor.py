@@ -33,8 +33,8 @@ def execute(executor: Executor,
             **kwargs) \
         -> Iterator[Tuple[CommandResult, IO[str], IO[str]]]:
     """
-    Convenience syntax for executing a ShellCommand with temporary locally buffered stdout and
-    stderr. This is mostly a workaround for dysfunctional data streaming if IOBase objects, in
+    Convenience syntax for executing a ShellCommand with temporary and locally buffered stdout and
+    stderr. This is mostly a workaround for dysfunctional data streaming, if IOBase objects, in
     particular StringIO or ByteIO, are used. The context will create temporary files and delete
     them on exiting the context. The context executes the command synchronously (i.e. it calls
     `executor.wait_for(process)`.

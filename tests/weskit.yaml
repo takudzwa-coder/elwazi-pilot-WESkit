@@ -141,7 +141,7 @@ workflow_engines:
   # interpreted in any way.
   #
   NFL:
-    "21.04.0":
+    "22.10.0":
       default_parameters:
         - name: "engine-environment"
           value: null
@@ -219,6 +219,17 @@ workflow_engines:
         - name: "queue"
           api: true
           type: "Optional[str]"
+        - name: "use-conda"
+          api: false
+          type: "bool"
+          value: "false"
+        - name: "use-singularity"
+          api: false
+          type: "bool"
+          value: "false"
+        - name: "profile"
+          api: false
+          type: "Optional[str]"
 
 
 cors:
@@ -247,5 +258,7 @@ login:
 # Celery configuration. Use keys and values according to
 # https://docs.celeryproject.org/en/stable/userguide/configuration.html#configuration
 #
-# Note that CELERY_RESULT_BACKEND/RESULT_BACKEND, and BROKER_URL have *lower* priority.
+# Note: CELERY_RESULT_BACKEND/RESULT_BACKEND, and BROKER_URL have *lower* priority.
+#
+# Note: The default configuration is in api/weskit/celeryconfig.py.
 celery: {}

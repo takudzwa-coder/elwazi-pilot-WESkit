@@ -5,23 +5,23 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from os import PathLike
+
 import asyncio
+import asyncssh
 import logging
 import os
 import shlex
 import tempfile
 import uuid
-from asyncio.subprocess import PIPE
-from contextlib import asynccontextmanager
-from os import PathLike
-from pathlib import Path
-from typing import Optional, Sequence, Union, List
-
-import asyncssh
 from asyncssh import SSHClientConnection, SSHKey, SSHClientProcess, \
     ProcessError, SSHCompletedProcess
+from contextlib import asynccontextmanager
+from pathlib import Path
+from subprocess import PIPE      # nosec: B404
 from tenacity import \
     wait_exponential, stop_after_attempt, wait_random, AsyncRetrying, retry_if_exception
+from typing import Optional, Sequence, Union, List
 
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.executor.Executor \
@@ -221,7 +221,7 @@ class SshExecutor(Executor):
     def _process_directory(self, process_id: uuid.UUID) -> Path:
         return self._remote_tmp / str(self._executor_id) / str(process_id)  # nosec: B108
 
-    def _wrapper_path(self, process_id: uuid.UUID) -> Path:
+    def _env_path(self, process_id: uuid.UUID) -> Path:
         return self._process_directory(process_id) / "wrapper.sh"
 
     async def _create_wrapper(self, command: ShellCommand) -> Path:
@@ -229,6 +229,10 @@ class SshExecutor(Executor):
         We assume Bash is available on the remote side. Detection of the shell is tricky, if at all
         possible. Therefore, if you want to support other shells, make this configurable via a
         WESkit variable.
+
+        The protocol is
+
+                source wrapper.sh && command arg1 arg2 ...
         """
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             print("#!/bin/bash", file=file)
@@ -242,18 +246,22 @@ class SshExecutor(Executor):
                 print(f"export {var_name}={shlex.quote(var_value)}", file=file)
             return Path(file.name)
 
-    async def _upload_wrapper(self, process_id: uuid.UUID, command: ShellCommand):
+    async def _upload_env(self, process_id: uuid.UUID, command: ShellCommand):
         """
         SSH usually does not allow to set environment variables. Therefore, we create a little
         script that sets up the environment for the remote process.
 
-        The wrapper will be put into a directory that uniquely identifies the process and uses
-        information about the parent process (the one running the SSHExecutor).
+        The environment script will be put into a directory that uniquely identifies the process
+        and uses information about the parent process (the one running the SSHExecutor).
+
+        The usage protocol is
+
+            source env.sh && command arg1 ...
 
         :param command:
         :return:
         """
-        local_wrapper_file = await self._create_wrapper(command)
+        local_env_file = await self._create_wrapper(command)
         remote_dir = self._process_directory(process_id)
         try:
             async with self._retryable_connection():
@@ -261,10 +269,10 @@ class SshExecutor(Executor):
                     run(f"set -ue; umask 0077; mkdir -p {shlex.quote(str(remote_dir))}", check=True)
 
                 # We use run() rather than sftp, because sftp is not turned on all SSH servers.
-                await asyncssh.scp(local_wrapper_file,
-                                   (self._connection, self._wrapper_path(process_id)))
+                await asyncssh.scp(local_env_file,
+                                   (self._connection, self._env_path(process_id)))
         finally:
-            os.unlink(local_wrapper_file)
+            os.unlink(local_env_file)
 
     async def _is_executable(self, path: PathLike) -> bool:
         """
@@ -311,8 +319,6 @@ class SshExecutor(Executor):
         output and error refer to remote files, then include them into the command (e.g. with
         shell redirections).
 
-        Note that the paths for the stdout, stderr, and stdin files are *remote* paths.
-
         :param command:
         :param stdout_file:
         :param stderr_file:
@@ -328,7 +334,7 @@ class SshExecutor(Executor):
         # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
         # we create a remote temporary file on the remote host, that is sourced before the
         # actual command is executed remotely.
-        await self._upload_wrapper(process_id, command)
+        await self._upload_env(process_id, command)
 
         # SSH is always associated with a shell. Therefore, a string is processed by asyncssh,
         # rather than an executable with a sequence of parameters, all in a list (compare
@@ -336,7 +342,7 @@ class SshExecutor(Executor):
         #
         # The environment setup script is `source`d.
         source_prefix: List[Union[str, ShellSpecial]] = \
-            ["source", str(self._wrapper_path(process_id)), ss("&&")]
+            ["source", str(self._env_path(process_id)), ss("&&")]
         effective_command = \
             command.copy(command=source_prefix + command.command)
 
@@ -347,7 +353,7 @@ class SshExecutor(Executor):
                                stdout=PIPE if stdout_file is None else stdout_file,
                                stderr=PIPE if stderr_file is None else stderr_file,
                                **kwargs)
-        logger.debug(f"Executed command ({process_id}): {effective_command.command_expression}")
+        logger.info(f"Executed command ({process_id}): {effective_command.command_expression}")
 
         return ExecutedProcess(executor=self,
                                process_handle=process,
@@ -382,7 +388,7 @@ class SshExecutor(Executor):
             async with self._retryable_connection():
                 await process.handle.wait()
                 self.update_process(process)
-                wrapper_path = self._wrapper_path(process.id.value)
+                wrapper_path = self._env_path(process.id.value)
                 await self._connection.run(f"rm {shlex.quote(str(wrapper_path))}", check=True)
                 process_dir = self._process_directory(process.id.value)
                 await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)
