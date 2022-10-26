@@ -222,9 +222,9 @@ class SshExecutor(Executor):
         return self._remote_tmp / str(self._executor_id) / str(process_id)  # nosec: B108
 
     def _env_path(self, process_id: uuid.UUID) -> Path:
-        return self._process_directory(process_id) / "wrapper.sh"
+        return self._process_directory(process_id) / "env.sh"
 
-    async def _create_wrapper(self, command: ShellCommand) -> Path:
+    async def _create_env_script(self, command: ShellCommand) -> Path:
         """
         We assume Bash is available on the remote side. Detection of the shell is tricky, if at all
         possible. Therefore, if you want to support other shells, make this configurable via a
@@ -232,7 +232,7 @@ class SshExecutor(Executor):
 
         The protocol is
 
-                source wrapper.sh && command arg1 arg2 ...
+                source env.sh && command arg1 arg2 ...
         """
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             print("#!/bin/bash", file=file)
@@ -261,7 +261,7 @@ class SshExecutor(Executor):
         :param command:
         :return:
         """
-        local_env_file = await self._create_wrapper(command)
+        local_env_file = await self._create_env_script(command)
         remote_dir = self._process_directory(process_id)
         try:
             async with self._retryable_connection():
@@ -388,8 +388,8 @@ class SshExecutor(Executor):
             async with self._retryable_connection():
                 await process.handle.wait()
                 self.update_process(process)
-                wrapper_path = self._env_path(process.id.value)
-                await self._connection.run(f"rm {shlex.quote(str(wrapper_path))}", check=True)
+                env_path = self._env_path(process.id.value)
+                await self._connection.run(f"rm {shlex.quote(str(env_path))}", check=True)
                 process_dir = self._process_directory(process.id.value)
                 await self._connection.run(f"rmdir {shlex.quote(str(process_dir))}", check=True)
         except TimeoutError as e:
