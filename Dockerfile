@@ -32,6 +32,13 @@ RUN mkdir /weskit \
     && chmod -R 0770 /home/weskit /weskit /opt/conda \
     && umask 0770
 
+# Install Docker to allow Docker-in-Docker, e.g. for the workflow engines
+RUN apt-get --allow-releaseinfo-change update && \
+    apt-get install -y curl && \
+    apt-get clean
+RUN curl -fsSL https://get.docker.com | sh
+RUN usermod -a -G docker $USER
+
 USER $USER:$GROUP
 
 # For development bind your weskit repository to /weskit. It needs to be readable by the

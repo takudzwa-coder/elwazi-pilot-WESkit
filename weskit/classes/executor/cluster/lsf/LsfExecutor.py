@@ -75,8 +75,6 @@ class LsfExecutor(ClusterExecutor):
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) -> ExecutedProcess:
         """
-        stdout, stderr, and stdin files are *remote files on the cluster nodes*.
-
         WARNING: Do not set too many environment variables in `command.environment`. The
                 implementation uses `bsub -env` and too many variables may result in a too long
                 command-line.
@@ -85,14 +83,14 @@ class LsfExecutor(ClusterExecutor):
         if stdin_file is not None:
             logger.error("stdin_file is not supported in ClusterExecutor.execute()")
         # Note that there are at two shells involved: The environment on the submission host
-        # and the environment on the compute node, on which the actual command is executed.
+        # and the environment on the compute-node, on which the actual command is executed.
         submission_command = self._command_set.submit(command=command,
                                                       stdout_file=stdout_file,
                                                       stderr_file=stderr_file,
                                                       settings=settings)
         # The actual submission is done quickly. We wait here for the
-        # result and then use the cluster job ID returned from the submission command,
-        # as process ID to query the cluster job status later.
+        # result and then use the cluster job ID returned from the submission command
+        # as process ID to query the cluster's job status later.
 
         with execute(self._executor, submission_command) \
              as (result, stdout, stderr):

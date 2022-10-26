@@ -100,13 +100,13 @@ def test_workflow_type(run_request_validator):
                                                              workflow_type_version="6.10.0")),
                       dict)
     assert isinstance(run_request_validator.validate(request(workflow_type="NFL",
-                                                             workflow_type_version="21.04.0")),
+                                                             workflow_type_version="22.10.0")),
                       dict)
     assert run_request_validator.validate(request(workflow_type="blabla")) == \
         ["Unknown workflow_type 'blabla'. Know NFL, SMK"]
     assert run_request_validator.validate(request(workflow_type="NFL",
                                                   workflow_type_version="blabla")) == \
-        ["Unknown workflow_type_version 'blabla'. Know 21.04.0"]
+        ["Unknown workflow_type_version 'blabla'. Know 22.10.0"]
 
 
 def test_workflow_type_version(run_request_validator):
