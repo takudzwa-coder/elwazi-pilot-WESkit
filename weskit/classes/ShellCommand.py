@@ -158,6 +158,3 @@ class ShellCommand:
             shlex.quote(el) if not isinstance(el, ShellSpecial) else el.value
             for el in self.__command
         ])
-
-    def needs_shell(self) -> bool:
-        return any([isinstance(el, ShellSpecial) for el in self.__command])

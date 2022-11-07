@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Mapping
 from uuid import UUID
 
+from classes.ShellCommand import ShellCommand
+from classes.WorkflowEngineParameters import ActualEngineParameter
+from weskit.classes.executor.Executor import ProcessId, ExecutionSettings
 from weskit.serializer import to_json, from_json
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ProcessingStage import ProcessingStage
@@ -36,7 +39,8 @@ class Run:
                  user_id: str,
                  db_version: int = 0,
                  exit_code: Optional[int] = None,
-                 celery_task_id: Optional[str] = None,
+                 submission_task_id: Optional[str] = None,
+                 process_id: ProcessId = None,
                  sub_dir: Optional[Path] = None,
                  rundir_rel_workflow_path: Optional[Path] = None,
                  outputs: Dict[str, List[str]] = {},
@@ -45,7 +49,9 @@ class Run:
                  start_time: Optional[datetime] = None,
                  task_logs: Optional[list] = None,
                  stdout: Optional[List[str]] = None,
-                 stderr: Optional[List[str]] = None
+                 stderr: Optional[List[str]] = None,
+                 command: Optional[ShellCommand] = None,
+                 execution_settings: Optional[ExecutionSettings] = None
                  ) -> None:
         if task_logs is None:
             task_logs = []
@@ -57,7 +63,8 @@ class Run:
         self.__request = request
         self.__user_id = user_id
         self.exit_code = exit_code
-        self.celery_task_id = celery_task_id
+        self.submission_task_id = submission_task_id
+        self.process_id = process_id
         self.sub_dir = sub_dir
         self.rundir_rel_workflow_path = rundir_rel_workflow_path
         self.outputs = {} if len(outputs) == 0 else outputs
@@ -70,6 +77,10 @@ class Run:
         self.task_logs = task_logs
         self.stdout = stdout
         self.stderr = stderr
+
+        # We set the fields directly, because the setters allow only to set non-None values.
+        self.__command = command
+        self.__execution_settings = execution_settings
 
         # We keep a copy of the original data in the form of a dictionary representation.
         # Thus, we can detect any modification and don't have to clutter client code with copies
@@ -171,8 +182,8 @@ class Run:
             copy._reference = dict(self)
 
             # The easy fields:
-            copy.celery_task_id = Run._merge_field("celery_task_id", self_d, other_d, None)
             copy.exit_code = Run._merge_field("exit_code", self_d, other_d, None)
+            copy.submission_task_id = Run._merge_field("celery_task_id", self_d, other_d, None)
             copy.sub_dir = Run._merge_field("sub_dir", self_d, other_d, None)
             copy.rundir_rel_workflow_path = Run._merge_field("rundir_rel_workflow_path",
                                                              self_d, other_d, None)
@@ -198,7 +209,9 @@ class Run:
                          rundir_rel_workflow_path=mop(result["rundir_rel_workflow_path"], str),
                          request_time=mop(result["request_time"], format_timestamp),
                          start_time=mop(result["start_time"], format_timestamp),
-                         processing_stage=result["processing_stage"].name)
+                         processing_stage=result["processing_stage"].name,
+                         command=to_json(result["command"]),
+                         execution_settings=to_json(result["execution_settings"]))
         return result
 
     @staticmethod
@@ -212,7 +225,9 @@ class Run:
                        rundir_rel_workflow_path=mop(values["rundir_rel_workflow_path"], Path),
                        request_time=mop(values["request_time"], from_formatted_timestamp),
                        start_time=mop(values["start_time"], from_formatted_timestamp),
-                       processing_stage=ProcessingStage.from_string(values["processing_stage"]))
+                       processing_stage=ProcessingStage.from_string(values["processing_stage"]),
+                       command=from_json(values["command"]),
+                       execution_settings=from_json(values["execution_settings"]))
         return Run(**args)
 
     def __eq__(self, other):
@@ -228,8 +243,9 @@ class Run:
             "request_time": self.__request_time,
             "request": self.__request,
             "user_id": self.__user_id,
-            "celery_task_id": self.celery_task_id,
             "exit_code": self.exit_code,
+            "submission_task_id": self.submission_task_id,
+            "process_id": self.process_id,
             "sub_dir": self.sub_dir,
             "rundir_rel_workflow_path": self.rundir_rel_workflow_path,
             "outputs": self.outputs,
@@ -238,7 +254,9 @@ class Run:
             "start_time": self.start_time,
             "task_logs": self.task_logs,
             "stdout": self.stdout,
-            "stderr": self.stderr
+            "stderr": self.stderr,
+            "command": self.command,
+            "execution_settings": self.execution_settings,
         }.items():
             yield k, v
 
@@ -250,12 +268,20 @@ class Run:
         return dict(self) != self._reference
 
     @property
-    def celery_task_id(self) -> Optional[str]:
-        return self.__celery_task_id
+    def submission_task_id(self) -> Optional[str]:
+        return self.__submission_task_id
 
-    @celery_task_id.setter
-    def celery_task_id(self, celery_task_id: Optional[str]):
-        self.__celery_task_id = celery_task_id
+    @submission_task_id.setter
+    def submission_task_id(self, task_id: Optional[str]):
+        self.__submission_task_id = task_id
+
+    @property
+    def process_id(self) -> Optional[ProcessId]:
+        return self._process_id
+
+    @process_id.setter
+    def process_id(self, process_id: Optional[ProcessId]):
+        self._process_id = process_id
 
     @property
     def rundir_rel_workflow_path(self) -> Optional[Path]:
@@ -290,6 +316,22 @@ class Run:
     @property
     def id(self) -> UUID:
         return self.__id
+
+    @property
+    def command(self) -> Optional[ShellCommand]:
+        return self.__command
+
+    @command.setter
+    def command(self, command: ShellCommand) -> None:
+        self.__command = command
+
+    @property
+    def execution_settings(self) -> Optional[ExecutionSettings]:
+        return self.__execution_settings
+
+    @execution_settings.setter
+    def execution_settings(self, settings: ExecutionSettings) -> None:
+        self.__execution_settings = settings
 
     @property
     def db_version(self) -> int:

@@ -16,10 +16,15 @@ require_workdir_tag: false
 # 'executor' defines where the workflow engine is executed. Allowed values are
 # "ssh", "ssh_lsf", "ssh_slurm", "local", "local_lsf", and "local_slurm"
 #
+# Note that this does *not* configure the execution location of the workload jobs that the workflow
+# is submitting. Please configure the workflow engine for that. For instance, here you would
+# configure where the nextflow engine is being executed, while you would need to edit the
+# nextflow.config to tell nextflow where to submit the workload.
+#
 # Remote executors (all but "local") need a remote_data_dir. This is the corresponding value for
 # WESKIT_DATA, but located on the remote filesystem. "remote_data_dir" is ignored if the executor
 # type is set to "local". If any of the executors involving SSH is used, additionally "login" is
-# is needed, but is ignored for all "local" executor types.
+# needed, but is ignored for all "local" executor types.
 executor:
   type: "local"
 #  remote_data_dir: "/tmp"
@@ -159,7 +164,7 @@ workflow_engines:
           api: true
           type: "Optional[str]"
         - name: "job-name"
-          api: true
+          api: false
           type: "Optional[str]"
         - name: "group"
           api: true
@@ -230,7 +235,40 @@ workflow_engines:
         - name: "profile"
           api: false
           type: "Optional[str]"
-
+        - name: "tes"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_aws_access_key_id"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_aws_secret_access_key"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_aws_security_token"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_aws_profile"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_conda_pkgs_dirs"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_conda_envs_path"
+          api: false
+          type: "Optional[str]"
+        - name: "envvar_home"
+          api: false
+          type: "Optional[str]"
+        - name: "forceall"
+          api: false
+          type: "bool"
+          value: "false"
+        - name: "jobs"
+          api: false
+          type: "Optional[str]"
+        - name: "prefix_conda_envs_path"
+          api: false
+          type: "Optional[str]"
 
 cors:
   enabled: false

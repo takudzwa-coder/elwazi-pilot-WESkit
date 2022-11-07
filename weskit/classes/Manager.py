@@ -22,7 +22,7 @@ from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
 
-from weskit.tasks.CommandTask import run_command
+from tasks.SubmissionTask import run_workflow
 from weskit.classes.Database import Database
 from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
@@ -58,11 +58,11 @@ class Manager:
         self.require_workdir_tag = require_workdir_tag
         # Register the relevant tasks with fully qualified name (see import).
         # The function needs to be static.
-        self.celery_app.task(run_command)
+        self.celery_app.task(run_workflow)
 
     @property
     def _run_task(self) -> Task:
-        return self.celery_app.tasks["weskit.tasks.CommandTask.run_command"]
+        return self.celery_app.tasks["weskit.tasks.WorkflowTask.run_workflow"]
 
     def cancel(self, run: Run) -> Run:
         """
@@ -79,7 +79,7 @@ class Manager:
             # because the current working directory is touched.
             cwd = os.getcwd()
             Control(self.celery_app). \
-                revoke(task_id=run.celery_task_id,
+                revoke(task_id=run.submission_task_id,
                        terminate=True,
                        signal='SIGKILL')
             os.chdir(cwd)
@@ -142,7 +142,7 @@ class Manager:
                 not isinstance(exception, ConcurrentModificationError):
             # Assumption: Recovery has been tried before (e.g. in Database). A PyMongoError here
             # is non-recoverable. Thus, we should not try to write to the DB for PyMongoErrors.
-            self.database.update_run(run, resolution_fun=Run.merge)
+            self.database.update_run(run, resolution_fun=Run.merge, max_tries=3)
         return exception
 
     def update_run(self,
@@ -154,10 +154,10 @@ class Manager:
         Then, if there is a change compared to the old Run, update the run in the database.
         """
         try:
-            if run.celery_task_id is not None:
-                celery_task = self._run_task.AsyncResult(run.celery_task_id)
+            if run.submission_task_id is not None:
+                celery_task = self._run_task.AsyncResult(run.submission_task_id)
                 logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
-                    run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
+                    run.id, run.processing_stage.name, run.submission_task_id, celery_task.state))
                 run = self._update_run_results(run, celery_task)
 
             elif run.processing_stage.is_running or \
@@ -325,12 +325,60 @@ class Manager:
 
         return workflow_path_rel
 
+    def _prepare_run_command(self,
+                             run: Run) -> Run:
+        """
+        Set up the ShellCommand and the execution settings (for the executor). This will also
+        validate the settings from the request.
+        """
+
+        # Check workflow_type
+        if run.request["workflow_type"] not in self.workflow_engines.keys():
+            workflow_type = run.request["workflow_type"]
+        else:
+            # This should have been found in the validation!
+            raise self._record_error(
+                run,
+                RuntimeError("Workflow type '%s' is not known. Know %s" %
+                             (run.request["workflow_type"],
+                              ", ".join(self.workflow_engines.keys()))),
+                ProcessingStage.ERROR)
+
+        # Check workflow_type_version
+        workflow_type_version = run.request["workflow_type_version"]
+        if workflow_type_version not in self.workflow_engines[workflow_type].keys():
+            # This should have been found in the validation!
+            raise self._record_error(
+                run,
+                RuntimeError("Workflow type version '%s' is not known. Know %s" %
+                             (run.request["workflow_type_version"],
+                              ", ".join(self.workflow_engines[workflow_type].keys()))),
+                ProcessingStage.ERROR)
+        else:
+            engine = self.workflow_engines[workflow_type][workflow_type_version]
+
+        # Check that the engine parameters are valid. We do this here, because it is preferable to
+        # validate early (here) rather than late (in the Celery worker). We also store the
+        # run engine parameters and the execution settings in the run (and therefore the database).
+        run.command = engine. \
+            run_command(workflow_path=run.rundir_rel_workflow_path,
+                        workdir=run_workflow.executor_context.workdir(run.sub_dir),
+                        config_files=[Path(f"{run.id}.yaml")],
+                        run_engine_params=run.request.get("workflow_engine_parameters", {}))
+
+        run.execution_settings = engine. \
+            execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
+
+        return run
+
     def prepare_execution(self,
                           run: Run,
                           files: "Optional[ImmutableMultiDict[str, FileStorage]]" = None)\
             -> Run:
         if files is None:
             files = ImmutableMultiDict()
+
+        run = self._prepare_run_command(run)
 
         if run.processing_stage != ProcessingStage.RUN_CREATED:
             ex = RuntimeError("run.processing_stage not RUN_CREATED",
@@ -374,56 +422,12 @@ class Manager:
             self._record_error(run, ex, ProcessingStage.ERROR)
             raise ex
 
-        # Set workflow_type
-        if run.request["workflow_type"] in self.workflow_engines.keys():
-            workflow_type = run.request["workflow_type"]
-        else:
-            # This should have been found in the validation.
-            raise self._record_error(
-                run,
-                RuntimeError("Workflow type '%s' is not known. Know %s" %
-                             (run.request["workflow_type"],
-                              ", ".join(self.workflow_engines.keys()))),
-                ProcessingStage.ERROR)
-
-        # Set workflow type version
-        if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
-            workflow_type_version = run.request["workflow_type_version"]
-        else:
-            # This should have been found in the validation.
-            raise self._record_error(
-                run,
-                RuntimeError("Workflow type version '%s' is not known. Know %s" %
-                             (run.request["workflow_type_version"],
-                              ", ".join(self.workflow_engines[workflow_type].keys()))),
-                ProcessingStage.ERROR)
-
-        if run.rundir_rel_workflow_path is None:
-            raise self._record_error(run,
-                                     RuntimeError(f"Workflow path of run is None: {run.id}"),
-                                     ProcessingStage.ERROR)
-
-        # Execute run
-        command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
-            command(workflow_path=run.rundir_rel_workflow_path,
-                    workdir=run.sub_dir,
-                    config_files=[Path(f"{run.id}.yaml")],
-                    engine_params=run.request.get("workflow_engine_parameters", {}))
-        execution_settings: ExecutionSettings = \
-            self.workflow_engines[workflow_type][workflow_type_version].\
-            execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
-        run.execution_log["cmd"] = command.command
-        run.execution_log["env"] = command.environment
-        run.start_time = now()
         self._run_task.apply_async(
-            task_id=run.celery_task_id,
             args=[],
             kwargs={
-                "command": command,
-                "worker_context": self.weskit_context,
-                "executor_context": self.executor_context,
-                "execution_settings": execution_settings
-            })
+                "run_id": run.id
+            },
+            task_id=run.submission_task_id)
         run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
 
         return run

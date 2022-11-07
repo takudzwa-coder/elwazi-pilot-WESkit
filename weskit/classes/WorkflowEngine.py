@@ -5,17 +5,20 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+import json
 import math
+import re
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any, Tuple, Set
 
 from tempora import parse_timedelta
 
+from classes.Run import Run
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
-from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.classes.executor.Executor import ExecutionSettings, CommandResult
 from weskit.exceptions import ClientError
 from weskit.memory_units import Memory, Unit
 from weskit.utils import mop
@@ -137,7 +140,7 @@ class WorkflowEngine(metaclass=ABCMeta):
             result[parameter] = None if value is None else str(value)
         return result
 
-    def _effective_run_params(self, run_params: Dict[str, Optional[str]]) \
+    def effective_engine_params(self, run_params: Dict[str, Optional[str]]) \
             -> List[ActualEngineParameter]:
         """
         Combine the run (engine) parameters with the default engine parameters. Check the
@@ -162,11 +165,11 @@ class WorkflowEngine(metaclass=ABCMeta):
         return result
 
     @abstractmethod
-    def command(self,
-                workflow_path: Path,
-                workdir: Optional[Path],
-                config_files: List[Path],
-                engine_params: Dict[str, Optional[str]]) \
+    def run_command(self,
+                    workflow_path: Path,
+                    workdir: Optional[Path],
+                    config_files: List[Path],
+                    engine_params: Dict[str, Optional[str]]) \
             -> ShellCommand:
         """
         Use the instance variables and run parameters to compose a command to be executed
@@ -192,7 +195,7 @@ class WorkflowEngine(metaclass=ABCMeta):
             else:
                 return parameter.value
 
-        parameter_idx = ParameterIndex(self._effective_run_params(engine_params))
+        parameter_idx = ParameterIndex(self.effective_engine_params(engine_params))
         return ExecutionSettings(
             job_name=get_value(parameter_idx.get("job-name")),
             accounting_name=get_value(parameter_idx.get("accounting-name")),
@@ -202,6 +205,15 @@ class WorkflowEngine(metaclass=ABCMeta):
             queue=get_value(parameter_idx.get("queue")),
             cores=mop(get_value(parameter_idx.get("cores")), int))
 
+    def run_metadata(self, run: Run, command_result: CommandResult) -> Set[Tuple[str, str]]:
+        """
+        This method returns all information available for a run as known by the workflow engine
+        and the engine-specific output logs.
+
+        The integration with information from other sources should be done in client code.
+        """
+        return set()
+
 
 class Snakemake(WorkflowEngine):
 
@@ -209,6 +221,7 @@ class Snakemake(WorkflowEngine):
                  version: str,
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
+        self._stats_file_name = "snakemake_stats.json"
 
     @staticmethod
     def name():
@@ -219,35 +232,104 @@ class Snakemake(WorkflowEngine):
         return KNOWN_PARAMS.subset(frozenset({"cores",
                                               "use-singularity",
                                               "use-conda",
-                                              "profile"})
+                                              "forceall",
+                                              "profile",
+                                              "tes",
+                                              "jobs",
+                                              "conda-prefix",
+                                              "envvar_aws_access_key_id",
+                                              "envvar_aws_secret_access_key",
+                                              "envvar_aws_security_token",
+                                              "envvar_aws_profile",
+                                              "envvar_conda_pkgs_dirs",
+                                              "envvar_conda_envs_path",
+                                              "envvar_home",
+                                              "prefix_conda_envs_path"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
     def _command_params(self, parameters: List[ActualEngineParameter]) -> List[str]:
-        result = []
+        result = ["--stats", self._stats_file_name]
         for param in parameters:
             result += self._argument_param(param, "cores", "--cores")
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
+            result += self._optional_param(param, "forceall", "--forceall")
             result += self._argument_param(param, "profile", "--profile")
+            result += self._argument_param(param, "tes", "--tes")
+            result += self._argument_param(param, "jobs", "--jobs")
         return result
 
-    def command(self,
-                workflow_path: Path,
-                workdir: Optional[Path],
-                config_files: List[Path],
-                engine_params: Dict[str, Optional[str]])\
+    def _extract_engine_params(self, engine_params: Dict[str, Optional[str]], prefix: str) \
+            -> List[str]:
+        filt_params = [v for k, v in engine_params.items() if prefix in k]
+        if len(filt_params) > 0:
+            parameters: List[str]
+            parameters = [parameter for parameter in filt_params if parameter is not None]
+            parameters = [" ".join(parameters)]
+            return parameters
+        else:
+            return []
+
+    def run_command(self,
+                    workflow_path: Path,
+                    workdir: Optional[Path],
+                    config_files: List[Path],
+                    run_engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
-        parameters = self._effective_run_params(engine_params)
-        command = super()._engine_environment_setup(parameters)
+        engine_params = self.effective_engine_params(run_engine_params)
+        command = super()._engine_environment_setup(engine_params)
         command += ["snakemake",
                     "--snakefile", str(workflow_path)
-                    ] + self._command_params(parameters)
+                    ] + self._command_params(engine_params)
         if len(config_files) > 0:
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
+
+        envvars = self._extract_engine_params(run_engine_params, 'envvar_')
+        if len(envvars) > 0:
+            command += ["--envvars"] + envvars
+
+        conda_prefix = self._extract_engine_params(run_engine_params, 'prefix_')
+        if len(conda_prefix) > 0:
+            command += ["--conda-prefix"] + conda_prefix
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
-                            environment=self._environment(workflow_path, parameters))
+                            environment=self._environment(workflow_path, engine_params))
+
+    @staticmethod
+    def _match_completed_job_id(line: str) -> Optional[str]:
+        pattern = re.compile(r"\[\S+\] Task completed: (\S+)")
+        return mop(pattern.match(line), lambda m: m.group(1))
+
+    @staticmethod
+    def _match_compute_location(line: str) -> Optional[Tuple[str, str]]:
+        pattern = re.compile(r"[(\S+)] Job execution on \S+: (\S+)")
+        return mop(pattern.match(line), lambda m: (m.group(1), m.group(2)))
+
+    @staticmethod
+    def _parse_stdout(stdout: List[str]) -> Set[Tuple[str, Any]]:
+        results: Set[(str, Any)] = set()
+        for line in stdout:
+            job_id = Snakemake._match_completed_job_id(line)
+            if job_id:
+                results += ("job_id", job_id)
+            compute_location = Snakemake._match_compute_location(line)
+            if compute_location:
+                # These are the effective location and type of the compute-infrastructure, as
+                # determined by Snakemake (e.g. after summarizing its input from CLI and profiles).
+                results += ("compute_url", compute_location[1])
+                results += ("compute_type", compute_location[0])
+        return results
+
+    @staticmethod
+    def run_metadata(result: CommandResult) -> Set[Tuple[str, str]]:
+        result = set()
+        with open(result.stdout_file, "r") as fh:
+            result += self._parse_stdout(fh.readlines())
+        with open(result.workdir / self._stats_file_name, "r") as fh:
+            stats = json.load(fh)
+            result += [("output_file", file) for file in stats["files"].keys()]
+        return result
 
 
 class Nextflow(WorkflowEngine):
@@ -306,13 +388,13 @@ class Nextflow(WorkflowEngine):
             result += self._optional_param(param, "graph", "-with-dag")
         return result
 
-    def command(self,
-                workflow_path: Path,
-                workdir: Optional[Path],
-                config_files: List[Path],
-                engine_params: Dict[str, Optional[str]])\
+    def run_command(self,
+                    workflow_path: Path,
+                    workdir: Optional[Path],
+                    config_files: List[Path],
+                    engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
-        parameters = self._effective_run_params(engine_params)
+        parameters = self.effective_engine_params(engine_params)
         command = super()._engine_environment_setup(parameters)
         command += ["nextflow"] +\
             self._command_params(parameters) +\

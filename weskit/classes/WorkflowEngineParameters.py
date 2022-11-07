@@ -105,7 +105,19 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"max-runtime"}),
     EngineParameter({"use-singularity"}),
     EngineParameter({"use-conda"}),
-    EngineParameter({"profile"})
+    EngineParameter({"forceall"}),
+    EngineParameter({"profile"}),
+    EngineParameter({"tes"}),
+    EngineParameter({"jobs"}),
+    EngineParameter({"conda-prefix"}),
+    EngineParameter({"envvar_aws_access_key_id"}),
+    EngineParameter({"envvar_aws_secret_access_key"}),
+    EngineParameter({"envvar_aws_security_token"}),
+    EngineParameter({"envvar_aws_profile"}),
+    EngineParameter({"envvar_conda_pkgs_dirs"}),
+    EngineParameter({"envvar_conda_envs_path"}),
+    EngineParameter({"envvar_home"}),
+    EngineParameter({"prefix_conda_envs_path"})
 ])
 
 
@@ -150,3 +162,24 @@ class ActualEngineParameter(EngineParameter):
 
     def __hash__(self):
         return hash((self.param, self.value))
+
+    def __iter__(self):
+        for (k, v) in {
+            "name": list(self.param.names)[0],
+            "value": self.value,
+            "is_api_parameter": bool
+        }.items():
+            yield k, v
+
+    @staticmethod
+    def from_dict(data: Dict[str, Union[str, bool]]) -> ActualEngineParameter:
+        return ActualEngineParameter(param=KNOWN_PARAMS["name"],
+                                     value=data["value"],
+                                     api_parameter=data["api_parameter"])
+
+    def encode_json(self) -> dict:
+        return dict(self)
+
+    @staticmethod
+    def decode_json(data) -> ActualEngineParameter:
+        return ActualEngineParameter.from_dict(data)

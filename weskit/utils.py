@@ -11,7 +11,7 @@ import os
 import traceback
 from asyncio import AbstractEventLoop
 from datetime import datetime
-from typing import Dict, Union, List, TypeVar, Optional, Callable, Any, Mapping
+from typing import Dict, Union, List, TypeVar, Optional, Callable, Any, Mapping, Iterable
 from urllib.parse import urlparse
 
 import boto3
@@ -74,7 +74,10 @@ def get_current_timestamp() -> str:
 
 
 def all_subclasses(cls):
-    """Stolen from https://stackoverflow.com/a/3862957/8784544"""
+    """
+    Python 3 classes have a __subclasses__ method that lists all subclasses. Retrieve all subclasses
+    by a recursive call.
+    """
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
@@ -133,6 +136,10 @@ def mop(value: Optional[T], fun: Callable[[T], R]) -> Optional[R]:
         return fun(value)
     else:
         return None
+
+
+def head_option(iter: Iterable[T], pred: Callable[[T], bool]) -> Optional[T]:
+    return next(filter(pred, iter), None)
 
 
 def identity(value: T) -> T:

@@ -49,7 +49,7 @@ def test_update_run(test_database):
     new_run = copy.copy(run)
     # Runs in processing stage SUBMITTED_EXECUTION must have a celery_task_id.
     # Not nice: Interaction with test_update_all_runs via to DB.
-    new_run.celery_task_id = "1245"
+    new_run.submission_task_id = "1245"
     new_run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
     test_database.update_run(new_run)
     assert new_run.processing_stage == ProcessingStage.SUBMITTED_EXECUTION

@@ -127,7 +127,7 @@ def test_run_merge_merges_none():
     run1 = Run(**run_data)
 
     run2 = Run(**updated(run_data, celery_task_id=None))
-    assert run1.merge(run2).celery_task_id == run1.celery_task_id
+    assert run1.merge(run2).submission_task_id == run1.submission_task_id
 
     run3 = Run(**updated(run_data, sub_dir=None))
     assert run1.merge(run3).sub_dir == run1.sub_dir

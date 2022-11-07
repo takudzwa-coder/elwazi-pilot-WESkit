@@ -5,8 +5,8 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
-from weskit import create_database, create_app
+from weskit.globals import create_database
+from weskit import create_app
 from weskit.celery_app import celery_app, update_celery_config_from_env
 
 

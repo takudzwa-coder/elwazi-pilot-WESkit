@@ -91,9 +91,6 @@ class WorkflowEngineFactory:
         """
         Return a dictionary of all WorkflowEngines mapping workflow_engine to
         workflow_engine_version to WorkflowEngine instances.
-
-        This is yet statically implemented, but could at some
-        point by done with https://stackoverflow.com/a/3862957/8784544.
         """
         workflow_engines = {}
         workflow_engines.update(WorkflowEngineFactory._maybe_engine(Snakemake, engine_params))

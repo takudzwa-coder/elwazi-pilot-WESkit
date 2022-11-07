@@ -13,8 +13,10 @@ from importlib import import_module
 from json import JSONEncoder
 from pathlib import PosixPath
 from typing import Callable, Optional, Dict
+from uuid import UUID
 
 from kombu.serialization import register
+from urllib3.util import Url, parse_url
 
 from weskit.memory_units import Memory
 from weskit.utils import identity
@@ -243,6 +245,26 @@ def _(obj: PosixPath):
 @decode_json.register("pathlib.PosixPath")
 def _(obj) -> PosixPath:
     return PosixPath(obj)
+
+
+@encode_json.register(UUID)
+def _(obj) -> str:
+    return str(obj)
+
+
+@decode_json.register("uuid.UUID")
+def _(value):
+    return UUID(value)
+
+
+@encode_json.register(Url)
+def _(obj) -> str:
+    return str(obj)
+
+
+@decode_json.register("urllib3.util.Url")
+def _(value):
+    return parse_url(value)
 
 
 # Register DispatchingEncoder via to_json() and corresponding from_json() with kombu (used by

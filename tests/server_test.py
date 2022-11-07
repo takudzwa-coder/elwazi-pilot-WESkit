@@ -675,7 +675,7 @@ class TestManagerRaiseError:
 
     @pytest.mark.integration
     def test_update_run_fails_with_missing_celery_id(self, long_run):
-        long_run.celery_task_id = None
+        long_run.submission_task_id = None
         with pytest.raises(RuntimeError):
             WESApp.from_current_app(flask_current_app).manager.update_run(long_run)
 
