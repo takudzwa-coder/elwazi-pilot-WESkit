@@ -105,7 +105,8 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"max-runtime"}),
     EngineParameter({"use-singularity"}),
     EngineParameter({"use-conda"}),
-    EngineParameter({"profile"})
+    EngineParameter({"profile"}),
+    EngineParameter({"tes"})
 ])
 
 

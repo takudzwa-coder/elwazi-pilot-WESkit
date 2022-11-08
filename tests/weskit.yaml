@@ -230,7 +230,9 @@ workflow_engines:
         - name: "profile"
           api: false
           type: "Optional[str]"
-
+        - name: "tes"
+          api: false
+          type: "Optional[str]"
 
 cors:
   enabled: false

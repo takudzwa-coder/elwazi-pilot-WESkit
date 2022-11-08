@@ -219,7 +219,8 @@ class Snakemake(WorkflowEngine):
         return KNOWN_PARAMS.subset(frozenset({"cores",
                                               "use-singularity",
                                               "use-conda",
-                                              "profile"})
+                                              "profile",
+                                              "tes"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
@@ -230,6 +231,7 @@ class Snakemake(WorkflowEngine):
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
             result += self._argument_param(param, "profile", "--profile")
+            result += self._argument_param(param, "tes", "--tes")
         return result
 
     def command(self,

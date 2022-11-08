@@ -71,13 +71,15 @@ def test_create_snakemake():
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "TRUE", "api": True},
          {"name": "use-conda", "value": "TRUE", "api": True},
-         {"name": "profile", "value": "TRUE", "api": True}]
+         {"name": "profile", "value": "TRUE", "api": True},
+         {"name": "tes", "value": "TRUE", "api": True}]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"cores"}), "2", True),
         ActualEngineParameter(EngineParameter({"use-singularity"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True)
+        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True)
     ]
     assert engine.name() == "SMK"
 
@@ -96,7 +98,8 @@ def test_command_with_default_parameters():
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
-         {"name": "profile", "value": "myprofile", "api": True}]
+         {"name": "profile", "value": "myprofile", "api": True},
+         {"name": "tes", "value": "https://some/test/URL", "api": True}]
     )
 
     # Test default value with empty run parameters.
@@ -110,6 +113,7 @@ def test_command_with_default_parameters():
                                '--use-singularity',
                                '--use-conda',
                                '--profile', 'myprofile',
+                               '--tes', 'https://some/test/URL',
                                '--configfile', '/some/config.yaml']
     assert command.environment == {
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
