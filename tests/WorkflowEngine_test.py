@@ -99,14 +99,16 @@ def test_command_with_default_parameters():
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
          {"name": "profile", "value": "myprofile", "api": True},
-         {"name": "tes", "value": "https://some/test/URL", "api": True}]
+         {"name": "tes", "value": "https://some/test/URL", "api": True},
+         {"name": "aws_access_key_id", "value": "AWS_ACCESS_KEY_ID", "api": True}]
     )
 
     # Test default value with empty run parameters.
     command = engine.command(Path("/some/path"),
                              Path("/some/workdir"),
                              [Path("/some/config.yaml")],
-                             {})
+                             {"aws_access_key_id": "AWS_ACCESS_KEY_ID"})
+    print(command)
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
@@ -114,7 +116,8 @@ def test_command_with_default_parameters():
                                '--use-conda',
                                '--profile', 'myprofile',
                                '--tes', 'https://some/test/URL',
-                               '--configfile', '/some/config.yaml']
+                               '--configfile', '/some/config.yaml',
+                               '--envvars', 'AWS_ACCESS_KEY_ID']
     assert command.environment == {
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
         "WESKIT_WORKFLOW_PATH": "/some/path"

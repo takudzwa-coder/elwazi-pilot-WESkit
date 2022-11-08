@@ -233,6 +233,18 @@ workflow_engines:
         - name: "tes"
           api: false
           type: "Optional[str]"
+        - name: "aws_access_key_id"
+          api: false
+          type: "Optional[str]"
+        - name: "aws_secret_access_key"
+          api: false
+          type: "Optional[str]"
+        - name: "aws_security_token"
+          api: false
+          type: "Optional[str]"
+        - name: "aws_profile"
+          api: false
+          type: "Optional[str]"
 
 cors:
   enabled: false

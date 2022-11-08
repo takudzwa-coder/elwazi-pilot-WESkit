@@ -106,7 +106,11 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"use-singularity"}),
     EngineParameter({"use-conda"}),
     EngineParameter({"profile"}),
-    EngineParameter({"tes"})
+    EngineParameter({"tes"}),
+    EngineParameter({"aws_access_key_id"}),
+    EngineParameter({"aws_secret_access_key"}),
+    EngineParameter({"aws_security_token"}),
+    EngineParameter({"aws_profile"})
 ])
 
 

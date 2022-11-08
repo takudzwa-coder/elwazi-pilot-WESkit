@@ -220,7 +220,11 @@ class Snakemake(WorkflowEngine):
                                               "use-singularity",
                                               "use-conda",
                                               "profile",
-                                              "tes"})
+                                              "tes",
+                                              "aws_access_key_id",
+                                              "aws_secret_access_key",
+                                              "aws_security_token",
+                                              "aws_profile"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
@@ -247,6 +251,9 @@ class Snakemake(WorkflowEngine):
                     ] + self._command_params(parameters)
         if len(config_files) > 0:
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
+        aws_envvars = [v for k, v in engine_params.items() if 'aws' in k]
+        if len(aws_envvars) > 0:
+            command += ["--envvars"] + list(map(lambda p: str(p), aws_envvars))
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(workflow_path, parameters))
