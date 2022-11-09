@@ -105,12 +105,19 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"max-runtime"}),
     EngineParameter({"use-singularity"}),
     EngineParameter({"use-conda"}),
+    EngineParameter({"forceall"}),
     EngineParameter({"profile"}),
     EngineParameter({"tes"}),
-    EngineParameter({"aws_access_key_id"}),
-    EngineParameter({"aws_secret_access_key"}),
-    EngineParameter({"aws_security_token"}),
-    EngineParameter({"aws_profile"})
+    EngineParameter({"jobs"}),
+    EngineParameter({"conda-prefix"}),
+    EngineParameter({"envvar_aws_access_key_id"}),
+    EngineParameter({"envvar_aws_secret_access_key"}),
+    EngineParameter({"envvar_aws_security_token"}),
+    EngineParameter({"envvar_aws_profile"}),
+    EngineParameter({"envvar_conda_pkgs_dirs"}),
+    EngineParameter({"envvar_conda_envs_path"}),
+    EngineParameter({"envvar_home"}),
+    EngineParameter({"prefix_conda_envs_path"})
 ])
 
 

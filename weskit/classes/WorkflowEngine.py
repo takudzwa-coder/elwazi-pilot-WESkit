@@ -219,12 +219,19 @@ class Snakemake(WorkflowEngine):
         return KNOWN_PARAMS.subset(frozenset({"cores",
                                               "use-singularity",
                                               "use-conda",
+                                              "forceall",
                                               "profile",
                                               "tes",
-                                              "aws_access_key_id",
-                                              "aws_secret_access_key",
-                                              "aws_security_token",
-                                              "aws_profile"})
+                                              "jobs",
+                                              "conda-prefix",
+                                              "envvar_aws_access_key_id",
+                                              "envvar_aws_secret_access_key",
+                                              "envvar_aws_security_token",
+                                              "envvar_aws_profile",
+                                              "envvar_conda_pkgs_dirs",
+                                              "envvar_conda_envs_path",
+                                              "envvar_home",
+                                              "prefix_conda_envs_path"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
@@ -234,9 +241,22 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "cores", "--cores")
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
+            result += self._optional_param(param, "forceall", "--forceall")
             result += self._argument_param(param, "profile", "--profile")
             result += self._argument_param(param, "tes", "--tes")
+            result += self._argument_param(param, "jobs", "--jobs")
         return result
+
+    def _extract_engine_params(self, engine_params: Dict[str, Optional[str]], prefix: str) \
+            -> List[str]:
+        filt_params = [v for k, v in engine_params.items() if prefix in k]
+        if len(filt_params) > 0:
+            parameters: List[str]
+            parameters = [parameter for parameter in filt_params if parameter is not None]
+            parameters = [" ".join(parameters)]
+            return parameters
+        else:
+            return []
 
     def command(self,
                 workflow_path: Path,
@@ -251,9 +271,15 @@ class Snakemake(WorkflowEngine):
                     ] + self._command_params(parameters)
         if len(config_files) > 0:
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
-        aws_envvars = [v for k, v in engine_params.items() if 'aws' in k]
-        if len(aws_envvars) > 0:
-            command += ["--envvars"] + list(map(lambda p: str(p), aws_envvars))
+
+        envvars = self._extract_engine_params(engine_params, 'envvar_')
+        if len(envvars) > 0:
+            command += ["--envvars"] + envvars
+
+        conda_prefix = self._extract_engine_params(engine_params, 'prefix_')
+        if len(conda_prefix) > 0:
+            print(conda_prefix)
+            command += ["--conda-prefix"] + conda_prefix
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(workflow_path, parameters))
