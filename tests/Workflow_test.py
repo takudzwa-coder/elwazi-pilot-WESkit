@@ -107,6 +107,7 @@ def test_execute_snakemake(manager,
     assert "hello_world.txt" in to_filename(run.outputs["filesystem"])
 
     assert run.execution_log["env"] == {
+        "CONDA_ENVS_PATH": "conda_envs/",
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
         "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
     }
@@ -151,6 +152,7 @@ def test_fail_execute_snakemake(manager,
     assert "hello_world.txt" not in to_filename(run.outputs["filesystem"])
 
     assert run.execution_log["env"] == {
+        "CONDA_ENVS_PATH": "conda_envs/",
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
         "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
     }
@@ -162,6 +164,39 @@ def test_fail_execute_snakemake(manager,
         "--configfile",
         f"{run.id}.yaml"
     ]
+
+
+@pytest.mark.integration
+def test_without_workflow_params_snakemake(manager,
+                                           celery_worker):
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="6.10.0",
+                       workflow_engine_parameters={},
+                       workflow_params={})
+    run = manager.prepare_execution(run, files=[])
+    run = manager.execute(run)
+    manager.database.insert_run(run)
+
+    start_time = time.time()
+    success = False
+    while not success:
+        assert is_within_timeout(start_time), "Test timed out"
+        status = run.status
+        if status != RunStatus.EXECUTOR_ERROR:
+            print("Waiting ... (status=%s)" % status.name)
+            time.sleep(1)
+            run = manager.update_run(run)
+        else:
+            success = True
+    assert run.execution_log["cmd"] == [
+        "snakemake",
+        "--snakefile",
+        str(run.rundir_rel_workflow_path),
+        "--cores", "1",
+        '--configfile',
+        f"{run.id}.yaml"
+        ]
 
 
 @pytest.mark.integration

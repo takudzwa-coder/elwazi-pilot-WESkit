@@ -233,25 +233,20 @@ workflow_engines:
         - name: "tes"
           api: false
           type: "Optional[str]"
-        - name: "envvar_aws_access_key_id"
+        - name: "task_aws_access_key_id"
           api: false
           type: "Optional[str]"
-        - name: "envvar_aws_secret_access_key"
+        - name: "task_aws_secret_access_key"
           api: false
           type: "Optional[str]"
-        - name: "envvar_aws_security_token"
+        - name: "task_conda_pkgs_dirs"
           api: false
           type: "Optional[str]"
-        - name: "envvar_aws_profile"
+        - name: "task_conda_envs_path"
           api: false
           type: "Optional[str]"
-        - name: "envvar_conda_pkgs_dirs"
-          api: false
-          type: "Optional[str]"
-        - name: "envvar_conda_envs_path"
-          api: false
-          type: "Optional[str]"
-        - name: "envvar_home"
+          value: "conda_envs/"
+        - name: "task_home"
           api: false
           type: "Optional[str]"
         - name: "forceall"

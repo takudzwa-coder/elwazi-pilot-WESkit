@@ -120,6 +120,8 @@ class WorkflowEngine(metaclass=ABCMeta):
             if param.value is None:
                 return []
             else:
+                # check if the parameter is an environmental
+                # variable starting with '$'
                 if str(param.value).startswith('$'):
                     return [argument, ss(str(param.value))]
                 else:
@@ -227,13 +229,11 @@ class Snakemake(WorkflowEngine):
                                               "tes",
                                               "jobs",
                                               "conda-prefix",
-                                              "envvar_aws_access_key_id",
-                                              "envvar_aws_secret_access_key",
-                                              "envvar_aws_security_token",
-                                              "envvar_aws_profile",
-                                              "envvar_conda_pkgs_dirs",
-                                              "envvar_conda_envs_path",
-                                              "envvar_home",
+                                              "task_aws_access_key_id",
+                                              "task_aws_secret_access_key",
+                                              "task_conda_pkgs_dirs",
+                                              "task_conda_envs_path",
+                                              "task_home",
                                               "prefix_conda_envs_path"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
@@ -252,14 +252,18 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "conda-prefix", "--conda-prefix")
         return result
 
+    # For submission of the workload tasks to e.g. the TES server or a container,
+    # we need to pass several environmental variables to snakemake.
+    # AWS_ACCESS_KEY_ID and  AWS_SECRET_ACCESS_KEY are needed for accessing the S3 storage
+    # CONDA_PKGS_DIRS and CONDA_ENVS_PATH are required for installation of the new environments
+    # on the TES server and mounted as mounted as a writable volume in the container.
+    # conda-prefix receives the same CONDA_ENVS_PATH but on the "local" side.
     ENVVARS_DICT = {
-            "envvar_aws_access_key_id": "AWS_ACCESS_KEY_ID",
-            "envvar_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
-            "envvar_aws_security_token": "AWS_SECURITY_TOKEN",
-            "envvar_aws_profile": "AWS_PROFILE",
-            "envvar_conda_pkgs_dirs": "CONDA_PKGS_DIRS",
-            "envvar_conda_envs_path": "CONDA_ENVS_PATH",
-            "envvar_home": "HOME"
+            "task_aws_access_key_id": "AWS_ACCESS_KEY_ID",
+            "task_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
+            "task_conda_pkgs_dirs": "CONDA_PKGS_DIRS",
+            "task_conda_envs_path": "CONDA_ENVS_PATH",
+            "task_home": "HOME"
         }
 
     def _environment(self,
@@ -287,10 +291,9 @@ class Snakemake(WorkflowEngine):
         init: List[Union[ShellSpecial, str]] = ["snakemake", "--snakefile", str(workflow_path)]
         command += init + self._command_params(parameters)
 
-        if len(config_files) > 0:
-            command += ["--configfile"] + list(map(lambda p: str(p), config_files))
+        command += ["--configfile"] + list(map(lambda p: str(p), config_files))
 
-        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items() if "envvar_" in k]
+        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items() if "task_" in k]
         if len(filt_params) > 0:
             command += ["--envvars"] + filt_params
 
@@ -370,6 +373,7 @@ class Nextflow(WorkflowEngine):
             command += ["-params-file", str(config_files[0])]
         else:
             raise ValueError("Nextflow accepts only a single parameters file (`-params-file`)")
+
         command += self._run_command_params(parameters)
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),

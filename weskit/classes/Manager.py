@@ -404,10 +404,11 @@ class Manager:
                                      ProcessingStage.ERROR)
 
         # Execute run
+        config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
-                    config_files=[Path(f"{run.id}.yaml")],
+                    config_files=config_files,
                     engine_params=run.request.get("workflow_engine_parameters", {}))
         execution_settings: ExecutionSettings = \
             self.workflow_engines[workflow_type][workflow_type_version].\
