@@ -260,8 +260,8 @@ workflow_engines:
           value: "false"
         - name: "jobs"
           api: false
-          type: "Optional[str]"
-        - name: "prefix_conda_envs_path"
+          type: "Optional[int]"
+        - name: "conda-prefix"
           api: false
           type: "Optional[str]"
 

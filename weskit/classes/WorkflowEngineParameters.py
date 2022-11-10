@@ -117,7 +117,7 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"envvar_conda_pkgs_dirs"}),
     EngineParameter({"envvar_conda_envs_path"}),
     EngineParameter({"envvar_home"}),
-    EngineParameter({"prefix_conda_envs_path"})
+    EngineParameter({"conda-prefix"})
 ])
 
 

@@ -102,10 +102,12 @@ def test_command_with_default_parameters():
          {"name": "profile", "value": "myprofile", "api": True},
          {"name": "tes", "value": "https://some/test/URL", "api": True},
          {"name": "jobs", "value": "1", "api": True},
-         {"name": "envvar_aws_access_key_id", "value": "AWS_ACCESS_KEY_ID", "api": True},
-         {"name": "envvar_conda_envs_path", "value": "CONDA_ENVS_PATH", "api": True},
+         {"name": "envvar_aws_access_key_id", "value": "GyCCggXpRpKQ3hBB", "api": True},
+         {"name": "envvar_aws_secret_access_key", "value": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
+          "api": True},
+         {"name": "envvar_conda_envs_path", "value": "/some/conda/path/", "api": True},
          {"name": "envvar_home", "value": "/tmp", "api": True},
-         {"name": "prefix_conda_envs_path", "value": "$CONDA_ENVS_PATH", "api": True}
+         {"name": "conda-prefix", "value": "$CONDA_ENVS_PATH", "api": True}
          ]
     )
 
@@ -113,10 +115,11 @@ def test_command_with_default_parameters():
     command = engine.command(Path("/some/path"),
                              Path("/some/workdir"),
                              [Path("/some/config.yaml")],
-                             {"envvar_aws_access_key_id": "AWS_ACCESS_KEY_ID",
-                              "envvar_conda_envs_path": "CONDA_ENVS_PATH",
+                             {"envvar_aws_access_key_id": "GyCCggXpRpKQ3hBB",
+                              "envvar_aws_secret_access_key": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
+                              "envvar_conda_envs_path": "/some/conda/path/",
                               "envvar_home": "/tmp",
-                              "prefix_conda_envs_path": "$CONDA_ENVS_PATH"})
+                              "conda-prefix": "$CONDA_ENVS_PATH"})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
@@ -126,10 +129,17 @@ def test_command_with_default_parameters():
                                '--profile', 'myprofile',
                                '--tes', 'https://some/test/URL',
                                '--jobs', '1',
+                               '--conda-prefix', ss('$CONDA_ENVS_PATH'),
                                '--configfile', '/some/config.yaml',
-                               '--envvars', 'AWS_ACCESS_KEY_ID CONDA_ENVS_PATH /tmp',
-                               '--conda-prefix', '$CONDA_ENVS_PATH']
+                               '--envvars', "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+                               "CONDA_ENVS_PATH", "HOME"
+                               ]
+
     assert command.environment == {
+        'AWS_ACCESS_KEY_ID': 'GyCCggXpRpKQ3hBB',
+        'AWS_SECRET_ACCESS_KEY': 'basTuIRppYhACCdXS6yYZb1XhUTksJPq',
+        'CONDA_ENVS_PATH': '/some/conda/path/',
+        'HOME': '/tmp',
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }

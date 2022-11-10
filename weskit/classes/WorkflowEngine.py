@@ -109,7 +109,7 @@ class WorkflowEngine(metaclass=ABCMeta):
     def _argument_param(self,
                         param: ActualEngineParameter,
                         name: str,
-                        argument: str) -> List[str]:
+                        argument: str) -> List[Union[str, ShellSpecial]]:
         """
         Helper for parameter processing. This processor is for arguments of the type key/value,
         with an obligatory value (i.e. the value must not be None). If the parameter is None
@@ -120,7 +120,10 @@ class WorkflowEngine(metaclass=ABCMeta):
             if param.value is None:
                 return []
             else:
-                return [argument, str(param.value)]
+                if str(param.value).startswith('$'):
+                    return [argument, ss(str(param.value))]
+                else:
+                    return [argument, str(param.value)]
         else:
             return []
 
@@ -235,7 +238,8 @@ class Snakemake(WorkflowEngine):
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
-    def _command_params(self, parameters: List[ActualEngineParameter]) -> List[str]:
+    def _command_params(self, parameters: List[ActualEngineParameter]) -> \
+            List[Union[ShellSpecial, str]]:
         result = []
         for param in parameters:
             result += self._argument_param(param, "cores", "--cores")
@@ -245,18 +249,30 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "profile", "--profile")
             result += self._argument_param(param, "tes", "--tes")
             result += self._argument_param(param, "jobs", "--jobs")
+            result += self._argument_param(param, "conda-prefix", "--conda-prefix")
         return result
 
-    def _extract_engine_params(self, engine_params: Dict[str, Optional[str]], prefix: str) \
-            -> List[str]:
-        filt_params = [v for k, v in engine_params.items() if prefix in k]
-        if len(filt_params) > 0:
-            parameters: List[str]
-            parameters = [parameter for parameter in filt_params if parameter is not None]
-            parameters = [" ".join(parameters)]
-            return parameters
-        else:
-            return []
+    ENVVARS_DICT = {
+            "envvar_aws_access_key_id": "AWS_ACCESS_KEY_ID",
+            "envvar_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
+            "envvar_aws_security_token": "AWS_SECURITY_TOKEN",
+            "envvar_aws_profile": "AWS_PROFILE",
+            "envvar_conda_pkgs_dirs": "CONDA_PKGS_DIRS",
+            "envvar_conda_envs_path": "CONDA_ENVS_PATH",
+            "envvar_home": "HOME"
+        }
+
+    def _environment(self,
+                     workflow_path: Path,
+                     parameters: List[ActualEngineParameter]) -> Dict[str, str]:
+        result = super()._environment(workflow_path, parameters)
+
+        for var in self.ENVVARS_DICT:
+            for p in parameters:
+                if p.value is not None:
+                    if p.param == self.known_parameters()[var]:
+                        result[self.ENVVARS_DICT[var]] = str(p.value)
+        return result
 
     def command(self,
                 workflow_path: Path,
@@ -266,20 +282,18 @@ class Snakemake(WorkflowEngine):
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
         command = super()._engine_environment_setup(parameters)
-        command += ["snakemake",
-                    "--snakefile", str(workflow_path)
-                    ] + self._command_params(parameters)
+
+        # explicit annotation for your list is required
+        init: List[Union[ShellSpecial, str]] = ["snakemake", "--snakefile", str(workflow_path)]
+        command += init + self._command_params(parameters)
+
         if len(config_files) > 0:
             command += ["--configfile"] + list(map(lambda p: str(p), config_files))
 
-        envvars = self._extract_engine_params(engine_params, 'envvar_')
-        if len(envvars) > 0:
-            command += ["--envvars"] + envvars
+        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items() if "envvar_" in k]
+        if len(filt_params) > 0:
+            command += ["--envvars"] + filt_params
 
-        conda_prefix = self._extract_engine_params(engine_params, 'prefix_')
-        if len(conda_prefix) > 0:
-            print(conda_prefix)
-            command += ["--conda-prefix"] + conda_prefix
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(workflow_path, parameters))
