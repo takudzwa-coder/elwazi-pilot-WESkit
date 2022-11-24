@@ -546,7 +546,6 @@ class TestWithHeaderToken:
             s3 = urlparse(log_response.json["outputs"]["S3"][idx]).path
             assert path in s3
 
-        print(log_response.json["task_logs"])
         assert log_response.json["task_logs"][0]["name"] == "../../../tests/wf1/Snakefile"
         assert log_response.json["task_logs"][0]["exit_code"] == 0
         assert log_response.json["task_logs"][0]["cmd"] == [
