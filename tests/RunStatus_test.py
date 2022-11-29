@@ -12,8 +12,8 @@ from weskit.classes.ProcessingStage import ProcessingStage
 
 
 def test_runstatus_progress_state():
-    assert RunStatus.ga4gh_state("AWAITING_START") == RunStatus.QUEUED
-    assert RunStatus.ga4gh_state(ProcessingStage.AWAITING_START) == RunStatus.QUEUED
+    assert RunStatus.ga4gh_state("AWAITING_START") == RunStatus.INITIALIZING
+    assert RunStatus.ga4gh_state(ProcessingStage.AWAITING_START) == RunStatus.INITIALIZING
     assert RunStatus.ga4gh_state("STARTED_EXECUTION") == RunStatus.RUNNING
     assert RunStatus.ga4gh_state("FINISHED_EXECUTION") == RunStatus.COMPLETE
     assert RunStatus.ga4gh_state("ERROR") == RunStatus.SYSTEM_ERROR

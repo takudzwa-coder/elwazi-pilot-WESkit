@@ -117,7 +117,7 @@ class Manager:
         other conditions or because of previous query results) with SUCCESSFUL Celery state,
         update the Run with information from the Celery task.
         """
-        if not run.status.is_terminal and celery_task.status == "SUCCESS":
+        if not run.processing_stage.is_terminal and celery_task.status == "SUCCESS":
             # The command itself may have failed, though, because run_command catches execution
             # errors of the command and lets the Celery job succeed.
             result = celery_task.get()
@@ -144,7 +144,8 @@ class Manager:
 
             run = self.insert_task_logs(run_dir_abs, result, run)
 
-        run.status = RunStatus.from_celery_and_exit(celery_task.state, run.exit_code)
+        run.processing_stage = ProcessingStage.from_celery_and_exit(celery_task.state,
+                                                                    run.exit_code)
         return run
 
     def _record_error(self, run: Run,

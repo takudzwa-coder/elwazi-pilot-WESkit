@@ -55,9 +55,9 @@ class RunStatus(enum.Enum):
     #
     CANCELED = 8
 
-    # > REQUESTED_CANCEL: The task was canceled by the user, and is in the process of stopping.
+    # > CANCELING: The task was canceled by the user, and is in the process of stopping.
     #
-    REQUESTED_CANCEL = 9
+    CANCELING = 9
 
     def __repr__(self) -> str:
         return self.name
@@ -67,12 +67,18 @@ class RunStatus(enum.Enum):
         if isinstance(stage, str):
             stage = ProcessingStage[stage]
         api_state = {
-            ProcessingStage.AWAITING_START: RunStatus.QUEUED,
+            ProcessingStage.RUN_CREATED: RunStatus.INITIALIZING,
+            ProcessingStage.PREPARED_DIR: RunStatus.INITIALIZING,
+            ProcessingStage.PREPARED_EXECUTION: RunStatus.INITIALIZING,
+            ProcessingStage.SUBMITTED_EXECUTION: RunStatus.INITIALIZING,
+            ProcessingStage.AWAITING_START: RunStatus.INITIALIZING,
             ProcessingStage.STARTED_EXECUTION: RunStatus.RUNNING,
+            ProcessingStage.PAUSED: RunStatus.PAUSED,
             ProcessingStage.FINISHED_EXECUTION: RunStatus.COMPLETE,
             ProcessingStage.ERROR: RunStatus.SYSTEM_ERROR,
             ProcessingStage.EXECUTOR_ERROR: RunStatus.EXECUTOR_ERROR,
             ProcessingStage.RERUN_EXECUTION: RunStatus.QUEUED,
-            ProcessingStage.CANCELED: RunStatus.CANCELED
+            ProcessingStage.CANCELED: RunStatus.CANCELED,
+            ProcessingStage.REQUESTED_CANCEL: RunStatus.CANCELING
         }
         return api_state[stage]

@@ -42,7 +42,7 @@ class ProcessingStage(enum.Enum):
     #                      Thus, the RUNNING state is assumed, as long as the workflow engine runs.
     STARTED_EXECUTION = 6
 
-    # > RERUN_EXECUTION: ACelery task is being retried.
+    # > RERUN_EXECUTION: A Celery task is being retried.
     #
     RERUN_EXECUTION = 7
 
@@ -95,7 +95,8 @@ class ProcessingStage(enum.Enum):
         return ProcessingStage[name]
 
     @staticmethod
-    def from_celery(celery_state_name: Optional[str], exit_code: Optional[int]) -> ProcessingStage:
+    def from_celery_and_exit(celery_state_name: Optional[str], exit_code: Optional[int]) -> \
+            ProcessingStage:
         if celery_state_name is None:
             raise RuntimeError("run.celery_task_state should be set at this point")
         celery_to_weskit_stage = {
@@ -124,7 +125,9 @@ class ProcessingStage(enum.Enum):
     def INITIALIZING_STAGES() -> List[ProcessingStage]:
         return [ProcessingStage.RUN_CREATED,
                 ProcessingStage.PREPARED_DIR,
-                ProcessingStage.PREPARED_EXECUTION]
+                ProcessingStage.PREPARED_EXECUTION,
+                ProcessingStage.SUBMITTED_EXECUTION,
+                ProcessingStage.AWAITING_START]
 
     @property
     def is_initializing(self) -> bool:
@@ -132,9 +135,7 @@ class ProcessingStage(enum.Enum):
 
     @staticmethod
     def RUNNING_STAGES() -> List[ProcessingStage]:
-        return [ProcessingStage.SUBMITTED_EXECUTION,
-                ProcessingStage.AWAITING_START,
-                ProcessingStage.STARTED_EXECUTION,
+        return [ProcessingStage.STARTED_EXECUTION,
                 ProcessingStage.RERUN_EXECUTION]
 
     @property
@@ -165,7 +166,6 @@ class ProcessingStage(enum.Enum):
             ProcessingStage.PREPARED_DIR: 2,
             ProcessingStage.PREPARED_EXECUTION: 3,
             ProcessingStage.SUBMITTED_EXECUTION: 4,
-            # The following are terminal states and not updated in the DB (see update_runs)
             ProcessingStage.AWAITING_START: 5,
             ProcessingStage.STARTED_EXECUTION: 6,
             ProcessingStage.RERUN_EXECUTION: 7,
@@ -173,14 +173,14 @@ class ProcessingStage(enum.Enum):
             ProcessingStage.FINISHED_EXECUTION: 9,
             ProcessingStage.ERROR: 10,
             ProcessingStage.EXECUTOR_ERROR: 11,
-            ProcessingStage.REQUESTED_CANCEL: 12,
-            ProcessingStage.CANCELED: 13
+            ProcessingStage.CANCELED: 12,
+            ProcessingStage.REQUESTED_CANCEL: 13
         }
         return PRECEDENCE[self]
 
     @property
     def is_pausible(self) -> bool:
-        return self in [ProcessingStage.SUBMITTED_EXECUTION]
+        return self in [ProcessingStage.SUBMITTED_EXECUTION, ProcessingStage.AWAITING_START]
 
     def allowed_to_progress_to(self, new_state: ProcessingStage) -> bool:
         if self == new_state:
