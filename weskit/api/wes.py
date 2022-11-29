@@ -88,7 +88,7 @@ def GetRunStatus(run_id):
         if access_denied_response is None:
             return {
                 "run_id": run_id,
-                "state": RunStatus.ga4gh_state(run.processing_stage).name
+                "state": RunStatus.ga4gh_state(run.processing_stage.name).name
             }, 200
         else:
             return access_denied_response

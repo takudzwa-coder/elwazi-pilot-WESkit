@@ -84,7 +84,7 @@ class Helper:
 
 
 def run_log(run: Run) -> dict:
-    run_ga4gh_status = RunStatus.ga4gh_state(run.processing_stage).name
+    run_ga4gh_status = RunStatus.ga4gh_state(run.processing_stage.name).name
     return {
         "run_id": run.id,
         "request": run.request,
