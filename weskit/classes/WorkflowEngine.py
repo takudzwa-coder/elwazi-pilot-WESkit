@@ -120,8 +120,8 @@ class WorkflowEngine(metaclass=ABCMeta):
             if param.value is None:
                 return []
             else:
-                # check if the parameter is an environmental
-                # variable starting with '$'
+                # environmental varibales e.g. $CONDA_ENVS_PATH need to be evaluated
+                # before passed with its respective arument to the command
                 if str(param.value).startswith('$'):
                     return [argument, ss(str(param.value))]
                 else:
@@ -256,8 +256,8 @@ class Snakemake(WorkflowEngine):
     # we need to pass several environmental variables to snakemake.
     # AWS_ACCESS_KEY_ID and  AWS_SECRET_ACCESS_KEY are needed for accessing the S3 storage
     # CONDA_PKGS_DIRS and CONDA_ENVS_PATH are required for installation of the new environments
-    # on the TES server and mounted as mounted as a writable volume in the container.
-    # conda-prefix receives the same CONDA_ENVS_PATH but on the "local" side.
+    # on the TES server in the container as mounted volume
+    # conda-prefix receives the same CONDA_ENVS_PATH but on the "local"/Celery worker side.
     ENVVARS_DICT = {
             "task_aws_access_key_id": "AWS_ACCESS_KEY_ID",
             "task_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",

@@ -250,7 +250,7 @@ workflow_engines:
           api: false
           type: "Optional[str]"
         - name: "forceall"
-          api: false
+          api: true
           type: "bool"
           value: "false"
         - name: "jobs"
