@@ -42,17 +42,13 @@ class ProcessingStage(enum.Enum):
     #                      Thus, the RUNNING state is assumed, as long as the workflow engine runs.
     STARTED_EXECUTION = 6
 
-    # > RERUN_EXECUTION: A Celery task is being retried.
-    #
-    RERUN_EXECUTION = 7
-
     # > PAUSED: The workflow run is paused.
     #           Not implemented yet
-    PAUSED = 8
+    PAUSED = 7
 
     # > FINISHED: The Celery task finished (successfully or not).
     #             All workload jobs and the workflow engine executed with exit code == 0.
-    FINISHED_EXECUTION = 9
+    FINISHED_EXECUTION = 8
 
     # > ERROR: Any error of the WESkit system itself. Examples are
     #
@@ -61,7 +57,7 @@ class ProcessingStage(enum.Enum):
     # * Filesystem errors (inaccessible mounts, etc.), other than client-caused file access errors
     #   (e.g. wrong paths).
     # * WESkit.Executor errors (cluster errors, SSH errors, etc.)
-    ERROR = 10
+    ERROR = 9
 
     # > EXECUTOR_ERROR: The "task" corresponds to a worklow engine execution. The workflow
     #                   executes workload jobs that correspond to the "Executors".
@@ -76,16 +72,16 @@ class ProcessingStage(enum.Enum):
     # * errors during the execution of the workload (e.g. on the cluster).
     #
     # This means, the EXECUTOR_ERROR usually is used, if the workflow engine exited with code > 0.
-    EXECUTOR_ERROR = 11
+    EXECUTOR_ERROR = 10
 
     # > CANCELED: The workflow engine run (~ task) has been successfully cancelled.
     #
-    CANCELED = 12
+    CANCELED = 11
 
     # > REQUESTED_CANCEL:  The workflow engine run (~ task) is being cancelled, e.g. waiting for the
     #               engine to respond to SIGTERM and clean up running cluster jobs,
     #               compiling incomplete run, run results, etc.
-    REQUESTED_CANCEL = 13
+    REQUESTED_CANCEL = 12
 
     def __repr__(self) -> str:
         return self.name
@@ -103,7 +99,7 @@ class ProcessingStage(enum.Enum):
             "PENDING": ProcessingStage.AWAITING_START,
             "STARTED": ProcessingStage.STARTED_EXECUTION,
             "SUCCESS": ProcessingStage.FINISHED_EXECUTION,
-            "RETRY": ProcessingStage.RERUN_EXECUTION,
+            "RETRY": ProcessingStage.ERROR,
             "REVOKED": ProcessingStage.CANCELED,
             "FAILURE": ProcessingStage.ERROR
         }
@@ -135,8 +131,7 @@ class ProcessingStage(enum.Enum):
 
     @staticmethod
     def RUNNING_STAGES() -> List[ProcessingStage]:
-        return [ProcessingStage.STARTED_EXECUTION,
-                ProcessingStage.RERUN_EXECUTION]
+        return [ProcessingStage.STARTED_EXECUTION]
 
     @property
     def is_running(self) -> bool:
@@ -168,13 +163,12 @@ class ProcessingStage(enum.Enum):
             ProcessingStage.SUBMITTED_EXECUTION: 4,
             ProcessingStage.AWAITING_START: 5,
             ProcessingStage.STARTED_EXECUTION: 6,
-            ProcessingStage.RERUN_EXECUTION: 7,
-            ProcessingStage.PAUSED: 8,
-            ProcessingStage.FINISHED_EXECUTION: 9,
-            ProcessingStage.ERROR: 10,
-            ProcessingStage.EXECUTOR_ERROR: 11,
-            ProcessingStage.CANCELED: 12,
-            ProcessingStage.REQUESTED_CANCEL: 13
+            ProcessingStage.PAUSED: 7,
+            ProcessingStage.FINISHED_EXECUTION: 8,
+            ProcessingStage.ERROR: 9,
+            ProcessingStage.EXECUTOR_ERROR: 10,
+            ProcessingStage.CANCELED: 11,
+            ProcessingStage.REQUESTED_CANCEL: 12
         }
         return PRECEDENCE[self]
 

@@ -235,7 +235,6 @@ class Manager:
 
         run = Run(id=self.database.create_run_id(),
                   processing_stage=ProcessingStage.RUN_CREATED,
-                  exit_code=None,
                   request_time=now(),
                   request=validated_request,
                   user_id=user_id)
@@ -377,8 +376,6 @@ class Manager:
 
             run.rundir_rel_workflow_path = self._prepare_workflow_path(
                 run, self._process_workflow_attachment(run, files))
-
-            run.processing_stage = ProcessingStage.PREPARED_DIR
 
             # create a random Celery ID and update the run stage
             celery_task_id = str(uuid4())

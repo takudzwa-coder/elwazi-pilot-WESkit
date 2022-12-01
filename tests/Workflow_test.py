@@ -140,7 +140,6 @@ def test_fail_execute_snakemake(manager,
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
         stage = run.processing_stage
-        print(stage)
         if stage != ProcessingStage.EXECUTOR_ERROR:
             print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)

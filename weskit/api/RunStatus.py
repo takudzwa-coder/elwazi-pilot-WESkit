@@ -9,6 +9,8 @@
 from __future__ import annotations
 import enum
 
+from weskit.classes.ProcessingStage import ProcessingStage
+
 
 class RunStatus(enum.Enum):
     """
@@ -60,20 +62,19 @@ class RunStatus(enum.Enum):
         return self.name
 
     @staticmethod
-    def ga4gh_state(processing_stage: str) -> RunStatus:
+    def from_stage(stage: ProcessingStage) -> RunStatus:
         weskit_stage_to_status = {
-                                    "RUN_CREATED": RunStatus.INITIALIZING,
-                                    "PREPARED_DIR": RunStatus.INITIALIZING,
-                                    "PREPARED_EXECUTION": RunStatus.INITIALIZING,
-                                    "SUBMITTED_EXECUTION": RunStatus.INITIALIZING,
-                                    "AWAITING_START": RunStatus.INITIALIZING,
-                                    "STARTED_EXECUTION": RunStatus.RUNNING,
-                                    "PAUSED": RunStatus.PAUSED,
-                                    "FINISHED_EXECUTION": RunStatus.COMPLETE,
-                                    "ERROR": RunStatus.SYSTEM_ERROR,
-                                    "EXECUTOR_ERROR": RunStatus.EXECUTOR_ERROR,
-                                    "RERUN_EXECUTION": RunStatus.QUEUED,
-                                    "CANCELED": RunStatus.CANCELED,
-                                    "REQUESTED_CANCEL": RunStatus.CANCELING
+                                    ProcessingStage.RUN_CREATED: RunStatus.INITIALIZING,
+                                    ProcessingStage.PREPARED_DIR: RunStatus.INITIALIZING,
+                                    ProcessingStage.PREPARED_EXECUTION: RunStatus.INITIALIZING,
+                                    ProcessingStage.SUBMITTED_EXECUTION: RunStatus.INITIALIZING,
+                                    ProcessingStage.AWAITING_START: RunStatus.INITIALIZING,
+                                    ProcessingStage.STARTED_EXECUTION: RunStatus.RUNNING,
+                                    ProcessingStage.PAUSED: RunStatus.PAUSED,
+                                    ProcessingStage.FINISHED_EXECUTION: RunStatus.COMPLETE,
+                                    ProcessingStage.ERROR: RunStatus.SYSTEM_ERROR,
+                                    ProcessingStage.EXECUTOR_ERROR: RunStatus.EXECUTOR_ERROR,
+                                    ProcessingStage.CANCELED: RunStatus.CANCELED,
+                                    ProcessingStage.REQUESTED_CANCEL: RunStatus.CANCELING
         }
-        return weskit_stage_to_status[processing_stage]
+        return weskit_stage_to_status[stage]

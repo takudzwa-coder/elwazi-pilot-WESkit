@@ -35,7 +35,6 @@ class Run:
                  request: dict,
                  user_id: str,
                  db_version: int = 0,
-                 exit_code: Optional[Any] = None,
                  celery_task_id: Optional[str] = None,
                  sub_dir: Optional[Path] = None,
                  rundir_rel_workflow_path: Optional[Path] = None,
@@ -57,7 +56,6 @@ class Run:
         self.__request = request
         self.__user_id = user_id
         self.celery_task_id = celery_task_id
-        self.exit_code = exit_code
         self.sub_dir = sub_dir
         self.rundir_rel_workflow_path = rundir_rel_workflow_path
         self.outputs = {} if outputs is None else outputs
@@ -172,7 +170,6 @@ class Run:
 
             # The easy fields:
             copy.celery_task_id = Run._merge_field("celery_task_id", self_d, other_d, None)
-            copy.exit_code = Run._merge_field("exit_code", self_d, other_d, None)
             copy.sub_dir = Run._merge_field("sub_dir", self_d, other_d, None)
             copy.rundir_rel_workflow_path = Run._merge_field("rundir_rel_workflow_path",
                                                              self_d, other_d, None)
@@ -229,7 +226,6 @@ class Run:
             "request_time": self.__request_time,
             "request": self.__request,
             "user_id": self.__user_id,
-            "exit_code": self.exit_code,
             "celery_task_id": self.celery_task_id,
             "sub_dir": self.sub_dir,
             "rundir_rel_workflow_path": self.rundir_rel_workflow_path,
@@ -311,10 +307,6 @@ class Run:
     @property
     def exit_code(self) -> Optional[Any]:
         return self.execution_log.get("exit_code", None)
-
-    @exit_code.setter
-    def exit_code(self, exit_code: Optional[str]):
-        self.__exit_code = exit_code
 
     @property
     def processing_stage(self) -> ProcessingStage:

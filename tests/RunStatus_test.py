@@ -8,15 +8,15 @@
 import pytest
 
 from weskit.api.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 
 
 def test_runstatus_progress_state():
-    assert RunStatus.ga4gh_state("AWAITING_START") == RunStatus.INITIALIZING
-    assert RunStatus.ga4gh_state("STARTED_EXECUTION") == RunStatus.RUNNING
-    assert RunStatus.ga4gh_state("FINISHED_EXECUTION") == RunStatus.COMPLETE
-    assert RunStatus.ga4gh_state("ERROR") == RunStatus.SYSTEM_ERROR
-    assert RunStatus.ga4gh_state("EXECUTOR_ERROR") == RunStatus.EXECUTOR_ERROR
-    assert RunStatus.ga4gh_state("RERUN_EXECUTION") == RunStatus.QUEUED
-    assert RunStatus.ga4gh_state("CANCELED") == RunStatus.CANCELED
-    with pytest.raises(KeyError):
-        RunStatus.ga4gh_state("NONEXISTING")
+    assert RunStatus.from_stage(ProcessingStage.AWAITING_START) == RunStatus.INITIALIZING
+    assert RunStatus.from_stage(ProcessingStage.STARTED_EXECUTION) == RunStatus.RUNNING
+    assert RunStatus.from_stage(ProcessingStage.FINISHED_EXECUTION) == RunStatus.COMPLETE
+    assert RunStatus.from_stage(ProcessingStage.ERROR) == RunStatus.SYSTEM_ERROR
+    assert RunStatus.from_stage(ProcessingStage.EXECUTOR_ERROR) == RunStatus.EXECUTOR_ERROR
+    assert RunStatus.from_stage(ProcessingStage.CANCELED) == RunStatus.CANCELED
+    with pytest.raises(AttributeError):
+        RunStatus.from_stage(ProcessingStage.NONEXISTING)

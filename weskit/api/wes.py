@@ -16,6 +16,7 @@ from weskit.api.Helper import Helper, run_log
 from weskit.exceptions import ClientError
 from weskit.oidc.Decorators import login_required
 from weskit.api.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 
 bp = Blueprint("wes", __name__)
 
@@ -88,7 +89,7 @@ def GetRunStatus(run_id):
         if access_denied_response is None:
             return {
                 "run_id": run_id,
-                "state": RunStatus.ga4gh_state(run.processing_stage.name).name
+                "state": RunStatus.from_stage(run.processing_stage).name
             }, 200
         else:
             return access_denied_response
@@ -165,7 +166,7 @@ def ListRuns(*args, **kwargs):
         current_app.manager.update_runs()
         runs = [{
             "run_id": str(run_info["id"]),
-            "state": RunStatus.ga4gh_state(run_info["processing_stage"]).name
+            "state": RunStatus.from_stage(ProcessingStage[run_info["processing_stage"]]).name
         } for run_info in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
         return jsonify({
             "runs": runs,
