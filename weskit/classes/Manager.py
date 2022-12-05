@@ -144,8 +144,7 @@ class Manager:
 
             run = self.insert_task_logs(run_dir_abs, result, run)
 
-        run.processing_stage = ProcessingStage.from_celery_and_exit(celery_task.state,
-                                                                    run.exit_code)
+        run.processing_stage = ProcessingStage.from_celery(celery_task.state)
         return run
 
     def _record_error(self, run: Run,
@@ -171,7 +170,7 @@ class Manager:
                    max_tries: int = 1) -> Run:
         """
         Given an old Run and a new Run (that may or may not differ from the old Run version),
-        retrieve the processing stage information from Celery and update the run.
+        retrieve the Celery state and update the run.
         Then, if there is a change compared to the old Run, update the run in the database.
         """
         try:
@@ -193,7 +192,6 @@ class Manager:
             # This may happen, if the open()s fail, e.g. because the run directory was manually
             # deleted or is unavailable due to network problems.
             raise self._record_error(run, e, ProcessingStage.ERROR)
-
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,

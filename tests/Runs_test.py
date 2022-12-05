@@ -160,7 +160,6 @@ def test_run_merge_merges_outputs():
 
 def test_run_merge_processing_stage():
     init = Run(**mock_run_data)
-    prepared_dir = Run(**updated(mock_run_data, processing_stage=ProcessingStage.PREPARED_DIR))
     prepared_execution = Run(**updated(mock_run_data,
                              processing_stage=ProcessingStage.PREPARED_EXECUTION))
     submitted_execution = Run(**updated(mock_run_data,
@@ -170,7 +169,6 @@ def test_run_merge_processing_stage():
     error = Run(**updated(mock_run_data, processing_stage=ProcessingStage.ERROR))
     canceled = Run(**updated(mock_run_data, processing_stage=ProcessingStage.CANCELED))
 
-    assert init.merge(prepared_dir).processing_stage == ProcessingStage.PREPARED_DIR
     assert init.merge(prepared_execution).processing_stage == ProcessingStage.PREPARED_EXECUTION
     assert init.merge(submitted_execution).processing_stage == ProcessingStage.SUBMITTED_EXECUTION
     assert init.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
@@ -179,17 +177,13 @@ def test_run_merge_processing_stage():
     assert finished.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
     assert submitted_execution.merge(error).processing_stage == ProcessingStage.ERROR
     assert submitted_execution.merge(paused).processing_stage == ProcessingStage.PAUSED
-    assert prepared_dir.merge(submitted_execution).processing_stage == \
-        ProcessingStage.SUBMITTED_EXECUTION
+
     assert prepared_execution.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
     assert submitted_execution.merge(canceled).processing_stage == \
         ProcessingStage.CANCELED
 
 
 # test higher precedence
-    assert prepared_dir.merge(init).processing_stage == ProcessingStage.PREPARED_DIR
-    assert prepared_dir.merge(prepared_execution).processing_stage == \
-        ProcessingStage.PREPARED_EXECUTION
     assert prepared_execution.merge(submitted_execution).processing_stage == \
         ProcessingStage.SUBMITTED_EXECUTION
     assert submitted_execution.merge(finished).processing_stage == \

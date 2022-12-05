@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 import enum
+from typing import Optional
 
 from weskit.classes.ProcessingStage import ProcessingStage
 
@@ -62,10 +63,9 @@ class RunStatus(enum.Enum):
         return self.name
 
     @staticmethod
-    def from_stage(stage: ProcessingStage) -> RunStatus:
+    def from_stage(stage: ProcessingStage, exit_code: Optional[int]) -> RunStatus:
         weskit_stage_to_status = {
                                     ProcessingStage.RUN_CREATED: RunStatus.INITIALIZING,
-                                    ProcessingStage.PREPARED_DIR: RunStatus.INITIALIZING,
                                     ProcessingStage.PREPARED_EXECUTION: RunStatus.INITIALIZING,
                                     ProcessingStage.SUBMITTED_EXECUTION: RunStatus.INITIALIZING,
                                     ProcessingStage.AWAITING_START: RunStatus.INITIALIZING,
@@ -77,4 +77,16 @@ class RunStatus(enum.Enum):
                                     ProcessingStage.CANCELED: RunStatus.CANCELED,
                                     ProcessingStage.REQUESTED_CANCEL: RunStatus.CANCELING
         }
+        if stage == ProcessingStage.FINISHED_EXECUTION:
+            if exit_code is None:
+                # The exit_code returned from the worker should always be an integer, if the
+                # Celery worker gets into the SUCCESS state.
+                return RunStatus.SYSTEM_ERROR
+            elif exit_code > 0:
+                return RunStatus.EXECUTOR_ERROR
+            elif exit_code < 0:  # System error in task not resulting in Celery task FAILURE
+                return RunStatus.SYSTEM_ERROR
+            else:
+                return weskit_stage_to_status[ProcessingStage.FINISHED_EXECUTION]
+
         return weskit_stage_to_status[stage]

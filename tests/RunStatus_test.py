@@ -11,12 +11,18 @@ from weskit.api.RunStatus import RunStatus
 from weskit.classes.ProcessingStage import ProcessingStage
 
 
-def test_runstatus_progress_state():
-    assert RunStatus.from_stage(ProcessingStage.AWAITING_START) == RunStatus.INITIALIZING
-    assert RunStatus.from_stage(ProcessingStage.STARTED_EXECUTION) == RunStatus.RUNNING
-    assert RunStatus.from_stage(ProcessingStage.FINISHED_EXECUTION) == RunStatus.COMPLETE
-    assert RunStatus.from_stage(ProcessingStage.ERROR) == RunStatus.SYSTEM_ERROR
-    assert RunStatus.from_stage(ProcessingStage.EXECUTOR_ERROR) == RunStatus.EXECUTOR_ERROR
-    assert RunStatus.from_stage(ProcessingStage.CANCELED) == RunStatus.CANCELED
+def test_runstatus_from_processingstage():
+    assert RunStatus.from_stage(ProcessingStage.AWAITING_START, exit_code=None) == \
+        RunStatus.INITIALIZING
+    assert RunStatus.from_stage(ProcessingStage.STARTED_EXECUTION, exit_code=None) == \
+        RunStatus.RUNNING
+    assert RunStatus.from_stage(ProcessingStage.FINISHED_EXECUTION, exit_code=0) == \
+        RunStatus.COMPLETE
+    assert RunStatus.from_stage(ProcessingStage.ERROR, exit_code=None) == \
+        RunStatus.SYSTEM_ERROR
+    assert RunStatus.from_stage(ProcessingStage.EXECUTOR_ERROR, exit_code=None) == \
+        RunStatus.EXECUTOR_ERROR
+    assert RunStatus.from_stage(ProcessingStage.CANCELED, exit_code=None) == \
+        RunStatus.CANCELED
     with pytest.raises(AttributeError):
-        RunStatus.from_stage(ProcessingStage.NONEXISTING)
+        RunStatus.from_stage(ProcessingStage.NONEXISTING, exit_code=None)

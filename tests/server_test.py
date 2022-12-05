@@ -304,7 +304,7 @@ class TestOpenEndpoint:
           }
         assert set(response.json["system_state_counts"].keys()) == {
             'AWAITING_START', 'CANCELED', 'REQUESTED_CANCEL', 'RUN_CREATED', 'ERROR',
-            'EXECUTOR_ERROR', 'FINISHED_EXECUTION', 'PAUSED', 'PREPARED_DIR', 'PREPARED_EXECUTION',
+            'EXECUTOR_ERROR', 'FINISHED_EXECUTION', 'PAUSED', 'PREPARED_EXECUTION',
             'STARTED_EXECUTION', 'SUBMITTED_EXECUTION'
         }
         for v in response.json["system_state_counts"].values():

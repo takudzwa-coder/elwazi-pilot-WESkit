@@ -89,7 +89,7 @@ def GetRunStatus(run_id):
         if access_denied_response is None:
             return {
                 "run_id": run_id,
-                "state": RunStatus.from_stage(run.processing_stage).name
+                "state": RunStatus.from_stage(run.processing_stage, run.exit_code).name
             }, 200
         else:
             return access_denied_response
@@ -166,7 +166,8 @@ def ListRuns(*args, **kwargs):
         current_app.manager.update_runs()
         runs = [{
             "run_id": str(run_info["id"]),
-            "state": RunStatus.from_stage(ProcessingStage[run_info["processing_stage"]]).name
+            "state": RunStatus.from_stage(ProcessingStage.from_string(run_info["processing_stage"]),
+                                          run_info["exit_code"]).name
         } for run_info in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
         return jsonify({
             "runs": runs,

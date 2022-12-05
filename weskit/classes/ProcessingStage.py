@@ -19,36 +19,32 @@ class ProcessingStage(enum.Enum):
     #            were partially written to the run-dir.
     RUN_CREATED = 1
 
-    # > PREPARED_DIR: The attachment files have been written to the run-dir,
-    #                 but no Celery task ID has yet been defined.
-    PREPARED_DIR = 2
-
     # > PREPARED_EXECUTION: A Celery task ID was defined and the execution may or
     #                       may not have started.
-    PREPARED_EXECUTION = 3
+    PREPARED_EXECUTION = 2
 
     # > SUBMITTED_EXECUTION: The execution of the workflow engine execution has been submitted
     #                        to the Celery task with the known ID.
-    SUBMITTED_EXECUTION = 4
+    SUBMITTED_EXECUTION = 3
 
     # > AWAITING_START: Celery task is submitted. This may be a run-task representing a
     #                   workflow engine run but may also include a preparatory task to stage
     #                   large request-attachments, etc.
-    AWAITING_START = 5
+    AWAITING_START = 4
 
     # > STARTED_EXECUTION: An "Executor" seems to be executing individual
     #                      workfload jobs ("first Executor", etc.) WESkit has no access to
     #                      these Executors, which are managed by the workflow engines.
     #                      Thus, the RUNNING state is assumed, as long as the workflow engine runs.
-    STARTED_EXECUTION = 6
+    STARTED_EXECUTION = 5
 
     # > PAUSED: The workflow run is paused.
     #           Not implemented yet
-    PAUSED = 7
+    PAUSED = 6
 
     # > FINISHED: The Celery task finished (successfully or not).
     #             All workload jobs and the workflow engine executed with exit code == 0.
-    FINISHED_EXECUTION = 8
+    FINISHED_EXECUTION = 7
 
     # > ERROR: Any error of the WESkit system itself. Examples are
     #
@@ -57,7 +53,7 @@ class ProcessingStage(enum.Enum):
     # * Filesystem errors (inaccessible mounts, etc.), other than client-caused file access errors
     #   (e.g. wrong paths).
     # * WESkit.Executor errors (cluster errors, SSH errors, etc.)
-    ERROR = 9
+    ERROR = 8
 
     # > EXECUTOR_ERROR: The "task" corresponds to a worklow engine execution. The workflow
     #                   executes workload jobs that correspond to the "Executors".
@@ -72,16 +68,16 @@ class ProcessingStage(enum.Enum):
     # * errors during the execution of the workload (e.g. on the cluster).
     #
     # This means, the EXECUTOR_ERROR usually is used, if the workflow engine exited with code > 0.
-    EXECUTOR_ERROR = 10
+    EXECUTOR_ERROR = 9
 
     # > CANCELED: The workflow engine run (~ task) has been successfully cancelled.
     #
-    CANCELED = 11
+    CANCELED = 10
 
     # > REQUESTED_CANCEL:  The workflow engine run (~ task) is being cancelled, e.g. waiting for the
     #               engine to respond to SIGTERM and clean up running cluster jobs,
     #               compiling incomplete run, run results, etc.
-    REQUESTED_CANCEL = 12
+    REQUESTED_CANCEL = 11
 
     def __repr__(self) -> str:
         return self.name
@@ -91,7 +87,7 @@ class ProcessingStage(enum.Enum):
         return ProcessingStage[name]
 
     @staticmethod
-    def from_celery_and_exit(celery_state_name: Optional[str], exit_code: Optional[int]) -> \
+    def from_celery(celery_state_name: Optional[str]) -> \
             ProcessingStage:
         if celery_state_name is None:
             raise RuntimeError("run.celery_task_state should be set at this point")
@@ -103,24 +99,11 @@ class ProcessingStage(enum.Enum):
             "REVOKED": ProcessingStage.CANCELED,
             "FAILURE": ProcessingStage.ERROR
         }
-        if celery_state_name == "SUCCESS":
-            if exit_code is None:
-                # The exit_code returned from the worker should always be an integer, if the
-                # Celery worker gets into the SUCCESS state.
-                return ProcessingStage.ERROR
-            elif exit_code > 0:
-                return ProcessingStage.EXECUTOR_ERROR
-            elif exit_code < 0:  # System error in task not resulting in Celery task FAILURE
-                return ProcessingStage.ERROR
-            else:
-                return celery_to_weskit_stage["SUCCESS"]
-        else:
-            return celery_to_weskit_stage[celery_state_name]
+        return celery_to_weskit_stage[celery_state_name]
 
     @staticmethod
     def INITIALIZING_STAGES() -> List[ProcessingStage]:
         return [ProcessingStage.RUN_CREATED,
-                ProcessingStage.PREPARED_DIR,
                 ProcessingStage.PREPARED_EXECUTION,
                 ProcessingStage.SUBMITTED_EXECUTION,
                 ProcessingStage.AWAITING_START]
@@ -158,17 +141,16 @@ class ProcessingStage(enum.Enum):
         # that Celery could go from SUCCESS to CANCELED.
         PRECEDENCE = {
             ProcessingStage.RUN_CREATED: 1,
-            ProcessingStage.PREPARED_DIR: 2,
-            ProcessingStage.PREPARED_EXECUTION: 3,
-            ProcessingStage.SUBMITTED_EXECUTION: 4,
-            ProcessingStage.AWAITING_START: 5,
-            ProcessingStage.STARTED_EXECUTION: 6,
-            ProcessingStage.PAUSED: 7,
-            ProcessingStage.FINISHED_EXECUTION: 8,
-            ProcessingStage.ERROR: 9,
-            ProcessingStage.EXECUTOR_ERROR: 10,
-            ProcessingStage.CANCELED: 11,
-            ProcessingStage.REQUESTED_CANCEL: 12
+            ProcessingStage.PREPARED_EXECUTION: 2,
+            ProcessingStage.SUBMITTED_EXECUTION: 3,
+            ProcessingStage.AWAITING_START: 4,
+            ProcessingStage.STARTED_EXECUTION: 5,
+            ProcessingStage.PAUSED: 6,
+            ProcessingStage.FINISHED_EXECUTION: 7,
+            ProcessingStage.ERROR: 8,
+            ProcessingStage.EXECUTOR_ERROR: 9,
+            ProcessingStage.CANCELED: 10,
+            ProcessingStage.REQUESTED_CANCEL: 11
         }
         return PRECEDENCE[self]
 
@@ -193,7 +175,7 @@ class ProcessingStage(enum.Enum):
         elif self.precedence < new_state.precedence:
             # Stage changes along the precedence are allowed, unless a terminal state was already
             # reached before.
-            return self not in [ProcessingStage.FINISHED_EXECUTION, ProcessingStage.ERROR]
+            return not self.is_terminal
         else:
             return False
 
