@@ -100,7 +100,6 @@ class Database:
             projection={"_id": False,
                         "id": True,
                         "processing_stage": True,
-                        "exit_code": True,
                         "user_id": True,
                         },
             filter={"user_id": user_id}))

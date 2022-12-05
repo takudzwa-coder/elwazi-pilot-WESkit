@@ -164,10 +164,11 @@ def ListRuns(*args, **kwargs):
     try:
         ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
+        manager = current_app.manager
         runs = [{
             "run_id": str(run_info["id"]),
             "state": RunStatus.from_stage(ProcessingStage.from_string(run_info["processing_stage"]),
-                                          run_info["exit_code"]).name
+                                          manager.get_run(str(run_info["id"])).exit_code).name
         } for run_info in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
         return jsonify({
             "runs": runs,
