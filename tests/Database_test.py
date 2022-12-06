@@ -26,7 +26,7 @@ def test_insert_and_load_run(test_database):
     test_database.insert_run(run1)
     run2 = test_database.get_run(run1.id)
     assert run1 == run2
-    run_id_and_states = test_database.list_run_ids_and_states("test_id")
+    run_id_and_states = test_database.list_run_ids_and_stages("test_id")
     assert len(run_id_and_states) == 1
 
 

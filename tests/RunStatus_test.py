@@ -20,8 +20,6 @@ def test_runstatus_from_processingstage():
         RunStatus.COMPLETE
     assert RunStatus.from_stage(ProcessingStage.ERROR, exit_code=None) == \
         RunStatus.SYSTEM_ERROR
-    assert RunStatus.from_stage(ProcessingStage.EXECUTOR_ERROR, exit_code=None) == \
-        RunStatus.EXECUTOR_ERROR
     assert RunStatus.from_stage(ProcessingStage.CANCELED, exit_code=None) == \
         RunStatus.CANCELED
     with pytest.raises(AttributeError):

@@ -164,12 +164,11 @@ def ListRuns(*args, **kwargs):
     try:
         ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
-        manager = current_app.manager
         runs = [{
             "run_id": str(run_info["id"]),
             "state": RunStatus.from_stage(ProcessingStage.from_string(run_info["processing_stage"]),
-                                          manager.get_run(str(run_info["id"])).exit_code).name
-        } for run_info in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
+                                          run_info["exit_code"]).name
+        } for run_info in current_app.manager.database.list_run_ids_and_stages(ctx.user.id)]
         return jsonify({
             "runs": runs,
             "next_page_token": ""
@@ -233,7 +232,7 @@ def ListRunsExtended(*args, **kwargs):
         ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
         response = current_app.manager.database.\
-            list_run_ids_and_states_and_times(ctx.user.id)
+            list_run_ids_and_stages_and_times(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)

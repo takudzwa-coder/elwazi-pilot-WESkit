@@ -55,29 +55,14 @@ class ProcessingStage(enum.Enum):
     # * WESkit.Executor errors (cluster errors, SSH errors, etc.)
     ERROR = 8
 
-    # > EXECUTOR_ERROR: The "task" corresponds to a worklow engine execution. The workflow
-    #                   executes workload jobs that correspond to the "Executors".
-    #                   The workflows, however, contain also code that is executed by the workflow
-    #                   engine directly (which is an implementation detail of the engine).
-    #                   Therefore, any error during the workflow processing by the engine
-    #                   -- be it in the coreworkflow or in any of its workload jobs --
-    #                   should map to EXECUTOR_ENGINE.
-    # E.g.
-    # * validation error of the config.yaml
-    # * parameter validation/processing error in the workflow code
-    # * errors during the execution of the workload (e.g. on the cluster).
-    #
-    # This means, the EXECUTOR_ERROR usually is used, if the workflow engine exited with code > 0.
-    EXECUTOR_ERROR = 9
-
     # > CANCELED: The workflow engine run (~ task) has been successfully cancelled.
     #
-    CANCELED = 10
+    CANCELED = 9
 
     # > REQUESTED_CANCEL:  The workflow engine run (~ task) is being cancelled, e.g. waiting for the
     #               engine to respond to SIGTERM and clean up running cluster jobs,
     #               compiling incomplete run, run results, etc.
-    REQUESTED_CANCEL = 11
+    REQUESTED_CANCEL = 10
 
     def __repr__(self) -> str:
         return self.name
@@ -124,7 +109,6 @@ class ProcessingStage(enum.Enum):
     def TERMINAL_STAGES() -> List[ProcessingStage]:
         return [ProcessingStage.FINISHED_EXECUTION,
                 ProcessingStage.ERROR,
-                ProcessingStage.EXECUTOR_ERROR,
                 ProcessingStage.CANCELED]
 
     @property
@@ -148,9 +132,8 @@ class ProcessingStage(enum.Enum):
             ProcessingStage.PAUSED: 6,
             ProcessingStage.FINISHED_EXECUTION: 7,
             ProcessingStage.ERROR: 8,
-            ProcessingStage.EXECUTOR_ERROR: 9,
-            ProcessingStage.CANCELED: 10,
-            ProcessingStage.REQUESTED_CANCEL: 11
+            ProcessingStage.CANCELED: 9,
+            ProcessingStage.REQUESTED_CANCEL: 10
         }
         return PRECEDENCE[self]
 

@@ -234,6 +234,7 @@ class Manager:
         run = Run(id=self.database.create_run_id(),
                   processing_stage=ProcessingStage.RUN_CREATED,
                   request_time=now(),
+                  exit_code=None,
                   request=validated_request,
                   user_id=user_id)
         self.database.insert_run(run)

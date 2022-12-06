@@ -73,7 +73,6 @@ class RunStatus(enum.Enum):
                                     ProcessingStage.PAUSED: RunStatus.PAUSED,
                                     ProcessingStage.FINISHED_EXECUTION: RunStatus.COMPLETE,
                                     ProcessingStage.ERROR: RunStatus.SYSTEM_ERROR,
-                                    ProcessingStage.EXECUTOR_ERROR: RunStatus.EXECUTOR_ERROR,
                                     ProcessingStage.CANCELED: RunStatus.CANCELED,
                                     ProcessingStage.REQUESTED_CANCEL: RunStatus.CANCELING
         }

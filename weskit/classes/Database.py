@@ -93,12 +93,13 @@ class Database:
                 runs.append(Run.from_bson_serializable(run_data))
         return runs
 
-    def list_run_ids_and_states(self, user_id: str) -> List[Dict[str, str]]:
+    def list_run_ids_and_stages(self, user_id: str) -> List[Dict[str, str]]:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
         return list(self._runs.find(
             projection={"_id": False,
                         "id": True,
+                        "exit_code": True,
                         "processing_stage": True,
                         "user_id": True,
                         },
@@ -249,7 +250,7 @@ class Database:
             .delete_one({"id": run.id}) \
             .acknowledged
 
-    def list_run_ids_and_states_and_times(self, user_id: str) -> list:
+    def list_run_ids_and_stages_and_times(self, user_id: str) -> list:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
         return list(map(
