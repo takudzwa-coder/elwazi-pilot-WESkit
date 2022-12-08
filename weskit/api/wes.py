@@ -15,6 +15,8 @@ from flask_jwt_extended import current_user
 from weskit.api.Helper import Helper, run_log
 from weskit.exceptions import ClientError
 from weskit.oidc.Decorators import login_required
+from weskit.api.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 
 bp = Blueprint("wes", __name__)
 
@@ -87,7 +89,7 @@ def GetRunStatus(run_id):
         if access_denied_response is None:
             return {
                 "run_id": run_id,
-                "state": run.status.name
+                "state": RunStatus.from_stage(run.processing_stage, run.exit_code).name
             }, 200
         else:
             return access_denied_response
@@ -164,8 +166,9 @@ def ListRuns(*args, **kwargs):
         current_app.manager.update_runs()
         runs = [{
             "run_id": str(run_info["id"]),
-            "state": run_info["status"]
-        } for run_info in current_app.manager.database.list_run_ids_and_states(ctx.user.id)]
+            "state": RunStatus.from_stage(ProcessingStage.from_string(run_info["processing_stage"]),
+                                          run_info["exit_code"]).name
+        } for run_info in current_app.manager.database.list_run_ids_and_stages(ctx.user.id)]
         return jsonify({
             "runs": runs,
             "next_page_token": ""
@@ -229,7 +232,7 @@ def ListRunsExtended(*args, **kwargs):
         ctx = Helper(current_app, current_user)
         current_app.manager.update_runs()
         response = current_app.manager.database.\
-            list_run_ids_and_states_and_times(ctx.user.id)
+            list_run_ids_and_stages_and_times(ctx.user.id)
         return jsonify(response), 200
     except Exception as e:
         logger.error(e, exc_info=True)

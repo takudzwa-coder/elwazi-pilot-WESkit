@@ -17,7 +17,7 @@ from pymongo.database import Database as MongoDatabase
 from pymongo.results import InsertOneResult
 
 from weskit.classes.Run import Run
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.exceptions import ConcurrentModificationError, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
@@ -93,14 +93,15 @@ class Database:
                 runs.append(Run.from_bson_serializable(run_data))
         return runs
 
-    def list_run_ids_and_states(self, user_id: str) -> List[Dict[str, str]]:
+    def list_run_ids_and_stages(self, user_id: str) -> List[Dict[str, str]]:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
         return list(self._runs.find(
             projection={"_id": False,
                         "id": True,
-                        "status": True,
-                        "user_id": True
+                        "exit_code": True,
+                        "processing_stage": True,
+                        "user_id": True,
                         },
             filter={"user_id": user_id}))
 
@@ -109,17 +110,17 @@ class Database:
         Returns the statistics of all job-states ever, for all users.
         """
         pipeline: Sequence[Mapping[str, Any]] = [
-            {"$unwind": "$status"},
-            {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+            {"$unwind": "$stage"},
+            {"$group": {"_id": "$stage", "count": {"$sum": 1}}},
             {"$sort": SON([("count", -1), ("_id", -1)])}
             ]
         counts_data = list(self._runs.aggregate(pipeline))
         counts = {}
         for counts_datum in counts_data:
             counts[counts_datum["_id"]] = counts_datum["count"]
-        for status in RunStatus:
-            if status.name not in counts.keys():
-                counts[status.name] = 0
+        for processing_stage in ProcessingStage:
+            if processing_stage.name not in counts.keys():
+                counts[processing_stage.name] = 0
         return counts
 
     def create_run_id(self) -> uuid.UUID:
@@ -249,13 +250,13 @@ class Database:
             .delete_one({"id": run.id}) \
             .acknowledged
 
-    def list_run_ids_and_states_and_times(self, user_id: str) -> list:
+    def list_run_ids_and_stages_and_times(self, user_id: str) -> list:
         if user_id is None:
             raise ValueError("Can only list runs for specific user.")
         return list(map(
             lambda r: {
                 "run_id": r["id"],
-                "run_status": r["status"],
+                "run_stage": r["processing_stage"],
                 "start_time": r["start_time"],
                 "user_id": r["user_id"],
                 "request": r["request"]

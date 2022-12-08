@@ -17,10 +17,10 @@ from flask import current_app
 from validators.url import url as validate_url
 
 from test_utils import \
-    assert_within_timeout, is_within_timeout, assert_status_is_not_failed, get_workflow_data
+    assert_within_timeout, is_within_timeout, assert_stage_is_not_failed, get_workflow_data
 from weskit import WESApp
 from weskit.api.Helper import Helper
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.oidc.User import User, not_logged_in_user_id
 from weskit.utils import to_filename
 
@@ -57,10 +57,10 @@ def test_run(test_client,
     start_time = time.time()
     while not success:
         assert_within_timeout(start_time)
-        status = run.status
-        if status != RunStatus.COMPLETE:
-            assert_status_is_not_failed(status)
-            print("Waiting ... (status=%s)" % status.name)
+        stage = run.processing_stage
+        if stage != ProcessingStage.FINISHED_EXECUTION:
+            assert_stage_is_not_failed(stage)
+            print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = current_app.manager.update_run(run)
             continue
@@ -99,12 +99,12 @@ def long_run(test_client,
     run = manager.execute(run)
     run = manager.database.update_run(run)
     start_time = time.time()
-    status = RunStatus.INITIALIZING
-    while status != RunStatus.RUNNING:
+    stage = ProcessingStage.PREPARED_EXECUTION
+    while stage != ProcessingStage.SUBMITTED_EXECUTION:
         assert_within_timeout(start_time)
-        status = run.status
-        assert_status_is_not_failed(status)
-        print("Waiting ... (status=%s)" % status.name)
+        stage = run.processing_stage
+        assert_stage_is_not_failed(stage)
+        print("Waiting ... (stage=%s)" % stage.name)
         time.sleep(1)
         run = current_app.manager.update_run(run)
     yield run
@@ -303,8 +303,9 @@ class TestOpenEndpoint:
               "tag2": "value2"
           }
         assert set(response.json["system_state_counts"].keys()) == {
-            'CANCELED', 'CANCELING', 'COMPLETE', 'EXECUTOR_ERROR',
-            'INITIALIZING', 'PAUSED', 'QUEUED', 'RUNNING', 'SYSTEM_ERROR'
+            'AWAITING_START', 'CANCELED', 'REQUESTED_CANCEL', 'RUN_CREATED', 'ERROR',
+            'FINISHED_EXECUTION', 'PAUSED', 'PREPARED_EXECUTION',
+            'STARTED_EXECUTION', 'SUBMITTED_EXECUTION'
         }
         for v in response.json["system_state_counts"].values():
             assert type(v) is int
@@ -316,7 +317,7 @@ class TestWithoutLogin:
     credentials.
     """
     @pytest.mark.integration
-    def test_get_run_status(self, test_client):
+    def test_get_run_stage(self, test_client):
         response = test_client.get("/weskit/v1/runs/test_runId/status")
         assert response.status_code == 404
 
@@ -582,13 +583,13 @@ class TestWithHeaderToken:
         assert response.status_code == 200, response.json
         assert len([x for x in response.json if x['run_id'] == str(test_run.id)]) == 1
         assert response.json[0].keys() == \
-               {"request", "run_id", "run_status", "start_time", "user_id"}
+               {"request", "run_id", "run_stage", "start_time", "user_id"}
 
     @pytest.mark.integration
-    def test_get_run_status(self,
-                            test_client,
-                            test_run,
-                            OIDC_credentials):
+    def test_get_run_stage(self,
+                           test_client,
+                           test_run,
+                           OIDC_credentials):
         run_id = str(test_run.id)
         response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
                                    headers=OIDC_credentials.headerToken)
@@ -606,9 +607,9 @@ class TestWithHeaderToken:
         }
 
     @pytest.mark.integration
-    def test_get_nonexisting_run_status(self,
-                                        test_client,
-                                        OIDC_credentials):
+    def test_get_nonexisting_run_stage(self,
+                                       test_client,
+                                       OIDC_credentials):
         response = test_client.get("/weskit/v1/runs/nonExistingRun/status",
                                    headers=OIDC_credentials.headerToken)
         assert response.status_code == 404

@@ -11,7 +11,7 @@ from typing import Optional
 
 from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.classes.Run import Run
-from weskit.classes.RunStatus import RunStatus
+from weskit.api.RunStatus import RunStatus
 from weskit.classes.WESApp import WESApp
 from weskit.exceptions import ClientError
 from weskit.oidc.User import User
@@ -62,7 +62,8 @@ class Helper:
         access_denied_response = self.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
-            if run.status is not RunStatus.COMPLETE:
+            run_ga4gh_status = RunStatus.from_stage(run.processing_stage, run.exit_code)
+            if run_ga4gh_status is not RunStatus.COMPLETE:
                 return {"msg": "Run '%s' is not in COMPLETED state" % run_id,
                         "status_code": 409
                         }, 409     # CONFLICT (with current resource state)
@@ -83,10 +84,11 @@ class Helper:
 
 
 def run_log(run: Run) -> dict:
+    run_ga4gh_status = RunStatus.from_stage(run.processing_stage, run.exit_code).name
     return {
         "run_id": run.id,
         "request": run.request,
-        "state": run.status.name,
+        "state": run_ga4gh_status,
         "run_log": execution_log_to_run_log(run),
         "task_logs": run.task_logs,
         "outputs": run.outputs,

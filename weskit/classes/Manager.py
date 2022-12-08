@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, Any, cast, Union
 from typing import Optional, List
 from urllib.parse import urlparse
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import yaml
 from celery import Celery, Task
@@ -26,7 +26,7 @@ from weskit.tasks.CommandTask import run_command
 from weskit.classes.Database import Database
 from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
@@ -72,8 +72,8 @@ class Manager:
         TODO State is not written back to DB
         """
         raise NotImplementedError()
-        if run.status.is_running:
-            run.status = RunStatus.CANCELING
+        if run.processing_stage.is_running:
+            run.processing_stage = ProcessingStage.REQUESTED_CANCEL
             # This is a quickfix for executing the tests.
             # This might be a bad solution for multithreaded use-cases,
             # because the current working directory is touched.
@@ -83,7 +83,7 @@ class Manager:
                        terminate=True,
                        signal='SIGKILL')
             os.chdir(cwd)
-        elif run.status is RunStatus.INITIALIZING:
+        elif run.processing_stage.is_initializing:
             # We cannot yet cancel a run in the initializing state. Ignore the request!
             # TODO Try updating the state until it is RUNNING. Then cancel the RUNNING run.
             pass
@@ -117,7 +117,7 @@ class Manager:
         other conditions or because of previous query results) with SUCCESSFUL Celery state,
         update the Run with information from the Celery task.
         """
-        if not run.status.is_terminal and celery_task.status == "SUCCESS":
+        if not run.processing_stage.is_terminal and celery_task.status == "SUCCESS":
             # The command itself may have failed, though, because run_command catches execution
             # errors of the command and lets the Celery job succeed.
             result = celery_task.get()
@@ -140,24 +140,24 @@ class Manager:
                 # command execution (other than workflow engine errors; e.g. SSH connection).
                 raise self._record_error(run,
                                          RuntimeError("Error during processing of '%s'" % run.id),
-                                         RunStatus.SYSTEM_ERROR)
+                                         ProcessingStage.ERROR)
 
             run = self.insert_task_logs(run_dir_abs, result, run)
 
-        run.status = RunStatus.from_celery_and_exit(celery_task.state, run.exit_code)
+        run.processing_stage = ProcessingStage.from_celery(celery_task.state)
         return run
 
     def _record_error(self, run: Run,
                       exception: Exception,
-                      new_state: RunStatus) -> Exception:
+                      new_state: ProcessingStage) -> Exception:
         """
-        Take an exception, log it, set run.status to new_state, and try to store the
+        Take an exception, log it, set run.processing_stage to new_state, and try to store the
         updated Run in the database (e.g. will if this is e.g. DB connection exception).
 
         Return the exception to simplify usage as `raise self._record_error(...)`.
         """
-        logger.debug("%s during processing of run '%s'" % (new_state.name, run.id))
-        run.status = new_state
+        logger.info("%s during processing of run '%s'" % (new_state.name, run.id))
+        run.processing_stage = new_state
         if not isinstance(exception, PyMongoError) and \
                 not isinstance(exception, ConcurrentModificationError):
             # Assumption: Recovery has been tried before (e.g. in Database). A PyMongoError here
@@ -169,27 +169,29 @@ class Manager:
                    run: Run,
                    max_tries: int = 1) -> Run:
         """
-        For a given Run, try to retrieve its status from Celery. If it exists, try to retrieve
-        its result information and update all in the database. Return the up-to-data Run.
+        Given an old Run and a new Run (that may or may not differ from the old Run version),
+        retrieve the Celery state and update the run.
+        Then, if there is a change compared to the old Run, update the run in the database.
         """
         try:
             if run.celery_task_id is not None:
                 celery_task = self._run_task.AsyncResult(run.celery_task_id)
-                logger.debug("Run %s with status %s has Celery task %s in state '%s'" % (
-                    run.id, run.status.name, run.celery_task_id, celery_task.state))
+                logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
+                    run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
                 run = self._update_run_results(run, celery_task)
 
-            elif run.status.is_running or run.status == RunStatus.CANCELING:
+            elif run.processing_stage.is_running or \
+                    run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
                 raise self._record_error(
                     run,
-                    RuntimeError(f"No Celery task ID for run {run.id} in status {run.status}"),
-                    RunStatus.SYSTEM_ERROR)
+                    RuntimeError(f"No Celery task ID for run {run.id}",
+                                 f" in stage {run.processing_stage}"),
+                    ProcessingStage.ERROR)
 
         except FileNotFoundError as e:
             # This may happen, if the open()s fail, e.g. because the run directory was manually
             # deleted or is unavailable due to network problems.
-            raise self._record_error(run, e, RunStatus.SYSTEM_ERROR)
-
+            raise self._record_error(run, e, ProcessingStage.ERROR)
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
@@ -206,8 +208,8 @@ class Manager:
             # Generally updating finished runs does not make much sense and creates problems with
             # deleted runs. On the long run, with increasing numbers of runs there will also be
             # a performance problem when updating accumulated finished runs.
-            query = {"run_status": {"$not": {"$in": [state.name
-                                                     for state in RunStatus.TERMINAL_STATES()]}}}
+            query = {"run_stage": {"$not": {"$in": [state.name
+                     for state in ProcessingStage.TERMINAL_STAGES()]}}}
         else:
             query = {"run_id": run_id}
 
@@ -230,8 +232,9 @@ class Manager:
             validated_request["tags"] = None
 
         run = Run(id=self.database.create_run_id(),
-                  status=RunStatus.INITIALIZING,
+                  processing_stage=ProcessingStage.RUN_CREATED,
                   request_time=now(),
+                  exit_code=None,
                   request=validated_request,
                   user_id=user_id)
         self.database.insert_run(run)
@@ -349,9 +352,10 @@ class Manager:
         if files is None:
             files = ImmutableMultiDict()
 
-        if run.status != RunStatus.INITIALIZING:
-            ex = RuntimeError("run.status not INITIALIZING but %s" % run.status.name)
-            raise self._record_error(run, ex, RunStatus.SYSTEM_ERROR)
+        if run.processing_stage != ProcessingStage.RUN_CREATED:
+            ex = RuntimeError("run.processing_stage not RUN_CREATED",
+                              f"but {run.processing_stage.name}")
+            raise self._record_error(run, ex, ProcessingStage.ERROR)
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -372,17 +376,22 @@ class Manager:
             run.rundir_rel_workflow_path = self._prepare_workflow_path(
                 run, self._process_workflow_attachment(run, files))
 
+            # create a random Celery ID and update the run stage
+            celery_task_id = str(uuid4())
+            run.celery_task_id = celery_task_id
+            run.processing_stage = ProcessingStage.PREPARED_EXECUTION
+
         except (ClientError, OSError) as e:
             # Any error during preparation, also if caused by the client should result in the
             # run to be in SYSTEM_ERROR state.
-            raise self._record_error(run, e, RunStatus.SYSTEM_ERROR)
-
+            raise self._record_error(run, e, ProcessingStage.ERROR)
         return run
 
     def execute(self, run: Run) -> Run:
-        if run.status != RunStatus.INITIALIZING:
-            ex = RuntimeError("run.status not INITIALIZING but %s" % run.status)
-            self._record_error(run, ex, RunStatus.SYSTEM_ERROR)
+        if run.processing_stage != ProcessingStage.PREPARED_EXECUTION:
+            ex = RuntimeError("run.processing_stage not PREPARED_EXECUTION but",
+                              f" {run.processing_stage}")
+            self._record_error(run, ex, ProcessingStage.ERROR)
             raise ex
 
         # Set workflow_type
@@ -395,7 +404,7 @@ class Manager:
                 RuntimeError("Workflow type '%s' is not known. Know %s" %
                              (run.request["workflow_type"],
                               ", ".join(self.workflow_engines.keys()))),
-                RunStatus.SYSTEM_ERROR)
+                ProcessingStage.ERROR)
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
@@ -407,12 +416,12 @@ class Manager:
                 RuntimeError("Workflow type version '%s' is not known. Know %s" %
                              (run.request["workflow_type_version"],
                               ", ".join(self.workflow_engines[workflow_type].keys()))),
-                RunStatus.SYSTEM_ERROR)
+                ProcessingStage.ERROR)
 
         if run.rundir_rel_workflow_path is None:
             raise self._record_error(run,
                                      RuntimeError(f"Workflow path of run is None: {run.id}"),
-                                     RunStatus.SYSTEM_ERROR)
+                                     ProcessingStage.ERROR)
 
         # Execute run
         command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
@@ -426,7 +435,8 @@ class Manager:
         run.execution_log["cmd"] = command.command
         run.execution_log["env"] = command.environment
         run.start_time = now()
-        task = self._run_task.apply_async(
+        self._run_task.apply_async(
+            task_id=run.celery_task_id,
             args=[],
             kwargs={
                 "command": command,
@@ -434,6 +444,6 @@ class Manager:
                 "executor_context": self.executor_context,
                 "execution_settings": execution_settings
             })
-        run.celery_task_id = task.id
+        run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
 
         return run

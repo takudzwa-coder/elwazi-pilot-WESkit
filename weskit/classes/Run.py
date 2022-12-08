@@ -16,7 +16,7 @@ from uuid import UUID
 
 from weskit.serializer import to_json, from_json
 from weskit.classes.PathContext import PathContext
-from weskit.classes.RunStatus import RunStatus
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.utils import format_timestamp, from_formatted_timestamp, updated
 from weskit.utils import mop
 
@@ -35,12 +35,13 @@ class Run:
                  request: dict,
                  user_id: str,
                  db_version: int = 0,
+                 exit_code: Optional[int] = None,
                  celery_task_id: Optional[str] = None,
                  sub_dir: Optional[Path] = None,
                  rundir_rel_workflow_path: Optional[Path] = None,
                  outputs: Dict[str, List[str]] = None,
                  execution_log: Optional[Dict[str, Any]] = None,
-                 status: RunStatus = RunStatus.INITIALIZING,
+                 processing_stage: ProcessingStage = ProcessingStage.RUN_CREATED,
                  start_time: Optional[datetime] = None,
                  task_logs: list = None,
                  stdout: Optional[List[str]] = None,
@@ -55,6 +56,7 @@ class Run:
         self.__request_time = request_time
         self.__request = request
         self.__user_id = user_id
+        self.exit_code = exit_code
         self.celery_task_id = celery_task_id
         self.sub_dir = sub_dir
         self.rundir_rel_workflow_path = rundir_rel_workflow_path
@@ -63,9 +65,7 @@ class Run:
             self.execution_log = {}
         else:
             self.execution_log = execution_log
-        # Direct field access for initial setting of the status. Afterwards controlled progression
-        # with accessors.
-        self.__status = status
+        self.__processing_stage = processing_stage
         self.start_time = start_time
         self.task_logs = task_logs
         self.stdout = stdout
@@ -113,35 +113,35 @@ class Run:
         return new_outputs
 
     @staticmethod
-    def _merge_status(status_a: RunStatus, status_b: RunStatus) -> RunStatus:
+    def _next_stage(stage_a: ProcessingStage, stage_b: ProcessingStage) -> ProcessingStage:
         """
         If a transition between the two states is allowed, simply choose the more progressed
         state based on its precedence. We cannot make any assumptions about whether self or
         other is more progressed (the nature of concurrency). Therefore, select the more
         progressed state of the two Runs (i.e. ignore parameter order).
         """
-        if status_a == status_b:
-            return status_a
+        if stage_a == stage_b:
+            return stage_a
 
-        b_may_progress_to_a = status_b.allowed_to_progress_to(status_a)
-        a_may_progress_to_b = status_a.allowed_to_progress_to(status_b)
+        b_may_progress_to_a = stage_b.allowed_to_progress_to(stage_a)
+        a_may_progress_to_b = stage_a.allowed_to_progress_to(stage_b)
         if b_may_progress_to_a and a_may_progress_to_b:
             # Reversible state transition. Take the one with higher precedence to disambiguate.
-            if status_a.precedence > status_b.precedence:
-                return status_a
-            elif status_a.precedence < status_b.precedence:
-                return status_b
+            if stage_a.precedence > stage_b.precedence:
+                return stage_a
+            elif stage_a.precedence < stage_b.precedence:
+                return stage_b
             else:
-                raise RuntimeError("Bug! Different RunStatus with same precedence! "
-                                   f"{status_a.name} and {status_b.name}")
+                raise RuntimeError("Bug! Different ProcessingStage with same precedence! "
+                                   f"{stage_a.name} and {stage_b.name}")
         elif b_may_progress_to_a:
-            return status_a
+            return stage_a
         elif a_may_progress_to_b:
-            return status_b
+            return stage_b
         else:
             raise RuntimeError(
-                "No progression rules for status "
-                f"A = {status_a.name} and B = {status_b.name}")
+                "No progression rules for stage "
+                f"A = {stage_a.name} and B = {stage_b.name}")
 
     def merge(self, other: Run) -> Run:
         """
@@ -172,6 +172,7 @@ class Run:
 
             # The easy fields:
             copy.celery_task_id = Run._merge_field("celery_task_id", self_d, other_d, None)
+            copy.exit_code = Run._merge_field("exit_code", self_d, other_d, None)
             copy.sub_dir = Run._merge_field("sub_dir", self_d, other_d, None)
             copy.rundir_rel_workflow_path = Run._merge_field("rundir_rel_workflow_path",
                                                              self_d, other_d, None)
@@ -183,8 +184,7 @@ class Run:
 
             # Fields with special rules
             copy.outputs = Run._merge_outputs(copy.outputs, other.outputs)
-            copy.status = Run._merge_status(copy.status, other.status)
-
+            copy.processing_stage = Run._next_stage(copy.processing_stage, other.processing_stage)
             return copy
 
     def to_bson_serializable(self):
@@ -198,7 +198,7 @@ class Run:
                          rundir_rel_workflow_path=mop(result["rundir_rel_workflow_path"], str),
                          request_time=mop(result["request_time"], format_timestamp),
                          start_time=mop(result["start_time"], format_timestamp),
-                         status=result["status"].name)
+                         processing_stage=result["processing_stage"].name)
         return result
 
     @staticmethod
@@ -212,7 +212,7 @@ class Run:
                        rundir_rel_workflow_path=mop(values["rundir_rel_workflow_path"], Path),
                        request_time=mop(values["request_time"], from_formatted_timestamp),
                        start_time=mop(values["start_time"], from_formatted_timestamp),
-                       status=RunStatus.from_string(values["status"]))
+                       processing_stage=ProcessingStage.from_string(values["processing_stage"]))
         return Run(**args)
 
     def __eq__(self, other):
@@ -229,11 +229,12 @@ class Run:
             "request": self.__request,
             "user_id": self.__user_id,
             "celery_task_id": self.celery_task_id,
+            "exit_code": self.exit_code,
             "sub_dir": self.sub_dir,
             "rundir_rel_workflow_path": self.rundir_rel_workflow_path,
             "outputs": self.outputs,
             "execution_log": self.execution_log,
-            "status": self.status,
+            "processing_stage": self.processing_stage,
             "start_time": self.start_time,
             "task_logs": self.task_logs,
             "stdout": self.stdout,
@@ -307,24 +308,23 @@ class Run:
         self.__execution_log = execution_log
 
     @property
-    def exit_code(self) -> Optional[Any]:
+    def exit_code(self) -> Optional[int]:
         return self.execution_log.get("exit_code", None)
 
-    @property
-    def status(self) -> RunStatus:
-        return self.__status
+    @exit_code.setter
+    def exit_code(self, exit_code: Optional[int]):
+        self.__exit_code = exit_code
 
-    @status.setter
-    def status(self, run_status: RunStatus):
-        """
-        Update the Run.status, but guard against invalid state transitions. This early test
-        prevents that invalid state changes get persisted into database and follows the
-        "fail early" principle.
-        """
-        if self.__status != run_status:
-            logger.debug("Updating state of %s: %s -> %s" %
-                         (self.id, self.__status.name, run_status.name))
-            self.__status = self.__status.progress_to(run_status)
+    @property
+    def processing_stage(self) -> ProcessingStage:
+        return self.__processing_stage
+
+    @processing_stage.setter
+    def processing_stage(self, stage: ProcessingStage):
+        if self.__processing_stage != stage:
+            logger.debug("Updating stage of %s: %s -> %s" %
+                         (self.id, self.__processing_stage.name, stage.name))
+            self.__processing_stage = self.__processing_stage.progress_to(stage)
 
     @property
     def outputs(self) -> Dict[str, List[str]]:
