@@ -182,13 +182,15 @@ def test_without_workflow_params_snakemake(manager,
     success = False
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
-        status = run.status
-        if status != RunStatus.EXECUTOR_ERROR:
-            print("Waiting ... (status=%s)" % status.name)
+        stage = run.processing_stage
+        if stage != ProcessingStage.FINISHED_EXECUTION:
+            print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = manager.update_run(run)
         else:
             success = True
+    # test if workflow submission fails
+    assert run.execution_log["exit_code"] != 0
     assert run.execution_log["cmd"] == [
         "snakemake",
         "--snakefile",
