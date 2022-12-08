@@ -256,25 +256,25 @@ class ClusterExecutor(Executor):
         return process
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.id.value is None:
-            raise ValueError("Process ID was None, probably due to previous error")
-        elif process.result.status.finished:
+        """
+        Wait for the process to be finished. Update the process with the results
+        """
+        if process.result.status.finished:
             return process.result
         else:
             wait_command = self._command_set.wait_for(process.id.value)
 
         with execute(self._executor, wait_command) as (result, stdout, stderr):
-            if result.status.code == 2:
-                error_message = stderr.readlines()
-                if error_message != \
-                        [f"done({process.id.value}): Wait condition is never satisfied\n"]:
-                    raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                            f"stderr={error_message}, " +
-                                            f"stdout={stdout.readlines()}")
+            error_message = ", ".join([f"Wait failed: {str(result)}",
+                                       f"stderr={stdout.readlines()}",
+                                       f"stdout={stdout.readlines()}"
+                                       ])
+            if (result.status.code == 2) & (stderr.readlines() != \
+                    [f"done({process.id.value}): Wait condition is never satisfied\n"]):
+                raise ExecutorException(error_message)
+
             elif result.status.failed:
-                raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                        f"stderr={stdout.readlines()}, " +
-                                        f"stdout={stdout.readlines()}")
+                raise ExecutorException(error_message)
         return self.update_process(process).result
 
     @abstractmethod
