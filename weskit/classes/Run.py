@@ -115,10 +115,10 @@ class Run:
     @staticmethod
     def _next_stage(stage_a: ProcessingStage, stage_b: ProcessingStage) -> ProcessingStage:
         """
-        If a transition between the two states is allowed, simply choose the more progressed
-        state based on its precedence. We cannot make any assumptions about whether self or
+        If a transition between the two stages is allowed, simply choose the more progressed
+        stage based on its precedence. We cannot make any assumptions about whether self or
         other is more progressed (the nature of concurrency). Therefore, select the more
-        progressed state of the two Runs (i.e. ignore parameter order).
+        progressed stage of the two Runs (i.e. ignore parameter order).
         """
         if stage_a == stage_b:
             return stage_a
@@ -126,7 +126,7 @@ class Run:
         b_may_progress_to_a = stage_b.allowed_to_progress_to(stage_a)
         a_may_progress_to_b = stage_a.allowed_to_progress_to(stage_b)
         if b_may_progress_to_a and a_may_progress_to_b:
-            # Reversible state transition. Take the one with higher precedence to disambiguate.
+            # Reversible stage transition. Take the one with higher precedence to disambiguate.
             if stage_a.precedence > stage_b.precedence:
                 return stage_a
             elif stage_a.precedence < stage_b.precedence:

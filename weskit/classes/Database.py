@@ -18,6 +18,7 @@ from pymongo.results import InsertOneResult
 
 from weskit.classes.Run import Run
 from weskit.classes.ProcessingStage import ProcessingStage
+from weskit.api.RunStatus import RunStatus
 from weskit.exceptions import ConcurrentModificationError, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
@@ -111,17 +112,21 @@ class Database:
         Returns the statistics of all job-states ever, for all users.
         """
         pipeline: Sequence[Mapping[str, Any]] = [
-            {"$unwind": "$stage"},
-            {"$group": {"_id": "$stage", "count": {"$sum": 1}}},
+            {"$unwind": "$processing_stage"},
+            {"$group": {"_id": {"processing_stage": "$processing_stage",
+                                "celery_task_id": "$celery_task_id",
+                                "exit_code": "$exit_code"
+                                }, "count": {"$sum": 1}}},
             {"$sort": SON([("count", -1), ("_id", -1)])}
             ]
         counts_data = list(self._runs.aggregate(pipeline))
-        counts = {}
+        counts: Dict = {status.name: 0 for status in RunStatus}
+
         for counts_datum in counts_data:
-            counts[counts_datum["_id"]] = counts_datum["count"]
-        for processing_stage in ProcessingStage:
-            if processing_stage.name not in counts.keys():
-                counts[processing_stage.name] = 0
+            status = RunStatus.from_stage(
+                stage=ProcessingStage.from_string(counts_datum["_id"]["processing_stage"]),
+                exit_code=counts_datum["_id"]["exit_code"])
+            counts[status.name] += counts_datum["count"]
         return counts
 
     def create_run_id(self) -> uuid.UUID:

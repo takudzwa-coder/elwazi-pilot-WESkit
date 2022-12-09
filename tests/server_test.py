@@ -307,9 +307,8 @@ class TestOpenEndpoint:
               "tag2": "value2"
           }
         assert set(response.json["system_state_counts"].keys()) == {
-            'AWAITING_START', 'CANCELED', 'REQUESTED_CANCEL', 'RUN_CREATED', 'ERROR',
-            'FINISHED_EXECUTION', 'PAUSED', 'PREPARED_EXECUTION',
-            'STARTED_EXECUTION', 'SUBMITTED_EXECUTION'
+            'CANCELED', 'CANCELING', 'COMPLETE', 'EXECUTOR_ERROR', 'INITIALIZING',
+            'PAUSED', 'QUEUED', 'RUNNING', 'SYSTEM_ERROR'
         }
         for v in response.json["system_state_counts"].values():
             assert type(v) is int
