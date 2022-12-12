@@ -13,16 +13,16 @@ class ExecutorException(Exception):
     pass
 
 
-class ExecutionError(ExecutorException):
+class ProcessingError(ExecutorException):
     """
     Error during the execution of a command, i.e. command returned e.g. with exit code != 0.
     """
     pass
 
 
-class TimingError(ExecutorException):
+class TimeoutError(ExecutorException):
     """
-    Command execution was partially successful i.e. command execution returned no output
+    Command was executed but no response was observed after exceeding the given timeout
     """
     pass
 
