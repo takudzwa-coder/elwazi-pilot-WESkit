@@ -175,8 +175,8 @@ def run_command(command: ShellCommand,
             "exit_code": exit_code,
             "stdout_file": str(rundir_context.stdout_file(Path("."), start_time)),
             "stderr_file": str(rundir_context.stderr_file(Path("."), start_time)),
-            "log_dir": str(rundir_context.log_dir(Path("."), start_time)),
-            "log_file": str(rundir_context.execution_log_file(Path("."), start_time)),
+            "log_dir": str(rundir_context.log_dir(workdir, start_time)),
+            "log_file": str(rundir_context.execution_log_file(workdir, start_time)),
             "output_files": outputs
         }
         with open(worker_context.execution_log_file(workdir, start_time), "w") as fh:
