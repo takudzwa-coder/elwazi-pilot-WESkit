@@ -6,7 +6,7 @@
 #
 #  Authors: The WESkit Team
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from weskit.classes.Database import Database
 from weskit.classes.WorkflowEngineFactory import ConfParameters
@@ -128,7 +128,7 @@ class ServiceInfo:
                     })
         return result
 
-    def system_state_counts(self) -> Dict[str, int]:
+    def system_state_counts(self) -> List[Any]:
         return self._db.count_states()
 
     def auth_instructions_url(self) -> str:

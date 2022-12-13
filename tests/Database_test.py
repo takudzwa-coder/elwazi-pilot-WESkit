@@ -14,7 +14,6 @@ from weskit.exceptions import DatabaseOperationError, ConcurrentModificationErro
 from test_utils import get_mock_run
 from weskit.classes.Run import Run
 from weskit.classes.ProcessingStage import ProcessingStage
-from weskit.api.RunStatus import RunStatus
 from weskit.utils import updated
 
 
@@ -94,13 +93,6 @@ def test_get_runs(test_database):
     assert len(runs) > 0
     for run in runs:
         assert isinstance(run, Run)
-
-
-@pytest.mark.integration
-def test_count_states(test_database):
-    counts = test_database.count_states()
-    for status in RunStatus:
-        assert status.name in counts.keys()
 
 
 @pytest.mark.integration

@@ -12,7 +12,7 @@ from flask import Blueprint
 from flask import current_app, jsonify, request
 from flask_jwt_extended import current_user
 
-from weskit.api.Helper import Helper, run_log
+from weskit.api.Helper import Helper, run_log, convert_stage_to_status
 from weskit.exceptions import ClientError
 from weskit.oidc.Decorators import login_required
 from weskit.api.RunStatus import RunStatus
@@ -145,7 +145,7 @@ def GetServiceInfo(*args, **kwargs):
             "default_workflow_engine_parameters":
                 current_app.service_info.default_workflow_engine_parameters(),
             "system_state_counts":
-                current_app.service_info.system_state_counts(),
+                convert_stage_to_status(current_app.service_info.system_state_counts()),
             "auth_instructions_url":
                 current_app.service_info.auth_instructions_url(),
             "tags":

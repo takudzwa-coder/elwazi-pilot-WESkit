@@ -7,10 +7,11 @@
 #  Authors: The WESkit Team
 
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from weskit.api.RunRequestValidator import RunRequestValidator
 from weskit.classes.Run import Run
+from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.api.RunStatus import RunStatus
 from weskit.classes.WESApp import WESApp
 from weskit.exceptions import ClientError
@@ -112,3 +113,13 @@ def execution_log_to_run_log(run: Run) -> dict:
         "stderr": run.execution_log["stderr_file"],
         "exit_code": run.execution_log["exit_code"]
     }
+
+
+def convert_stage_to_status(counts_data: List[Any]) -> Dict[str, int]:
+    counts: Dict = {status.name: 0 for status in RunStatus}
+    for counts_datum in counts_data:
+        status = RunStatus.from_stage(
+            stage=ProcessingStage.from_string(counts_datum["_id"]["processing_stage"]),
+            exit_code=counts_datum["_id"]["exit_code"])
+        counts[status.name] += counts_datum["count"]
+    return counts
