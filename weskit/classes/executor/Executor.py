@@ -9,16 +9,22 @@ from __future__ import annotations
 
 import abc
 import json
+import logging
+from asyncio import AbstractEventLoop
 from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import PathLike
-from pathlib import Path
-from typing import Optional, Any, Union, IO
+from typing import Optional, Any
+from uuid import uuid4, UUID
 
-from weskit.serializer import decode_json
+from weskit.utils import get_event_loop
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.memory_units import Memory
+from weskit.serializer import decode_json
+
+logger = logging.getLogger(__name__)
 
 
 class ProcessId:
@@ -26,16 +32,27 @@ class ProcessId:
     This is for the process ID on the executor. I.e. if the process is not run directly, but e.g.
     on a different compute node as a cluster job, then the ExecutorProcessId shall be the cluster
     job ID.
+
+    The process ID's value is the native ID of the executor, such as a UNIX PID or a cluster job
+    ID assigned by the cluster upon submission. It is available only **after** the submission.
+
+    The process ID's tag is an internal identifier of the process that is just a unique string
+    and can be used to retrieve the process ID value from the execution infrastructure, in the
+    case that the submission succeeded, but the value couldn't be stored in the DB anymore, e.g.
+    in case of network failure or died worker containers.
+
+    Every process gets a process tag, whether you set it or not. The default is a UUID string.
     """
-    def __init__(self, value: Optional[Any]):
+    def __init__(self,
+                 value: Optional[Any]):
         self._value = value
 
     @property
-    def value(self):
+    def value(self) -> Optional[Any]:
         return self._value
 
     def __repr__(self) -> str:
-        return f"ProcessId({self.value})"
+        return f"ProcessId(value={self.value})"
 
 
 class ExecutionStatus:
@@ -50,6 +67,12 @@ class ExecutionStatus:
                  code: Optional[int] = None,
                  name: Optional[str] = None,
                  message: Optional[str] = None):
+        """
+        :param code: Exit code of the process, if available.
+        :param name: A possible status name, e.g. PENDING or similar, according to the execution
+                     infrastructure
+        :param message: If available a message, such as an error message from the infrastructure.
+        """
         self._code = code
         self._name = name
         self._message = message
@@ -94,29 +117,26 @@ class ExecutionStatus:
                ")"
 
 
-# Some executors support using streams, filedescriptors, etc. so more general file representations
-# as parameters for stdout and stderr. We declare the type here.
-FileRepr = Union[PathLike, IO[str]]
-
-
 class CommandResult:
     """
     Any type of result information. Note that there can be intermediate results of a process,
     such as the currently produced standard output, even though the process is not terminated.
     Therefore, the exit_code is optional.
+
+    Note that the process_id may be None, namely shortly after the process was submitted
     """
 
     def __init__(self,
                  command: ShellCommand,
-                 id: ProcessId,
-                 stdout_file: Optional[FileRepr],
-                 stderr_file: Optional[FileRepr],
-                 stdin_file: Optional[FileRepr],
+                 process_id: ProcessId,
+                 stdout_file: Optional[PathLike],
+                 stderr_file: Optional[PathLike],
+                 stdin_file: Optional[PathLike],
                  execution_status: ExecutionStatus,
                  start_time: datetime,
                  end_time: Optional[datetime] = None):
         self._command = command
-        self._process_id = id
+        self._process_id = process_id
         self._execution_status = execution_status
         self._stdout_file = stdout_file
         self._stderr_file = stderr_file
@@ -129,19 +149,23 @@ class CommandResult:
         return self._command
 
     @property
-    def id(self) -> ProcessId:
+    def process_id(self) -> ProcessId:
         return self._process_id
 
+    @process_id.setter
+    def process_id(self, id: ProcessId) -> None:
+        self.process_id = id
+
     @property
-    def stdout_file(self) -> Optional[FileRepr]:
+    def stdout_file(self) -> Optional[PathLike]:
         return self._stdout_file
 
     @property
-    def stderr_file(self) -> Optional[FileRepr]:
+    def stderr_file(self) -> Optional[PathLike]:
         return self._stderr_file
 
     @property
-    def stdin_file(self) -> Optional[FileRepr]:
+    def stdin_file(self) -> Optional[PathLike]:
         return self._stdin_file
 
     @property
@@ -165,7 +189,7 @@ class CommandResult:
         self._end_time = value
 
     def __repr__(self):
-        return f"CommandResult(command={self.command}, id={self.id}, status={self.status})"
+        return f"CommandResult(command={self.command}, id={self.process_id}, status={self.status})"
 
 
 @dataclass
@@ -248,7 +272,7 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
         but could also be implemented in the subclass including some process management. It
         primarily serves to address the process in the Executor.
         """
-        return self._result.id
+        return self._result.process_id
 
     def update_result(self) -> ExecutedProcess:
         """
@@ -270,6 +294,9 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
     def result(self, value: CommandResult):
         self._result = value
 
+    def detach(self) -> None:
+        pass
+
 
 class Executor(metaclass=abc.ABCMeta):
     """
@@ -279,12 +306,33 @@ class Executor(metaclass=abc.ABCMeta):
     of a successfully executed command is unexpected are returned as ExecutorExceptions.
     """
 
+    def __init__(self,
+                 event_loop: Optional[AbstractEventLoop] = None):
+        """
+        Some the methods are asynchronous. We keep an event loop ready for them.
+        """
+        self._executor_id = uuid4()
+        logger.info(f"Starting executor with ID {self._executor_id}")
+        if event_loop is None:
+            self._event_loop = get_event_loop()
+        else:
+            self._event_loop = event_loop
+
+    @property
+    def id(self) -> UUID:
+        return self._executor_id
+
+    @property
+    @abc.abstractmethod
+    def hostname(self) -> str:
+        pass
+
     @abc.abstractmethod
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[FileRepr] = None,
-                stderr_file: Optional[FileRepr] = None,
-                stdin_file: Optional[FileRepr] = None,
+                stdout_file: Optional[PathLike] = None,
+                stderr_file: Optional[PathLike] = None,
+                stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) \
             -> ExecutedProcess:
@@ -323,20 +371,21 @@ class Executor(metaclass=abc.ABCMeta):
     def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
         """
         Update the result of the executed process, if possible. If the status of the process is not
-        in a finished state, this function updates to the the intermediate results at the time of
+        in a finished state, this function updates to the intermediate results at the time of
         the query. The CommandResult may thus contain no exit code.
         """
         pass
 
     @abc.abstractmethod
-    def kill(self, process: ExecutedProcess):
+    def kill(self, process: ExecutedProcess) -> bool:
         """
-        Cancel the the process named by the process_id. Note that the killing operation may fail.
+        Cancel the process named by the process_id. Note that the killing operation may fail.
         Furthermore, note that if the process cannot be killed because it does not exist (anymore)
-        no exception is thrown. This is to reduce unnecessary exceptions in the common case where
-        a process ends between the last status check and the killing command. The killing of a
-        process may take time on some infrastructures or may take time to be send remotely.
-        Consequently, this function may block.
+        no exception is thrown. Instead, if the process could not be found, False is returned.
+        This is to reduce unnecessary exceptions in the common case where a process ends between
+        the last status check and the killing command. Finally, even though the killing itself
+        may not be immediately effective, this method immediately returns after sending the kill
+        signal.
         """
         pass
 
@@ -348,17 +397,10 @@ class Executor(metaclass=abc.ABCMeta):
         """
         pass
 
+    @property
     @abc.abstractmethod
-    def copy_file(self, source: Path,  target: Path):
+    def storage(self) -> StorageAccessor:
         """
-        Copy a file associated with the execution of a job from source to target. If the target is
-        remote then this corresponds to a network transfer.
-        """
-        pass
-
-    @abc.abstractmethod
-    def remove_file(self, target: Path):
-        """
-        Remove the target file. The target can be remote.
+        Return a storage accessor for doing file operations on a (possibly remote) storage.
         """
         pass

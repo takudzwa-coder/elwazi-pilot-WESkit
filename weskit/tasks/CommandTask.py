@@ -11,20 +11,21 @@ import json
 import logging
 import os
 from abc import ABCMeta
+from asyncio import AbstractEventLoop
 from datetime import datetime
-from werkzeug.utils import cached_property
 from pathlib import Path
-from typing import Optional
 
 from celery import Task
+from typing import Optional
+from werkzeug.utils import cached_property
 
+from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import CommandResult, ExecutionSettings, Executor
-from weskit.utils import format_timestamp
-from weskit.utils import get_current_timestamp, collect_relative_paths_from
-from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
+from weskit.utils import \
+    format_timestamp, get_event_loop, get_current_timestamp, collect_relative_paths_from
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,10 @@ class CommandTask(Task, metaclass=ABCMeta):
     """
 
     @cached_property
+    def event_loop(self) -> AbstractEventLoop:
+        return get_event_loop()
+
+    @cached_property
     def config(self):
         config = read_config()
         update_celery_config_from_env()
@@ -55,7 +60,9 @@ class CommandTask(Task, metaclass=ABCMeta):
     def executor(self) -> Executor:
         return get_executor(self.executor_type,
                             login_parameters=self.config["executor"]["login"]
-                            if self.executor_type.needs_login_credentials else None)
+                            if self.executor_type.needs_login_credentials
+                            else None,
+                            event_loop=self.event_loop)
 
 
 @celery_app.task(base=CommandTask)

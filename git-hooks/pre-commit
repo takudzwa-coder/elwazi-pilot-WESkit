@@ -11,11 +11,11 @@ if [[ ! -v NO_COMMIT_CHECKS || (-v NO_COMMIT_CHECKS && "$NO_COMMIT_CHECKS" != "t
 
   # Type checks
   echo "Mypy ..." >> /dev/stderr
-  mypy tests/ weskit/
+  mypy tests/ weskit/ uwsgi_server/ tools/
 
   # Code style checks
   echo "flake8 ..." >> /dev/stderr
-  flake8 tests/ weskit/
+  flake8 tests/ weskit/ uwsgi_server/ tools/
 
   # Security
   echo "bandit ..." >> /dev/stderr

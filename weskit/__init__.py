@@ -102,7 +102,7 @@ def create_app(celery: Celery,
     validation_result = create_validator(validation)(config)
     if isinstance(validation_result, list):
         logger.error(f"Could not validate '{config_file}': %s" % validation_result)
-        sys.exit(ErrorCodes.CONFIGURATION_ERROR)
+        sys.exit(ErrorCodes.CONFIGURATION_ERROR.value)
     else:
         # The validation result contains the normalized config (with default values set).
         config = validation_result
@@ -145,12 +145,13 @@ def create_app(celery: Celery,
             require_workdir_tag=manager.require_workdir_tag)
     }
 
-    app = WESApp(manager,
-                 service_info,
-                 request_validators)
+    app = WESApp(manager=manager,
+                 service_info=service_info,
+                 request_validators=request_validators,
+                 log_config=log_config,
+                 logger=logger)
+    print(app.manager)
 
-    app.log_config = log_config
-    app.logger = logger
     app.register_blueprint(wes_bp)
 
     # Enable CORS headers for all origins, if enabled

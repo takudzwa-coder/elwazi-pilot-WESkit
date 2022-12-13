@@ -39,11 +39,11 @@ class Run:
                  celery_task_id: Optional[str] = None,
                  sub_dir: Optional[Path] = None,
                  rundir_rel_workflow_path: Optional[Path] = None,
-                 outputs: Dict[str, List[str]] = None,
+                 outputs: Dict[str, List[str]] = {},
                  execution_log: Optional[Dict[str, Any]] = None,
                  processing_stage: ProcessingStage = ProcessingStage.RUN_CREATED,
                  start_time: Optional[datetime] = None,
-                 task_logs: list = None,
+                 task_logs: Optional[list] = None,
                  stdout: Optional[List[str]] = None,
                  stderr: Optional[List[str]] = None
                  ) -> None:
@@ -60,7 +60,7 @@ class Run:
         self.celery_task_id = celery_task_id
         self.sub_dir = sub_dir
         self.rundir_rel_workflow_path = rundir_rel_workflow_path
-        self.outputs = {} if outputs is None else outputs
+        self.outputs = {} if len(outputs) == 0 else outputs
         if execution_log is None:
             self.execution_log = {}
         else:

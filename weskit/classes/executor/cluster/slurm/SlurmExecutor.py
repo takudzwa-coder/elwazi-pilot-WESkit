@@ -10,6 +10,7 @@ import logging
 import tempfile
 from os import PathLike
 from pathlib import Path
+
 from typing import Optional, Match
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -34,8 +35,8 @@ class SlurmExecutor(ClusterExecutor):
         should run locally, you can use a command_executor.LocalExecutor. If you need to submit via
         a remote connection you can use an command_executor.SshExecutor.
         """
+        super().__init__(executor)
         self.__command_set = SlurmCommandSet()
-        self._executor = executor
         self._shell_interpreter = '/bin/bash'
 
     @property
@@ -51,7 +52,7 @@ class SlurmExecutor(ClusterExecutor):
         return "COMPLETED"
 
     @property
-    def _jid_in_submission_output_pattern(selfs) -> str:
+    def _jid_in_submission_output_pattern(self) -> str:
         return r'Submitted batch job (\d+)'
 
     @property
@@ -101,14 +102,14 @@ class SlurmExecutor(ClusterExecutor):
         if stdin_file is not None:
             logger.error("stdin_file is not supported in ClusterExecutor.execute()")
         # Note that there are at two shell involved: The environment on the submission host
-        # and the environment on the compute node, on which the actual command is executed.
+        # and the environment on the compute-node, on which the actual command is executed.
 
         def _create_process(job_id: ProcessId,
                             execution_status: ExecutionStatus):
             process = ExecutedProcess(executor=self,
                                       process_handle=job_id,
                                       pre_result=CommandResult(command=command,
-                                                               id=job_id,
+                                                               process_id=job_id,
                                                                stderr_file=stderr_file,
                                                                stdout_file=stdout_file,
                                                                stdin_file=stdin_file,
@@ -119,7 +120,7 @@ class SlurmExecutor(ClusterExecutor):
         source_script = self._create_command_script(command)
         target_script = Path(str(command.workdir), ".weskit_submitted_command.sh")
         try:
-            self.copy_file(source_script, target_script)
+            self._event_loop.run_until_complete(self.storage.put(source_script, target_script))
         except ExecutorException:
             return _create_process(job_id=ProcessId(0),
                                    execution_status=ExecutionStatus(1, "EXIT"))
@@ -149,7 +150,7 @@ class SlurmExecutor(ClusterExecutor):
                     ProcessId(self.extract_jobid_from_submission_output(stdout_lines))
 
         # Remove the remote file once the submission has been executed.
-        self.remove_file(target_script)
+        self._event_loop.run_until_complete(self.storage.remove_file(target_script))
 
         logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
         # NOTE: We could now create an additional `wait` process that waits for the cluster job
@@ -157,3 +158,6 @@ class SlurmExecutor(ClusterExecutor):
         # handle is just the cluster job ID.
         return _create_process(job_id=cluster_job_id,
                                execution_status=ExecutionStatus(None))
+
+    def kill(self, process: ExecutedProcess):
+        raise NotImplementedError()

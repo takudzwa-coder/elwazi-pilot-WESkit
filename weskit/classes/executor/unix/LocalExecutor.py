@@ -1,4 +1,4 @@
-#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+#  Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
 #
 #  Distributed under the MIT License. Full text at
 #
@@ -6,16 +6,16 @@
 #
 #  Authors: The WESkit Team
 import logging
-import os
+import socket
 import subprocess  # nosec B603 B404
-from builtins import int, super, open, property
 from os import PathLike
-from pathlib import Path
-from shutil import copyfile
+
+from builtins import int, super, open, property
 from typing import Optional, cast, IO, Union, List
 
 import weskit.classes.executor.Executor as base
 from weskit.classes.ShellCommand import ShellCommand, ShellSpecial
+from weskit.classes.storage.LocalStorageAccessor import LocalStorageAccessor
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
@@ -78,9 +78,23 @@ class LocalExecutor(base.Executor):
     """
 
     def __init__(self):
-        pass
+        super().__init__()
+        self._storage = LocalStorageAccessor()
 
-    def _file_repr_to_io(self, file: Optional[base.FileRepr], mode: str) -> Optional[IO]:
+    @property
+    def storage(self) -> LocalStorageAccessor:
+        return self._storage
+
+    @property
+    def hostname(self) -> str:
+        """
+        The service is supposed to be run in containers. It does not make sense to return
+        "localhost" (on which host is this code running?). By contrast, the container name
+        might be useful.
+        """
+        return socket.gethostname()
+
+    def _file_repr_to_io(self, file: Optional[PathLike], mode: str) -> Optional[IO]:
         if isinstance(file, PathLike):
             return open(cast(PathLike, file), mode)
         else:
@@ -88,9 +102,9 @@ class LocalExecutor(base.Executor):
 
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[base.FileRepr] = None,
-                stderr_file: Optional[base.FileRepr] = None,
-                stdin_file: Optional[base.FileRepr] = None,
+                stdout_file: Optional[PathLike] = None,
+                stderr_file: Optional[PathLike] = None,
+                stdin_file: Optional[PathLike] = None,
                 settings: Optional[base.ExecutionSettings] = None,
                 shell: bool = True,
                 **kwargs) \
@@ -138,7 +152,7 @@ class LocalExecutor(base.Executor):
                                         process_handle=process,
                                         pre_result=base.
                                         CommandResult(command=command,
-                                                      id=base.ProcessId(process.pid),
+                                                      process_id=base.ProcessId(process.pid),
                                                       stdout_file=stdout_file,
                                                       stderr_file=stderr_file,
                                                       stdin_file=stdin_file,
@@ -162,22 +176,13 @@ class LocalExecutor(base.Executor):
                                         process_handle=None,
                                         pre_result=base.
                                         CommandResult(command=command,
-                                                      id=base.ProcessId(None),
+                                                      process_id=base.ProcessId(None),
                                                       stdout_file=stdout_file,
                                                       stderr_file=stderr_file,
                                                       stdin_file=stdin_file,
                                                       execution_status=base.ExecutionStatus(
                                                           exit_code, message=e.strerror),
                                                       start_time=start_time))
-
-    def copy_file(self, source: Path, target: Path):
-        if source == target:
-            raise ValueError("Identical source and target paths: '{source}'")
-        else:
-            copyfile(source, target)
-
-    def remove_file(self, target: PathLike):
-        os.unlink(target)
 
     def get_status(self, process: base.ExecutedProcess) -> base.ExecutionStatus:
         if process.handle is None:
@@ -199,7 +204,7 @@ class LocalExecutor(base.Executor):
                 result.status = base.ExecutionStatus(return_code)
                 result.end_time = now()
                 process.result = result
-            return process
+        return process
 
     def kill(self, process: base.ExecutedProcess):
         if process.handle is not None:

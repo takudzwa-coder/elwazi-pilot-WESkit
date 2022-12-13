@@ -12,13 +12,14 @@ from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
+from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings, FileRepr
+    Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings
 from weskit.classes.executor.ExecutorException import \
     ExecutorException, ExecutionError, TimingError
 from weskit.utils import now
@@ -90,6 +91,7 @@ class ClusterExecutor(Executor):
     """
     Execute job-management operations via shell commands issued on a local/remote host.
     """
+
     @abstractmethod
     def __init__(self,
                  executor: Executor):
@@ -98,13 +100,16 @@ class ClusterExecutor(Executor):
         E.g. if this the commands should run locally, you can use a command_executor.LocalExecutor.
         If you need to submit via a remote connection, you can use a command_executor.SshExecutor.
         """
+        super().__init__()
         self._executor = executor
 
-    def copy_file(self, source: Path, target: Path):
-        self._executor.copy_file(source, target)
+    @property
+    def storage(self) -> StorageAccessor:
+        return self._executor.storage
 
-    def remove_file(self, target: Path):
-        self._executor.remove_file(target)
+    @property
+    def hostname(self) -> str:
+        return self._executor.hostname
 
     @property
     @abstractmethod
@@ -123,7 +128,7 @@ class ClusterExecutor(Executor):
         # I this situation a number of diagnostic messages are shown, but eventually, the
         # submission line is displayed. We simply try to parse all these lines and are happy
         # with the first line that matches.
-        matches = map(lambda l: re.match(self._jid_in_submission_output_pattern, l), output)
+        matches = map(lambda line: re.match(self._jid_in_submission_output_pattern, line), output)
         first_match = next(filter(lambda m: bool(m), matches), None)
         if first_match is None:
             raise ExecutorException(f"Could not parse job ID from: {output}")
@@ -197,7 +202,11 @@ class ClusterExecutor(Executor):
            stop=stop_after_attempt(4),
            retry=retry_if_exception(is_retryable_error))
     def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
-        status_command = self._command_set.get_status([process.id.value])
+        if process.id.value is None:
+            raise ValueError("Process ID was None, probably due to previous error")
+        else:
+            status_command = self._command_set.get_status([process.id.value])
+
         with execute(self._executor, status_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
@@ -235,12 +244,6 @@ class ClusterExecutor(Executor):
 
             return ExecutionStatus(exit_code, status_name)
 
-    def kill(self, process: ExecutedProcess):
-        # Not tested therefore
-        raise NotImplementedError("kill on ClusterExecutor is not tested")
-        # kill_command = ShellCommand(self._command_set.kill(process.id.value))
-        # self._executor.wait_for(self._executor.execute(kill_command))
-
     def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
         old_status = process.result.status
         process.result.status = self.get_status(process)
@@ -253,9 +256,13 @@ class ClusterExecutor(Executor):
         return process
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.result.status.finished:
+        if process.id.value is None:
+            raise ValueError("Process ID was None, probably due to previous error")
+        elif process.result.status.finished:
             return process.result
-        wait_command = self._command_set.wait_for(process.id.value)
+        else:
+            wait_command = self._command_set.wait_for(process.id.value)
+
         with execute(self._executor, wait_command) as (result, stdout, stderr):
             if result.status.code == 2:
                 error_message = stderr.readlines()
@@ -273,9 +280,9 @@ class ClusterExecutor(Executor):
     @abstractmethod
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[FileRepr] = None,
-                stderr_file: Optional[FileRepr] = None,
-                stdin_file: Optional[FileRepr] = None,
+                stdout_file: Optional[PathLike] = None,
+                stderr_file: Optional[PathLike] = None,
+                stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) \
             -> ExecutedProcess:

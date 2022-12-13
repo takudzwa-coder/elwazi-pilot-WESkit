@@ -7,13 +7,13 @@
 #  Authors: The WESkit Team
 
 import logging
-import time
 from datetime import datetime
 from urllib.parse import urlparse
 
 import pytest
 import requests
-from flask import current_app
+import time
+from flask import current_app as flask_current_app
 from validators.url import url as validate_url
 
 from test_utils import \
@@ -36,6 +36,7 @@ def test_run(test_client,
     run is created manually and the user_id is fixed to the value from the test keycloak DB.
     Engine parameters are used to also test their serialization/deserialization.
     """
+    current_app = WESApp.from_current_app(flask_current_app)
     manager = current_app.manager
     request = get_workflow_data(
         snakefile="file:tests/wf1/Snakefile",
@@ -73,6 +74,7 @@ def test_run(test_client,
 @pytest.fixture(scope="module")
 def incomplete_run(test_client,
                    celery_session_worker):
+    current_app = WESApp.from_current_app(flask_current_app)
     manager = current_app.manager
     request = get_workflow_data(
         snakefile="file:tests/wf1/Snakefile",
@@ -88,6 +90,7 @@ def incomplete_run(test_client,
 @pytest.fixture(scope="function")
 def long_run(test_client,
              celery_session_worker):
+    current_app = WESApp.from_current_app(flask_current_app)
     manager = current_app.manager
     request = get_workflow_data(
         snakefile="file:tests/wf2/Snakefile",
@@ -129,6 +132,7 @@ def login_fixture():
 
     class LoginClass:
         def __init__(self):
+            current_app = WESApp.from_current_app(flask_current_app)
             payload = {
                 "grant_type": "password",
                 "username": "test",
@@ -666,17 +670,17 @@ class TestManagerRaiseError:
     def test_update_run_fails_with_missing_celery_id(self, long_run):
         long_run.celery_task_id = None
         with pytest.raises(RuntimeError):
-            current_app.manager.update_run(long_run)
+            WESApp.from_current_app(flask_current_app).manager.update_run(long_run)
 
     @pytest.mark.integration
     def test_fails_reexecute_active_run(self, long_run):
         with pytest.raises(RuntimeError):
-            current_app.manager.execute(long_run)
+            WESApp.from_current_app(flask_current_app).manager.execute(long_run)
 
     @pytest.mark.integration
     def test_fails_prepare_execution(self, long_run):
         with pytest.raises(RuntimeError):
-            current_app.manager.prepare_execution(long_run)
+            WESApp.from_current_app(flask_current_app).manager.prepare_execution(long_run)
 
 
 class TestExceptionError:
@@ -691,8 +695,13 @@ class TestExceptionError:
                          test_run,
                          OIDC_credentials):
 
+        current_app = WESApp.from_current_app(flask_current_app)
+
         run_id = test_run.id
-        current_app.manager = None
+
+        # Setting the manager to None really is just a quick way to create the exceptions.
+        # We use reflection, rather than making the manager field Optional in WESApp.
+        current_app._manager = None     # no type
 
         # fails to get run log
         self.raise_error(test_client, f"/ga4gh/wes/v1/runs/{run_id}", OIDC_credentials)
@@ -723,6 +732,8 @@ class TestOICDValidationError:
                                           test_client,
                                           test_run,
                                           OIDC_credentials):
+
+        current_app = WESApp.from_current_app(flask_current_app)
 
         current_app.config["userinfo_validation_value"] = "XXX"
         response = test_client.post("/ga4gh/wes/v1/runs",

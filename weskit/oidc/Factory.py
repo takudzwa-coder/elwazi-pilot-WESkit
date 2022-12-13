@@ -8,6 +8,8 @@
 
 import json
 import logging
+from typing import Optional
+
 from time import sleep
 
 import requests
@@ -16,6 +18,7 @@ from flask import Flask
 from flask_jwt_extended import JWTManager
 from jwt.algorithms import RSAAlgorithm
 
+from weskit.classes.WESApp import WESApp
 from weskit.oidc.Login import Login
 from weskit.oidc.User import User
 from weskit.utils import safe_getenv
@@ -26,7 +29,7 @@ logger = logging.getLogger(__name__)
 def _is_login_enabled(config: dict) -> bool:
     """
     This function checks if all required configurations are set end enabled in the config file
-    It returns true if the Login is correctly set up end enabled, otherwise false
+    It returns true if the Login is correctly set up end enabled, otherwise false.
 
     :param config: configuration dict
     :return:
@@ -46,7 +49,7 @@ def _is_login_enabled(config: dict) -> bool:
         return False
 
 
-def setup(app: Flask, config: dict) -> None:
+def setup(app: WESApp, config: dict) -> None:
     """
     Factory for setting up everything needed for OIDC authentication, including
 
@@ -136,6 +139,7 @@ def _retrieve_rsa_public_key(oidc_config: dict) -> RSAPublicKey:
 
 def _retrieve_oidc_config(issuer_url: str, timeout_sec: int = 10) -> dict:
     config_url = "%s/.well-known/openid-configuration" % issuer_url
+    oidc_config: Optional[dict] = None
     for retry in range(4, -1, -1):
         try:
             response = requests.get(config_url)
@@ -156,7 +160,10 @@ def _retrieve_oidc_config(issuer_url: str, timeout_sec: int = 10) -> dict:
 
             sleep(timeout_sec)
 
-    return oidc_config
+    if oidc_config is None:
+        raise RuntimeError("Could not retrieve OIDC configuration")
+    else:
+        return oidc_config
 
 
 def _validate_issuer_config_response(response) -> dict:
