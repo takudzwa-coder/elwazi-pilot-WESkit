@@ -28,6 +28,7 @@ from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.ServiceInfo import ServiceInfo
 from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
 from weskit.classes.executor.unix.SshExecutor import SshExecutor
+from weskit.api.ServiceInfo import ServiceInfo
 from weskit.utils import create_validator, get_event_loop
 
 logger = logging.getLogger(__name__)
