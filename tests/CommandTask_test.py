@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-import Executor_test
 from weskit import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -48,14 +47,14 @@ def test_run_command(temporary_dir, test_config):
 
 
 @pytest.mark.ssh
-def test_run_command_ssh(temporary_dir, test_config):
+def test_run_command_ssh(temporary_dir, test_config, remote_config):
     with tempfile.NamedTemporaryFile("w", prefix="config", suffix=".yaml") as config_file:
         config = {
             "executor": {
                 "type": "ssh",
                 "remote_data_dir": "/tmp",
                 "remote_workflows_dir": "/tmp",
-                "login": Executor_test.remote_config["ssh"]  # "ssh" in remote.yaml
+                "login": remote_config["ssh"]  # "ssh" in remote.yaml
             }
         }
         print(yaml.dump(config), file=config_file)

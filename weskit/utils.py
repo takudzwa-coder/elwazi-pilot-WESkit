@@ -5,15 +5,33 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
+import asyncio
+import logging
 import os
 import traceback
+from asyncio import AbstractEventLoop
 from datetime import datetime
 from typing import Dict, Union, List, TypeVar, Optional, Callable, Any, Mapping
 from urllib.parse import urlparse
 
 import boto3
 from cerberus import Validator
+
+logger = logging.getLogger(__name__)
+
+
+def get_event_loop() -> AbstractEventLoop:
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError as ex:
+        # Compare StackOverflow: https://tinyurl.com/yckkwbew
+        if str(ex).startswith('There is no current event loop in thread'):
+            logger.warning("Using a fresh asyncio event-loop")
+            event_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(event_loop)
+            return event_loop
+        else:
+            raise ex
 
 
 def collect_relative_paths_from(directory):

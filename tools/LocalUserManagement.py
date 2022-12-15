@@ -36,13 +36,13 @@ def loadValidated(yamlDict):
     }
 
     # Verify that File on disc has no corruped entries
-    if(len(filtered)) != len(yamlDict):
+    if (len(filtered)) != len(yamlDict):
         print(
                 ("Skiped %d Entrys from DBfile: "
                     "Invalid Format!") % (
                     len(yamlDict) - len(filtered))
         )
-    return(filtered)
+    return filtered
 
 
 ################################################
@@ -53,14 +53,14 @@ def loadValidated(yamlDict):
 def dbfile2dict(file):
     try:
         with open(file, 'r') as stream:
-            return(loadValidated(yaml.safe_load(stream)))
+            return loadValidated(yaml.safe_load(stream))
     except FileNotFoundError:
         print(
             "File %s does not exists, trying to create one" %
             file
         )
         dict2dbfile(file, dict())
-        return({})
+        return {}
 
 
 ################################################
@@ -70,7 +70,7 @@ def dbfile2dict(file):
 def dict2dbfile(file, users):
     try:
         with open(file, 'w') as stream:
-            return(yaml.dump(users, stream))
+            return yaml.dump(users, stream)
     except Exception as e:
         print(e)
         print("unable to write %s" % file)

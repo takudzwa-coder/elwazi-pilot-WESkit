@@ -82,7 +82,8 @@ class Database:
             **kwargs)
         if run_data is not None:
             return Run.from_bson_serializable(run_data)
-        return None
+        else:
+            return None
 
     def get_runs(self, query) -> List[Run]:
         runs = []

@@ -1,4 +1,5 @@
 ---
+# Please use localhost for testing SSH
 #ssh:
 #  username: user
 #  hostname: localhost

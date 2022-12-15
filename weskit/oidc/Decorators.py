@@ -11,8 +11,11 @@ from functools import wraps
 from typing import Callable, Optional
 
 import requests
-from flask import current_app
+from flask import current_app as flask_current_app
 from flask_jwt_extended.view_decorators import _decode_jwt_from_headers, verify_jwt_in_request
+
+from weskit.utils import mop
+from weskit.classes.WESApp import WESApp
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +36,12 @@ def login_required(validate_online: bool = True):
     def wrapper(fn: Callable):
         @wraps(fn)
         def decorator(*args, **kwargs):
+            current_app = WESApp.from_current_app(flask_current_app)
             if current_app.oidc_login is None:
-                # Don't use endpoint protection!
+                # Don't use endpoint protection by OIDC.
                 verify_jwt_in_request(optional=True)
             else:
+                # An OIDC login is configured.
                 verify_jwt_in_request()
                 if validate_online:
                     if not validate(current_app):
@@ -74,9 +79,10 @@ def validate(app) -> bool:
     if j.get('active', False):
         return True
     else:
+        current_app = WESApp.from_current_app(flask_current_app)
         logger.warning("Online validation failed: id='{}', secret='{}', token='{}'".
-                       format(current_app.oidc_login.client_id,
-                              current_app.oidc_login.client_secret,
+                       format(mop(current_app.oidc_login, lambda login: login.client_id),
+                              mop(current_app.oidc_login, lambda login: login.client_secret),
                               get_token()))
         return False
 
@@ -104,9 +110,10 @@ def validate_userinfo(app) -> bool:
     if app.config["userinfo_validation_value"] in test_claim:
         return True
     else:
+        current_app = WESApp.from_current_app(flask_current_app)
         logger.warning("Userinfo validation failed: id='{}', secret='{}', token='{}'".
-                       format(current_app.oidc_login.client_id,
-                              current_app.oidc_login.client_secret,
+                       format(mop(current_app.oidc_login, lambda login: login.client_id),
+                              mop(current_app.oidc_login, lambda login: login.client_secret),
                               get_token()))
         return False
 

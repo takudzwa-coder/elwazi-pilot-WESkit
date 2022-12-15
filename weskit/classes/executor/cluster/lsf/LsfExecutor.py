@@ -7,6 +7,7 @@
 #  Authors: The WESkit Team
 import logging
 from os import PathLike
+
 from typing import Optional, Match
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -31,8 +32,8 @@ class LsfExecutor(ClusterExecutor):
         should run locally, you can use a command_executor.LocalExecutor. If you need to submit via
         a remote connection, you can use a command_executor.SshExecutor.
         """
+        super().__init__(executor)
         self.__command_set = LsfCommandSet()
-        self._executor = executor
 
     @property
     def _command_set(self) -> CommandSet:
@@ -114,9 +115,12 @@ class LsfExecutor(ClusterExecutor):
         return ExecutedProcess(executor=self,
                                process_handle=cluster_job_id,
                                pre_result=CommandResult(command=command,
-                                                        id=cluster_job_id,
+                                                        process_id=cluster_job_id,
                                                         stderr_file=stderr_file,
                                                         stdout_file=stdout_file,
                                                         stdin_file=stdin_file,
                                                         execution_status=ExecutionStatus(None),
                                                         start_time=start_time))
+
+    def kill(self, process: ExecutedProcess):
+        raise NotImplementedError("should use bkill")

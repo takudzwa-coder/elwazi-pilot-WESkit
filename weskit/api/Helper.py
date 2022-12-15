@@ -26,7 +26,7 @@ class Helper:
     """
 
     def __init__(self, current_app: WESApp, current_user: Optional[User]):
-        self.app = current_app
+        self.app: WESApp = current_app
 
         if current_user is None or current_user == None:   # noqa E711
             # Python sucks. current_user can be (some) None, but still
@@ -58,7 +58,11 @@ class Helper:
         Safe access to "stderr" or "stdout" (= log_name) data.
         """
         manager = self.app.manager
-        run = manager.update_run(manager.get_run(run_id))
+        run = manager.get_run(run_id)
+        if run is None:
+            raise RuntimeError(f"Could not find run with identifier {run_id}")
+        else:
+            run = manager.update_run(run)
         access_denied_response = self.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:

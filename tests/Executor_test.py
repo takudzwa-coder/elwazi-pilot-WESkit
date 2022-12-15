@@ -6,7 +6,6 @@
 #
 #  Authors: The WESkit Team
 
-import asyncio
 import re
 import time
 import uuid
@@ -14,79 +13,23 @@ from abc import abstractmethod, ABCMeta
 from datetime import timedelta, datetime
 from os import PathLike
 from pathlib import Path
-from typing import Optional, cast
+from typing import Optional
 
 import pytest
-import yaml
-from typing.io import IO
 
+import conftest
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.executor.Executor import ExecutedProcess, ExecutionStatus, ProcessId
 from weskit.classes.executor.Executor import \
     ExecutionSettings, CommandResult, Executor
-from weskit.classes.executor.Executor import FileRepr, ExecutedProcess, ExecutionStatus, ProcessId
 from weskit.classes.executor.ExecutorException import ExecutorException
-from weskit.classes.executor.LocalExecutor import LocalExecutor
-from weskit.classes.executor.SshExecutor import SshExecutor
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
+from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
+from weskit.classes.storage.LocalStorageAccessor import LocalStorageAccessor
 from weskit.memory_units import Memory, Unit
 from weskit.serializer import to_json, from_json
 from weskit.utils import now
-
-
-# Note that testing multiple executors cannot be done by a fixture yielding multiple times.
-# See https://github.com/pytest-dev/pytest/issues/1595.
-#
-# Instead, marks for individual parameters of pytest.mark.parametrize are used.
-# See https://docs.pytest.org/en/6.2.x/example/markers.html#marking-individual-tests-when-using-parametrize   # noqa
-#
-# You can select the tests to execute on the commandline.
-
-
-def get_remote_config():
-    with open("tests/remote.yaml", "r") as f:
-        return yaml.safe_load(f)
-
-
-def get_executors(remote_config):
-    executors = {
-        "local": pytest.param(LocalExecutor(),
-                              None,
-                              marks=[pytest.mark.integration])
-    }
-
-    if remote_config is not None and "ssh" in remote_config.keys():
-        ssh_executor = SshExecutor(**(remote_config["ssh"]))
-        executors["ssh"] = pytest.param(ssh_executor,
-                                        None,
-                                        marks=[pytest.mark.slow,
-                                               pytest.mark.integration,
-                                               pytest.mark.ssh])
-
-    if remote_config is not None and "lsf_submission_host" in remote_config.keys():
-        ssh_lsf_executor = LsfExecutor(SshExecutor(**(remote_config['lsf_submission_host']['ssh'])))
-        shared_workdir_lsf = remote_config['lsf_submission_host']["shared_workdir"]
-        executors["ssh_lsf"] = pytest.param(ssh_lsf_executor,
-                                            shared_workdir_lsf,
-                                            marks=[pytest.mark.slow,
-                                                   pytest.mark.integration,
-                                                   pytest.mark.ssh_lsf])
-
-    if remote_config is not None and "slurm_submission_host" in remote_config.keys():
-        ssh_slurm_executor = SlurmExecutor(SshExecutor(**(
-            remote_config['slurm_submission_host']['ssh'])))
-        shared_workdir_slurm = remote_config['slurm_submission_host']["shared_workdir"]
-        executors["ssh_slurm"] = pytest.param(ssh_slurm_executor,
-                                              shared_workdir_slurm,
-                                              marks=[pytest.mark.slow,
-                                                     pytest.mark.integration,
-                                                     pytest.mark.ssh_slurm])
-
-    return executors
-
-
-remote_config = get_remote_config()
-executors = get_executors(remote_config)
 
 
 def test_execution_setting_dict():
@@ -154,8 +97,9 @@ def test_execution_status():
     assert str(full_result) == "ExecutionStatus(code=1, name=name, message=message)"
 
 
-@pytest.mark.parametrize("executor,_", executors.values())
-def test_submit_failing_command(executor, _):
+@pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
+def test_submit_failing_command(executor_prefix, request):
+    executor, _ = request.getfixturevalue(executor_prefix + "_executor")
     command = ShellCommand(["bash", "-c", "nonexistingcommand"],
                            workdir=Path("./"))
     process = executor.execute(command,
@@ -170,8 +114,9 @@ def test_submit_failing_command(executor, _):
     assert result.status.failed
 
 
-@pytest.mark.parametrize("executor,_", executors.values())
-def test_submit_nonexisting_command(executor, _):
+@pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
+def test_submit_nonexisting_command(executor_prefix, request):
+    executor, _ = request.getfixturevalue(executor_prefix + "_executor")
     command = ShellCommand(["nonexistingcommand"],
                            workdir=Path("./"))
     process = executor.execute(command,
@@ -183,8 +128,9 @@ def test_submit_nonexisting_command(executor, _):
     assert result.status.code == 127
 
 
-@pytest.mark.parametrize("executor,_", executors.values())
-def test_inacessible_workdir(executor, _):
+@pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
+def test_inacessible_workdir(executor_prefix, request):
+    executor, _ = request.getfixturevalue(executor_prefix + "_executor")
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=Path("/this/path/does/not/exist"))
     process = executor.execute(command,
@@ -204,15 +150,10 @@ class ExecuteProcess(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def executor(self) -> Executor:
-        pass
-
-    @property
-    @abstractmethod
     def workdir(self) -> Path:
         pass
 
-    def execute(self, stdout_file, stderr_file) -> CommandResult:
+    def execute(self, executor, stdout_file, stderr_file) -> CommandResult:
         # Note: This tests exports variables to Bash, as executed command. The variables (and $PWD)
         #       are then used to evaluate the shell expression.
         command = ShellCommand(["bash", "-c",
@@ -226,14 +167,14 @@ class ExecuteProcess(metaclass=ABCMeta):
                                                             # but fails for LsfExecutor (bug?).
                                    "WITH_SPACE": "wo, rld"  # Should be "wo, rld ".  dito.
                                })
-        process = self.executor.execute(command,
-                                        stdout_file=stdout_file,
-                                        stderr_file=stderr_file,
-                                        settings=ExecutionSettings(
-                                            job_name="weskit_test_execute",
-                                            walltime=timedelta(minutes=5.0),
-                                            memory=Memory(100, Unit.MEGA)))
-        return self.executor.wait_for(process)
+        process = executor.execute(command,
+                                   stdout_file=stdout_file,
+                                   stderr_file=stderr_file,
+                                   settings=ExecutionSettings(
+                                       job_name="weskit_test_execute",
+                                       walltime=timedelta(minutes=5.0),
+                                       memory=Memory(100, Unit.MEGA)))
+        return executor.wait_for(process)
 
     def _assert_stdout(self, observed, expected):
         assert observed == expected
@@ -274,10 +215,6 @@ class ExecuteProcess(metaclass=ABCMeta):
 class TestExecuteLocalProcess(ExecuteProcess):
 
     @property
-    def executor(self) -> LocalExecutor:
-        return LocalExecutor()
-
-    @property
     def workdir(self) -> Path:
         return self._workdir
 
@@ -285,57 +222,45 @@ class TestExecuteLocalProcess(ExecuteProcess):
     def workdir(self, val: Path):
         self._workdir = val
 
-    def test_execute(self, temporary_dir):
+    def test_execute(self, temporary_dir, local_executor):
+        executor, _ = local_executor
         self.workdir = Path(temporary_dir)
         stderr_file = self.workdir / "stderr"
         stdout_file = self.workdir / "stdout"
 
-        result = self.execute(stdout_file, stderr_file)
+        result = self.execute(executor, stdout_file, stderr_file)
         self.check_execution_result(result, stdout_file, stderr_file, stdout_file)
 
 
-@pytest.mark.skipif("ssh" not in executors.keys(),
+@pytest.mark.skipif("ssh" not in conftest.executor_prefixes,
                     reason="No SshExecutor. Did you configure your tests/remote.yaml?")
-@pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.ssh
 class ExecuteProcessViaSsh(ExecuteProcess):
 
-    @property
-    @abstractmethod
-    def remote(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def ssh_executor(self) -> SshExecutor:
-        pass
-
-    def move_to_local(self, remote, local):
+    async def move_to_local(self, storage, remote, local):
         """
         This removes the file on the remote side.
         """
-        asyncio.get_event_loop().run_until_complete(
-            self.ssh_executor.get(remote, local))
-        asyncio.get_event_loop().run_until_complete(
-            self.ssh_executor.remote_rm(remote))
+        await storage.get(remote, local)
+        await storage.remove_file(remote)
 
-    def run_execute_test(self, temporary_dir):
+    async def run_execute_test(self, temporary_dir, executor):
         prefix = uuid.uuid4()
         stderr_file = self.workdir / f"{prefix}.stderr"
         stdout_file = self.workdir / f"{prefix}.stdout"
 
-        result = self.execute(stdout_file, stderr_file)
+        result = executor.execute(stdout_file, stderr_file)
 
         local_temp = Path(temporary_dir)
-        self.move_to_local(stdout_file, local_temp / f"{prefix}.stdout")
-        self.move_to_local(stderr_file, local_temp / f"{prefix}.stderr")
+        await self.move_to_local(executor.storage, stdout_file, local_temp / f"{prefix}.stdout")
+        await self.move_to_local(executor.storage, stderr_file, local_temp / f"{prefix}.stderr")
 
         self.check_execution_result(result, stdout_file, stderr_file,
                                     local_temp / f"{prefix}.stdout")
 
 
-@pytest.mark.skipif("ssh" not in executors.keys(),
+@pytest.mark.skipif("ssh" not in conftest.executor_prefixes,
                     reason="No SshExecutor. Did you configure your tests/remote.yaml?")
 @pytest.mark.slow
 @pytest.mark.integration
@@ -343,23 +268,12 @@ class ExecuteProcessViaSsh(ExecuteProcess):
 class TestSubmitSshProcess(ExecuteProcessViaSsh):
 
     @property
-    def executor(self) -> SshExecutor:
-        return cast("SshExecutor", executors["ssh"].values[0])
-
-    @property
-    def ssh_executor(self) -> SshExecutor:
-        return cast("SshExecutor", executors["ssh"].values[0])
-
-    @property
-    def remote(self) -> str:
-        return self.executor.hostname
-
-    @property
     def workdir(self) -> Path:
         return Path("/tmp")
 
-    def test_execute(self, temporary_dir):
-        self.run_execute_test(temporary_dir)
+    def test_execute(self, temporary_dir, ssh_executor):
+        executor, _ = ssh_executor
+        self.run_execute_test(temporary_dir, executor)
 
 
 @pytest.mark.slow
@@ -368,30 +282,12 @@ class TestSubmitSshProcess(ExecuteProcessViaSsh):
 class TestSubmitLsfProcess(ExecuteProcessViaSsh):
 
     @property
-    def executor(self) -> LsfExecutor:
-        return cast("LsfExecutor", executors["ssh_lsf"].values[0])
-
-    @property
-    def ssh_executor(self) -> SshExecutor:
-        # We do an explicit cast here. The only use case we are interested in is that the nested
-        # executor is a remote executor, and the only we provide is the one based on SSH. The
-        # cast avoids problems with the type highlighting and makes this decision (somehow)
-        # explicit, without coming up with a `RemoteExecutor` or so, which would be total overkill.
-        return cast("SshExecutor", self.executor.executor)
-
-    @property
-    def shared_workdir(self) -> str:
-        return cast("str", executors["ssh_lsf"].values[1])
-
-    @property
-    def remote(self) -> str:
-        return self.ssh_executor.hostname
-
-    @property
     def workdir(self) -> Path:
-        # Note: For this test, the workdir needs to be accessibly from the submission/ssh host
-        #       and the compute nodes. Therefore, choose a location on a shared filesystem.
-        return Path(self.shared_workdir)
+        return self._workdir
+
+    @workdir.setter
+    def workdir(self, value: Path):
+        self._workdir = value
 
     def _assert_stdout(self, observed, expected):
         """
@@ -403,7 +299,7 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
         # ""
         #
         # Ignore everything the last 4 lines.
-        indexed = next(filter(lambda l: l[1] == "The output (if any) follows:\n",
+        indexed = next(filter(lambda line: line[1] == "The output (if any) follows:\n",
                               zip(range(0, len(observed) - 1), observed)),
                        None)
         if indexed is None:
@@ -412,13 +308,15 @@ class TestSubmitLsfProcess(ExecuteProcessViaSsh):
         toIdx = len(observed) - 6
         assert observed[fromIdx:toIdx] == expected, f"Could not validate stdout: {observed}"
 
-    def test_execute(self, temporary_dir):
-        self.run_execute_test(temporary_dir)
+    def test_execute(self, temporary_dir, ssh_lsf_executor):
+        executor, workdir = ssh_lsf_executor
+        self.workdir = workdir
+        self.run_execute_test(temporary_dir, executor)
 
 
 # This tests an internal feature of the LocalExecutor().
-@pytest.mark.parametrize("executor,_", [executors["local"]])
-def test_std_fds_are_closed(executor, _, temporary_dir):
+def test_std_fds_are_closed(local_executor, temporary_dir):
+    executor, _ = local_executor
     workdir = Path(temporary_dir)
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=workdir)
@@ -430,9 +328,10 @@ def test_std_fds_are_closed(executor, _, temporary_dir):
     assert process.handle.stderr_fd.closed
 
 
-@pytest.mark.parametrize("executor,_", executors.values())
-def test_get_status(executor, _):
-    command = ShellCommand(["sleep", "20" if isinstance(executor, (SlurmExecutor, LsfExecutor))
+@pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
+def test_get_status(executor_prefix, request):
+    executor, _ = request.getfixturevalue(executor_prefix + "_executor")
+    command = ShellCommand(["sleep", "30" if isinstance(executor, (SlurmExecutor, LsfExecutor))
                             else "1"],
                            workdir=Path("./"))
     process = executor.execute(command,
@@ -455,9 +354,13 @@ def test_get_status(executor, _):
 # I didn't get the SshExecutor to succeed in this test (see comment below). As the usage-pattern
 # of the Executor does (currently) not rely on update_process() but only wait_for(), it's probably
 # acceptable to keep the SshExecutor out in this test.
-@pytest.mark.parametrize("executor,_",
-                         dict(filter(lambda kv: kv[0] != "ssh", executors.items())).values())
-def test_update_process(executor, _):
+@pytest.mark.parametrize("executor_prefix", [executor
+                                             for executor in conftest.executor_prefixes
+                                             if executor.values[0] != "ssh"])
+@pytest.mark.slow
+def test_update_process(executor_prefix, request):
+    executor, _ = request.getfixturevalue(executor_prefix + "_executor")
+
     if isinstance(executor, LocalExecutor):
         sleep_duration = 1
     elif isinstance(executor, LsfExecutor):
@@ -493,8 +396,8 @@ def test_update_process(executor, _):
 
 
 @pytest.mark.skip
-@pytest.mark.parametrize("executor,_", executors.values())
-def test_kill_process(executor, _):
+@pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
+def test_kill_process(executor_prefix, request):
     # TODO Killing is not implemented yet.
     assert False
 
@@ -528,21 +431,24 @@ class MockExecutor(Executor):
     def remove_file(self, file: PathLike):
         pass
 
-    def _write_mock_to_opt_filerepr(self, text: str, file: Optional[FileRepr]):
+    def _write_mock_to_opt_filerepr(self, text: str, file: Optional[PathLike]):
         if file is not None:
-            # mypy does not understand `isinstance` for type inference.
-            # Instead we do explicit casts to the two types unified in FileRepr.
-            if isinstance(file, IO):
-                print(text, file=cast(IO[str], file))
-            else:
-                with open(cast(PathLike, file), "w") as f:
-                    print(text, file=f)
+            with open(file, "w") as f:
+                print(text, file=f)
+
+    @property
+    def storage(self) -> LocalStorageAccessor:
+        return LocalStorageAccessor()
+
+    @property
+    def hostname(self) -> str:
+        return "localhost"
 
     def execute(self,
                 command: ShellCommand,
-                stdout_file: Optional[FileRepr] = None,
-                stderr_file: Optional[FileRepr] = None,
-                stdin_file: Optional[FileRepr] = None,
+                stdout_file: Optional[PathLike] = None,
+                stderr_file: Optional[PathLike] = None,
+                stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) -> ExecutedProcess:
         self._write_mock_to_opt_filerepr("stdout", stdout_file)
@@ -550,7 +456,7 @@ class MockExecutor(Executor):
         return ExecutedProcess(process_handle=None,
                                executor=self,
                                pre_result=CommandResult(command=command,
-                                                        id=ProcessId(12234),
+                                                        process_id=ProcessId(12234),
                                                         execution_status=ExecutionStatus(),
                                                         stderr_file=stderr_file,
                                                         stdout_file=stdout_file,
@@ -628,9 +534,9 @@ class TestLsfGetStatus:
             This should emulate a successful bjobs execution producing the specified output.
             """
 
-            def execute(self, command: ShellCommand, stdout_file: Optional[FileRepr] = None,
-                        stderr_file: Optional[FileRepr] =
-                        None, stdin_file: Optional[FileRepr] = None,
+            def execute(self, command: ShellCommand, stdout_file: Optional[PathLike] = None,
+                        stderr_file: Optional[PathLike] =
+                        None, stdin_file: Optional[PathLike] = None,
                         settings: Optional[ExecutionSettings] = None, **kwargs) -> ExecutedProcess:
                 assert isinstance(stdout_file, PathLike)
                 with open(stdout_file, "w") as f:
@@ -667,11 +573,19 @@ class TestLsfGetStatus:
             def remove_file(self, file: Path):
                 pass
 
+            @property
+            def storage(self) -> LocalStorageAccessor:
+                return LocalStorageAccessor()
+
+            @property
+            def hostname(self) -> str:
+                return "localhost"
+
         executor = LsfExecutor(MockInnerExecutor())
         process = ExecutedProcess(executor=executor,
                                   process_handle=None,
                                   pre_result=CommandResult(ShellCommand([]),
-                                                           id=ProcessId(cluster_job_id),
+                                                           process_id=ProcessId(cluster_job_id),
                                                            execution_status=ExecutionStatus(),
                                                            stdin_file=None,
                                                            stdout_file=None,

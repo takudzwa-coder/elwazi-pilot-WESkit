@@ -79,7 +79,7 @@ class ShellCommand:
     def __init__(self,
                  command: List[CommandSegment],
                  workdir: Optional[Path] = None,
-                 environment: Dict[str, str] = None):
+                 environment: Optional[Dict[str, str]] = None):
         self.command = command
         if environment is None:
             self.environment = {}

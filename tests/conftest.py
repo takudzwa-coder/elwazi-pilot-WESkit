@@ -5,27 +5,60 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-
 import logging
 import os
 import shutil
-import time
 from pathlib import Path
 from tempfile import mkdtemp
 
 import pytest
+import nest_asyncio
 import requests
+import time
 import yaml
 from testcontainers.core.container import DockerContainer
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.redis import RedisContainer
 
+from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
+from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 from weskit import create_app, create_database, Manager, WorkflowEngineFactory, PathContext
-from weskit.utils import create_validator
+from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
+from weskit.classes.executor.unix.SshExecutor import SshExecutor
+from weskit.utils import create_validator, get_event_loop
 
 logger = logging.getLogger(__name__)
+
+
+def get_remote_config():
+    with open("tests/remote.yaml", "r") as f:
+        return yaml.safe_load(f)
+
+
+@pytest.fixture(scope="session")
+def remote_config():
+    return get_remote_config()
+
+
+# Workaround against "RuntimeError" about already running loop.
+# Compare: https://github.com/pytest-dev/pytest-asyncio/issues/112
+# Note that fixtures that are used in the tests should still not be async, because they will
+# be tried to be evaluated multiple times, which is not possible with coroutines (no referential
+# transparency :( ).
+nest_asyncio.apply()
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """
+    See https://github.com/pexip/os-python-pytest-asyncio#event_loop
+
+    Provide the global event loop via a fixture.
+    """
+    return get_event_loop()
 
 
 @pytest.fixture(scope="function")
@@ -286,3 +319,89 @@ def manager(celery_session_app, redis_container, test_config, test_database):
 @pytest.fixture(scope="session")
 def manager_rundir(celery_session_app, redis_container, test_config, test_database):
     return create_manager(celery_session_app, redis_container, test_config, test_database, True)
+
+
+def get_connection(event_loop, **kwargs):
+    connection = RetryableSshConnection(**kwargs)
+    event_loop.run_until_complete(connection.connect())
+    return connection
+
+# All the following fixtures could have been made async with pytest-async. However, that did
+# not work well, because it gave RuntimeErrors about either existing event loops, or about
+# multiple evaluations of co-routines. pytest-async seems not to be mature enough :P.
+
+
+@pytest.fixture(scope="session")
+def ssh_local_connection(remote_config, event_loop):
+    return get_connection(event_loop, **(remote_config["ssh"]))
+
+
+@pytest.fixture(scope="session")
+def ssh_lsf_connection(remote_config, event_loop):
+    return get_connection(event_loop, **(remote_config["lsf_submission_host"]["ssh"]))
+
+
+@pytest.fixture(scope="session")
+def ssh_slurm_connection(remote_config, event_loop):
+    return get_connection(event_loop, **(remote_config["slurm_submission_host"]["ssh"]))
+
+
+# The executor fixtures return pairs (tuples), of executor and the Path to the shared workdir to
+# be used for tests. Where this does not apply (local and the SSH executor that is assumed to be
+# logging in to localhost), instead of a Path, None is returned.
+
+@pytest.fixture(scope="session")
+def local_executor():
+    return LocalExecutor(), None
+
+
+@pytest.fixture(scope="session")
+def ssh_executor(ssh_local_connection, event_loop):
+    return SshExecutor(ssh_local_connection, event_loop), None
+
+
+@pytest.fixture(scope="session")
+def ssh_lsf_executor(ssh_lsf_connection, event_loop, remote_config):
+    return LsfExecutor(SshExecutor(ssh_lsf_connection, event_loop)), \
+        Path(remote_config["lsf_submission_host"]["shared_workdir"])
+
+
+@pytest.fixture(scope="session")
+def ssh_slurm_executor(ssh_slurm_connection, event_loop, remote_config):
+    return SlurmExecutor(SshExecutor(ssh_slurm_connection, event_loop)), \
+        Path(remote_config['slurm_submission_host']["shared_workdir"])
+
+
+# Use these to parametrize your tests. Get the corresponding fixtures in the test body with
+#
+#   request.getfixturevalue(name + "_executor")
+#
+# request is another pytest-provided fixture that has to be the last parameter of the test
+# function's signature.
+executor_prefixes = [pytest.param("local")]
+
+# The following ensures that only the executors are attempted to be used in the tests, that have
+# a configuration in the remote.yaml. The pytest parameters allow the selection of groups of
+# tests by the availability of the integration-test resources (e.g. a cluster).
+_remote_config = get_remote_config()
+
+if _remote_config is not None:
+    if "ssh" in _remote_config:
+        executor_prefixes.append(pytest.param("ssh", marks=[
+            pytest.mark.ssh,
+            pytest.mark.integration,
+        ]))
+
+    if "slurm_submission_host" in _remote_config:
+        executor_prefixes.append(pytest.param("ssh_slurm", marks=[
+            pytest.mark.ssh_slurm,
+            pytest.mark.integration,
+            pytest.mark.slow
+        ]))
+
+    if "lsf_submission_host" in _remote_config:
+        executor_prefixes.append(pytest.param("ssh_lsf", marks=[
+            pytest.mark.ssh_lsf,
+            pytest.mark.integration,
+            pytest.mark.slow
+        ]))
