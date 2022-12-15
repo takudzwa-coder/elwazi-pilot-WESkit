@@ -25,7 +25,6 @@ from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 from weskit import create_app, create_database, Manager, WorkflowEngineFactory, PathContext
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
-from weskit.classes.ServiceInfo import ServiceInfo
 from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
 from weskit.classes.executor.unix.SshExecutor import SshExecutor
 from weskit.api.ServiceInfo import ServiceInfo
