@@ -26,7 +26,7 @@ from weskit.classes.EngineExecutorType import EngineExecutorType
 from weskit.classes.ErrorCodes import ErrorCodes
 from weskit.classes.Manager import Manager
 from weskit.classes.PathContext import PathContext
-from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.api.ServiceInfo import ServiceInfo
 from weskit.classes.WESApp import WESApp
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory

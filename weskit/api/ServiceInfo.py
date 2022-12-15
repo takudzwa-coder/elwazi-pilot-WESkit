@@ -6,10 +6,12 @@
 #
 #  Authors: The WESkit Team
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from weskit.classes.Database import Database
 from weskit.classes.WorkflowEngineFactory import ConfParameters
+from weskit.classes.ProcessingStage import ProcessingStage
+from weskit.api.RunStatus import RunStatus
 
 
 class ServiceInfo:
@@ -129,7 +131,15 @@ class ServiceInfo:
         return result
 
     def system_state_counts(self) -> Dict[str, int]:
-        return self._db.count_states()
+
+        counts_data: List[Any] = self._db.count_states()
+        counts: Dict = {status.name: 0 for status in RunStatus}
+        for counts_datum in counts_data:
+            status = RunStatus.from_stage(
+                stage=ProcessingStage.from_string(counts_datum["_id"]["processing_stage"]),
+                exit_code=counts_datum["_id"]["exit_code"])
+            counts[status.name] += counts_datum["count"]
+        return counts
 
     def auth_instructions_url(self) -> str:
         return self._static_service_info["auth_instructions_url"]

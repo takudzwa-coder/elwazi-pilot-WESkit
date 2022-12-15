@@ -20,6 +20,7 @@ from test_utils import \
     assert_within_timeout, is_within_timeout, assert_stage_is_not_failed, get_workflow_data
 from weskit import WESApp
 from weskit.api.Helper import Helper
+from weskit.api.RunStatus import RunStatus
 from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.oidc.User import User, not_logged_in_user_id
 from weskit.utils import to_filename
@@ -307,12 +308,14 @@ class TestOpenEndpoint:
               "tag2": "value2"
           }
         assert set(response.json["system_state_counts"].keys()) == {
-            'AWAITING_START', 'CANCELED', 'REQUESTED_CANCEL', 'RUN_CREATED', 'ERROR',
-            'FINISHED_EXECUTION', 'PAUSED', 'PREPARED_EXECUTION',
-            'STARTED_EXECUTION', 'SUBMITTED_EXECUTION'
+            'CANCELED', 'CANCELING', 'COMPLETE', 'EXECUTOR_ERROR', 'INITIALIZING',
+            'PAUSED', 'QUEUED', 'RUNNING', 'SYSTEM_ERROR'
         }
         for v in response.json["system_state_counts"].values():
             assert type(v) is int
+
+        for status in RunStatus:
+            assert status.name in response.json["system_state_counts"].keys()
 
 
 class TestWithoutLogin:

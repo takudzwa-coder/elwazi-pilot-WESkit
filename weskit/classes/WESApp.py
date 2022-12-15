@@ -16,7 +16,7 @@ from typing import Optional, cast
 from flask import Flask
 
 from weskit.classes.Manager import Manager
-from weskit.classes.ServiceInfo import ServiceInfo
+from weskit.api.ServiceInfo import ServiceInfo
 from weskit.oidc.Login import Login
 
 

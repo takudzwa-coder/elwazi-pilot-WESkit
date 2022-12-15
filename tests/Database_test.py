@@ -96,13 +96,6 @@ def test_get_runs(test_database):
 
 
 @pytest.mark.integration
-def test_count_states(test_database):
-    counts = test_database.count_states()
-    for processing_stage in ProcessingStage:
-        assert processing_stage.name in counts.keys()
-
-
-@pytest.mark.integration
 def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",

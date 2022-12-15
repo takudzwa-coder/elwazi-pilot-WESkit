@@ -17,7 +17,6 @@ from pymongo.database import Database as MongoDatabase
 from pymongo.results import InsertOneResult
 
 from weskit.classes.Run import Run
-from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.exceptions import ConcurrentModificationError, DatabaseOperationError
 
 logger = logging.getLogger(__name__)
@@ -106,23 +105,19 @@ class Database:
                         },
             filter={"user_id": user_id}))
 
-    def count_states(self) -> Dict[str, int]:
+    def count_states(self) -> List[Any]:
         """
         Returns the statistics of all job-states ever, for all users.
         """
         pipeline: Sequence[Mapping[str, Any]] = [
-            {"$unwind": "$stage"},
-            {"$group": {"_id": "$stage", "count": {"$sum": 1}}},
+            {"$unwind": "$processing_stage"},
+            {"$group": {"_id": {"processing_stage": "$processing_stage",
+                                "exit_code": "$exit_code"
+                                }, "count": {"$sum": 1}}},
             {"$sort": SON([("count", -1), ("_id", -1)])}
             ]
         counts_data = list(self._runs.aggregate(pipeline))
-        counts = {}
-        for counts_datum in counts_data:
-            counts[counts_datum["_id"]] = counts_datum["count"]
-        for processing_stage in ProcessingStage:
-            if processing_stage.name not in counts.keys():
-                counts[processing_stage.name] = 0
-        return counts
+        return counts_data
 
     def create_run_id(self) -> uuid.UUID:
         run_id = uuid.uuid4()
