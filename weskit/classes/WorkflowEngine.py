@@ -293,8 +293,8 @@ class Snakemake(WorkflowEngine):
 
         command += ["--configfile"] + list(map(lambda p: str(p), config_files))
 
-        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items() 
-                        if any(k.startswith(x) for x in ["data_", "task_"])]
+        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items()
+                       if any(k.startswith(x) for x in ["data_", "task_"])]
         if len(filt_params) > 0:
             command += ["--envvars"] + filt_params
 
