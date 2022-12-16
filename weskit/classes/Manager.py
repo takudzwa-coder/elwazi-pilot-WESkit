@@ -89,24 +89,6 @@ class Manager:
             pass
         return run
 
-    def insert_task_logs(self, run_dir, result, run) -> Run:
-        if run.exit_code is not None and run.exit_code == 0:
-            with open(run_dir / result["log_file"], "r") as f:
-                log_results = json.loads(f.readlines()[0])
-                task_logs = [
-                    {
-                        "name": log_results["env"]["WESKIT_WORKFLOW_PATH"],
-                        "cmd": log_results["cmd"],
-                        "start_time":log_results["start_time"],
-                        "end_time": log_results["end_time"],
-                        "stdout": log_results["stdout_file"],
-                        "stderr": log_results["stderr_file"],
-                        "exit_code": log_results["exit_code"]
-                    }
-                ]
-                run.task_logs = task_logs
-        return run
-
     def _update_run_results(self, run: Run, celery_task) -> Run:
         """
         For the semantics of Celery's built-in states, see
@@ -141,8 +123,6 @@ class Manager:
                 raise self._record_error(run,
                                          RuntimeError("Error during processing of '%s'" % run.id),
                                          ProcessingStage.ERROR)
-
-            run = self.insert_task_logs(run_dir_abs, result, run)
 
         run.processing_stage = ProcessingStage.from_celery(celery_task.state)
         return run

@@ -554,17 +554,21 @@ class TestWithHeaderToken:
             s3 = urlparse(log_response.json["outputs"]["S3"][idx]).path
             assert path in s3
 
-        assert log_response.json["task_logs"][0]["name"] == "../../../tests/wf1/Snakefile"
-        assert log_response.json["task_logs"][0]["exit_code"] == 0
-        assert log_response.json["task_logs"][0]["cmd"] == [
-                                                         'snakemake',
-                                                         '--snakefile',
-                                                         '../../../tests/wf1/Snakefile',
-                                                         '--cores',
-                                                         '1',
-                                                         '--configfile',
-                                                         f"{run_id}.yaml"
-                                                        ]
+        assert log_response.json["task_logs"] == []
+        # TODO Implement for issue #95 and #266.
+        # "task_logs": [
+        #   {
+        #     "name": "string",
+        #     "cmd": [
+        #       "string"
+        #     ],
+        #     "start_time": "string",
+        #     "end_time": "string",
+        #     "stdout": "string",
+        #     "stderr": "string",
+        #     "exit_code": 0
+        #   }
+        # ]
 
     @pytest.mark.integration
     def test_get_runs(self,
