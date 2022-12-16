@@ -229,8 +229,8 @@ class Snakemake(WorkflowEngine):
                                               "tes",
                                               "jobs",
                                               "conda-prefix",
-                                              "task_aws_access_key_id",
-                                              "task_aws_secret_access_key",
+                                              "data_aws_access_key_id",
+                                              "data_aws_secret_access_key",
                                               "task_conda_pkgs_dirs",
                                               "task_conda_envs_path",
                                               "task_home",
@@ -259,8 +259,8 @@ class Snakemake(WorkflowEngine):
     # on the TES server in the container as mounted volume
     # conda-prefix receives the same CONDA_ENVS_PATH but on the "local"/Celery worker side.
     ENVVARS_DICT = {
-            "task_aws_access_key_id": "AWS_ACCESS_KEY_ID",
-            "task_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
+            "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
+            "data_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
             "task_conda_pkgs_dirs": "CONDA_PKGS_DIRS",
             "task_conda_envs_path": "CONDA_ENVS_PATH",
             "task_home": "HOME"
@@ -293,7 +293,8 @@ class Snakemake(WorkflowEngine):
 
         command += ["--configfile"] + list(map(lambda p: str(p), config_files))
 
-        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items() if "task_" in k]
+        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items() 
+                        if any(k.startswith(x) for x in ["data_", "task_"])]
         if len(filt_params) > 0:
             command += ["--envvars"] + filt_params
 
