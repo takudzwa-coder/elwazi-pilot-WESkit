@@ -259,7 +259,9 @@ class ClusterExecutor(Executor):
         """
         Wait for the process to be finished. Update the process with the results
         """
-        if process.result.status.finished:
+        if process.id.value is None:
+            raise ValueError("Process ID was None, probably due to previous error")
+        elif process.result.status.finished:
             return process.result
         else:
             wait_command = self._command_set.wait_for(str(process.id.value))
