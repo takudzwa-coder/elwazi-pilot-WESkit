@@ -253,11 +253,15 @@ class Snakemake(WorkflowEngine):
         return result
 
     # For submission of the workload tasks to e.g. the TES server or a container,
-    # we need to pass several environmental variables to snakemake.
-    # AWS_ACCESS_KEY_ID and  AWS_SECRET_ACCESS_KEY are needed for accessing the S3 storage
-    # CONDA_PKGS_DIRS and CONDA_ENVS_PATH are required for installation of the new environments
-    # on the TES server in the container as mounted volume
-    # conda-prefix receives the same CONDA_ENVS_PATH but on the "local"/Celery worker side.
+    # we need to pass several environmental variables.
+    #
+    # * AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY for accessing the S3 storage
+    # * CONDA_PKGS_DIRS, CONDA_ENVS_PATH for installation of the new environments
+    #                                    on a writable volume mounted into the
+    #                                    container
+    # * conda-prefix receives the same value as CONDA_ENVS_PATH but is used in
+    #                the engine environment (e.g. local/Celery worker side).
+
     ENVVARS_DICT = {
             "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
             "data_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
