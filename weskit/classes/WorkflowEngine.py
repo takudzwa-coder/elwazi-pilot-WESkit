@@ -291,7 +291,7 @@ class Snakemake(WorkflowEngine):
         init: List[Union[ShellSpecial, str]] = ["snakemake", "--snakefile", str(workflow_path)]
         command += init + self._command_params(parameters)
 
-        command += ["--configfile"] + list(map(lambda p: str(p), config_files))
+        command += ["--configfile"] + [str(file) for file in config_files]
 
         filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items()
                        if any(k.startswith(x) for x in ["data_", "task_"])]
