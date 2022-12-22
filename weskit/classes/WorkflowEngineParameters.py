@@ -109,7 +109,6 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"profile"}),
     EngineParameter({"tes"}),
     EngineParameter({"jobs"}),
-    EngineParameter({"conda-prefix"}),
     EngineParameter({"data_aws_access_key_id"}),
     EngineParameter({"data_aws_secret_access_key"}),
     EngineParameter({"task_conda_pkgs_dirs"}),

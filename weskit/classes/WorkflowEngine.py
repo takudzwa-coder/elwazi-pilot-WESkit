@@ -109,7 +109,7 @@ class WorkflowEngine(metaclass=ABCMeta):
     def _argument_param(self,
                         param: ActualEngineParameter,
                         name: str,
-                        argument: str) -> List[Union[str, ShellSpecial]]:
+                        argument: str) -> List[str]:
         """
         Helper for parameter processing. This processor is for arguments of the type key/value,
         with an obligatory value (i.e. the value must not be None). If the parameter is None
@@ -120,12 +120,7 @@ class WorkflowEngine(metaclass=ABCMeta):
             if param.value is None:
                 return []
             else:
-                # environmental varibales e.g. $CONDA_ENVS_PATH need to be evaluated
-                # before passed with its respective arument to the command
-                if str(param.value).startswith('$'):
-                    return [argument, ss(str(param.value))]
-                else:
-                    return [argument, str(param.value)]
+                return [argument, str(param.value)]
         else:
             return []
 
@@ -228,7 +223,6 @@ class Snakemake(WorkflowEngine):
                                               "profile",
                                               "tes",
                                               "jobs",
-                                              "conda-prefix",
                                               "data_aws_access_key_id",
                                               "data_aws_secret_access_key",
                                               "task_conda_pkgs_dirs",
@@ -239,7 +233,7 @@ class Snakemake(WorkflowEngine):
                                           known_parameters().all]))
 
     def _command_params(self, parameters: List[ActualEngineParameter]) -> \
-            List[Union[ShellSpecial, str]]:
+            List[str]:
         result = []
         for param in parameters:
             result += self._argument_param(param, "cores", "--cores")
@@ -249,7 +243,6 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "profile", "--profile")
             result += self._argument_param(param, "tes", "--tes")
             result += self._argument_param(param, "jobs", "--jobs")
-            result += self._argument_param(param, "conda-prefix", "--conda-prefix")
         return result
 
     # For submission of the workload tasks to e.g. the TES server or a container,
@@ -257,10 +250,7 @@ class Snakemake(WorkflowEngine):
     #
     # * AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY for accessing the S3 storage
     # * CONDA_PKGS_DIRS, CONDA_ENVS_PATH for installation of the new environments
-    #                                    on a writable volume mounted into the
-    #                                    container
-    # * conda-prefix receives the same value as CONDA_ENVS_PATH but is used in
-    #                the engine environment (e.g. local/Celery worker side).
+    #                                    on a writable volume mounted into the container
 
     ENVVARS_DICT = {
             "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
@@ -292,7 +282,7 @@ class Snakemake(WorkflowEngine):
         command = super()._engine_environment_setup(parameters)
 
         # explicit annotation for your list is required
-        init: List[Union[ShellSpecial, str]] = ["snakemake", "--snakefile", str(workflow_path)]
+        init: List[str] = ["snakemake", "--snakefile", str(workflow_path)]
         command += init + self._command_params(parameters)
 
         command += ["--configfile"] + [str(file) for file in config_files]

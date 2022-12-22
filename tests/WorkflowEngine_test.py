@@ -106,8 +106,7 @@ def test_command_with_default_parameters():
          {"name": "data_aws_secret_access_key", "value": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
           "api": True},
          {"name": "task_conda_envs_path", "value": "some/relative/path/", "api": True},
-         {"name": "task_home", "value": "/tmp", "api": True},
-         {"name": "conda-prefix", "value": "$CONDA_ENVS_PATH", "api": True}
+         {"name": "task_home", "value": "/tmp", "api": True}
          ]
     )
 
@@ -118,8 +117,7 @@ def test_command_with_default_parameters():
                              {"data_aws_access_key_id": "GyCCggXpRpKQ3hBB",
                               "data_aws_secret_access_key": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
                               "task_conda_envs_path": "some/relative/path/",
-                              "task_home": "/tmp",
-                              "conda-prefix": "$CONDA_ENVS_PATH"})
+                              "task_home": "/tmp"})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
@@ -129,7 +127,6 @@ def test_command_with_default_parameters():
                                '--profile', 'myprofile',
                                '--tes', 'https://some/test/URL',
                                '--jobs', '1',
-                               '--conda-prefix', ss('$CONDA_ENVS_PATH'),
                                '--configfile', '/some/config.yaml',
                                '--envvars', "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
                                "CONDA_ENVS_PATH", "HOME"

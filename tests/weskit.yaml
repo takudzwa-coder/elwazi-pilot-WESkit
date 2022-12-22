@@ -256,9 +256,7 @@ workflow_engines:
         - name: "jobs"
           api: false
           type: "Optional[int]"
-        - name: "conda-prefix"
-          api: false
-          type: "Optional[str]"
+
 
 cors:
   enabled: false
