@@ -252,7 +252,7 @@ def test_database(database_container):
     database._runs.drop()
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(scope="session")
 def redis_container():
     redis_container = RedisContainer("redis:6.2.6-alpine")
     with redis_container as rc:

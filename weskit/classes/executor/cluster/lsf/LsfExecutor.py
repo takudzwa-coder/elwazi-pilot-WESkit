@@ -68,6 +68,24 @@ class LsfExecutor(ClusterExecutor):
     def _success_exit_value(self) -> str:
         return "-"
 
+    def wait_for(self, process: ExecutedProcess) -> CommandResult:
+        if process.id.value is None:
+            raise ValueError("Process ID was None, probably due to previous error")
+        elif process.result.status.finished:
+            return process.result
+        else:
+            wait_command = self._command_set.wait_for(str(process.id.value))
+
+        with execute(self._executor, wait_command) as (result, stdout, stderr):
+            if result.status.code == 2:
+                error_message = stderr.readlines()
+                if error_message != \
+                        [f"done({process.id.value}): Wait condition is never satisfied\n"]:
+                    raise ExecutorException(f"Wait failed: {str(result)}, " +
+                                            f"stderr={error_message}, " +
+                                            f"stdout={stdout.readlines()}")
+        return self.update_process(process).result
+
     def execute(self,
                 command: ShellCommand,
                 stdout_file: Optional[PathLike] = None,
