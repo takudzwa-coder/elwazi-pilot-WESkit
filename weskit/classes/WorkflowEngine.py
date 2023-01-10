@@ -219,17 +219,57 @@ class Snakemake(WorkflowEngine):
         return KNOWN_PARAMS.subset(frozenset({"cores",
                                               "use-singularity",
                                               "use-conda",
-                                              "profile"})
+                                              "forceall",
+                                              "profile",
+                                              "tes",
+                                              "jobs",
+                                              "data_aws_access_key_id",
+                                              "data_aws_secret_access_key",
+                                              "task_conda_pkgs_dir",
+                                              "task_conda_envs_path",
+                                              "task_home",
+                                              "prefix_conda_envs_path"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
-    def _command_params(self, parameters: List[ActualEngineParameter]) -> List[str]:
+    def _command_params(self, parameters: List[ActualEngineParameter]) -> \
+            List[str]:
         result = []
         for param in parameters:
             result += self._argument_param(param, "cores", "--cores")
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
+            result += self._optional_param(param, "forceall", "--forceall")
             result += self._argument_param(param, "profile", "--profile")
+            result += self._argument_param(param, "tes", "--tes")
+            result += self._argument_param(param, "jobs", "--jobs")
+        return result
+
+    # For submission of the workload tasks to e.g. the TES server or a container,
+    # we need to pass several environmental variables.
+    #
+    # * AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY for accessing the S3 storage
+    # * CONDA_PKGS_DIRS, CONDA_ENVS_PATH for installation of the new environments
+    #                                    on a writable volume mounted into the container
+
+    ENVVARS_DICT = {
+            "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
+            "data_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
+            "task_conda_pkgs_dir": "CONDA_PKGS_DIRS",
+            "task_conda_envs_path": "CONDA_ENVS_PATH",
+            "task_home": "HOME"
+        }
+
+    def _environment(self,
+                     workflow_path: Path,
+                     parameters: List[ActualEngineParameter]) -> Dict[str, str]:
+        result = super()._environment(workflow_path, parameters)
+
+        for var in self.ENVVARS_DICT:
+            for p in parameters:
+                if p.value is not None:
+                    if p.param == self.known_parameters()[var]:
+                        result[self.ENVVARS_DICT[var]] = str(p.value)
         return result
 
     def command(self,
@@ -240,11 +280,18 @@ class Snakemake(WorkflowEngine):
             -> ShellCommand:
         parameters = self._effective_run_params(engine_params)
         command = super()._engine_environment_setup(parameters)
-        command += ["snakemake",
-                    "--snakefile", str(workflow_path)
-                    ] + self._command_params(parameters)
-        if len(config_files) > 0:
-            command += ["--configfile"] + list(map(lambda p: str(p), config_files))
+
+        # explicit annotation for your list is required
+        init: List[str] = ["snakemake", "--snakefile", str(workflow_path)]
+        command += init + self._command_params(parameters)
+
+        command += ["--configfile"] + [str(file) for file in config_files]
+
+        filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items()
+                       if k in self.ENVVARS_DICT.keys()]
+        if len(filt_params) > 0:
+            command += ["--envvars"] + filt_params
+
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(workflow_path, parameters))
@@ -321,6 +368,7 @@ class Nextflow(WorkflowEngine):
             command += ["-params-file", str(config_files[0])]
         else:
             raise ValueError("Nextflow accepts only a single parameters file (`-params-file`)")
+
         command += self._run_command_params(parameters)
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),

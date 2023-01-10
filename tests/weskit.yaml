@@ -230,6 +230,32 @@ workflow_engines:
         - name: "profile"
           api: false
           type: "Optional[str]"
+        - name: "tes"
+          api: false
+          type: "Optional[Url]"
+        - name: "data_aws_access_key_id"
+          api: false
+          type: "Optional[str]"
+        - name: "data_aws_secret_access_key"
+          api: false
+          type: "Optional[str]"
+        - name: "task_conda_pkgs_dir"
+          api: false
+          type: "Optional[Path]"
+        - name: "task_conda_envs_path"
+          api: false
+          type: "Optional[Path]"
+          value: "conda_envs/"
+        - name: "task_home"
+          api: false
+          type: "Optional[Path]"
+        - name: "forceall"
+          api: true
+          type: "bool"
+          value: "false"
+        - name: "jobs"
+          api: false
+          type: "Optional[int]"
 
 
 cors:

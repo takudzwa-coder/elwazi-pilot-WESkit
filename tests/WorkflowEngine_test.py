@@ -71,13 +71,15 @@ def test_create_snakemake():
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "TRUE", "api": True},
          {"name": "use-conda", "value": "TRUE", "api": True},
-         {"name": "profile", "value": "TRUE", "api": True}]
+         {"name": "profile", "value": "TRUE", "api": True},
+         {"name": "tes", "value": "TRUE", "api": True}]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"cores"}), "2", True),
         ActualEngineParameter(EngineParameter({"use-singularity"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True)
+        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True)
     ]
     assert engine.name() == "SMK"
 
@@ -96,22 +98,45 @@ def test_command_with_default_parameters():
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
-         {"name": "profile", "value": "myprofile", "api": True}]
+         {"name": "forceall", "value": "T", "api": True},
+         {"name": "profile", "value": "myprofile", "api": True},
+         {"name": "tes", "value": "https://some/test/URL", "api": True},
+         {"name": "jobs", "value": "1", "api": True},
+         {"name": "data_aws_access_key_id", "value": "GyCCggXpRpKQ3hBB", "api": True},
+         {"name": "data_aws_secret_access_key", "value": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
+          "api": True},
+         {"name": "task_conda_envs_path", "value": "some/relative/path/", "api": True},
+         {"name": "task_home", "value": "/tmp", "api": True}
+         ]
     )
 
     # Test default value with empty run parameters.
     command = engine.command(Path("/some/path"),
                              Path("/some/workdir"),
                              [Path("/some/config.yaml")],
-                             {})
+                             {"data_aws_access_key_id": "GyCCggXpRpKQ3hBB",
+                              "data_aws_secret_access_key": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
+                              "task_conda_envs_path": "some/relative/path/",
+                              "task_home": "/tmp"})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
                                '--use-singularity',
                                '--use-conda',
+                               '--forceall',
                                '--profile', 'myprofile',
-                               '--configfile', '/some/config.yaml']
+                               '--tes', 'https://some/test/URL',
+                               '--jobs', '1',
+                               '--configfile', '/some/config.yaml',
+                               '--envvars', "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+                               "CONDA_ENVS_PATH", "HOME"
+                               ]
+
     assert command.environment == {
+        'AWS_ACCESS_KEY_ID': 'GyCCggXpRpKQ3hBB',
+        'AWS_SECRET_ACCESS_KEY': 'basTuIRppYhACCdXS6yYZb1XhUTksJPq',
+        'CONDA_ENVS_PATH': 'some/relative/path/',
+        'HOME': '/tmp',
         "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
