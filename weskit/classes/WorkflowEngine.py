@@ -225,7 +225,7 @@ class Snakemake(WorkflowEngine):
                                               "jobs",
                                               "data_aws_access_key_id",
                                               "data_aws_secret_access_key",
-                                              "task_conda_pkgs_dirs",
+                                              "task_conda_pkgs_dir",
                                               "task_conda_envs_path",
                                               "task_home",
                                               "prefix_conda_envs_path"})
@@ -255,7 +255,7 @@ class Snakemake(WorkflowEngine):
     ENVVARS_DICT = {
             "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
             "data_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
-            "task_conda_pkgs_dirs": "CONDA_PKGS_DIRS",
+            "task_conda_pkgs_dir": "CONDA_PKGS_DIRS",
             "task_conda_envs_path": "CONDA_ENVS_PATH",
             "task_home": "HOME"
         }
@@ -288,7 +288,7 @@ class Snakemake(WorkflowEngine):
         command += ["--configfile"] + [str(file) for file in config_files]
 
         filt_params = [self.ENVVARS_DICT[k] for k, v in engine_params.items()
-                       if any(k.startswith(x) for x in ["data_", "task_"])]
+                       if k in self.ENVVARS_DICT.keys()]
         if len(filt_params) > 0:
             command += ["--envvars"] + filt_params
 
