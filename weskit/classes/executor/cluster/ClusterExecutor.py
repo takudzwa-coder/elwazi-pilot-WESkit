@@ -255,13 +255,24 @@ class ClusterExecutor(Executor):
             process.result.end_time = now()
         return process
 
-    @abstractmethod
-    def wait_for(self, process: ExecutedProcess):
-        """
-        Update the process once the job is finished.
-        Otherwise throgh the corresponding error message.
-        """
+    def check_result_status(self, result, stdout, stderr, process):
         pass
+
+    def wait_for(self, process: ExecutedProcess) -> CommandResult:
+        if process.id.value is None:
+            raise ValueError("Process ID was None, probably due to previous error")
+        elif process.result.status.finished:
+            return process.result
+        else:
+            wait_command = self._command_set.wait_for(process.id.value)
+
+        with execute(self._executor, wait_command) as (result, stdout, stderr):
+            self.check_result_status(result, stdout, stderr, process)
+            if result.status.failed:
+                raise ExecutorException(f"Wait failed: {str(result)}, " +
+                                        f"stderr={stdout.readlines()}, " +
+                                        f"stdout={stdout.readlines()}")
+        return self.update_process(process).result
 
     @abstractmethod
     def execute(self,

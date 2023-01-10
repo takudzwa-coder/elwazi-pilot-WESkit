@@ -84,21 +84,6 @@ class SlurmExecutor(ClusterExecutor):
                     print(export, end="\n", sep=" ", file=file)
             return Path(file.name)
 
-    def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.id.value is None:
-            raise ValueError("Process ID was None, probably due to previous error")
-        elif process.result.status.finished:
-            return process.result
-        else:
-            wait_command = self._command_set.wait_for(str(process.id.value))
-
-        with execute(self._executor, wait_command) as (result, stdout, stderr):
-            if result.status.failed:
-                raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                        f"stderr={stdout.readlines()}, " +
-                                        f"stdout={stdout.readlines()}")
-        return self.update_process(process).result
-
     def execute(self,
                 command: ShellCommand,
                 stdout_file: Optional[PathLike] = None,
