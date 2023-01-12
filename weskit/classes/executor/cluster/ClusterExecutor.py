@@ -12,16 +12,16 @@ from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
 from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
-from weskit.classes.storage.StorageAccessor import StorageAccessor
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings
 from weskit.classes.executor.ExecutorException import \
     ExecutorException, ExecutionError, TimingError
+from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
@@ -262,20 +262,12 @@ class ClusterExecutor(Executor):
             return process.result
         else:
             wait_command = self._command_set.wait_for(process.id.value)
-
-        with execute(self._executor, wait_command) as (result, stdout, stderr):
-            if result.status.code == 2:
-                error_message = stderr.readlines()
-                if error_message != \
-                        [f"done({process.id.value}): Wait condition is never satisfied\n"]:
+            with execute(self._executor, wait_command) as (result, stdout, stderr):
+                if result.status.failed:
                     raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                            f"stderr={error_message}, " +
+                                            f"stderr={stdout.readlines()}, " +
                                             f"stdout={stdout.readlines()}")
-            elif result.status.failed:
-                raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                        f"stderr={stdout.readlines()}, " +
-                                        f"stdout={stdout.readlines()}")
-        return self.update_process(process).result
+            return self.update_process(process).result
 
     @abstractmethod
     def execute(self,

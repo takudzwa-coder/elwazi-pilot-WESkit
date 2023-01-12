@@ -7,7 +7,6 @@
 #  Authors: The WESkit Team
 import logging
 from os import PathLike
-
 from typing import Optional, Match
 
 from weskit.classes.ShellCommand import ShellCommand
