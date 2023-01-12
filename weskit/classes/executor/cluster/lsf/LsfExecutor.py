@@ -7,7 +7,6 @@
 #  Authors: The WESkit Team
 import logging
 from os import PathLike
-
 from typing import Optional, Match
 
 from weskit.classes.ShellCommand import ShellCommand
@@ -67,15 +66,6 @@ class LsfExecutor(ClusterExecutor):
     @property
     def _success_exit_value(self) -> str:
         return "-"
-
-    def check_result_status(self, result, stdout, stderr, process) -> None:
-        if result.status.code == 2:
-            error_message = stderr.readlines()
-            if error_message != \
-                    [f"done({process.id.value}): Wait condition is never satisfied\n"]:
-                raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                        f"stderr={error_message}, " +
-                                        f"stdout={stdout.readlines()}")
 
     def execute(self,
                 command: ShellCommand,

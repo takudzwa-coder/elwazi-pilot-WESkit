@@ -155,5 +155,6 @@ class LsfCommandSet(CommandSet):
         """
         A command that blocks (up to a year), until the requested job ended.
         """
-        result: List[Union[str, ShellSpecial]] = ["bwait", "-t", "525600", "-w", f"done({job_id})"]
+        result: List[Union[str, ShellSpecial]] = \
+            ["bwait", "-t", "525600", "-w", f"ended({job_id})"]
         return ShellCommand(result)

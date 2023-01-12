@@ -80,4 +80,4 @@ def test_kill():
 
 def test_wait():
     command = LsfCommandSet().wait_for("1234")
-    assert command.command == ["bwait", "-t", "525600", "-w", "done(1234)"]
+    assert command.command == ["bwait", "-t", "525600", "-w", "ended(1234)"]

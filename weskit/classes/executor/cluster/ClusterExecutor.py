@@ -12,16 +12,16 @@ from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
 from typing import Optional, List, Tuple, Iterator, IO, Match, cast
 
-from weskit.classes.storage.StorageAccessor import StorageAccessor
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
+
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings
 from weskit.classes.executor.ExecutorException import \
     ExecutorException, ExecutionError, TimingError
+from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
@@ -255,9 +255,6 @@ class ClusterExecutor(Executor):
             process.result.end_time = now()
         return process
 
-    def check_result_status(self, result, stdout, stderr, process):
-        pass
-
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
         if process.id.value is None:
             raise ValueError("Process ID was None, probably due to previous error")
@@ -265,14 +262,12 @@ class ClusterExecutor(Executor):
             return process.result
         else:
             wait_command = self._command_set.wait_for(process.id.value)
-
-        with execute(self._executor, wait_command) as (result, stdout, stderr):
-            self.check_result_status(result, stdout, stderr, process)
-            if result.status.failed:
-                raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                        f"stderr={stdout.readlines()}, " +
-                                        f"stdout={stdout.readlines()}")
-        return self.update_process(process).result
+            with execute(self._executor, wait_command) as (result, stdout, stderr):
+                if result.status.failed:
+                    raise ExecutorException(f"Wait failed: {str(result)}, " +
+                                            f"stderr={stdout.readlines()}, " +
+                                            f"stdout={stdout.readlines()}")
+            return self.update_process(process).result
 
     @abstractmethod
     def execute(self,
