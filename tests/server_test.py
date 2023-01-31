@@ -491,12 +491,12 @@ class TestWithHeaderToken:
         # We use the path to the workflow file (workflow_url) for now.
         assert log_response.json["run_log"]["name"] == log_response.json["request"]["workflow_url"]
         assert log_response.json["run_log"]["cmd"] == [
-            'snakemake',
-            '--snakefile',
-            '../../../tests/wf1/Snakefile',
-            '--cores',
-            '1',
-            '--configfile',
+            "snakemake",
+            "--snakefile",
+            "../../../tests/wf1/Snakefile",
+            "--cores",
+            "1",
+            "--configfile",
             f"{run_id}.yaml"
         ]
 

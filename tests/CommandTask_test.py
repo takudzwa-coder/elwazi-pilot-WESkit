@@ -19,7 +19,8 @@ from weskit.tasks.CommandTask import run_command
 def test_run_command(temporary_dir, test_config):
     command = ["echo", "hello world", ss(">"), "x"]
     context = PathContext(data_dir=Path(temporary_dir).parent,
-                          workflows_dir=Path(temporary_dir))
+                          workflows_dir=Path(temporary_dir),
+                          singularity_engines_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
     command_obj = ShellCommand(command=command,
                                workdir=workdir)

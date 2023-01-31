@@ -72,6 +72,10 @@ def create_app(celery: Celery,
         "WESKIT_WORKFLOWS",
         os.path.join(os.getcwd(), "workflows"))).absolute()
 
+    singularity_engines_base_dir = Path(os.getenv(
+        "WESKIT_SINGULARITY_ENGINES",
+        os.path.join(os.getcwd(), "singularity_engines"))).absolute()
+
     weskit_data = Path(os.getenv("WESKIT_DATA", "./tmp")).absolute()
 
     request_validation_config = \
@@ -104,12 +108,15 @@ def create_app(celery: Celery,
         config = validation_result
 
     container_context = PathContext(data_dir=weskit_data,
-                                    workflows_dir=workflows_base_dir)
+                                    workflows_dir=workflows_base_dir,
+                                    singularity_engines_dir=singularity_engines_base_dir)
 
     executor_type = EngineExecutorType.from_string(config["executor"]["type"])
     if executor_type.needs_login_credentials:
         executor_context = PathContext(data_dir=config["executor"]["remote_data_dir"],
-                                       workflows_dir=config["executor"]["remote_workflows_dir"])
+                                       workflows_dir=config["executor"]["remote_workflows_dir"],
+                                       singularity_engines_dir=config["executor"]
+                                                                     ["singularity_engines_dir"])
     else:
         executor_context = container_context
 
@@ -123,6 +130,7 @@ def create_app(celery: Celery,
                 create(config["workflow_engines"]),
                 weskit_context=container_context,
                 executor_context=executor_context,
+                executor_type=executor_type,
                 require_workdir_tag=config["require_workdir_tag"])
 
     service_info = ServiceInfo(config["static_service_info"],

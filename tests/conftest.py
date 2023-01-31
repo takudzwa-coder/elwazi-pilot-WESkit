@@ -24,6 +24,7 @@ from weskit import create_app, create_database, Manager, WorkflowEngineFactory, 
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
 from weskit.classes.executor.unix.SshExecutor import SshExecutor
+from weskit.classes.EngineExecutorType import EngineExecutorType
 from weskit.api.ServiceInfo import ServiceInfo
 from weskit.utils import create_validator, get_event_loop
 
@@ -294,10 +295,12 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
     workflows_base_dir = Path("tests")
     os.environ["WESKIT_WORKFLOWS"] = str(workflows_base_dir)
     test_dir = Path("test-data")
+    singularity_engines_dir = Path("test-engines")
     if not (test_dir.exists() and test_dir.is_dir()):
         test_dir.mkdir()
     common_context = PathContext(workflows_dir=workflows_base_dir,
-                                 data_dir=test_dir)
+                                 data_dir=test_dir,
+                                 singularity_engines_dir=singularity_engines_dir)
     return Manager(celery_app=celery_session_app,
                    database=test_database,
                    config=test_config,
@@ -305,6 +308,7 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
                    create(test_config["workflow_engines"]),
                    weskit_context=common_context,
                    executor_context=common_context,
+                   executor_type=EngineExecutorType.from_string(test_config["executor"]["type"]),
                    require_workdir_tag=require_workdir_tag)
 
 

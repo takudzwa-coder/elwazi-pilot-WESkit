@@ -27,6 +27,8 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.classes.WorkflowEngine import SingularityWorkflowEngine, LocalEngine
+from weskit.classes.EngineExecutor import EngineExecutorType
 from weskit.exceptions import ClientError
 from weskit.utils import return_pre_signed_url, now
 
@@ -44,11 +46,13 @@ class Manager:
                  workflow_engines: dict,
                  weskit_context: PathContext,
                  executor_context: PathContext,
+                 executor_type: EngineExecutorType,
                  require_workdir_tag: bool) -> None:
         self.config = config
         self.workflow_engines = workflow_engines
         self.weskit_context = weskit_context
         self.executor_context = executor_context
+        self.executor_type = executor_type
         self.celery_app = celery_app
         self.database = database
         self.require_workdir_tag = require_workdir_tag
@@ -357,6 +361,13 @@ class Manager:
             self.database.update_run(run, resolution_fun=Run.merge)
             return run
 
+        # set container engine
+        container_engine: Any
+        if self.executor_type.needs_login_credentials:
+            container_engine = SingularityWorkflowEngine
+        else:
+            container_engine = LocalEngine
+
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
@@ -388,8 +399,10 @@ class Manager:
             return run
 
         # Execute run
-        config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]
-        command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
+        config_files: List[Path] = [Path(f"{run.id}.yaml")]
+        command: ShellCommand
+        command = container_engine(self.workflow_engines[workflow_type][workflow_type_version],
+                                   self.executor_context).\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
                     config_files=config_files,

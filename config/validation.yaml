@@ -50,6 +50,16 @@ executor:
           - ssh
           - ssh_slurm
           - ssh_lsf
+    singularity_engines_dir:
+      type: string
+      required: false
+      dependencies:
+        type:
+          - local_slurm
+          - local_lsf
+          - ssh
+          - ssh_slurm
+          - ssh_lsf
     login:
       type: dict
       required: false

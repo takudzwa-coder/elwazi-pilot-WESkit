@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, Union
 from tempora import parse_timedelta
 
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
+from weskit.classes.PathContext import PathContext
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -401,3 +402,96 @@ class Nextflow(WorkflowEngine):
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(workflow_path, parameters))
+
+
+class ContainerWorkflowEngine():
+    _workflowEngine: WorkflowEngine
+
+    def __init__(self, workflowEngine: WorkflowEngine,
+                 executor_context: PathContext):
+        self._workflowEngine = workflowEngine
+        self.executor_context = executor_context
+
+    @property
+    def workflowEngine(self):
+        return self._workflowEngine
+
+    @abstractmethod
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files:  List[Path],
+                engine_params: Dict[str, Optional[str]])\
+            -> ShellCommand:
+        pass
+
+
+class SingularityWorkflowEngine(ContainerWorkflowEngine):
+
+    def __init__(self, workflowEngine: WorkflowEngine,
+                 executor_context: PathContext):
+        self._workflowEngine = workflowEngine
+        self.executor_context = executor_context
+
+    @staticmethod
+    def name() -> str:
+        return "Singularity"  # Apptainer
+
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files:  List[Path],
+                engine_params: Dict[str, Optional[str]])\
+            -> ShellCommand:
+
+        workflowEngine_dict = {"SMK": "snakemake",
+                               "NFL": "nextflow"
+                               }
+        container_workflowEngine_name = workflowEngine_dict[str(self._workflowEngine.name())]
+
+        workflow_engine_commmand = self._workflowEngine.command(workflow_path,
+                                                                workdir,
+                                                                config_files,
+                                                                engine_params)
+
+        container_engine_command: List[Union[str, ShellSpecial]]
+        container_engine_command = ["singularity", "run",
+                                    "--no-home", "-e", "--env", "LC_ALL=POSIX",
+                                    "--bind", ":".join([str(self.executor_context.data_dir),
+                                                        str(self.executor_context.data_dir)]),
+                                    "--bind", ":".join([str(self.executor_context.workflows_dir),
+                                                        str(self.executor_context.workflows_dir)]),
+                                    (f"{self.executor_context.singularity_engines_dir}/"
+                                     f"{container_workflowEngine_name}_"
+                                     f"{self._workflowEngine.version}.sif"),
+                                    "&&"
+                                    ]
+        workflow_engine_commmand.command = \
+            container_engine_command + workflow_engine_commmand.command
+
+        return workflow_engine_commmand
+
+
+class LocalEngine(ContainerWorkflowEngine):
+
+    def __init__(self, workflowEngine: WorkflowEngine,
+                 executor_context: PathContext):
+        self._workflowEngine = workflowEngine
+        self.executor_context = executor_context
+
+    @staticmethod
+    def name() -> str:
+        return "Local"
+
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files:  List[Path],
+                engine_params: Dict[str, Optional[str]])\
+            -> ShellCommand:
+
+        workflow_engine_commmand = self._workflowEngine.command(workflow_path,
+                                                                workdir,
+                                                                config_files,
+                                                                engine_params)
+        return workflow_engine_commmand
