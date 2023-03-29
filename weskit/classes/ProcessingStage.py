@@ -175,8 +175,6 @@ class ProcessingStage(enum.Enum):
         """
         if self.allowed_to_progress_to(new_state):
             return new_state
-        elif self.is_terminal:
-            return self
         else:
             raise RuntimeError(
                 f"Forbidden state-change requested: '{self.name}' -/-> '{new_state.name}'")

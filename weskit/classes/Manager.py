@@ -155,10 +155,15 @@ class Manager:
         """
         try:
             if run.celery_task_id is not None:
+                # backend deletes celery state after a predefined expiry time
+                # AsyncResult sets celery state to "PENDING" if ID is not in backend
                 celery_task = self._run_task.AsyncResult(run.celery_task_id)
                 logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
                     run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
-                run = self._update_run_results(run, celery_task)
+                # celery state should not be pending for finished runs
+                if not (celery_task.state == "PENDING" and
+                        run.processing_stage.name == "FINISHED_EXECUTION"):
+                    run = self._update_run_results(run, celery_task)
 
             elif run.processing_stage.is_running or \
                     run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
