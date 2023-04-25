@@ -76,7 +76,7 @@ class WorkflowEngine(metaclass=ABCMeta):
                       for p in params
                       if p.param == self.known_parameters()["engine-environment"]]
         if len(candidates) > 0 and candidates[0] is not None:
-            return ["source", candidates[0], ss("&&"), "set", "-eu", "-o", "pipefail", ss("&&")]
+            return ["set", "-eu", "-o", "pipefail", ss("&&"), "source", candidates[0], ss("&&")]
         else:
             return []
 

@@ -293,8 +293,8 @@ def test_create_nextflow():
                               Path("/some/workdir"),
                               [Path("/some/config.yaml")],
                               {})
-    assert created1.command == ['source', '/path/to/script', ss("&&"),
-                                'set', '-eu', '-o', 'pipefail', ss('&&'),
+    assert created1.command == ['set', '-eu', '-o', 'pipefail', ss('&&'),
+                                'source', '/path/to/script', ss("&&"),
                                 'nextflow', "run", "/some/path",
                                 '-params-file', '/some/config.yaml',
                                 '-with-trace',
@@ -316,8 +316,8 @@ def test_create_nextflow():
                                "timeline": "F",
                                "report": "N",
                                "trace": "FALSE"})
-    assert created2.command == ['source', '/path/to/script', ss('&&'),
-                                'set', '-eu', '-o', 'pipefail', ss('&&'),
+    assert created2.command == ['set', '-eu', '-o', 'pipefail', ss('&&'),
+                                'source', '/path/to/script', ss('&&'),
                                 'nextflow', "run", "/some/path",
                                 '-params-file', '/the/config.file']
     assert created2.environment == {

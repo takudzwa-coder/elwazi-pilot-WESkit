@@ -81,6 +81,10 @@ def test_run_command_ssh(temporary_dir, test_config, remote_config):
                 assert command_result["exit_code"] == 0
                 assert command_result["start_time"]
                 assert command_result["end_time"]
+                assert command_result["stdout_file"].startswith(".weskit")
+                assert command_result["stderr_file"].startswith(".weskit")
+                assert command_result["log_dir"].startswith(".weskit")
+                assert command_result["log_file"].startswith(".weskit")
             assert result["output_files"] == ["x"]
             with open(os.path.join(temporary_dir, "x"), "r") as f:
                 assert f.readlines() == ["hello world\n"]
