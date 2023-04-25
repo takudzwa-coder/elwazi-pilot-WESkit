@@ -89,6 +89,24 @@ class Manager:
             pass
         return run
 
+    def check_exit_code(self, run: Run) -> Run:
+        run_dir_abs = run.run_dir(self.weskit_context)
+        if run.exit_code is not None and run.exit_code >= 0:
+            print(f"exit code {run.exit_code}")
+            # Command (in Celery job) was executed (successfully or not)
+            # WARNING: Updates of > 4 mb can be slow with MongoDB.
+            with open(run_dir_abs / run.execution_log["stdout_file"], "r") as f:
+                run.stdout = f.readlines()
+            with open(run_dir_abs / run.execution_log["stderr_file"], "r") as f:
+                run.stderr = f.readlines()
+        else:
+            # run_command produces exit_code == -1 if there are technical errors during the
+            # command execution (other than workflow engine errors; e.g. SSH connection).
+            run.processing_stage = ProcessingStage.ERROR
+            return run
+
+        return run
+
     def _update_run_results(self, run: Run, celery_task) -> Run:
         """
         For the semantics of Celery's built-in states, see
@@ -109,20 +127,7 @@ class Manager:
             run.outputs["filesystem"] = result["output_files"]
             run.execution_log = result
 
-            run_dir_abs = run.run_dir(self.weskit_context)
-            if run.exit_code is not None and run.exit_code >= 0:
-                # Command (in Celery job) was executed (successfully or not)
-                # WARNING: Updates of > 4 mb can be slow with MongoDB.
-                with open(run_dir_abs / result["stdout_file"], "r") as f:
-                    run.stdout = f.readlines()
-                with open(run_dir_abs / result["stderr_file"], "r") as f:
-                    run.stderr = f.readlines()
-            else:
-                # run_command produces exit_code == -1 if there are technical errors during the
-                # command execution (other than workflow engine errors; e.g. SSH connection).
-                raise self._record_error(run,
-                                         RuntimeError("Error during processing of '%s'" % run.id),
-                                         ProcessingStage.ERROR)
+            run = self.check_exit_code(run)
 
         run.processing_stage = ProcessingStage.from_celery(celery_task.state)
         return run
