@@ -26,3 +26,9 @@ def test_runstatus_from_processingstage():
         RunStatus.CANCELED
     with pytest.raises(AttributeError):
         RunStatus.from_stage(ProcessingStage.NONEXISTING)
+
+
+def test_from_string():
+    assert ProcessingStage.from_string("SYSTEM_ERROR") == ProcessingStage.SYSTEM_ERROR
+    assert ProcessingStage.from_string("AWAITING_START") == ProcessingStage.AWAITING_START
+    assert ProcessingStage.from_string("blah") == ProcessingStage.SYSTEM_ERROR

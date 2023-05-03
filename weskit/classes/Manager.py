@@ -113,14 +113,18 @@ class Manager:
             if run.exit_code is not None and run.exit_code >= 0:
                 # Command (in Celery job) was executed (successfully or not)
                 # WARNING: Updates of > 4 mb can be slow with MongoDB.
-                with open(run_dir_abs / result["stdout_file"], "r") as f:
-                    run.stdout = f.readlines()
-                with open(run_dir_abs / result["stderr_file"], "r") as f:
-                    run.stderr = f.readlines()
+                try:
+                    with open(run_dir_abs / result["stdout_file"], "r") as f:
+                        run.stdout = f.readlines()
+                    with open(run_dir_abs / result["stderr_file"], "r") as f:
+                        run.stderr = f.readlines()
+                except FileNotFoundError as e:
+                    logger.error("%s during update of the run results" % (e))
+                    run.processing_stage = ProcessingStage.SYSTEM_ERROR
+                    return run
             else:
                 # run_command produces exit_code < 0 if there are technical errors during the
                 # command execution (other than workflow engine errors; e.g. SSH connection).
-                # or system error
                 run.processing_stage = ProcessingStage.SYSTEM_ERROR
                 return run
 
@@ -154,30 +158,25 @@ class Manager:
         retrieve the Celery state and update the run.
         Then, if there is a change compared to the old Run, update the run in the database.
         """
-        try:
-            if run.celery_task_id is not None:
-                # backend deletes celery state after a predefined expiry time
-                # AsyncResult sets celery state to "PENDING" if ID is not in backend
-                celery_task = self._run_task.AsyncResult(run.celery_task_id)
-                logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
-                    run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
-                # celery state should not be pending for finished runs
-                if not (celery_task.state == "PENDING" and
-                        run.processing_stage.name == "FINISHED_EXECUTION"):
-                    run = self._update_run_results(run, celery_task)
+        if run.celery_task_id is not None:
+            # backend deletes celery state after a predefined expiry time
+            # AsyncResult sets celery state to "PENDING" if ID is not in backend
+            celery_task = self._run_task.AsyncResult(run.celery_task_id)
+            logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
+                run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
+            # celery state should not be pending for finished runs
+            if not (celery_task.state == "PENDING" and
+                    run.processing_stage.name == "FINISHED_EXECUTION"):
+                run = self._update_run_results(run, celery_task)
 
-            elif run.processing_stage.is_running or \
-                    run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
-                raise self._record_error(
-                    run,
-                    RuntimeError(f"No Celery task ID for run {run.id}",
-                                 f" in stage {run.processing_stage}"),
-                    ProcessingStage.SYSTEM_ERROR)
+        elif run.processing_stage.is_running or \
+                run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
+            raise self._record_error(
+                run,
+                RuntimeError(f"No Celery task ID for run {run.id}",
+                             f" in stage {run.processing_stage}"),
+                ProcessingStage.SYSTEM_ERROR)
 
-        except FileNotFoundError as e:
-            # This may happen, if the open()s fail, e.g. because the run directory was manually
-            # deleted or is unavailable due to network problems.
-            raise self._record_error(run, e, ProcessingStage.SYSTEM_ERROR)
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
@@ -399,9 +398,9 @@ class Manager:
             # This should have been found in the validation.
             raise self._record_error(
                 run,
-                RuntimeError("Workflow type version '%s' is not known. Know %s" %
-                             (run.request["workflow_type_version"],
-                              ", ".join(self.workflow_engines[workflow_type].keys()))),
+                ClientError("Workflow type version '%s' is not known. Know %s" %
+                            (run.request["workflow_type_version"],
+                             ", ".join(self.workflow_engines[workflow_type].keys()))),
                 ProcessingStage.EXECUTOR_ERROR)
 
         if run.rundir_rel_workflow_path is None:
