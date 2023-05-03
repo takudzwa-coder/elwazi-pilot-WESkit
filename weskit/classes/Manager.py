@@ -89,24 +89,6 @@ class Manager:
             pass
         return run
 
-    def check_exit_code(self, run: Run) -> Run:
-        run_dir_abs = run.run_dir(self.weskit_context)
-        if run.exit_code is not None and run.exit_code >= 0:
-            print(f"exit code {run.exit_code}")
-            # Command (in Celery job) was executed (successfully or not)
-            # WARNING: Updates of > 4 mb can be slow with MongoDB.
-            with open(run_dir_abs / run.execution_log["stdout_file"], "r") as f:
-                run.stdout = f.readlines()
-            with open(run_dir_abs / run.execution_log["stderr_file"], "r") as f:
-                run.stderr = f.readlines()
-        else:
-            # run_command produces exit_code == -1 if there are technical errors during the
-            # command execution (other than workflow engine errors; e.g. SSH connection).
-            run.processing_stage = ProcessingStage.ERROR
-            return run
-
-        return run
-
     def _update_run_results(self, run: Run, celery_task) -> Run:
         """
         For the semantics of Celery's built-in states, see
@@ -127,9 +109,23 @@ class Manager:
             run.outputs["filesystem"] = result["output_files"]
             run.execution_log = result
 
-            run = self.check_exit_code(run)
+            run_dir_abs = run.run_dir(self.weskit_context)
+            if run.exit_code is not None and run.exit_code >= 0:
+                # Command (in Celery job) was executed (successfully or not)
+                # WARNING: Updates of > 4 mb can be slow with MongoDB.
+                with open(run_dir_abs / result["stdout_file"], "r") as f:
+                    run.stdout = f.readlines()
+                with open(run_dir_abs / result["stderr_file"], "r") as f:
+                    run.stderr = f.readlines()
+            else:
+                # run_command produces exit_code < 0 if there are technical errors during the
+                # command execution (other than workflow engine errors; e.g. SSH connection).
+                # or system error
+                run.processing_stage = ProcessingStage.SYSTEM_ERROR
+                return run
 
-        run.processing_stage = ProcessingStage.from_celery(celery_task.state)
+        run.processing_stage = ProcessingStage.from_celery_and_exit_code(celery_task.state,
+                                                                         run.exit_code)
         return run
 
     def _record_error(self, run: Run,
@@ -176,12 +172,12 @@ class Manager:
                     run,
                     RuntimeError(f"No Celery task ID for run {run.id}",
                                  f" in stage {run.processing_stage}"),
-                    ProcessingStage.ERROR)
+                    ProcessingStage.SYSTEM_ERROR)
 
         except FileNotFoundError as e:
             # This may happen, if the open()s fail, e.g. because the run directory was manually
             # deleted or is unavailable due to network problems.
-            raise self._record_error(run, e, ProcessingStage.ERROR)
+            raise self._record_error(run, e, ProcessingStage.SYSTEM_ERROR)
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
@@ -345,7 +341,7 @@ class Manager:
         if run.processing_stage != ProcessingStage.RUN_CREATED:
             ex = RuntimeError("run.processing_stage not RUN_CREATED",
                               f"but {run.processing_stage.name}")
-            raise self._record_error(run, ex, ProcessingStage.ERROR)
+            raise self._record_error(run, ex, ProcessingStage.SYSTEM_ERROR)
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -374,14 +370,14 @@ class Manager:
         except (ClientError, OSError) as e:
             # Any error during preparation, also if caused by the client should result in the
             # run to be in SYSTEM_ERROR state.
-            raise self._record_error(run, e, ProcessingStage.ERROR)
+            raise self._record_error(run, e, ProcessingStage.SYSTEM_ERROR)
         return run
 
     def execute(self, run: Run) -> Run:
         if run.processing_stage != ProcessingStage.PREPARED_EXECUTION:
             ex = RuntimeError("run.processing_stage not PREPARED_EXECUTION but",
                               f" {run.processing_stage}")
-            self._record_error(run, ex, ProcessingStage.ERROR)
+            self._record_error(run, ex, ProcessingStage.SYSTEM_ERROR)
             raise ex
 
         # Set workflow_type
@@ -394,7 +390,7 @@ class Manager:
                 RuntimeError("Workflow type '%s' is not known. Know %s" %
                              (run.request["workflow_type"],
                               ", ".join(self.workflow_engines.keys()))),
-                ProcessingStage.ERROR)
+                ProcessingStage.EXECUTOR_ERROR)
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
@@ -406,12 +402,12 @@ class Manager:
                 RuntimeError("Workflow type version '%s' is not known. Know %s" %
                              (run.request["workflow_type_version"],
                               ", ".join(self.workflow_engines[workflow_type].keys()))),
-                ProcessingStage.ERROR)
+                ProcessingStage.EXECUTOR_ERROR)
 
         if run.rundir_rel_workflow_path is None:
             raise self._record_error(run,
                                      RuntimeError(f"Workflow path of run is None: {run.id}"),
-                                     ProcessingStage.ERROR)
+                                     ProcessingStage.EXECUTOR_ERROR)
 
         # Execute run
         config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]

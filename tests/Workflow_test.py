@@ -141,12 +141,13 @@ def test_fail_execute_snakemake(manager,
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
         stage = run.processing_stage
-        if stage != ProcessingStage.FINISHED_EXECUTION:
+        if not stage.is_error:
             print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = manager.update_run(run)
         else:
             success = True
+
     assert run.execution_log["exit_code"] != 0
     assert not (manager.weskit_context.run_dir(run.sub_dir) / "hello_world.txt").exists()
     assert "hello_world.txt" not in to_filename(run.outputs["filesystem"])
@@ -183,7 +184,7 @@ def test_without_workflow_params_snakemake(manager,
     while not success:
         assert is_within_timeout(start_time), "Test timed out"
         stage = run.processing_stage
-        if stage != ProcessingStage.FINISHED_EXECUTION:
+        if not stage.is_error:
             print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
             run = manager.update_run(run)
@@ -294,33 +295,3 @@ def test_update_all_runs(manager,
     db_run = manager.get_run(run.id)
     assert db_run is not None
     assert db_run.processing_stage == ProcessingStage.FINISHED_EXECUTION
-
-
-@pytest.mark.integration
-def test_update_killed_job(manager,
-                           celery_worker):
-    run = get_mock_run(workflow_url="file:wf1/Snakefile",
-                       workflow_type="SMK",
-                       workflow_type_version="6.10.0")
-    manager.database.insert_run(run)
-    run = manager.prepare_execution(run, files=[])
-    run = manager.execute(run)
-    run = manager.database.update_run(run)
-
-    start_time = time.time()
-    success = False
-    while not success:
-        assert is_within_timeout(start_time), "Test timed out"
-        stage = run.processing_stage
-        print("Waiting ... (status=%s)" % stage.name)
-        if stage != ProcessingStage.STARTED_EXECUTION:
-            assert_stage_is_not_failed(stage)
-            time.sleep(1)
-            run = manager.update_run(run)
-        else:
-            time.sleep(3)
-            success = True
-
-    run.execution_log["exit_code"] = -1
-    run = manager.check_exit_code(run)
-    assert run.processing_stage == ProcessingStage.ERROR

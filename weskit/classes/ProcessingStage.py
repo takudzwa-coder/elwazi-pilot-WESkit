@@ -46,23 +46,28 @@ class ProcessingStage(enum.Enum):
     #             All workload jobs and the workflow engine executed with exit code == 0.
     FINISHED_EXECUTION = 7
 
-    # > ERROR: Any error of the WESkit system itself. Examples are
+    # > SYSTEM_ERROR: Any error of the WESkit system itself. Examples are
     #
-    # * Celery worker error
+    # * System error in task not resulting in Celery task FAILURE
     # * Errors in infrastructure (DB, Redis, Keycloak, etc.)
     # * Filesystem errors (inaccessible mounts, etc.), other than client-caused file access errors
     #   (e.g. wrong paths).
     # * WESkit.Executor errors (cluster errors, SSH errors, etc.)
-    ERROR = 8
+    SYSTEM_ERROR = 8
+
+    # > EXECUTOR_ERROR: The task encountered an error in one of the Executor processes.
+    #   Generally, this means that an Executor exited with a non-zero exit code.
+    #   exit_code > 0
+    EXECUTOR_ERROR = 9
 
     # > CANCELED: The workflow engine run (~ task) has been successfully cancelled.
     #
-    CANCELED = 9
+    CANCELED = 10
 
     # > REQUESTED_CANCEL:  The workflow engine run (~ task) is being cancelled, e.g. waiting for the
     #               engine to respond to SIGTERM and clean up running cluster jobs,
     #               compiling incomplete run, run results, etc.
-    REQUESTED_CANCEL = 10
+    REQUESTED_CANCEL = 11
 
     def __repr__(self) -> str:
         return self.name
@@ -72,18 +77,31 @@ class ProcessingStage(enum.Enum):
         return ProcessingStage[name]
 
     @staticmethod
-    def from_celery(celery_state_name: Optional[str]) -> \
-            ProcessingStage:
+    def from_celery_and_exit_code(celery_state_name: Optional[str],
+                                  command_exit_code: Optional[int]) -> ProcessingStage:
         if celery_state_name is None:
             raise RuntimeError("run.celery_task_state should be set at this point")
         celery_to_weskit_stage = {
             "PENDING": ProcessingStage.AWAITING_START,
             "STARTED": ProcessingStage.STARTED_EXECUTION,
             "SUCCESS": ProcessingStage.FINISHED_EXECUTION,
-            "RETRY": ProcessingStage.ERROR,
+            "RETRY": ProcessingStage.SYSTEM_ERROR,
             "REVOKED": ProcessingStage.CANCELED,
-            "FAILURE": ProcessingStage.ERROR
+            "FAILURE": ProcessingStage.SYSTEM_ERROR
         }
+
+        if celery_state_name == "SUCCESS":
+            if command_exit_code is None:
+                # The exit_code returned from the worker should always be an integer, if the
+                # Celery worker gets into the SUCCESS state.
+                return ProcessingStage.SYSTEM_ERROR
+            elif command_exit_code > 0:
+                return ProcessingStage.EXECUTOR_ERROR
+            elif command_exit_code < 0:  # System error in task not resulting in Celery task FAILURE
+                return ProcessingStage.SYSTEM_ERROR
+            else:
+                return celery_to_weskit_stage["SUCCESS"]
+
         return celery_to_weskit_stage[celery_state_name]
 
     @staticmethod
@@ -108,12 +126,22 @@ class ProcessingStage(enum.Enum):
     @staticmethod
     def TERMINAL_STAGES() -> List[ProcessingStage]:
         return [ProcessingStage.FINISHED_EXECUTION,
-                ProcessingStage.ERROR,
+                ProcessingStage.SYSTEM_ERROR,
+                ProcessingStage.EXECUTOR_ERROR,
                 ProcessingStage.CANCELED]
 
     @property
     def is_terminal(self) -> bool:
         return self in self.TERMINAL_STAGES()
+
+    @staticmethod
+    def ERROR_STAGES() -> List[ProcessingStage]:
+        return [ProcessingStage.SYSTEM_ERROR,
+                ProcessingStage.EXECUTOR_ERROR]
+
+    @property
+    def is_error(self) -> bool:
+        return self in self.ERROR_STAGES()
 
     @property
     def precedence(self) -> int:
@@ -131,9 +159,10 @@ class ProcessingStage(enum.Enum):
             ProcessingStage.STARTED_EXECUTION: 5,
             ProcessingStage.PAUSED: 6,
             ProcessingStage.FINISHED_EXECUTION: 7,
-            ProcessingStage.ERROR: 8,
-            ProcessingStage.CANCELED: 9,
-            ProcessingStage.REQUESTED_CANCEL: 10
+            ProcessingStage.SYSTEM_ERROR: 8,
+            ProcessingStage.EXECUTOR_ERROR: 9,
+            ProcessingStage.CANCELED: 10,
+            ProcessingStage.REQUESTED_CANCEL: 11
         }
         return PRECEDENCE[self]
 
@@ -145,7 +174,7 @@ class ProcessingStage(enum.Enum):
         if self == new_state:
             # Obviously, keeping the state is allowed.
             return True
-        elif self != ProcessingStage.ERROR and new_state == ProcessingStage.ERROR:
+        elif not self.is_error and new_state.is_error:
             # Transition to ERROR is always allowed.
             return True
         elif (self.is_pausible and new_state == ProcessingStage.PAUSED) or \

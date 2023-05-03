@@ -59,10 +59,6 @@ def assert_within_timeout(start_time, timeout=30):
     assert is_within_timeout(start_time, timeout), "Test timed out"
 
 
-def is_run_failed(stage: ProcessingStage) -> bool:
-    return stage in [ProcessingStage.ERROR]
-
-
 def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]] = None):
     engine_params = {} if engine_params is None else engine_params
     with open(config) as file:
@@ -79,7 +75,7 @@ def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]]
 
 
 def assert_stage_is_not_failed(stage: ProcessingStage):
-    assert not is_run_failed(stage), "Failing run stage '{}'".format(stage.name)
+    assert not stage.is_error, "Failing run stage '{}'".format(stage.name)
 
 
 def test_now_has_no_nanoseconds():
