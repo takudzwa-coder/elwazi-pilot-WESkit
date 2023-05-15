@@ -6,28 +6,28 @@
 #
 #  Authors: The WESkit Team
 
-class ExecutorException(Exception):
+class ExecutorError(Exception):
     """
     Any error in the Executor, including e.g. parse errors, etc.
     """
     pass
 
 
-class ProcessingError(ExecutorException):
+class WorkLoadError(ExecutorError):
     """
     Error during the execution of a command, i.e. command returned e.g. with exit code != 0.
     """
     pass
 
 
-class TimeoutError(ExecutorException):
+class TimeoutError(ExecutorError):
     """
     Command was executed but no response was observed after exceeding the given timeout
     """
     pass
 
 
-class ConnectionError(ExecutorException):
+class ConnectionError(ExecutorError):
     """
     A connection error prevented the operation to succeed. This should be used e.g. if channels
     cannot be opened or connections are interrupted.

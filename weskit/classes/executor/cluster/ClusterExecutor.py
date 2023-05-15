@@ -19,8 +19,8 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings
-from weskit.classes.executor.ExecutorException import \
-    ExecutorException, ProcessingError, TimeoutError
+from weskit.classes.executor.ExecutorError import \
+    ExecutorError, WorkLoadError, TimeoutError
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.utils import now
 
@@ -84,7 +84,7 @@ class CommandSet(metaclass=ABCMeta):
 
 
 def is_retryable_error(exception: BaseException) -> bool:
-    return isinstance(exception, (ProcessingError, TimeoutError))
+    return isinstance(exception, (WorkLoadError, TimeoutError))
 
 
 class ClusterExecutor(Executor):
@@ -123,7 +123,7 @@ class ClusterExecutor(Executor):
 
     def extract_jobid_from_submission_output(self, output: List[str]):
         if len(output) == 0:
-            raise ExecutorException("No parsable output during job submission")
+            raise ExecutorError("No parsable output during job submission")
         # Sometimes job submission may be delayed, because the cluster is overloaded.
         # I this situation a number of diagnostic messages are shown, but eventually, the
         # submission line is displayed. We simply try to parse all these lines and are happy
@@ -131,7 +131,7 @@ class ClusterExecutor(Executor):
         matches = map(lambda line: re.match(self._jid_in_submission_output_pattern, line), output)
         first_match = next(filter(lambda m: bool(m), matches), None)
         if first_match is None:
-            raise ExecutorException(f"Could not parse job ID from: {output}")
+            raise ExecutorError(f"Could not parse job ID from: {output}")
         return first_match.group(1)
 
     @property
@@ -217,7 +217,7 @@ class ClusterExecutor(Executor):
                 f"stderr={stderr_lines}"
                 ])
             if not result.status.success:
-                raise ProcessingError("Could not request status. " + base_error_info)
+                raise WorkLoadError("Could not request status. " + base_error_info)
             if len(stdout_lines) == 0:
                 # In case command was successfully executed but output is
                 # 'blocked' by the server (slurm).
@@ -226,10 +226,10 @@ class ClusterExecutor(Executor):
                 job_id, status_name, reported_exit_code = \
                     self.parse_get_status_output(stdout_lines)
             except ValueError:
-                raise ExecutorException("No unique match of status. " + base_error_info)
+                raise ExecutorError("No unique match of status. " + base_error_info)
 
             if job_id != str(process.id.value):
-                raise ExecutorException("Job ID didn't match the parsed one. " + base_error_info)
+                raise ExecutorError("Job ID didn't match the parsed one. " + base_error_info)
 
             # The reported exit code is '-' if the job is still running, or if the job
             # is done with return value 0.
@@ -264,9 +264,9 @@ class ClusterExecutor(Executor):
             wait_command = self._command_set.wait_for(process.id.value)
             with execute(self._executor, wait_command) as (result, stdout, stderr):
                 if result.status.failed:
-                    raise ExecutorException(f"Wait failed: {str(result)}, " +
-                                            f"stderr={stdout.readlines()}, " +
-                                            f"stdout={stdout.readlines()}")
+                    raise ExecutorError(f"Wait failed: {str(result)}, " +
+                                        f"stderr={stdout.readlines()}, " +
+                                        f"stdout={stdout.readlines()}")
             return self.update_process(process).result
 
     @abstractmethod

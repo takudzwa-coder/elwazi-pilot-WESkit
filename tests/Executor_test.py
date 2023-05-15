@@ -22,7 +22,7 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutedProcess, ExecutionStatus, ProcessId
 from weskit.classes.executor.Executor import \
     ExecutionSettings, CommandResult, Executor
-from weskit.classes.executor.ExecutorException import ExecutorException
+from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
 from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
@@ -623,7 +623,7 @@ class TestLsfGetStatus:
         assert status.name == "TheRealStatus"
 
     def test_job_state_multiple_match_error(self):
-        with pytest.raises(ExecutorException) as e:
+        with pytest.raises(ExecutorError) as e:
             self.run_test("123", ["bli bla blu\n",
                                   "ignore me\n",
                                   "123 TheRealStatus -\n",
