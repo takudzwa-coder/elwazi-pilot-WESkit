@@ -675,25 +675,6 @@ class TestWithHeaderToken:
         assert "content" in response.json
 
 
-class TestManagerRaiseError:
-
-    @pytest.mark.integration
-    def test_update_run_fails_with_missing_celery_id(self, long_run):
-        long_run.celery_task_id = None
-        with pytest.raises(RuntimeError):
-            WESApp.from_current_app(flask_current_app).manager.update_run(long_run)
-
-    @pytest.mark.integration
-    def test_fails_reexecute_active_run(self, long_run):
-        with pytest.raises(RuntimeError):
-            WESApp.from_current_app(flask_current_app).manager.execute(long_run)
-
-    @pytest.mark.integration
-    def test_fails_prepare_execution(self, long_run):
-        with pytest.raises(RuntimeError):
-            WESApp.from_current_app(flask_current_app).manager.prepare_execution(long_run)
-
-
 class TestExceptionError:
 
     def raise_error(self, client, wes_route, OIDC_credentials):

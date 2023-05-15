@@ -17,7 +17,6 @@ from uuid import UUID, uuid4
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
-from pymongo.errors import PyMongoError
 from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
@@ -31,7 +30,7 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
-from weskit.exceptions import ClientError, ConcurrentModificationError
+from weskit.exceptions import ClientError
 from weskit.utils import return_pre_signed_url, now
 
 ConfigParams = Dict[str, Dict[str, Any]]
@@ -132,24 +131,6 @@ class Manager:
                                                                          run.exit_code)
         return run
 
-    def _record_error(self, run: Run,
-                      exception: Exception,
-                      new_state: ProcessingStage) -> Exception:
-        """
-        Take an exception, log it, set run.processing_stage to new_state, and try to store the
-        updated Run in the database (e.g. will if this is e.g. DB connection exception).
-
-        Return the exception to simplify usage as `raise self._record_error(...)`.
-        """
-        logger.info("%s during processing of run '%s'" % (new_state.name, run.id))
-        run.processing_stage = new_state
-        if not isinstance(exception, PyMongoError) and \
-                not isinstance(exception, ConcurrentModificationError):
-            # Assumption: Recovery has been tried before (e.g. in Database). A PyMongoError here
-            # is non-recoverable. Thus, we should not try to write to the DB for PyMongoErrors.
-            self.database.update_run(run, resolution_fun=Run.merge)
-        return exception
-
     def update_run(self,
                    run: Run,
                    max_tries: int = 1) -> Run:
@@ -171,11 +152,9 @@ class Manager:
 
         elif run.processing_stage.is_running or \
                 run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
-            raise self._record_error(
-                run,
-                RuntimeError(f"No Celery task ID for run {run.id}",
-                             f" in stage {run.processing_stage}"),
-                ProcessingStage.SYSTEM_ERROR)
+            logger.error(f"No Celery task ID for run {run.id}",
+                         f" in stage {run.processing_stage}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
 
         return self.database.update_run(run, Run.merge, max_tries)
 
@@ -338,9 +317,9 @@ class Manager:
             files = ImmutableMultiDict()
 
         if run.processing_stage != ProcessingStage.RUN_CREATED:
-            ex = RuntimeError("run.processing_stage not RUN_CREATED",
-                              f"but {run.processing_stage.name}")
-            raise self._record_error(run, ex, ProcessingStage.SYSTEM_ERROR)
+            logger.error("run.processing_stage not RUN_CREATED",
+                         f"but {run.processing_stage.name}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -369,44 +348,39 @@ class Manager:
         except (ClientError, OSError) as e:
             # Any error during preparation, also if caused by the client should result in the
             # run to be in SYSTEM_ERROR state.
-            raise self._record_error(run, e, ProcessingStage.SYSTEM_ERROR)
+            logger.error(f" {e} during preparation of the execution.")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
         return run
 
     def execute(self, run: Run) -> Run:
         if run.processing_stage != ProcessingStage.PREPARED_EXECUTION:
-            ex = RuntimeError("run.processing_stage not PREPARED_EXECUTION but",
-                              f" {run.processing_stage}")
-            self._record_error(run, ex, ProcessingStage.SYSTEM_ERROR)
-            raise ex
+            logger.error("run.processing_stage not PREPARED_EXECUTION but",
+                         f" {run.processing_stage}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
 
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             # This should have been found in the validation.
-            raise self._record_error(
-                run,
-                RuntimeError("Workflow type '%s' is not known. Know %s" %
-                             (run.request["workflow_type"],
-                              ", ".join(self.workflow_engines.keys()))),
-                ProcessingStage.EXECUTOR_ERROR)
+            logger.error("Workflow type '%s' is not known. Know %s" %
+                         (run.request["workflow_type"],
+                          ", ".join(self.workflow_engines.keys())))
+            run.processing_stage = ProcessingStage.EXECUTOR_ERROR
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
             # This should have been found in the validation.
-            raise self._record_error(
-                run,
-                ClientError("Workflow type version '%s' is not known. Know %s" %
-                            (run.request["workflow_type_version"],
-                             ", ".join(self.workflow_engines[workflow_type].keys()))),
-                ProcessingStage.EXECUTOR_ERROR)
+            logger.error("Workflow type version '%s' is not known. Know %s" %
+                         (run.request["workflow_type_version"],
+                          ", ".join(self.workflow_engines[workflow_type].keys())))
+            run.processing_stage = ProcessingStage.EXECUTOR_ERROR
 
         if run.rundir_rel_workflow_path is None:
-            raise self._record_error(run,
-                                     RuntimeError(f"Workflow path of run is None: {run.id}"),
-                                     ProcessingStage.EXECUTOR_ERROR)
+            logger.error(f"Workflow path of run is None: {run.id}")
+            run.processing_stage = ProcessingStage.EXECUTOR_ERROR
 
         # Execute run
         config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]
