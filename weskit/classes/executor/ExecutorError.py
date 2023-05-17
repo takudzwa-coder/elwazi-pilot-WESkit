@@ -13,6 +13,13 @@ class ExecutorError(Exception):
     pass
 
 
+class RetryableExecutorError(Exception):
+    """
+    Any error that is retryable like get_status
+    """
+    pass
+
+
 class TimeoutError(ExecutorError):
     """
     Command was executed but no response was observed after exceeding the given timeout
