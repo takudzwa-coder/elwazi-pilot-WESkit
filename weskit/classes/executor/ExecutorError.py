@@ -13,13 +13,6 @@ class ExecutorError(Exception):
     pass
 
 
-class WorkLoadError(ExecutorError):
-    """
-    Error during the execution of a command, i.e. command returned e.g. with exit code != 0.
-    """
-    pass
-
-
 class TimeoutError(ExecutorError):
     """
     Command was executed but no response was observed after exceeding the given timeout

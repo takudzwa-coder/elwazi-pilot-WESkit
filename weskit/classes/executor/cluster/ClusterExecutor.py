@@ -20,7 +20,7 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings
 from weskit.classes.executor.ExecutorError import \
-    ExecutorError, WorkLoadError, TimeoutError
+    ExecutorError, TimeoutError
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.utils import now
 
@@ -84,7 +84,7 @@ class CommandSet(metaclass=ABCMeta):
 
 
 def is_retryable_error(exception: BaseException) -> bool:
-    return isinstance(exception, (WorkLoadError, TimeoutError))
+    return isinstance(exception, TimeoutError)
 
 
 class ClusterExecutor(Executor):
@@ -217,7 +217,7 @@ class ClusterExecutor(Executor):
                 f"stderr={stderr_lines}"
                 ])
             if not result.status.success:
-                raise WorkLoadError("Could not request status. " + base_error_info)
+                raise ExecutorError("Could not request status. " + base_error_info)
             if len(stdout_lines) == 0:
                 # In case command was successfully executed but output is
                 # 'blocked' by the server (slurm).
