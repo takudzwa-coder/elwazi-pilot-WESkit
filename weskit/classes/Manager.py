@@ -320,6 +320,7 @@ class Manager:
             logger.error("run.processing_stage not RUN_CREATED",
                          f"but {run.processing_stage.name}")
             run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -350,6 +351,7 @@ class Manager:
             # run to be in SYSTEM_ERROR state.
             logger.error(f" {e} during preparation of the execution.")
             run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
         return run
 
     def execute(self, run: Run) -> Run:
@@ -357,6 +359,8 @@ class Manager:
             logger.error("run.processing_stage not PREPARED_EXECUTION but",
                          f" {run.processing_stage}")
             run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
@@ -366,7 +370,9 @@ class Manager:
             logger.error("Workflow type '%s' is not known. Know %s" %
                          (run.request["workflow_type"],
                           ", ".join(self.workflow_engines.keys())))
-            run.processing_stage = ProcessingStage.EXECUTOR_ERROR
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
@@ -376,11 +382,15 @@ class Manager:
             logger.error("Workflow type version '%s' is not known. Know %s" %
                          (run.request["workflow_type_version"],
                           ", ".join(self.workflow_engines[workflow_type].keys())))
-            run.processing_stage = ProcessingStage.EXECUTOR_ERROR
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         if run.rundir_rel_workflow_path is None:
             logger.error(f"Workflow path of run is None: {run.id}")
-            run.processing_stage = ProcessingStage.EXECUTOR_ERROR
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         # Execute run
         config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]
