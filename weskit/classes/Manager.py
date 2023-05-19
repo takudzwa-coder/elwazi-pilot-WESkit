@@ -17,7 +17,6 @@ from uuid import UUID, uuid4
 import yaml
 from celery import Celery, Task
 from celery.app.control import Control
-from pymongo.errors import PyMongoError
 from trs_cli.client import TRSClient
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
 from werkzeug.utils import secure_filename
@@ -31,7 +30,7 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
-from weskit.exceptions import ClientError, ConcurrentModificationError
+from weskit.exceptions import ClientError
 from weskit.utils import return_pre_signed_url, now
 
 ConfigParams = Dict[str, Dict[str, Any]]
@@ -113,37 +112,24 @@ class Manager:
             if run.exit_code is not None and run.exit_code >= 0:
                 # Command (in Celery job) was executed (successfully or not)
                 # WARNING: Updates of > 4 mb can be slow with MongoDB.
-                with open(run_dir_abs / result["stdout_file"], "r") as f:
-                    run.stdout = f.readlines()
-                with open(run_dir_abs / result["stderr_file"], "r") as f:
-                    run.stderr = f.readlines()
+                try:
+                    with open(run_dir_abs / result["stdout_file"], "r") as f:
+                        run.stdout = f.readlines()
+                    with open(run_dir_abs / result["stderr_file"], "r") as f:
+                        run.stderr = f.readlines()
+                except FileNotFoundError as e:
+                    logger.error("%s during update of the run results" % (e))
+                    run.processing_stage = ProcessingStage.SYSTEM_ERROR
+                    return run
             else:
-                # run_command produces exit_code == -1 if there are technical errors during the
+                # run_command produces exit_code < 0 if there are technical errors during the
                 # command execution (other than workflow engine errors; e.g. SSH connection).
-                raise self._record_error(run,
-                                         RuntimeError("Error during processing of '%s'" % run.id),
-                                         ProcessingStage.ERROR)
+                run.processing_stage = ProcessingStage.SYSTEM_ERROR
+                return run
 
-        run.processing_stage = ProcessingStage.from_celery(celery_task.state)
+        run.processing_stage = ProcessingStage.from_celery_and_exit_code(celery_task.state,
+                                                                         run.exit_code)
         return run
-
-    def _record_error(self, run: Run,
-                      exception: Exception,
-                      new_state: ProcessingStage) -> Exception:
-        """
-        Take an exception, log it, set run.processing_stage to new_state, and try to store the
-        updated Run in the database (e.g. will if this is e.g. DB connection exception).
-
-        Return the exception to simplify usage as `raise self._record_error(...)`.
-        """
-        logger.info("%s during processing of run '%s'" % (new_state.name, run.id))
-        run.processing_stage = new_state
-        if not isinstance(exception, PyMongoError) and \
-                not isinstance(exception, ConcurrentModificationError):
-            # Assumption: Recovery has been tried before (e.g. in Database). A PyMongoError here
-            # is non-recoverable. Thus, we should not try to write to the DB for PyMongoErrors.
-            self.database.update_run(run, resolution_fun=Run.merge)
-        return exception
 
     def update_run(self,
                    run: Run,
@@ -153,30 +139,23 @@ class Manager:
         retrieve the Celery state and update the run.
         Then, if there is a change compared to the old Run, update the run in the database.
         """
-        try:
-            if run.celery_task_id is not None:
-                # backend deletes celery state after a predefined expiry time
-                # AsyncResult sets celery state to "PENDING" if ID is not in backend
-                celery_task = self._run_task.AsyncResult(run.celery_task_id)
-                logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
-                    run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
-                # celery state should not be pending for finished runs
-                if not (celery_task.state == "PENDING" and
-                        run.processing_stage.name == "FINISHED_EXECUTION"):
-                    run = self._update_run_results(run, celery_task)
+        if run.celery_task_id is not None:
+            # backend deletes celery state after a predefined expiry time
+            # AsyncResult sets celery state to "PENDING" if ID is not in backend
+            celery_task = self._run_task.AsyncResult(run.celery_task_id)
+            logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
+                run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
+            # celery state should not be pending for finished runs
+            if not (celery_task.state == "PENDING" and
+                    run.processing_stage.name == "FINISHED_EXECUTION"):
+                run = self._update_run_results(run, celery_task)
 
-            elif run.processing_stage.is_running or \
-                    run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
-                raise self._record_error(
-                    run,
-                    RuntimeError(f"No Celery task ID for run {run.id}",
-                                 f" in stage {run.processing_stage}"),
-                    ProcessingStage.ERROR)
+        elif run.processing_stage.is_running or \
+                run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
+            logger.error(f"No Celery task ID for run {run.id}",
+                         f" in stage {run.processing_stage}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
 
-        except FileNotFoundError as e:
-            # This may happen, if the open()s fail, e.g. because the run directory was manually
-            # deleted or is unavailable due to network problems.
-            raise self._record_error(run, e, ProcessingStage.ERROR)
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
@@ -338,9 +317,10 @@ class Manager:
             files = ImmutableMultiDict()
 
         if run.processing_stage != ProcessingStage.RUN_CREATED:
-            ex = RuntimeError("run.processing_stage not RUN_CREATED",
-                              f"but {run.processing_stage.name}")
-            raise self._record_error(run, ex, ProcessingStage.ERROR)
+            logger.error("run.processing_stage not RUN_CREATED",
+                         f"but {run.processing_stage.name}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
 
         # Prepare run directory
         if self.require_workdir_tag:
@@ -369,44 +349,48 @@ class Manager:
         except (ClientError, OSError) as e:
             # Any error during preparation, also if caused by the client should result in the
             # run to be in SYSTEM_ERROR state.
-            raise self._record_error(run, e, ProcessingStage.ERROR)
+            logger.error(f" {e} during preparation of the execution.")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
         return run
 
     def execute(self, run: Run) -> Run:
         if run.processing_stage != ProcessingStage.PREPARED_EXECUTION:
-            ex = RuntimeError("run.processing_stage not PREPARED_EXECUTION but",
-                              f" {run.processing_stage}")
-            self._record_error(run, ex, ProcessingStage.ERROR)
-            raise ex
+            logger.error("run.processing_stage not PREPARED_EXECUTION but",
+                         f" {run.processing_stage}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         # Set workflow_type
         if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             # This should have been found in the validation.
-            raise self._record_error(
-                run,
-                RuntimeError("Workflow type '%s' is not known. Know %s" %
-                             (run.request["workflow_type"],
-                              ", ".join(self.workflow_engines.keys()))),
-                ProcessingStage.ERROR)
+            logger.error("Workflow type '%s' is not known. Know %s" %
+                         (run.request["workflow_type"],
+                          ", ".join(self.workflow_engines.keys())))
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         # Set workflow type version
         if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
             # This should have been found in the validation.
-            raise self._record_error(
-                run,
-                RuntimeError("Workflow type version '%s' is not known. Know %s" %
-                             (run.request["workflow_type_version"],
-                              ", ".join(self.workflow_engines[workflow_type].keys()))),
-                ProcessingStage.ERROR)
+            logger.error("Workflow type version '%s' is not known. Know %s" %
+                         (run.request["workflow_type_version"],
+                          ", ".join(self.workflow_engines[workflow_type].keys())))
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         if run.rundir_rel_workflow_path is None:
-            raise self._record_error(run,
-                                     RuntimeError(f"Workflow path of run is None: {run.id}"),
-                                     ProcessingStage.ERROR)
+            logger.error(f"Workflow path of run is None: {run.id}")
+            run.processing_stage = ProcessingStage.SYSTEM_ERROR
+            self.database.update_run(run, resolution_fun=Run.merge)
+            return run
 
         # Execute run
         config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]

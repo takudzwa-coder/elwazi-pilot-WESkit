@@ -166,16 +166,21 @@ def test_run_merge_processing_stage():
                               processing_stage=ProcessingStage.SUBMITTED_EXECUTION))
     finished = Run(**updated(mock_run_data, processing_stage=ProcessingStage.FINISHED_EXECUTION))
     paused = Run(**updated(mock_run_data, processing_stage=ProcessingStage.PAUSED))
-    error = Run(**updated(mock_run_data, processing_stage=ProcessingStage.ERROR))
+    system_error = Run(**updated(mock_run_data, processing_stage=ProcessingStage.SYSTEM_ERROR))
+    executor_error = Run(**updated(mock_run_data, processing_stage=ProcessingStage.EXECUTOR_ERROR))
+
     canceled = Run(**updated(mock_run_data, processing_stage=ProcessingStage.CANCELED))
 
     assert init.merge(prepared_execution).processing_stage == ProcessingStage.PREPARED_EXECUTION
     assert init.merge(submitted_execution).processing_stage == ProcessingStage.SUBMITTED_EXECUTION
     assert init.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
-    assert init.merge(error).processing_stage == ProcessingStage.ERROR
+    assert init.merge(system_error).processing_stage == ProcessingStage.SYSTEM_ERROR
+    assert init.merge(executor_error).processing_stage == ProcessingStage.EXECUTOR_ERROR
 
     assert finished.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION
-    assert submitted_execution.merge(error).processing_stage == ProcessingStage.ERROR
+    assert submitted_execution.merge(system_error).processing_stage == ProcessingStage.SYSTEM_ERROR
+    assert submitted_execution.merge(executor_error).processing_stage == \
+        ProcessingStage.EXECUTOR_ERROR
     assert submitted_execution.merge(paused).processing_stage == ProcessingStage.PAUSED
 
     assert prepared_execution.merge(finished).processing_stage == ProcessingStage.FINISHED_EXECUTION

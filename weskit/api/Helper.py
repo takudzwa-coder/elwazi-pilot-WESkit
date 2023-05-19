@@ -66,7 +66,7 @@ class Helper:
         access_denied_response = self.get_access_denied_response(run_id, run)
 
         if access_denied_response is None:
-            run_ga4gh_status = RunStatus.from_stage(run.processing_stage, run.exit_code)
+            run_ga4gh_status = RunStatus.from_stage(run.processing_stage)
             if run_ga4gh_status is not RunStatus.COMPLETE:
                 return {"msg": "Run '%s' is not in COMPLETED state" % run_id,
                         "status_code": 409
@@ -88,7 +88,7 @@ class Helper:
 
 
 def run_log(run: Run) -> dict:
-    run_ga4gh_status = RunStatus.from_stage(run.processing_stage, run.exit_code).name
+    run_ga4gh_status = RunStatus.from_stage(run.processing_stage).name
     return {
         "run_id": run.id,
         "request": run.request,

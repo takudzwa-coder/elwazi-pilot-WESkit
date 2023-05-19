@@ -136,8 +136,7 @@ class ServiceInfo:
         counts: Dict = {status.name: 0 for status in RunStatus}
         for counts_datum in counts_data:
             status = RunStatus.from_stage(
-                stage=ProcessingStage.from_string(counts_datum["_id"]["processing_stage"]),
-                exit_code=counts_datum["_id"]["exit_code"])
+                stage=ProcessingStage.from_string(counts_datum["_id"]["processing_stage"]))
             counts[status.name] += counts_datum["count"]
         return counts
 
