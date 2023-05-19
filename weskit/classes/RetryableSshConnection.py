@@ -17,7 +17,7 @@ from tenacity import \
     AsyncRetrying, retry_if_exception, stop_after_attempt, wait_random, wait_exponential
 from urllib3.util import Url
 
-from weskit.classes.executor.ExecutorException import ExecutorException
+from weskit.classes.executor.ExecutorError import ExecutorError
 
 logger = logging.getLogger(__name__)
 
@@ -116,9 +116,9 @@ class RetryableSshConnection:
                                        send_env={})
             logger.debug(f"Connected to {self._remote_name}")
         except asyncssh.DisconnectError as e:
-            raise ExecutorException("Connection error (disconnect)", e)
+            raise ExecutorError("Connection error (disconnect)", e)
         except asyncio.TimeoutError as e:
-            raise ExecutorException("Connection error (timeout)", e)
+            raise ExecutorError("Connection error (timeout)", e)
 
     def disconnect(self) -> None:
         if self._connection is not None:
@@ -153,7 +153,7 @@ class RetryableSshConnection:
         with self._retryable_connection():
             do_ssh_op()
 
-        Exceptions raised by asyncssh are wrapped in an ExecutorException.
+        Exceptions raised by asyncssh are wrapped in an ExecutorError.
         """
         try:
             async for attempt in AsyncRetrying(**self._reconnection_retry_options(**kwargs)):
@@ -164,7 +164,7 @@ class RetryableSshConnection:
         except asyncssh.ChannelOpenError as ex:
             raise ConnectionError("Channel open failed", ex)
         except asyncssh.Error as ex:
-            raise ExecutorException("SSH error", ex)
+            raise ExecutorError("SSH error", ex)
 
     @property
     def username(self) -> str:

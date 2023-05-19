@@ -12,7 +12,7 @@ from typing import Optional, Match
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
-from weskit.classes.executor.ExecutorException import ExecutorException
+from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
 from weskit.utils import now
@@ -98,10 +98,10 @@ class LsfExecutor(ClusterExecutor):
             stderr_lines = stderr.readlines()
             start_time = now()
             if result.status.failed:
-                raise ExecutorException(f"Failed to submit cluster job: {result}, " +
-                                        f"status={result.status}, " +
-                                        f"stdout={stdout_lines}, " +
-                                        f"stderr={stderr_lines}")
+                raise ExecutorError(f"Failed to submit cluster job: {result}, " +
+                                    f"status={result.status}, " +
+                                    f"stdout={stdout_lines}, " +
+                                    f"stderr={stderr_lines}")
             else:
                 cluster_job_id = \
                     ProcessId(self.extract_jobid_from_submission_output(stdout_lines))

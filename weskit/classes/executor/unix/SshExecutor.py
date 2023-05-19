@@ -24,8 +24,8 @@ from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.executor.Executor \
     import Executor, ExecutionSettings, ExecutedProcess, \
     CommandResult, ExecutionStatus, ProcessId
-from weskit.classes.executor.ExecutorException import \
-    ExecutorException, ExecutionError
+from weskit.classes.executor.ExecutorError import \
+    ExecutorError, TimeoutError
 from weskit.classes.storage.SshStorageAccessor import SshStorageAccessor
 from weskit.utils import now
 
@@ -220,11 +220,11 @@ class SshExecutor(Executor):
                     process_dir = self._process_directory(process.id.value)
                     await self.storage.remove_dir(process_dir, recurse=True)
             except TimeoutError as e:
-                raise ExecutionError(f"Process {process.id.value} timed out:" +
-                                     str(process.command.command), e)
+                raise TimeoutError(f"Process {process.id.value} timed out:" +
+                                   str(process.command.command), e)
             except ProcessError as e:
-                raise ExecutorException(f"Error during cleanup of {process.id.value}:" +
-                                        str(process.command.command), e)
+                raise ExecutorError(f"Error during cleanup of {process.id.value}:" +
+                                    str(process.command.command), e)
             return process.result
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
@@ -235,4 +235,4 @@ class SshExecutor(Executor):
             process.handle.kill()
             self.wait_for(process)
         except OSError as e:
-            raise ExecutionError(f"Could not kill process ({process.command.command})", e)
+            raise ExecutorError(f"Could not kill process ({process.command.command})", e)

@@ -6,28 +6,28 @@
 #
 #  Authors: The WESkit Team
 
-class ExecutorException(Exception):
+class ExecutorError(Exception):
     """
     Any error in the Executor, including e.g. parse errors, etc.
     """
     pass
 
 
-class ExecutionError(ExecutorException):
+class RetryableExecutorError(Exception):
     """
-    Error during the execution of a command, i.e. command returned e.g. with exit code != 0.
-    """
-    pass
-
-
-class TimingError(ExecutorException):
-    """
-    Command execution was partially successful i.e. command execution returned no output
+    Any error that is retryable like get_status
     """
     pass
 
 
-class ConnectionError(ExecutorException):
+class TimeoutError(ExecutorError):
+    """
+    Command was executed but no response was observed after exceeding the given timeout
+    """
+    pass
+
+
+class ConnectionError(ExecutorError):
     """
     A connection error prevented the operation to succeed. This should be used e.g. if channels
     cannot be opened or connections are interrupted.

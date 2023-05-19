@@ -16,7 +16,7 @@ from typing import Optional, Match
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
     Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
-from weskit.classes.executor.ExecutorException import ExecutorException
+from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.slurm.SlurmCommandSet import SlurmCommandSet
 from weskit.utils import now
@@ -121,7 +121,7 @@ class SlurmExecutor(ClusterExecutor):
         target_script = Path(str(command.workdir), ".weskit_submitted_command.sh")
         try:
             self._event_loop.run_until_complete(self.storage.put(source_script, target_script))
-        except ExecutorException:
+        except ExecutorError:
             return _create_process(job_id=ProcessId(0),
                                    execution_status=ExecutionStatus(1, "EXIT"))
 
@@ -142,9 +142,9 @@ class SlurmExecutor(ClusterExecutor):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
             if result.status.failed:
-                raise ExecutorException(f"Failed to submit cluster job: {result}, " +
-                                        f"stdout={stdout_lines}, " +
-                                        f"stderr={stderr_lines}")
+                raise ExecutorError(f"Failed to submit cluster job: {result}, " +
+                                    f"stdout={stdout_lines}, " +
+                                    f"stderr={stderr_lines}")
             else:
                 cluster_job_id = \
                     ProcessId(self.extract_jobid_from_submission_output(stdout_lines))
