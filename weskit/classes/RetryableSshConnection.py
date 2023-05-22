@@ -17,7 +17,7 @@ from tenacity import \
     AsyncRetrying, retry_if_exception, stop_after_attempt, wait_random, wait_exponential, after_log
 from urllib3.util import Url
 
-from weskit.classes.executor.ExecutorError import ExecutorError
+from weskit.classes.executor.ExecutorError import ExecutorError, ConnectionError
 
 logger = logging.getLogger(__name__)
 
