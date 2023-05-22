@@ -14,10 +14,10 @@ from typing import Sequence, Optional
 import asyncssh
 from asyncssh import SSHKey, SSHClientConnection, SSHCompletedProcess, SSHClientProcess
 from tenacity import \
-    AsyncRetrying, retry_if_exception, stop_after_attempt, wait_random, wait_exponential
+    AsyncRetrying, retry_if_exception, stop_after_attempt, wait_random, wait_exponential, after_log
 from urllib3.util import Url
 
-from weskit.classes.executor.ExecutorError import ExecutorError
+from weskit.classes.executor.ExecutorError import ExecutorError, ConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -136,12 +136,12 @@ class RetryableSshConnection:
         """
         All retries should wrap around external asynchronous calls, such as asyncssh, or
         async functions that themselves do no retry, because errors are simply re-raised.
-        Thus, if the same error is causing a retry at different levels, retry attempts multiply!
+        Thus, if the same error is causing a retry at multiple levels, retry attempts multiply!
         """
         return {**self._retry_options,
                 "reraise": True,
                 "retry": retry_if_exception(is_connection_interrupted),
-                "after": self.raw,
+                "after": after_log(logger, logging.DEBUG),
                 **kwargs}
 
     @asynccontextmanager
