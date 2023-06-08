@@ -165,7 +165,8 @@ class RetryableSshConnection:
         Exceptions raised by asyncssh are wrapped in an ExecutorError.
         """
         try:
-            async for attempt in AsyncRetrying(before=await self.reconnect(), **self._reconnection_retry_options(**kwargs)):
+            async for attempt in AsyncRetrying(before=await self.reconnect(),
+             **self._reconnection_retry_options(**kwargs)):
                 with attempt:
                     yield self
         except asyncssh.DisconnectError as e:
