@@ -125,6 +125,15 @@ class RetryableSshConnection:
             self._connection.disconnect(code=11,   # SSH_DISCONNECT_BY_APPLICATION
                                         reason="Disconnection by request of WESkit")
 
+    async def reconnect(self):
+        try:
+            await self.run('echo "Connection is active"')
+            logger.info("Connection is active")
+        except asyncssh.Error:
+            logger.info("Connection is closed")
+            logger.info("Reconnecting...")
+            await self.connect()
+
     @property
     def raw(self) -> SSHClientConnection:
         if self._connection is None:
@@ -156,7 +165,7 @@ class RetryableSshConnection:
         Exceptions raised by asyncssh are wrapped in an ExecutorError.
         """
         try:
-            async for attempt in AsyncRetrying(**self._reconnection_retry_options(**kwargs)):
+            async for attempt in AsyncRetrying(before=await self.reconnect(), **self._reconnection_retry_options(**kwargs)):
                 with attempt:
                     yield self
         except asyncssh.DisconnectError as e:
