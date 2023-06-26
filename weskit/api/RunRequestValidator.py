@@ -88,10 +88,8 @@ class RunRequestValidator(object):
                                        self._validate_workflow_url)
         workdir_tag_errors = self._validate_rundir_tag(
             normalized_data.get("tags", None))
-        wep_errors = self._validate_workflow_engine_parameters(
-            normalized_data.get("workflow_engine_parameters", None))
-        wp_errors = self._validate_workflow_params(
-            normalized_data.get("workflow_params", None))
+        wep_errors = self._validate_params(normalized_data, "workflow_engine_parameters")
+        wp_errors = self._validate_params(normalized_data, "workflow_params")
 
         all_errors = stx_errors + wtnv_errors + url_errors + \
             workdir_tag_errors + workflow_attachment_errors + \
@@ -253,33 +251,18 @@ class RunRequestValidator(object):
         return []
 
     @staticmethod
-    def _validate_workflow_params(params: Optional[str]) -> List[str]:
-        try:
-            if params is None:
-                return []
-            elif not isinstance(params, str):
-                return ["workflow_params must be string with JSON dictionary"]
-            else:
+    def _validate_params(normalized_data: Dict[str, Any], field_name: str) -> List[str]:
+        params = normalized_data.get(field_name, None)
+        if params is None:
+            return []
+        elif not isinstance(params, str):
+            return [f"{field_name} must be string with JSON dictionary"]
+        else:
+            try:
                 parse_result = json.loads(params)
-                if isinstance(parse_result, Dict):
-                    return []
-                else:
-                    return ["workflow_params must be string with JSON dictionary"]
-        except JSONDecodeError as e:
-            return [f"JSON parse-error in workflow_params: {e.msg}"]
-
-    @staticmethod
-    def _validate_workflow_engine_parameters(params: Optional[str]) -> List[str]:
-        try:
-            if params is None:
+            except JSONDecodeError as e:
+                return [f"JSON parse-error in {field_name}: {e.msg}"]
+            if isinstance(parse_result, Dict):
                 return []
-            elif not isinstance(params, str):
-                return ["workflow_engine_parameters must be string with JSON dictionary"]
             else:
-                parse_result = json.loads(params)
-                if isinstance(parse_result, Dict):
-                    return []
-                else:
-                    return ["workflow_engine_parameters must be string with JSON dictionary"]
-        except JSONDecodeError as e:
-            return [f"JSON parse-error in workflow_engine_parameters: {e.msg}"]
+                return [f"{field_name} must be string with JSON dictionary"]
