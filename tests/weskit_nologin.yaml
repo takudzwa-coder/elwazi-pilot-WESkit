@@ -31,6 +31,8 @@ executor:
 #    knownhosts_file: "~/.ssh/known_hosts"
 #    keyfile: "~/.ssh/weskit_cluster_test_rsa"
 #    keyfile_passphrase: ""
+#    keepalive_interval: str = "30s",
+#    keepalive_count_max: int = 5,
 
 static_service_info:
 
