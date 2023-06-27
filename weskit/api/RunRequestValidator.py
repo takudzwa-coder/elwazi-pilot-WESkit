@@ -12,9 +12,10 @@ import logging
 import os
 import re
 from copy import deepcopy
+from json import JSONDecodeError
 from os.path import normpath, commonprefix
 from pathlib import Path
-from typing import List, Optional, Dict, Callable, TypeVar, Union
+from typing import List, Optional, Dict, Callable, TypeVar, Union, Any
 from urllib.parse import urlparse
 
 from werkzeug.datastructures import FileStorage, ImmutableMultiDict
@@ -53,7 +54,7 @@ class RunRequestValidator(object):
             -> Union[dict, List[str]]:
         """Validate the overall structure, types and values of the run request
         fields. workflow_params and workflow_engine_parameters are not tested
-        semantically but their structure is validated (see schema).
+        semantically but their structure is validated.
         Either return the normalized data or a list of error messages."""
 
         T = TypeVar('T')
@@ -71,6 +72,7 @@ class RunRequestValidator(object):
 
         # copy request data without "workflow_attachment"
         request_data = deepcopy({x: data[x] for x in data if x != "workflow_attachment"})
+        logger.debug(f"Request w/o attachments to validate = {request_data}")
         syntax_validation_result = self._validate_and_normalize_syntax(request_data)
         stx_errors: List[str] = []
         if isinstance(syntax_validation_result, list):
@@ -86,14 +88,21 @@ class RunRequestValidator(object):
                                        self._validate_workflow_url)
         workdir_tag_errors = self._validate_rundir_tag(
             normalized_data.get("tags", None))
+        wep_errors = self._validate_params(normalized_data, "workflow_engine_parameters")
+        wp_errors = self._validate_params(normalized_data, "workflow_params")
 
         all_errors = stx_errors + wtnv_errors + url_errors + \
-            workdir_tag_errors + workflow_attachment_errors
+            workdir_tag_errors + workflow_attachment_errors + \
+            wp_errors + wep_errors
 
+        validation_result: Union[Dict[Any, Any], List[str]]
         if len(all_errors) > 0:
-            return list(filter(lambda v: v != [] and v is not None, all_errors))
+            validation_result = list(filter(lambda v: v != [] and v is not None, all_errors))
         else:
-            return normalized_data
+            validation_result = normalized_data
+
+        logger.debug(f"Validation result = {validation_result}")
+        return validation_result
 
     def _validate_and_normalize_syntax(self, data: dict) \
             -> Union[dict, List[str]]:
@@ -240,3 +249,20 @@ class RunRequestValidator(object):
         if RunRequestValidator._uri_query_forbidden_pattern.search(value):
             return ["Forbidden characters: '%s'" % value]
         return []
+
+    @staticmethod
+    def _validate_params(normalized_data: Dict[str, Any], field_name: str) -> List[str]:
+        params = normalized_data.get(field_name, None)
+        if params is None:
+            return []
+        elif not isinstance(params, str):
+            return [f"{field_name} must be string with JSON dictionary"]
+        else:
+            try:
+                parse_result = json.loads(params)
+            except JSONDecodeError as e:
+                return [f"JSON parse-error in {field_name}: {e.msg}"]
+            if isinstance(parse_result, Dict):
+                return []
+            else:
+                return [f"{field_name} must be string with JSON dictionary"]

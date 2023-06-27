@@ -39,8 +39,8 @@ class RetryableSshConnection:
                  keyfile_passphrase: str,
                  knownhosts_file: Path,
                  connection_timeout: str = "2m",
-                 keepalive_interval: str = "0",
-                 keepalive_count_max: int = 3,
+                 keepalive_interval: str = "30s",
+                 keepalive_count_max: int = 5,
                  port: int = 22,
                  retry_options: Optional[dict] = None):
         """

@@ -60,7 +60,8 @@ def test_validate_success(run_request_validator):
 
 def test_validate_structure(run_request_validator):
     assert run_request_validator.validate(request(workflow_params={})) == \
-           [{'workflow_params': ['must be of string type']}]
+           [{'workflow_params': ['must be of string type']},
+            "workflow_params must be string with JSON dictionary"]
 
     request_wo_params = request()
     request_wo_params.pop("workflow_params")
@@ -151,3 +152,79 @@ def test_validate_attachment(run_request_validator):
         files = ImmutableMultiDict({"workflow_attachment": [wf_file1]})
         assert run_request_validator.validate(request(workflow_attachment=files)) == \
             ["At least one attachment filename is forbidden. Forbidden are: .nextflow, .snakemake"]
+
+
+def test_validate_workflow_params(run_request_validator):
+    assert run_request_validator.validate(request(
+        workflow_params=None
+    )) == [{"workflow_params": ["null value not allowed"]}]
+    assert run_request_validator.validate(request(
+        workflow_params="wrong"
+    )) == ["JSON parse-error in workflow_params: Expecting value"]
+    assert run_request_validator.validate(request(
+        workflow_params="[]"
+    )) == ["workflow_params must be string with JSON dictionary"]
+
+    assert run_request_validator.validate(request(
+        workflow_params="{}"
+    )) == {
+        'workflow_params': '{}',
+        'workflow_type': 'SMK',
+        'workflow_type_version': '6.10.0',
+        'workflow_url': 'file:tests/wf/Snakefile',
+    }
+
+    assert run_request_validator.validate(request(
+        workflow_params='{"engine-environment": "bla"}'
+    )) == {
+        'workflow_params': '{"engine-environment": "bla"}',
+        'workflow_type': 'SMK',
+        'workflow_type_version': '6.10.0',
+        'workflow_url': 'file:tests/wf/Snakefile',
+    }
+    assert run_request_validator.validate(request(
+        workflow_params='{"engine-environment": []}'
+    )) == {
+        'workflow_params': '{"engine-environment": []}',
+        'workflow_type': 'SMK',
+        'workflow_type_version': '6.10.0',
+        'workflow_url': 'file:tests/wf/Snakefile',
+    }
+
+
+def test_validate_workflow_engine_parameters(run_request_validator):
+    assert run_request_validator.validate(request(
+        workflow_params=None
+    )) == [{"workflow_params": ["null value not allowed"]}]
+    assert run_request_validator.validate(request(
+        workflow_params="wrong"
+    )) == ["JSON parse-error in workflow_params: Expecting value"]
+    assert run_request_validator.validate(request(
+        workflow_params="[]"
+    )) == ["workflow_params must be string with JSON dictionary"]
+
+    assert run_request_validator.validate(request(
+        workflow_params="{}"
+    )) == {
+               'workflow_params': '{}',
+               'workflow_type': 'SMK',
+               'workflow_type_version': '6.10.0',
+               'workflow_url': 'file:tests/wf/Snakefile',
+           }
+
+    assert run_request_validator.validate(request(
+        workflow_params='{"engine-environment": "bla"}'
+    )) == {
+               'workflow_params': '{"engine-environment": "bla"}',
+               'workflow_type': 'SMK',
+               'workflow_type_version': '6.10.0',
+               'workflow_url': 'file:tests/wf/Snakefile',
+           }
+    assert run_request_validator.validate(request(
+        workflow_params='{"engine-environment": []}'
+    )) == {
+               'workflow_params': '{"engine-environment": []}',
+               'workflow_type': 'SMK',
+               'workflow_type_version': '6.10.0',
+               'workflow_url': 'file:tests/wf/Snakefile',
+           }

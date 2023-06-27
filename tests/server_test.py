@@ -336,7 +336,9 @@ class TestWithoutLogin:
         data = get_workflow_data(
             snakefile="file:tests/wf1/Snakefile",
             config="tests/wf1/config.yaml")
-        response = test_client.post("/ga4gh/wes/v1/runs", json=data)
+        response = test_client.post("/ga4gh/wes/v1/runs",
+                                    data=data,
+                                    headers={"Content-Type": "multipart/form-data"})
         assert response.status_code == 401
 
 

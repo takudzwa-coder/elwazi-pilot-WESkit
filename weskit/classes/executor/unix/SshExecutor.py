@@ -76,11 +76,12 @@ class SshExecutor(Executor):
         """
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
             print("#!/bin/bash", file=file)
+            # Whatever command is executed later, make sure to catch all errors. This is also
+            # important for the `cd`, which may fail if the working directory is not
+            # accessible.
             print("set -o pipefail -ue", file=file)
+            print("echo 'Current working directory:' $PWD", file=file)
             if command.workdir is not None:
-                # Whatever command is executed later, make sure to catch all errors. This is also
-                # important for the `cd`, which may fail if the working directory is not
-                # accessible.
                 print(f"cd {shlex.quote(str(command.workdir))}", file=file)
             for var_name, var_value in command.environment.items():
                 print(f"export {var_name}={shlex.quote(var_value)}", file=file)
