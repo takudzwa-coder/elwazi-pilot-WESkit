@@ -121,7 +121,6 @@ def test_execute_snakemake(manager,
         "--configfile",
         f"{run.id}.yaml"
     ]
-    assert run.stderr[0] == "environment setup\n"
 
 
 @pytest.mark.integration

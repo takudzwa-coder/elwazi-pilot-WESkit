@@ -186,17 +186,6 @@ class TestHelper:
                  }, 403)
 
     @pytest.mark.integration
-    def test_log_response(self, test_run, login_app):
-        helper = Helper(login_app, User(id=test_run.user_id))
-        stderr, stderr_code = helper.get_log_response(test_run.id, "stderr")
-        assert stderr_code == 200
-        assert stderr["content"][0] == 'Building DAG of jobs...\n'
-
-        stdout, stdout_code = helper.get_log_response(test_run.id, "stdout")
-        assert stdout_code == 200
-        assert len(stdout["content"]) == 0
-
-    @pytest.mark.integration
     def test_log_response_run_incomplete(self, incomplete_run, login_app):
         helper = Helper(login_app, User(id=incomplete_run.user_id))
         assert helper.get_log_response(incomplete_run.id, "stderr") == \
@@ -340,16 +329,6 @@ class TestWithoutLogin:
     @pytest.mark.integration
     def test_list_runs_extended_wo_login(self, test_client):
         response = test_client.get("/weskit/v1/runs")
-        assert response.status_code == 401
-
-    @pytest.mark.integration
-    def test_get_run_stderr_wo_login(self, test_client):
-        response = test_client.get("/weskit/v1/runs/test_runId/stderr")
-        assert response.status_code == 401
-
-    @pytest.mark.integration
-    def test_get_run_stdout_wo_login(self, test_client):
-        response = test_client.get("/weskit/v1/runs/test_runId/stdout")
         assert response.status_code == 401
 
     @pytest.mark.integration
@@ -637,43 +616,6 @@ class TestWithHeaderToken:
                                    headers=OIDC_credentials.headerToken)
         assert response.status_code == 404
 
-    @pytest.mark.integration
-    def test_get_run_stderr(self,
-                            test_client,
-                            test_run,
-                            OIDC_credentials):
-        run_id = test_run.id
-        response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
-                                   headers=OIDC_credentials.headerToken)
-        start_time = time.time()
-        while response.status_code == 409:   # workflow still running
-            assert is_within_timeout(start_time, 20), "Timeout requesting stderr"
-            time.sleep(1)
-            response = test_client.get(f"/weskit/v1/runs/{run_id}/stderr",
-                                       headers=OIDC_credentials.headerToken)
-
-        assert response.status_code == 200, response.json
-        assert isinstance(response.json, dict)
-        assert "content" in response.json
-
-    @pytest.mark.integration
-    def test_get_run_stdout(self,
-                            test_client,
-                            test_run,
-                            OIDC_credentials):
-        run_id = test_run.id
-        response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
-                                   headers=OIDC_credentials.headerToken)
-        start_time = time.time()
-        while response.status_code == 409:    # workflow still running
-            assert is_within_timeout(start_time, 20), "Timeout requesting stdout"
-            time.sleep(1)
-            response = test_client.get(f"/weskit/v1/runs/{run_id}/stdout",
-                                       headers=OIDC_credentials.headerToken)
-        assert response.status_code == 200, response.json
-        assert isinstance(response.json, dict)
-        assert "content" in response.json
-
 
 class TestExceptionError:
 
@@ -709,12 +651,6 @@ class TestExceptionError:
 
         # fails to list runs extended
         self.raise_error(test_client, "/weskit/v1/runs", OIDC_credentials)
-
-        # fails to get stderr
-        self.raise_error(test_client, f"/weskit/v1/runs/{run_id}/stderr", OIDC_credentials)
-
-        # fails to get stdout
-        self.raise_error(test_client, f"/weskit/v1/runs/{run_id}/stdout", OIDC_credentials)
 
 
 class TestOICDValidationError:

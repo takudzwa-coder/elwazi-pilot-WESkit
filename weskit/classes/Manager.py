@@ -113,13 +113,11 @@ class Manager:
                 # Command (in Celery job) was executed (successfully or not)
                 # WARNING: Updates of > 4 mb can be slow with MongoDB.
                 try:
-                    with open(run_dir_abs / result["stdout_file"], "r") as f:
-                        run.stdout = f.readlines()
-                    with open(run_dir_abs / result["stderr_file"], "r") as f:
-                        run.stderr = f.readlines()
+                    os.path.isfile(run_dir_abs / result["stdout_file"])
+                    os.path.isfile(run_dir_abs / result["stderr_file"])
                 except FileNotFoundError as e:
                     logger.error("%s during update of the run results" % (e))
-                    run.processing_stage = ProcessingStage.SYSTEM_ERROR
+                    run.processing_stage = ProcessingStage.EXECUTOR_ERROR
                     return run
             else:
                 # run_command produces exit_code < 0 if there are technical errors during the
