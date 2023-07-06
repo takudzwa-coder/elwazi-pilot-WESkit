@@ -73,6 +73,12 @@ executor:
         keyfile_passphrase:
           type: string
           required: false
+        keepalive_interval:
+          type: string
+          required: false
+        keepalive_count_max:
+          type: integer
+          required: false
         retry_options:
           type: dict
           schema:
