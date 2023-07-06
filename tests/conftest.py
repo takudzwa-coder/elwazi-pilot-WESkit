@@ -5,26 +5,26 @@
 import logging
 import os
 import shutil
+import time
 from pathlib import Path
 from tempfile import mkdtemp
 
-import pytest
 import nest_asyncio
+import pytest
 import requests
-import time
 import yaml
 from testcontainers.core.container import DockerContainer
 from testcontainers.mongodb import MongoDbContainer
 from testcontainers.mysql import MySqlContainer
 from testcontainers.redis import RedisContainer
 
+from weskit import create_app, create_database, Manager, WorkflowEngineFactory, PathContext
+from weskit.api.ServiceInfo import ServiceInfo
+from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
-from weskit import create_app, create_database, Manager, WorkflowEngineFactory, PathContext
-from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
 from weskit.classes.executor.unix.SshExecutor import SshExecutor
-from weskit.api.ServiceInfo import ServiceInfo
 from weskit.utils import create_validator, get_event_loop
 
 logger = logging.getLogger(__name__)
