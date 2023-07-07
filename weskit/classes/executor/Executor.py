@@ -202,7 +202,23 @@ class ExecutionSettings:
     walltime: Optional[timedelta] = None
     memory: Optional[Memory] = None
     queue: Optional[str] = None
-    cores: Optional[int] = None
+    # Fractional cores are relevant for Kubernetes.
+    cores: Optional[float] = None
+    max_retries: Optional[int] = None
+    container_image: Optional[str] = None
+
+    def __post_init__(self):
+        """
+        Some sanity checks on the values done at construction time of the dataclass instance.
+        """
+        if self.max_retries is not None:
+            assert(self.max_retries >= 0)
+        if self.cores is not None:
+            assert(self.cores > 0)
+        if self.walltime is not None:
+            assert(self.walltime.total_seconds() > 0)
+        if self.memory is not None:
+            assert(self.memory.bytes() > 0)
 
     def __iter__(self):
         for i in {
@@ -212,7 +228,9 @@ class ExecutionSettings:
             "walltime": self.walltime,
             "memory": self.memory,
             "queue": self.queue,
-            "cores": self.cores
+            "cores": self.cores,
+            "max_retries": self.max_retries,
+            "container_image": self.container_image,
         }.items():
             yield i
 
