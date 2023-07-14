@@ -250,7 +250,7 @@ def GetRunStderr(run_id):
         raise e
 
 
-@bp.route("/weskit/v1/runs/<string:run_id>/stdout", methods=["GET"])
+@bp.route("/weskit/v1/run.s/<string:run_id>/stdout", methods=["GET"])
 @login_required()
 def GetRunStdout(run_id):
     """

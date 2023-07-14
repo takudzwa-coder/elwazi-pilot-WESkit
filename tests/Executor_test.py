@@ -464,7 +464,7 @@ def test_executor_context_manager():
     command = ShellCommand(["echo", "something"])
     executor = MockExecutor(target_status=0)
     with execute(executor, command) as (result, stdout, stderr):
-        assert executor.wait_for_called_with.id.value == 12234
+        assert executor.wait_for_called_with.pid.value == 12234
         assert result.status.code == 0
         assert stderr.readlines() == ["stderr\n"]
         assert stdout.readlines() == ["stdout\n"]

@@ -12,8 +12,11 @@ from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import PathLike
-from typing import Optional, Any
+from typing import Optional, TypeVar
 from uuid import uuid4, UUID
+
+import ulid
+from ulid.api import ULID
 
 from weskit.utils import get_event_loop
 from weskit.classes.ShellCommand import ShellCommand
@@ -22,6 +25,31 @@ from weskit.memory_units import Memory
 from weskit.serializer import decode_json
 
 logger = logging.getLogger(__name__)
+
+
+class WESkitProcessId:
+    """
+    A process ID assigned by WESkit **before** the submission of a process to the executor.
+    This ID can be used to implement recovery with
+
+    1. Create WESkitProcessId wid
+    2. Store wid in DB
+    3. Submit process with wid as ID to executor that can be used for re-identification.
+    4. Update DB with submission data
+    """
+
+    def __init__(self):
+        self._value = ulid.new()
+
+    @property
+    def value(self) -> ULID:
+        return self._value
+
+    def __repr__(self) -> str:
+        return f"WESkitProcessId(value={str(self.value)})"
+
+
+T = TypeVar("T")
 
 
 class ProcessId:
@@ -41,15 +69,15 @@ class ProcessId:
     Every process gets a process tag, whether you set it or not. The default is a UUID string.
     """
     def __init__(self,
-                 value: Optional[Any]):
+                 value: Optional[T]):
         self._value = value
 
     @property
-    def value(self) -> Optional[Any]:
+    def value(self) -> Optional[T]:
         return self._value
 
     def __repr__(self) -> str:
-        return f"ProcessId(value={self.value})"
+        return f"ProcessId(value={str(self.value)})"
 
 
 class ExecutionStatus:
@@ -256,6 +284,9 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
     process. ExecutedProcess delegates to the Executor it originated from, which saves
     us from having to implement some kind of process management, just in case we will have multiple
     processes in the same thread.
+
+    ExecutedProcess is serializable and can be stored in the database, such that another process
+    or thread can connect to the process running in the executor infrastructure.
     """
 
     # Note: The Executor is a forward reference to a not yet declared class. Either use
@@ -263,25 +294,25 @@ class ExecutedProcess(metaclass=abc.ABCMeta):
     # i.e. 'Executor'.
     def __init__(self,
                  executor: Executor,
-                 process_handle,
+                 weskit_id: WESkitProcessId,
                  pre_result: CommandResult):
         self._executor = executor
-        self._process_handle = process_handle
+        self._wid = weskit_id
         self._result = pre_result
 
     @property
-    def handle(self):
+    def wid(self):
         """
         Only for access from Executor.
         """
-        return self._process_handle
+        return self._wid
 
     @property
     def command(self) -> ShellCommand:
         return self._result.command
 
     @property
-    def id(self) -> ProcessId:
+    def pid(self) -> ProcessId:
         """
         Note that the process ID can be the one used by the underlying execution infrastructure,
         but could also be implemented in the subclass including some process management. It
@@ -340,11 +371,47 @@ class Executor(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def hostname(self) -> str:
+        """
+        #!/bin/bash
+
+        set -o pipefail -ue
+
+        logPath="${1:?No log path given}"
+        shift 1
+
+        declare -a command=( $@ )
+
+        # UNIX `false` cannot return arbitrary exit code, and `return` is not allowed in a {}
+        # block, and `exit` does not return from the block but ends the whole shell.
+        with_code() {
+          local code="${1:-0}"
+          return $code
+        }
+
+        # Run the command and collect all information
+        {
+          "$command[@]" &
+          echo "$!" > "$logPath/pid"
+          wait
+          exit_code="$?"
+          echo "$exit_code" > "$logPath/exit_code"
+          with_code "$exit_code"
+        } \
+          1> >(tee stdout > "$logPath/stdout") \
+          2> >(tee stderr > "$logPath/stderr")
+          <($logPath/stdin)
+        """
+        pass
+
+    # TODO Create a process directory
+    # TODO Create a wrapper and write it via the storage accessor to the process directory.
+    def _wrapper(self):
         pass
 
     @abc.abstractmethod
     def execute(self,
                 command: ShellCommand,
+                wid: Optional[WESkitProcessId] = None,
                 stdout_file: Optional[PathLike] = None,
                 stderr_file: Optional[PathLike] = None,
                 stdin_file: Optional[PathLike] = None,
@@ -360,6 +427,8 @@ class Executor(metaclass=abc.ABCMeta):
         The return value is a representation of the executed process.
 
         :param command: The command to be executed.
+        :param wid: An optional WESkitProcessId useful for re-identification of jobs, in case of
+                    an interruption of the executor before the metadata have been stored.
         :param stdout_file: A path to a file into which the standard output shall be written.
                             This can be a file-pattern, e.g. for LSF /path/to/file.o%J
         :param stderr_file: A path to a file into which the standard error shall be written.
@@ -367,6 +436,9 @@ class Executor(metaclass=abc.ABCMeta):
         :param stdin_file: A path to a file from which to take the process standard input.
         :param settings: Execution parameters on the execution infrastructure.
         :return: A representation of the executed command.
+
+        Note that the stdout, stderr, and stdin files are always paths on the host that executes
+        the process. Use the `Executor.storage` StorageAccessor to access the files.
         """
         pass
 
@@ -394,7 +466,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def kill(self, process: ExecutedProcess) -> bool:
         """
-        Cancel the process named by the process_id. Note that the killing operation may fail.
+        Cancel the process. Note that the killing operation may fail.
         Furthermore, note that if the process cannot be killed because it does not exist (anymore)
         no exception is thrown. Instead, if the process could not be found, False is returned.
         This is to reduce unnecessary exceptions in the common case where a process ends between
@@ -416,6 +488,8 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def storage(self) -> StorageAccessor:
         """
-        Return a storage accessor for doing file operations on a (possibly remote) storage.
+        Return a storage accessor for doing file operations on a (possibly remote) storage that is
+        associated with the Executor. For instance, this may be an accessor for accessing storage
+        via SSH, via NFS, or S3.
         """
         pass

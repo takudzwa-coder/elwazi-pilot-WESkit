@@ -199,10 +199,10 @@ class ClusterExecutor(Executor):
            stop=stop_after_attempt(4),
            retry=retry_if_exception(is_retryable_error))
     def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
-        if process.id.value is None:
+        if process.pid.value is None:
             raise ValueError("Process ID was None, probably due to previous error")
         else:
-            status_command = self._command_set.get_status([process.id.value])
+            status_command = self._command_set.get_status([process.pid.value])
 
         with execute(self._executor, status_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
@@ -225,7 +225,7 @@ class ClusterExecutor(Executor):
             except ValueError:
                 raise ExecutorError("No unique match of status. " + base_error_info)
 
-            if job_id != str(process.id.value):
+            if job_id != str(process.pid.value):
                 raise ExecutorError("Job ID didn't match the parsed one. " + base_error_info)
 
             # The reported exit code is '-' if the job is still running, or if the job
@@ -253,12 +253,12 @@ class ClusterExecutor(Executor):
         return process
 
     def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.id.value is None:
+        if process.pid.value is None:
             raise ValueError("Process ID was None, probably due to previous error")
         elif process.result.status.finished:
             return process.result
         else:
-            wait_command = self._command_set.wait_for(process.id.value)
+            wait_command = self._command_set.wait_for(process.pid.value)
             with execute(self._executor, wait_command) as (result, stdout, stderr):
                 if result.status.failed:
                     raise ExecutorError(f"Wait failed: {str(result)}, " +

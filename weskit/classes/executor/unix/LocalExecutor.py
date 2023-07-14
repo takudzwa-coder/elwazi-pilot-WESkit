@@ -11,61 +11,11 @@ from builtins import int, super, open, property
 from typing import Optional, cast, IO, Union, List
 
 import weskit.classes.executor.Executor as base
-from weskit.classes.ShellCommand import ShellCommand, ShellSpecial
+from weskit.classes.ShellCommand import ShellCommand, ShellSpecial, ss
 from weskit.classes.storage.LocalStorageAccessor import LocalStorageAccessor
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
-
-
-class ClosingPopen(subprocess.Popen):
-    """
-    A decorator for Popen that ensured the stdin, stdout, and stderr file descriptors are
-    closed, if the process is ended.
-
-    Note: This is not a complete implementation. E.g. terminate() and signal() are not overridden.
-    """
-
-    def __init__(self, *args,
-                 stdin=None,
-                 stdout=None,
-                 stderr=None,
-                 **kwargs):
-        self._stdin_fd = stdin
-        self._stdout_fd = stdout
-        self._stderr_fd = stderr
-        super().__init__(*args, stdin=stdin, stdout=stdout, stderr=stderr, **kwargs)
-
-    @property
-    def stdin_fd(self):
-        return self._stdin_fd
-
-    @property
-    def stderr_fd(self):
-        return self._stderr_fd
-
-    @property
-    def stdout_fd(self):
-        return self._stdout_fd
-
-    def _close_std_fds(self):
-        if self.stdin_fd is not None:
-            self.stdin_fd.close()
-        if self.stderr_fd is not None:
-            self.stderr_fd.close()
-        if self.stdout_fd is not None:
-            self.stdout_fd.close()
-
-    def poll(self):
-        retcode = super().poll()
-        if retcode is not None:
-            self._close_std_fds()
-        return retcode
-
-    def wait(self, timeout: Optional[float] = None) -> int:
-        retcode = super().wait(timeout)
-        self._close_std_fds()
-        return retcode
 
 
 class LocalExecutor(base.Executor):
@@ -91,62 +41,43 @@ class LocalExecutor(base.Executor):
         """
         return socket.gethostname()
 
-    def _file_repr_to_io(self, file: Optional[PathLike], mode: str) -> Optional[IO]:
-        if isinstance(file, PathLike):
-            return open(cast(PathLike, file), mode)
-        else:
-            return file
-
     def execute(self,
                 command: ShellCommand,
+                wid: Optional[base.WESkitProcessId] = None,
                 stdout_file: Optional[PathLike] = None,
                 stderr_file: Optional[PathLike] = None,
                 stdin_file: Optional[PathLike] = None,
                 settings: Optional[base.ExecutionSettings] = None,
-                shell: bool = True,
                 **kwargs) \
             -> base.ExecutedProcess:
         """
         Execute the process in the background and return the process ID.
 
-        Note, the LocalExecutor supports processing of IOBase objects as stderr, stdout, stdin.
-
-        If the ShellCommand contains shell specials it cannot be handled as pure command anymore.
-        In that case, you need to set `shell = True`, or you receive a ValueError because of
-        inconsistent settings.
+        The command is always wrapped in Bash shell.
         """
-        if command.needs_shell() and not shell:
-            ValueError("Command uses shell specials, but is not marked to be executed in shell: " +
-                       str(command))
+        if wid is None:
+            wid = base.WESkitProcessId()
 
-        # In the following explicit cast is used to avoid mypy errors. Mypy cannot (yet) infer the
-        # type from `isinstance` conditions.
-        stdin = self._file_repr_to_io(stdin_file, "r")
-        stderr = self._file_repr_to_io(stderr_file, "a")
-        stdout = self._file_repr_to_io(stdout_file, "a")
         start_time = now()
 
-        effective_command: List[Union[str, ShellSpecial]]
-        if shell:
-            effective_command = ["bash", "-c", command.command_expression]
-        else:
-            effective_command = command.command
+        effective_command: List[Union[str, ShellSpecial]] = \
+            ["bash", "-c", command.command_expression]
 
-        # Note : ClosingPopen ensures that in most situations the stderr and stdin are closed,
-        #        as soon as Popen.returncode is not None.
+        # TODO Wrapper script with redirections, pid!
+
         try:
-            process = ClosingPopen(effective_command,
-                                   cwd=command.workdir,
-                                   stdout=stdout,
-                                   stderr=stderr,
-                                   stdin=stdin,
-                                   env=command.environment,
-                                   shell=False,    # We wrap in Bash.
-                                   **kwargs)
-            logger.debug(f"Started process {process.pid}: {command.command}")
+            process = subprocess.run(effective_command,
+                                     cwd=command.workdir,
+                                     env={
+                                         "weskit_process_id": str(wid),
+                                         **command.environment
+                                     },
+                                     shell=False,    # We wrap in Bash.
+                                     **kwargs)
+            logger.debug(f"Started process {process.pid}: {effective_command}")
 
             return base.ExecutedProcess(executor=self,
-                                        process_handle=process,
+                                        weskit_id=wid,
                                         pre_result=base.
                                         CommandResult(command=command,
                                                       process_id=base.ProcessId(process.pid),

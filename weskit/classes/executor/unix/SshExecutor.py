@@ -206,22 +206,22 @@ class SshExecutor(Executor):
         return process
 
     async def _wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.id.value is None:
+        if process.pid.value is None:
             raise RuntimeError("Process has no valid ID")
         else:
             try:
                 async with self._connection.context():
                     await process.handle.wait()
                     self.update_process(process)
-                    env_path = self._env_path(process.id.value)
+                    env_path = self._env_path(process.pid.value)
                     await self.storage.remove_file(env_path)
-                    process_dir = self._process_directory(process.id.value)
+                    process_dir = self._process_directory(process.pid.value)
                     await self.storage.remove_dir(process_dir, recurse=True)
             except TimeoutError as e:
-                raise TimeoutError(f"Process {process.id.value} timed out:" +
+                raise TimeoutError(f"Process {process.pid.value} timed out:" +
                                    str(process.command.command), e)
             except ProcessError as e:
-                raise ExecutorError(f"Error during cleanup of {process.id.value}:" +
+                raise ExecutorError(f"Error during cleanup of {process.pid.value}:" +
                                     str(process.command.command), e)
             return process.result
 
