@@ -189,6 +189,14 @@ workflow_engines:
           value: "true"
           api: true
           type: "bool"
+        - name: "resume"
+          value: "false"
+          type: "bool"
+          api: false
+        - name: "task_working_dir"
+          value: ""
+          api: false
+          type: "str validFor Python.pathlib.Path"
 
   SMK:
     "6.10.0":
@@ -251,10 +259,10 @@ workflow_engines:
         - name: "task_home"
           api: false
           type: "Optional[Path]"
-        - name: "forceall"
-          api: true
-          type: "bool"
+        - name: "resume"
           value: "false"
+          type: "bool"
+          api: false
         - name: "jobs"
           api: false
           type: "Optional[int]"

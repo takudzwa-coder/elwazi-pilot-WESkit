@@ -242,6 +242,9 @@ class TestOpenEndpoint:
         def as_dict(params: list):
             """Used to make get to dictionaries that are comparable by ==."""
             return {p["name"]: p for p in params}
+
+        print(as_dict(response.json["default_workflow_engine_parameters"]))
+
         assert as_dict(response.json["default_workflow_engine_parameters"]) == as_dict([
               {"name": "SMK|6.10.0|engine-environment",
                "default_value": None,
@@ -255,10 +258,6 @@ class TestOpenEndpoint:
               {"name": "SMK|6.10.0|accounting-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": 'SMK|6.10.0|forceall',
-               'default_value': 'false',
-               'name': 'SMK|6.10.0|forceall',
-               'type': 'bool'},
               {"name": "SMK|6.10.0|job-name",
                "default_value": None,
                "type": "Optional[str]"},

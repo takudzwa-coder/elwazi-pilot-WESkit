@@ -219,7 +219,7 @@ class Snakemake(WorkflowEngine):
         return KNOWN_PARAMS.subset(frozenset({"cores",
                                               "use-singularity",
                                               "use-conda",
-                                              "forceall",
+                                              "resume",
                                               "profile",
                                               "tes",
                                               "jobs",
@@ -239,7 +239,7 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "cores", "--cores")
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
-            result += self._optional_param(param, "forceall", "--forceall")
+            result += self._optional_param(param, "resume", "--forceall")
             result += self._argument_param(param, "profile", "--profile")
             result += self._argument_param(param, "tes", "--tes")
             result += self._argument_param(param, "jobs", "--jobs")
@@ -315,7 +315,9 @@ class Nextflow(WorkflowEngine):
                                               "timeline",
                                               "graph",
                                               "max-memory",
-                                              "tempdir"})
+                                              "tempdir",
+                                              "resume",
+                                              "task_working_dir"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
 
@@ -351,6 +353,8 @@ class Nextflow(WorkflowEngine):
             result += self._optional_param(param, "report", "-with-report")
             result += self._optional_param(param, "timeline", "-with-timeline")
             result += self._optional_param(param, "graph", "-with-dag")
+            result += self._optional_param(param, "resume", "-resume")
+            result += self._argument_param(param, "task_working_dir", "-w")
         return result
 
     def command(self,

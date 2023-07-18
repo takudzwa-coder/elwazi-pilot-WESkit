@@ -98,7 +98,7 @@ def test_command_with_default_parameters():
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
-         {"name": "forceall", "value": "T", "api": True},
+         {"name": "resume", "value": "T", "api": True},
          {"name": "profile", "value": "myprofile", "api": True},
          {"name": "tes", "value": "https://some/test/URL", "api": True},
          {"name": "jobs", "value": "1", "api": True},
@@ -277,7 +277,8 @@ def test_create_nextflow():
          {"name": "trace", "value": "TRUE", "api": True},
          {"name": "report", "value": "T", "api": True},
          {"name": "graph", "value": "Y", "api": True},
-         {"name": "timeline", "value": "True", "api": True}]
+         {"name": "timeline", "value": "True", "api": True},
+         {"name": "resume", "value": "True", "api": True}]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"engine-environment"}), "/path/to/script", False),
@@ -285,7 +286,8 @@ def test_create_nextflow():
         ActualEngineParameter(EngineParameter({"trace"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"report"}), "T", True),
         ActualEngineParameter(EngineParameter({"graph"}), "Y", True),
-        ActualEngineParameter(EngineParameter({"timeline"}), "True", True)
+        ActualEngineParameter(EngineParameter({"timeline"}), "True", True),
+        ActualEngineParameter(EngineParameter({"resume"}), "True", True)
     ]
     assert engine.name() == "NFL"
 
@@ -300,7 +302,8 @@ def test_create_nextflow():
                                 '-with-trace',
                                 '-with-report',
                                 '-with-dag',
-                                '-with-timeline']
+                                '-with-timeline',
+                                '-resume']
     assert created1.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
@@ -319,7 +322,8 @@ def test_create_nextflow():
     assert created2.command == ['set', '-eu', '-o', 'pipefail', ss('&&'),
                                 'source', '/path/to/script', ss('&&'),
                                 'nextflow', "run", "/some/path",
-                                '-params-file', '/the/config.file']
+                                '-params-file', '/the/config.file',
+                                '-resume']
     assert created2.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
