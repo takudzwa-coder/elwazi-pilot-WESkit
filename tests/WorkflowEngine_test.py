@@ -123,7 +123,6 @@ def test_command_with_default_parameters():
                                '--cores', '2',
                                '--use-singularity',
                                '--use-conda',
-                               '--forceall',
                                '--profile', 'myprofile',
                                '--tes', 'https://some/test/URL',
                                '--jobs', '1',

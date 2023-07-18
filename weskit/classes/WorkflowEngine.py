@@ -83,23 +83,30 @@ class WorkflowEngine(metaclass=ABCMeta):
     def _optional_param(self,
                         param: ActualEngineParameter,
                         name: str,
-                        argument: str) -> List[str]:
+                        argument: str,
+                        invert: Optional[bool] = None) -> List[str]:
         """
         Helper for parameter processing. This is for flag-like parameters. The boolean value is
         interpreted as presence (True) or absence (False) of the flag.
         """
-        def to_bool(value: Optional[str]) -> bool:
+        def to_bool(value: Optional[str], invert: Optional[bool]) -> bool:
             if value is None:
                 return False
             elif value.lower() in ["true", "t", "present", "1", "yes", "y"]:
-                return True
+                if invert:
+                    return False
+                else:
+                    return True
             elif value.lower() in ["false", "f", "absent", "0", "no", "n"]:
-                return False
+                if invert:
+                    return True
+                else:
+                    return False
             else:
                 raise ValueError(f"Could not parse '{value}' to boolean")
 
         if param.param == self.known_parameters()[name]:
-            if to_bool(param.value):
+            if to_bool(param.value, invert):
                 return [argument]
             else:
                 return []
@@ -239,7 +246,7 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "cores", "--cores")
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
-            result += self._optional_param(param, "resume", "--forceall")
+            result += self._optional_param(param, "resume", "--forceall", invert=True)
             result += self._argument_param(param, "profile", "--profile")
             result += self._argument_param(param, "tes", "--tes")
             result += self._argument_param(param, "jobs", "--jobs")
@@ -317,7 +324,7 @@ class Nextflow(WorkflowEngine):
                                               "max-memory",
                                               "tempdir",
                                               "resume",
-                                              "task_working_dir"})
+                                              "NXF_work"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
 
@@ -354,7 +361,7 @@ class Nextflow(WorkflowEngine):
             result += self._optional_param(param, "timeline", "-with-timeline")
             result += self._optional_param(param, "graph", "-with-dag")
             result += self._optional_param(param, "resume", "-resume")
-            result += self._argument_param(param, "task_working_dir", "-w")
+            result += self._argument_param(param, "NXF_work", "-w")
         return result
 
     def command(self,

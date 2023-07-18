@@ -193,7 +193,7 @@ workflow_engines:
           value: "false"
           type: "bool"
           api: false
-        - name: "task_working_dir"
+        - name: "NXF_work"
           value: ""
           api: false
           type: "str validFor Python.pathlib.Path"
@@ -260,7 +260,7 @@ workflow_engines:
           api: false
           type: "Optional[Path]"
         - name: "resume"
-          value: "false"
+          value: "true"
           type: "bool"
           api: false
         - name: "jobs"
