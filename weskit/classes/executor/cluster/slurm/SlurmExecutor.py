@@ -9,9 +9,12 @@ from pathlib import Path
 
 from typing import Optional, Match
 
+from classes.executor.ExecutionState import ExecutionState
+from classes.executor.ProcessId import WESkitExecutionId
+from weskit.classes.executor.cluster.slurm.SlurmState import SlurmState
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
+    Executor, ExecutionResult, ProcessId, ExecutionSettings
 from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.slurm.SlurmCommandSet import SlurmCommandSet
@@ -20,7 +23,7 @@ from weskit.utils import now
 logger = logging.getLogger(__name__)
 
 
-class SlurmExecutor(ClusterExecutor):
+class SlurmExecutor(ClusterExecutor[SlurmState]):
     """
     Execute Slurm job-management operations via shell commands issued on a local/remote host.
     """
@@ -81,12 +84,13 @@ class SlurmExecutor(ClusterExecutor):
             return Path(file.name)
 
     def execute(self,
+                execution_id: WESkitExecutionId,
                 command: ShellCommand,
                 stdout_file: Optional[PathLike] = None,
                 stderr_file: Optional[PathLike] = None,
                 stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
-                **kwargs) -> ExecutedProcess:
+                **kwargs) -> ExecutionState[SlurmState]:
         """
         stdout, stderr, and stdin files are *remote files on the cluster nodes*.
 
@@ -104,13 +108,13 @@ class SlurmExecutor(ClusterExecutor):
                             execution_status: ExecutionStatus):
             process = ExecutedProcess(executor=self,
                                       process_handle=job_id,
-                                      pre_result=CommandResult(command=command,
-                                                               process_id=job_id,
-                                                               stderr_file=stderr_file,
-                                                               stdout_file=stdout_file,
-                                                               stdin_file=stdin_file,
-                                                               start_time=now(),
-                                                               execution_status=execution_status))
+                                      pre_result=ExecutionResult(command=command,
+                                                                 process_id=job_id,
+                                                                 stderr_url=stderr_file,
+                                                                 stdout_url=stdout_file,
+                                                                 stdin_url=stdin_file,
+                                                                 start_time=now(),
+                                                                 status=execution_status))
             return process
 
         source_script = self._create_command_script(command)

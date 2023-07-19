@@ -20,7 +20,7 @@ from weskit.celery_app import celery_app, read_config, update_celery_config_from
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.Executor import CommandResult, ExecutionSettings, Executor
+from weskit.classes.executor.Executor import ExecutionResult, ExecutionSettings, Executor, WESkitExecutionId
 from weskit.utils import \
     format_timestamp, get_event_loop, get_current_timestamp, collect_relative_paths_from
 
@@ -100,8 +100,6 @@ def run_command(command: ShellCommand,
     else:
         workdir = command.workdir
 
-    # The command context is the context needed by the command, which may be local or remote,
-    # dependent on the executor type.
     if run_command.executor_type.executes_engine_remotely:
         logger.info("Running command in {} (worker) = {} (executor): {}".
                     format(worker_context.run_dir(workdir),
@@ -109,18 +107,17 @@ def run_command(command: ShellCommand,
                            [repr(el) for el in command.command]))
     else:
         if worker_context != executor_context:
-            raise RuntimeError("No remote, but distinct remote path context: "
+            raise RuntimeError("Different worker and executor contexts: "
                                f"{worker_context} != {executor_context}")
         logger.info("Running command in {} (worker): {}".
                     format(executor_context.run_dir(workdir),
                            [repr(el) for el in command.command]))
 
-    # Make a copy of the ShellCommand appropriate for the (possibly remote) executor environment.
     shell_command = ShellCommand(command=command.command,
                                  workdir=executor_context.workdir(workdir),
                                  environment=command.environment)
 
-    result: Optional[CommandResult] = None
+    result: Optional[ExecutionResult] = None
     try:
         log_dir = worker_context.log_dir(workdir, start_time)
         logger.info("Creating log-dir %s" % str(log_dir))
@@ -135,11 +132,15 @@ def run_command(command: ShellCommand,
             # needed.
             pass
 
+        wid = WESkitExecutionId()
+        # TODO Update run database
+
         process =\
             run_command.executor.execute(
                 shell_command,
-                stdout_file=executor_context.stdout_file(workdir, start_time),
-                stderr_file=executor_context.stderr_file(workdir, start_time),
+                execution_id=wid,
+                stdout_url=executor_context.stdout_file(workdir, start_time),
+                stderr_url=executor_context.stderr_file(workdir, start_time),
                 settings=execution_settings)
         result = run_command.executor.wait_for(process)
 

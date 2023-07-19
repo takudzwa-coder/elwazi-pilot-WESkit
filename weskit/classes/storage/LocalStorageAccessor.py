@@ -2,10 +2,13 @@
 #
 # SPDX-License-Identifier: MIT
 
+from contextlib import contextmanager, asynccontextmanager
 from os import unlink, rmdir, walk, makedirs
 from pathlib import Path
 from shutil import copytree, copy2, rmtree
-from typing import List
+from typing import List, Iterator, IO
+
+from urllib3.util import Url
 
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 
@@ -75,3 +78,16 @@ class LocalStorageAccessor(StorageAccessor):
 
     async def create_dir(self, target: Path, mode=0o077, exists_ok=False) -> None:
         makedirs(target, mode=mode, exist_ok=exists_ok)
+
+    @asynccontextmanager
+    async def open(self,
+                   url: Url,
+                   *args,
+                   **kwargs) \
+            -> Iterator[IO[str]]:
+        if url.scheme is None or url.scheme == "file":
+            file = url.path
+            with open(file=file, *args, **kwargs) as fh:
+                yield fh
+        else:
+            raise ValueError(f"Can only use file:// URLs: '{url}'")

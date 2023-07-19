@@ -21,7 +21,7 @@ pushd "$testDir" > /dev/null
   $wrap -l "$test"  -a -- "echo hallo; echo du > /dev/stderr; exit 1" \
     > "$test.json" \
     || expect_fail
-  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 10 ]
+  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 11 ]
   [ "$(cat "$test.json" | jq .exit_code )" -eq 1 ]
   [ "$(cat "$test/exit_code")" -eq 1 ]
   [ "$(cat "$test/stdout")" == "hallo" ]
@@ -31,6 +31,7 @@ pushd "$testDir" > /dev/null
   [ "$(cat "$test.json" | jq -r .stderrFile )" == "$test/stderr" ]
   [ "$(cat "$test.json" | jq -r .exitFile )" == "$test/exit_code" ]
   [ "$(cat "$test.json" | jq -r .pidFile )" == "$test/pid" ]
+  [ "$(cat "$test.json" | jq -r .envFile )" == "/dev/null" ]
 }
 
 {
@@ -46,7 +47,7 @@ pushd "$testDir" > /dev/null
   $wrap -l "$test"  -a -- false \
     > "$test.json" \
     || expect_fail
-  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 10 ]
+  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 11 ]
   [ "$(cat "$test.json" | jq .exit_code )" -eq 1 ]
   [ "$(cat "$test/exit_code")" -eq 1 ]
   [ "$(cat "$test/stdout")" == "" ]
@@ -67,7 +68,7 @@ export -f run_with_output
     -- run_with_output 11 \
     > "$test.json" \
     || expect_fail
-  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 10 ]
+  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 11 ]
   [ "$(cat "$test.json" | jq .exit_code )" -eq 11 ]
   [ "$(cat "$test/$test.exit_code")" -eq 11 ]
   [ -f "$test/$test.pid" ]
@@ -105,6 +106,26 @@ export -f run_with_input
   [ "$(cat "$test/exit_code")" -eq 0 ]
   [ "$(cat "$test/stdout")" == "hello" ]
   [ "$(cat "$test/stderr")" == "" ]
+}
+
+
+
+echo_envVal() {
+  set -u
+  # shellcheck disable=SC2154
+  echo "$actualEnvVal"
+}
+export -f echo_envVal
+
+{
+  test="environment_file"
+  envFile="$(mktemp "XXXX-test-environment.txt")"
+  echo "export actualEnvVal='from environment file'" >> "$envFile"
+  $wrap -l "$test" -n "$envFile" -- echo_envVal \
+      > "$test.json"
+  [ "$(cat "$test/exit_code")" -eq 0 ]
+  [ "$(cat "$test.json" | jq -r .envFile)" == "$envFile" ]
+  [ "$(cat "$test/stdout")" == "from environment file" ]
 }
 
 echo "Success"

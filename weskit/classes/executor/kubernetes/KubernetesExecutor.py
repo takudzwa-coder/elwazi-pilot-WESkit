@@ -8,16 +8,18 @@
 from asyncio import AbstractEventLoop
 from datetime import timedelta
 from os import PathLike
+from signal import Signals
 from typing import Optional, List
 
 import kubernetes
 from kubernetes.client import ApiClient, ApiException, V1Job, V1JobSpec, V1PodFailurePolicyRule, V1PodTemplateSpec, \
     V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements, V1EnvVar, V1VolumeDevice, V1VolumeMount
 
+from classes.executor.ExecutionState import ExecutionState
+from classes.executor.kubernetes.KubernetesPhase import KubernetesPhase
 from memory_units import Unit
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.Executor import Executor, ExecutionSettings, ExecutedProcess, ExecutionStatus, \
-    CommandResult
+from weskit.classes.executor.Executor import Executor, ExecutionSettings
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 
 
@@ -64,7 +66,7 @@ class KubernetesExecutor(Executor):
                 stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) \
-            -> ExecutedProcess:
+            -> ExecutionState[KubernetesPhase]:
         """
         Submit a command to the execution infrastructure.
 
@@ -143,7 +145,8 @@ class KubernetesExecutor(Executor):
     # how to get killed by the executor, etc. Therefore, the ExecutedProcess is handed back to the
     # Executor for the following operations.
 
-    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
+    def get_status(self, ...)
+            -> ExecutionState[KubernetesPhase]:
         """
         Get the status of the process in the execution infrastructure. The `process.result` is not
         modified.
@@ -157,7 +160,8 @@ class KubernetesExecutor(Executor):
             pass
         return job.
 
-    def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
+    def update_process(self, state: ExecutionState[KubernetesPhase])\
+            -> ExecutionState[KubernetesPhase]:
         """
         Update the result of the executed process, if possible. If the status of the process is not
         in a finished state, this function updates to the intermediate results at the time of
@@ -165,7 +169,10 @@ class KubernetesExecutor(Executor):
         """
 
 
-    def kill(self, process: ExecutedProcess) -> bool:
+    def kill(self,
+             state: ExecutionState[KubernetesPhase],
+             signal: Signals = Signals.SIGINT) \
+            -> bool:
         """
         Cancel the process named by the process_id. Note that the killing operation may fail.
         Furthermore, note that if the process cannot be killed because it does not exist (anymore)
@@ -181,14 +188,6 @@ class KubernetesExecutor(Executor):
                                                             ...)
         except ApiException as e:
             pass
-
-
-    def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        """
-        Wait for the executed process and return the CommandResult. The ExecutedProcess is updated
-        with the most recent result object.
-        """
-        pass
 
     @property
     def storage(self) -> StorageAccessor:

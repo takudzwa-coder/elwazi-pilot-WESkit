@@ -26,7 +26,7 @@ from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
-from weskit.classes.executor.Executor import ExecutionSettings
+from weskit.classes.executor.Executor import ExecutionSettings, WESkitExecutionId
 from weskit.exceptions import ClientError
 from weskit.utils import return_pre_signed_url, now
 

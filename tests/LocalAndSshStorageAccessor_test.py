@@ -124,3 +124,11 @@ async def test_find_files(accessor_name, request):
         os.system("touch '%s'" % str(base_p / "test2"))
 
         assert set(await accessor.find(base_p)) == {base_p / "test1", base_p / "test2"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("accessor_name", accessor_names)
+async def test_open_file_and_read(accessor_name, request):
+    accessor = request.getfixturevalue(accessor_name)
+    with accessor.open(...) as fh:
+        assert False

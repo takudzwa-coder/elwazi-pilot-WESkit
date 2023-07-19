@@ -11,25 +11,26 @@ from asyncio import AbstractEventLoop
 from os import PathLike
 from pathlib import Path
 from subprocess import PIPE  # nosec: B404
-from typing import Optional, Union, List
+from typing import Optional, Union, List, cast
 
 from asyncssh import SSHClientProcess, \
-    ProcessError, SSHCompletedProcess
+    SSHCompletedProcess
+from urllib3.util import Url
 
+from classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
+from weskit.classes.executor.ExecutionState import ExecutionState
 from weskit.classes.executor.Executor \
-    import Executor, ExecutionSettings, ExecutedProcess, \
-    CommandResult, ExecutionStatus, ProcessId
-from weskit.classes.executor.ExecutorError import \
-    ExecutorError, TimeoutError
+    import ExecutionSettings
+from weskit.classes.executor.unix.UnixExecutor import UnixExecutor
+from weskit.classes.executor.unix.UnixStates import UnixState
 from weskit.classes.storage.SshStorageAccessor import SshStorageAccessor
-from weskit.utils import now
 
 logger = logging.getLogger(__name__)
 
 
-class SshExecutor(Executor):
+class SshExecutor(UnixExecutor):
     """
     Execute commands via SSH on a remote host. Only key-based authentication is supported.
 
@@ -39,27 +40,28 @@ class SshExecutor(Executor):
 
     def __init__(self,
                  connection: RetryableSshConnection,
-                 event_loop: Optional[AbstractEventLoop] = None,
-                 remote_tmp_base: Path = Path("/tmp/weskit/ssh")):  # nosec B108
-        super().__init__(event_loop)
+                 event_loop: Optional[AbstractEventLoop] = None):  # nosec B108
+        super().__init__(SshStorageAccessor(connection),
+                         event_loop)
         self._executor_id = uuid.uuid4()
-        self._remote_tmp = remote_tmp_base
         self._connection = connection
-        self._storage = SshStorageAccessor(connection)
 
     @property
     def storage(self) -> SshStorageAccessor:
-        return self._storage
+        return cast(SshStorageAccessor, super().storage)
 
     @property
     def hostname(self) -> str:
         return self._connection.hostname
 
-    def _process_directory(self, process_id: uuid.UUID) -> Path:
-        return self._remote_tmp / str(self._executor_id) / str(process_id)  # nosec: B108
+    def _env_path(self, execution_id: WESkitExecutionId) -> Path:
+        return self._process_directory(execution_id) / "env.sh"
 
-    def _env_path(self, process_tag: uuid.UUID) -> Path:
-        return self._process_directory(process_tag) / "env.sh"
+    def _wrapper_path(self, stage_path: Optional[Path]) -> Path:
+        if stage_path is None:
+            raise RuntimeError("Oops! No staging directory provided")
+        else:
+            return stage_path / "wrap"
 
     async def _create_env_script(self, command: ShellCommand) -> Path:
         """
@@ -84,7 +86,9 @@ class SshExecutor(Executor):
                 print(f"export {var_name}={shlex.quote(var_value)}", file=file)
             return Path(file.name)
 
-    async def _upload_env(self, process_id: uuid.UUID, command: ShellCommand):
+    async def _upload_helper_scripts(self,
+                                     execution_id: WESkitExecutionId,
+                                     command: ShellCommand):
         """
         SSH usually does not allow to set environment variables. Therefore, we create a little
         script that sets up the environment for the remote process.
@@ -100,14 +104,17 @@ class SshExecutor(Executor):
         :return:
         """
         local_env_file = await self._create_env_script(command)
-        remote_dir = self._process_directory(process_id)
+        remote_dir = self._process_directory(execution_id)
         try:
             async with self._connection.context():
                 await self.storage.create_dir(remote_dir,
-                                              mode=0o077,
+                                              mode=0o0770,
                                               exists_ok=True)
                 await self.storage.put(local_env_file,
-                                       self._env_path(process_id),
+                                       self._env_path(execution_id),
+                                       dirs_exist_ok=True)
+                await self.storage.put(self._wrapper_source_path,
+                                       self._wrapper_path(...TODO...),
                                        dirs_exist_ok=True)
         finally:
             os.unlink(local_env_file)
@@ -124,113 +131,110 @@ class SshExecutor(Executor):
                 await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
 
+    def execute(self, *args, **kwargs) \
+            -> ExecutionState[UnixState]:
+        return self._event_loop.run_until_complete(self._execute(*args, **kwargs))
+
     async def _execute(self,
+                       execution_id: WESkitExecutionId,
                        command: ShellCommand,
-                       stdout_file: Optional[PathLike] = None,
-                       stderr_file: Optional[PathLike] = None,
-                       stdin_file: Optional[PathLike] = None,
+                       stdout_file: Optional[Url] = None,
+                       stderr_file: Optional[Url] = None,
+                       stdin_file: Optional[Url] = None,
                        settings: Optional[ExecutionSettings] = None,
-                       **kwargs) -> ExecutedProcess:
+                       **kwargs) \
+            -> ExecutionState[UnixState]:
         """
         Only client-side stdout/stderr/stdin-files are supported. If you want that standard input,
         output and error refer to remote files, then include them into the command (e.g. with
         shell redirections).
 
         :param command:
-        :param stdout_file:
-        :param stderr_file:
-        :param stdin_file:
+        :param stdout_url:
+        :param stderr_url:
+        :param stdin_url:
         :param settings:
         :return:
         """
-        start_time = now()
-        # Note that the process tag according to the settings.tag field and this process_id are
-        # intentionally kept distinct, like they are also for all the other `Executor` classes.
-        process_id = uuid.uuid4()
-
         # Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
         # the server, environment variables to be set for the target process cannot be used
         # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
         # we create a remote temporary file on the remote host, that is sourced before the
         # actual command is executed remotely.
-        source_prefix: List[Union[str, ShellSpecial]] = \
-            ["source", str(self._env_path(process_id)), ss("&&")]
 
-        effective_command = \
-            command.copy(command=source_prefix + command.command,
-                         # The tag is also used to mark the process by an environment
-                         # variable that can be retrieved from /proc/*/environ on the remote
-                         # system.
-                         environment=command.environment)
-
-        await self._upload_env(process_id, effective_command)
-
-        async with self._connection.context():
-            # SSH is always associated with a shell. Therefore, a *string* is processed by
-            # asyncssh, rather than a list of strings like for subprocess.run/Popen). Therefore,
-            # we use the command_expression here.
-            process: SSHClientProcess = await self._connection.\
-                create_process(command=effective_command.command_expression,
-                               stdin=PIPE if stdin_file is None else stdin_file,
-                               stdout=PIPE if stdout_file is None else stdout_file,
-                               stderr=PIPE if stderr_file is None else stderr_file,
-                               **kwargs)
-        logger.info(f"Executed command ({process_id}): {effective_command.command_expression}")
-
-        return ExecutedProcess(executor=self,
-                               process_handle=process,
-                               pre_result=CommandResult(command=command,
-                                                        process_id=ProcessId(process_id),
-                                                        stdout_file=stdout_file,
-                                                        stderr_file=stderr_file,
-                                                        stdin_file=stdin_file,
-                                                        execution_status=ExecutionStatus(),
-                                                        start_time=start_time))
-
-    def execute(self, *args, **kwargs) -> ExecutedProcess:
-        return self._event_loop.run_until_complete(self._execute(*args, **kwargs))
-
-    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
-        return ExecutionStatus(process.handle.returncode)
-
-    def update_process(self, process: ExecutedProcess) -> ExecutedProcess:
-        """
-        Update the executed process, if possible.
-        """
-        result = process.result
-        return_code = process.handle.returncode
-        if return_code is not None:
-            result.status = ExecutionStatus(return_code)
-            result.end_time = now()
-            process.result = result
-        return process
-
-    async def _wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.pid.value is None:
-            raise RuntimeError("Process has no valid ID")
-        else:
-            try:
-                async with self._connection.context():
-                    await process.handle.wait()
-                    self.update_process(process)
-                    env_path = self._env_path(process.pid.value)
-                    await self.storage.remove_file(env_path)
-                    process_dir = self._process_directory(process.pid.value)
-                    await self.storage.remove_dir(process_dir, recurse=True)
-            except TimeoutError as e:
-                raise TimeoutError(f"Process {process.pid.value} timed out:" +
-                                   str(process.command.command), e)
-            except ProcessError as e:
-                raise ExecutorError(f"Error during cleanup of {process.pid.value}:" +
-                                    str(process.command.command), e)
-            return process.result
-
-    def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        return self._event_loop.run_until_complete(self._wait_for(process))
-
-    def kill(self, process: ExecutedProcess):
+        effective_command = self._wrapped_command(execution_id,
+                                                  command,
+                                                  stdout_url,
+                                                  stderr_url,
+                                                  stdin_url)
+        execution_state = Start(execution_id)
+        log_dir = self._log_dir(command.workdir, execution_id)
         try:
-            process.handle.kill()
-            self.wait_for(process)
-        except OSError as e:
-            raise ExecutorError(f"Could not kill process ({process.command.command})", e)
+
+           async with self._connection.context():
+                # Note: If the log dir exists this means that the execution_id was reused. The
+                #       execution_id, however should be used for a single execution attempt only!
+                await self.storage.create_dir(log_dir, exists_ok=False, mode=0o750)
+
+                await self._upload_helper_scripts(execution_id, effective_command)
+
+                # SSH is always associated with a shell. Therefore, a *string* is processed by
+                # asyncssh, rather than a list of strings like for subprocess.run/Popen). Therefore,
+                # we use the command_expression here.
+                # TODO Read stdin and stderr of submission process for error-tracking
+                process: SSHClientProcess = await self._connection. \
+                    create_process(command=effective_command.command_expression,
+                                   stdout=PIPE,
+                                   stderr=PIPE,
+                                   **kwargs)
+                    # TODO cwd=command.workdir,
+                    # TODO env={
+                           # Tag the process with `weskit_process_id` to make it
+                           # recoverable with a query of the environment variables
+                           # # of process (e.g. on /proc/).
+                           # Executor.EXECUTION_ID_VARIABLE: str(execution_id),
+                           # **command.environment
+                           # }
+
+                # The process already was sent to the background. We recover the process information.
+                execution_state = self.update_status(execution_state,
+                                                     Url(scheme="file",
+                                                         path=str(log_dir)),
+                                                     process.pid???)
+                logger.debug(f"Executor {self.id} started process {execution_id} with PID " +
+                             f"{execution_state.last_known_external_state.pid}: {effective_command}")
+                return execution_state
+
+        except FileNotFoundError as e:
+            # The other executors recognize inaccessible working directories or missing commands
+            # only after the wait_for(). We emulate this behaviour here such that all executors
+            # behave identically with respect to these problems.
+            if str(e).startswith(f"[Errno 2] No such file or directory: {repr(command.workdir)}"):
+                # cd /dir/does/not/exist: exit code 1
+                # Since somewhere between 3.7.9 and 3.10.4 the e.strerror does not contain the
+                # missing file anymore, which makes it impossible to tell from the message, whether
+                # the workdir is inaccessible, or the executed command.
+                return Failed(execution_state,
+                              UnixState.
+                              as_external_state(None,
+                                                None,
+                                                1,
+                                                "No such file or directory: " +
+                                                repr(command.workdir)),
+                              1)
+            else:
+                return Failed(execution_state,
+                              UnixState.
+                              as_external_state(None,
+                                                None,
+                                                127,
+                                                "Command not executable: " +
+                                                repr(effective_command.command_expression)),
+                              127)
+        except FileExistsError as e:
+            raise NonRetryableExecutorError(f"Tried to rerun execution ID {execution_id}")
+
+
+    def kill(self, execution_state: ExecutionState[UnixState]) -> bool:
+        pass
+        # TODO Invoke `kill -s SIGINT` remotely.

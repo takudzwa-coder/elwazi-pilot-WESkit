@@ -4,11 +4,14 @@
 
 import logging
 from os import PathLike
+from signal import Signals
 from typing import Optional, Match
 
+from classes.executor.ExecutionState import ExecutionState
+from weskit.classes.executor.cluster.lsf.LsfState import LsfState
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, CommandResult, ProcessId, ExecutionSettings, ExecutedProcess, ExecutionStatus
+    Executor, ExecutionResult, ProcessId, ExecutionSettings
 from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
@@ -17,7 +20,7 @@ from weskit.utils import now
 logger = logging.getLogger(__name__)
 
 
-class LsfExecutor(ClusterExecutor):
+class LsfExecutor(ClusterExecutor[LsfState]):
     """
     Execute LSF job-management operations via shell commands issued on a local/remote host.
     """
@@ -70,7 +73,7 @@ class LsfExecutor(ClusterExecutor):
                 stderr_file: Optional[PathLike] = None,
                 stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
-                **kwargs) -> ExecutedProcess:
+                **kwargs) -> ExecutionState[LsfState]:
         """
         WARNING: Do not set too many environment variables in `command.environment`. The
                 implementation uses `bsub -env` and too many variables may result in a too long
@@ -110,13 +113,13 @@ class LsfExecutor(ClusterExecutor):
         # The process handle is just the cluster job ID.
         return ExecutedProcess(executor=self,
                                process_handle=cluster_job_id,
-                               pre_result=CommandResult(command=command,
-                                                        process_id=cluster_job_id,
-                                                        stderr_file=stderr_file,
-                                                        stdout_file=stdout_file,
-                                                        stdin_file=stdin_file,
-                                                        execution_status=ExecutionStatus(None),
-                                                        start_time=start_time))
+                               pre_result=ExecutionResult(command=command,
+                                                          process_id=cluster_job_id,
+                                                          stderr_url=stderr_file,
+                                                          stdout_url=stdout_file,
+                                                          stdin_url=stdin_file,
+                                                          status=ExecutionStatus(None),
+                                                          start_time=start_time))
 
-    def kill(self, process: ExecutedProcess):
+    def kill(self, state: ExecutionState[LsfState], signal: Signals = Signals.SIGINT) -> bool:
         raise NotImplementedError("should use bkill")

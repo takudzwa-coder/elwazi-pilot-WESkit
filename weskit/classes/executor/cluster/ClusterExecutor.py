@@ -9,13 +9,14 @@ from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional, List, Tuple, Iterator, IO, Match, cast
+from typing import Optional, List, Tuple, Iterator, IO, Match, cast, Generic, TypeVar
 
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
 
+from classes.executor.ExecutionState import ExecutionState
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
-    Executor, ExecutedProcess, ExecutionStatus, CommandResult, ExecutionSettings
+    Executor, ExecutionResult, ExecutionSettings
 from weskit.classes.executor.ExecutorError import \
     ExecutorError, TimeoutError, RetryableExecutorError
 from weskit.classes.storage.StorageAccessor import StorageAccessor
@@ -29,7 +30,7 @@ def execute(executor: Executor,
             command: ShellCommand,
             encoding: Optional[str] = "utf-8",
             **kwargs) \
-        -> Iterator[Tuple[CommandResult, IO[str], IO[str]]]:
+        -> Iterator[Tuple[ExecutionResult, IO[str], IO[str]]]:
     """
     Convenience syntax for executing a ShellCommand with temporary and locally buffered stdout and
     stderr. This is mostly a workaround for dysfunctional data streaming, if IOBase objects, in
@@ -84,7 +85,10 @@ def is_retryable_error(exception: BaseException) -> bool:
     return isinstance(exception, (RetryableExecutorError, TimeoutError))
 
 
-class ClusterExecutor(Executor):
+S = TypeVar("S")
+
+
+class ClusterExecutor(Generic[S], Executor[S]):
     """
     Execute job-management operations via shell commands issued on a local/remote host.
     """
@@ -198,7 +202,7 @@ class ClusterExecutor(Executor):
     @retry(wait=wait_exponential(multiplier=1, min=1, max=6),
            stop=stop_after_attempt(4),
            retry=retry_if_exception(is_retryable_error))
-    def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
+    def get_status(self, process: ExecutedProcess) -> ExecutionState[S]:
         if process.pid.value is None:
             raise ValueError("Process ID was None, probably due to previous error")
         else:
@@ -252,20 +256,6 @@ class ClusterExecutor(Executor):
             process.result.end_time = now()
         return process
 
-    def wait_for(self, process: ExecutedProcess) -> CommandResult:
-        if process.pid.value is None:
-            raise ValueError("Process ID was None, probably due to previous error")
-        elif process.result.status.finished:
-            return process.result
-        else:
-            wait_command = self._command_set.wait_for(process.pid.value)
-            with execute(self._executor, wait_command) as (result, stdout, stderr):
-                if result.status.failed:
-                    raise ExecutorError(f"Wait failed: {str(result)}, " +
-                                        f"stderr={stdout.readlines()}, " +
-                                        f"stdout={stdout.readlines()}")
-            return self.update_process(process).result
-
     @abstractmethod
     def execute(self,
                 command: ShellCommand,
@@ -274,7 +264,7 @@ class ClusterExecutor(Executor):
                 stdin_file: Optional[PathLike] = None,
                 settings: Optional[ExecutionSettings] = None,
                 **kwargs) \
-            -> ExecutedProcess:
+            -> ExecutionState[S]:
         """
         Submit a command to the execution infrastructure.
 

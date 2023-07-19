@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 from abc import abstractmethod, ABCMeta
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List
+from typing import List, Iterator, IO
 
 
 class StorageAccessor(metaclass=ABCMeta):
@@ -76,5 +77,15 @@ class StorageAccessor(metaclass=ABCMeta):
         Return the files and subdirectories located in the target path (remote for a remote
         executor). The paths are relative to the target path. The target path itself is not
         returned.
+        """
+        pass
+
+    @abstractmethod
+    @asynccontextmanager
+    async def open(self, *args, **kwargs) -> Iterator[IO[str]]:
+        """
+        Replacement for the os.open() function to open a file and get a file-handle to read the
+        data from the file. The idea is that you can open a file on different storages (local, ssh,
+        S3, etc.) with basically the same (or similar) API as a local file.
         """
         pass

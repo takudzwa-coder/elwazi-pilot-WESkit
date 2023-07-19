@@ -4,27 +4,34 @@
 # pid, and exit_code.
 #
 # You can set these files to arbitrary paths
-#  * /dev/null: Ignore the output.
+#  * /dev/null: Ignore the output/input.
 #  * relative path with '/' included: Path relative to the working directory.
 #  * filename (no '/' included): A different filename in the log-directory.
 #  * absolute path: Anyway contains a '/' and will be used as is.
 #
-# wrap [-l .log-XXXX] [-i /dev/null] [-o stdout] [-e stderr] [-p pid] [-x exit_code] [-a] -- command ...
+# wrap [-l .log-XXXX] [-n /dev/null] [-i /dev/null] [-o stdout] [-e stderr] [-p pid] [-x exit_code] [-a] -- command ...
 #
-# If -a is set, the command is expected to be a string that is then subjected to a call to `eval`.
-# Otherwise, the command can be multiple command segments, that are together executed as command.
-# The following is equivalent.
+# -l log file
+# -n enviroment file sourced before execution
+# -i stdin file
+# -o stdout file
+# -e stderr file
+# -p pid file
+# -x exit code file
+# -a If -a is set, the command is expected to be a string that is then subjected to a call to `eval`.
+#    Otherwise, the command can be multiple command segments, that are together executed as command.
+#    The following is equivalent.
 #
-# wrap ... -- echo "hallo"
-# wrap ... -a -- "echo \"hallo\" > /dev/stdout"
+#      wrap ... -- echo "hallo"
+#      wrap ... -a -- "echo \"hallo\" > /dev/stdout"
 #
-# but the second command needs quoting because of the redirection. Use quoting with `-a` if the
-# command needs any shell specials (e.g. ';', '&', '<').
+#    but the second command needs quoting because of the redirection. Use quoting with `-a` if the
+#    command needs any shell specials (e.g. ';', '&', '<').
 #
-# You can also use shell functions that are exported with `export -f` from the calling environment.
+# You can execute shell functions that are exported with `export -f` from the calling environment.
 # See the tests in test_wrap.sh to get some ideas.
 #
-# Output is a JSON report of the form
+# Output to standard output is a JSON report of the form
 # {
 #    "exit_code": $int,
 #    "pid": $pid,
@@ -33,7 +40,8 @@
 #    "stdoutFile": "...",
 #    "stdinFile": "...",
 #    "exitFile": "...",
-#    "pidFile": "..."
+#    "pidFile": "...",
+#    "envFile": "..."
 # }
 set -o pipefail -ue
 
@@ -45,6 +53,7 @@ stderrFile="stderr"
 pidFile="pid"
 exitFile="exit_code"
 doEval="false"
+envFile="/dev/null"
 
 lastLen=-1
 while [[ $# -gt 0 ]]; do
@@ -78,6 +87,10 @@ while [[ $# -gt 0 ]]; do
       pidFile="$2"
       shift 2 # argument + values
       ;;
+    -n|--env)
+      envFile="$2"
+      shift 2 # argument + value
+      ;;
     -a|--eval)
       doEval="true"
       shift # argument
@@ -100,13 +113,14 @@ createLogDir="false"
 fixDir() {
   local varName="${1:?No variable name}"
   if echo "${!varName}" | grep -q -v "/"; then
+    # shellcheck disable=SC2140
     declare -g "$varName"="$logDir/${!varName}"
     createLogDir="true"
   fi
 }
 
 # Note that the stdin file is either /dev/null (default) or whatever file is provided. No
-# path magic for stdin.
+# path magic for stdinFile or envFile.
 fixDir stdoutFile
 fixDir stderrFile
 fixDir pidFile
@@ -116,6 +130,10 @@ if [[ "$createLogDir" == "true" ]]; then
   mkdir -p "$logDir"
 fi
 pid=-1
+if [[ "$envFile" != "/dev/null" ]]; then
+  # shellcheck source=/dev/null
+  source "$envFile"
+fi
 if [[ "$doEval" == "true" ]]; then
   eval "${command[*]}" \
     < "$stdinFile" \
@@ -148,7 +166,8 @@ cat - <<JSON_END >> /dev/stdout
     "stdoutFile": "$stdoutFile",
     "stdinFile": "$stdinFile",
     "exitFile": "$exitFile",
-    "pidFile": "$pidFile"
+    "pidFile": "$pidFile",
+    "envFile": "$envFile"
 }
 JSON_END
 

@@ -17,7 +17,7 @@ import conftest
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import ExecutedProcess, ExecutionStatus, ProcessId
 from weskit.classes.executor.Executor import \
-    ExecutionSettings, CommandResult, Executor
+    ExecutionSettings, ExecutionResult, Executor
 from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor, execute
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
@@ -149,7 +149,7 @@ class ExecuteProcess(metaclass=ABCMeta):
     def workdir(self) -> Path:
         pass
 
-    def execute(self, executor, stdout_file, stderr_file) -> CommandResult:
+    def execute(self, executor, stdout_file, stderr_file) -> ExecutionResult:
         # Note: This tests exports variables to Bash, as executed command. The variables (and $PWD)
         #       are then used to evaluate the shell expression.
         command = ShellCommand(["bash", "-c",
@@ -164,8 +164,8 @@ class ExecuteProcess(metaclass=ABCMeta):
                                    "WITH_SPACE": "wo, rld"  # Should be "wo, rld ".  dito.
                                })
         process = executor.execute(command,
-                                   stdout_file=stdout_file,
-                                   stderr_file=stderr_file,
+                                   stdout_url=stdout_file,
+                                   stderr_url=stderr_file,
                                    settings=ExecutionSettings(
                                        job_name="weskit_test_execute",
                                        walltime=timedelta(minutes=5.0),
@@ -176,11 +176,11 @@ class ExecuteProcess(metaclass=ABCMeta):
         assert observed == expected
 
     def check_execution_result(self, result, remote_stdout_file, remote_stderr_file, stdout_file):
-        assert result.stdout_file == remote_stdout_file, result
+        assert result.stdout_url == remote_stdout_file, result
         with open(stdout_file, "r") as stdout:
             stdout_lines = stdout.readlines()
 
-        assert result.stderr_file == remote_stderr_file, result
+        assert result.stderr_url == remote_stderr_file, result
 
         self._assert_stdout(
             stdout_lines,
@@ -317,8 +317,8 @@ def test_std_fds_are_closed(local_executor, temporary_dir):
     command = ShellCommand(["bash", "-c", "echo"],
                            workdir=workdir)
     process = executor.execute(command,
-                               stdout_file=workdir / "stdout",
-                               stderr_file=workdir / "stderr")
+                               stdout_url=workdir / "stdout",
+                               stderr_url=workdir / "stderr")
     executor.wait_for(process)
     assert process.handle.stdout_fd.closed
     assert process.handle.stderr_fd.closed
@@ -416,7 +416,7 @@ class MockExecutor(Executor):
     def kill(self, process: ExecutedProcess):
         pass
 
-    def wait_for(self, process: ExecutedProcess) -> CommandResult:
+    def wait_for(self, process: ExecutedProcess) -> ExecutionResult:
         self.wait_for_called_with = process
         process.result.status = ExecutionStatus(self._target_status)
         return process.result
@@ -451,13 +451,13 @@ class MockExecutor(Executor):
         self._write_mock_to_opt_filerepr("stderr", stderr_file)
         return ExecutedProcess(process_handle=None,
                                executor=self,
-                               pre_result=CommandResult(command=command,
-                                                        process_id=ProcessId(12234),
-                                                        execution_status=ExecutionStatus(),
-                                                        stderr_file=stderr_file,
-                                                        stdout_file=stdout_file,
-                                                        stdin_file=stdin_file,
-                                                        start_time=now()))
+                               pre_result=ExecutionResult(command=command,
+                                                          process_id=ProcessId(12234),
+                                                          status=ExecutionStatus(),
+                                                          stderr_url=stderr_file,
+                                                          stdout_url=stdout_file,
+                                                          stdin_url=stdin_file,
+                                                          start_time=now()))
 
 
 def test_executor_context_manager():
@@ -468,8 +468,8 @@ def test_executor_context_manager():
         assert result.status.code == 0
         assert stderr.readlines() == ["stderr\n"]
         assert stdout.readlines() == ["stdout\n"]
-        assert result.stdout_file == Path(stdout.name)
-        assert result.stderr_file == Path(stderr.name)
+        assert result.stdout_url == Path(stdout.name)
+        assert result.stderr_url == Path(stderr.name)
         assert re.match(r"/tmp/\S+", stderr.name)
         assert re.match(r"/tmp/\S+", stdout.name)
 
@@ -543,10 +543,10 @@ class TestLsfGetStatus:
                     f.writelines(bjobs_stderr)
                     f.flush()
                 return ExecutedProcess(self, None,
-                                       CommandResult(command, ProcessId(5432),
-                                                     stdout_file, stderr_file, stdin_file,
-                                                     ExecutionStatus(None),
-                                                     start_time=now()))
+                                       ExecutionResult(command, ProcessId(5432),
+                                                       stdout_file, stderr_file, stdin_file,
+                                                       ExecutionStatus(None),
+                                                       start_time=now()))
 
             def get_status(self, process: ExecutedProcess) -> ExecutionStatus:
                 return ExecutionStatus(0)
@@ -559,7 +559,7 @@ class TestLsfGetStatus:
             def kill(self, process: ExecutedProcess):
                 pass
 
-            def wait_for(self, process: ExecutedProcess) -> CommandResult:
+            def wait_for(self, process: ExecutedProcess) -> ExecutionResult:
                 self.update_process(process)
                 return process.result
 
@@ -580,13 +580,13 @@ class TestLsfGetStatus:
         executor = LsfExecutor(MockInnerExecutor())
         process = ExecutedProcess(executor=executor,
                                   process_handle=None,
-                                  pre_result=CommandResult(ShellCommand([]),
-                                                           process_id=ProcessId(cluster_job_id),
-                                                           execution_status=ExecutionStatus(),
-                                                           stdin_file=None,
-                                                           stdout_file=None,
-                                                           stderr_file=None,
-                                                           start_time=datetime.now()))
+                                  pre_result=ExecutionResult(ShellCommand([]),
+                                                             process_id=ProcessId(cluster_job_id),
+                                                             status=ExecutionStatus(),
+                                                             stdin_url=None,
+                                                             stdout_url=None,
+                                                             stderr_url=None,
+                                                             start_time=datetime.now()))
         return executor, process
 
     def run_test(self, *args, **kwargs):
