@@ -84,12 +84,12 @@ class WorkflowEngine(metaclass=ABCMeta):
                         param: ActualEngineParameter,
                         name: str,
                         argument: str,
-                        invert: Optional[bool] = None) -> List[str]:
+                        invert: bool = False) -> List[str]:
         """
         Helper for parameter processing. This is for flag-like parameters. The boolean value is
         interpreted as presence (True) or absence (False) of the flag.
         """
-        def to_bool(value: Optional[str], invert: Optional[bool]) -> bool:
+        def to_bool(value: Optional[str], invert: bool = False) -> bool:
             if value is None:
                 return False
             elif value.lower() in ["true", "t", "present", "1", "yes", "y"]:

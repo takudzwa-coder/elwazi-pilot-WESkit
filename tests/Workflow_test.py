@@ -227,7 +227,6 @@ def test_execute_nextflow(manager,
     assert run.run_dir(manager.weskit_context) / "hello_world.txt"
     hello_world_files = list(filter(lambda name: os.path.basename(name) == "hello_world.txt",
                                     run.outputs["filesystem"]))
-    print(run.outputs["filesystem"])
     assert len(hello_world_files) == 2, hello_world_files   # 1 actual file + 1 publish symlink
     with open(run.run_dir(manager.weskit_context) / hello_world_files[0], "r") as fh:
         assert fh.readlines() == ["hello_world\n"]

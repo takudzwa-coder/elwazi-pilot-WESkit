@@ -243,8 +243,6 @@ class TestOpenEndpoint:
             """Used to make get to dictionaries that are comparable by ==."""
             return {p["name"]: p for p in params}
 
-        print(as_dict(response.json["default_workflow_engine_parameters"]))
-
         assert as_dict(response.json["default_workflow_engine_parameters"]) == as_dict([
               {"name": "SMK|6.10.0|engine-environment",
                "default_value": None,
