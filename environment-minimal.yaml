@@ -1,0 +1,93 @@
+# This (almost) minimal environment specification should contain only the minimal set of packages.
+# Use it to update the environment.yaml that contains all packages:
+#
+# ```bash
+# mamba env create -n weskit -f environment-minimal.yaml
+# mamba activate weskit
+# mamba env export > environment.yaml
+# ```
+#
+# After that edit the environment.yaml and remove all paths (prefix) and check that the channels
+# are exactly as specified here. You can then check in the environment.yaml and build the
+# containers.
+#
+# When modifying this file, make sure to put packages for optional features, or for soon to be
+# removed features (e.g. supporting Nextflow or Snakemake in the container!) in the dedicated
+# sections.
+#
+name: weskit
+channels:
+  - bioconda
+  - conda-forge
+  - nodefaults
+dependencies:
+  # WESkit core packages
+  - python=3.11
+  - pip
+  - asyncssh
+  - bandit
+  - celery=5
+  - cerberus=1
+  - coverage=6
+  - dataclasses
+  - flake8
+  - flask=2
+  - flask-cors
+  - flask-jwt-extended
+  - jaraco.functools
+  - jinja2=3
+  - mccabe
+  - more-itertools
+  - mypy
+  - mypy_extensions
+  - nest-asyncio
+  - pymongo
+  - pytest
+  - pytest-asyncio
+  - pytest-celery
+  - pytest-cov
+  - werkzeug
+  - tempora
+  - cryptography
+  - kombu
+  - tenacity=8
+  - types-setuptools
+  - types-six
+  - types-toml
+  - validators
+  - bson
+  - uwsgi
+  - yaml
+  - jq
+  - zlib
+  # TRS
+  - bzip2
+  - flufl.lock=7
+  - xz
+  # Nextflow
+  - nextflow
+  - filelock
+  # Pip: Some pip-packages need gcc :(. E.g. datrie, a dependency of python-kubernetes.
+  - gcc_linux-64
+  - pip:
+    # In Conda these were conflicting with Python 3.11.*, but not in Pip
+    # WESkit core packages
+    - gevent
+    - python-kubernetes
+    - redis==4
+    - testcontainers==3.0.0
+    - ulid_py
+    - requests
+    - urllib3
+    - boto3
+    - requests-mock
+    - types-pyyaml
+    - types-requests
+    - types-urllib3
+    - typing
+    - typing-extensions
+    - typing_extensions
+    # TRS
+    - trs-cli==0.7.0
+    # Snakemake
+    - snakemake
