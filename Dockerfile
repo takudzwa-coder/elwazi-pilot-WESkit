@@ -6,7 +6,7 @@
 #
 #  Authors: The WESkit Team
 
-FROM registry.gitlab.com/api-base:latest
+FROM registry.gitlab.com/one-touch-pipeline/weskit/api/base:master
 
 EXPOSE 5000
 

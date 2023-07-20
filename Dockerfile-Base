@@ -57,6 +57,7 @@ RUN conda config --set proxy_servers.http "$HTTP_PROXY" && \
 # directory, or Conda will fail with a permission denied error.
 COPY environment.yaml /weskit/environment.yaml
 RUN echo "Creating environment ..." && \
+    conda config --set channel_priority flexible && \
     mamba env create -n weskit -f /weskit/environment.yaml && \
     source activate weskit && \
     echo "Cleaning packages ..." && \
@@ -64,4 +65,7 @@ RUN echo "Creating environment ..." && \
 
 # Ensures the following path will be a file, when mounted into the container (otherwise it will be a
 # directory).
+# TODO Remove after switching to helm. There it's /home/weskit/configs/config.yaml and works anyway.
 RUN touch /home/weskit/config.yaml
+
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "weskit"]

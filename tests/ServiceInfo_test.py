@@ -17,7 +17,7 @@ def test_validate_config(test_validation, test_config):
     # Ensure default value is set
     max_memory = list(filter(lambda p: p["name"] == "max-memory",
                              validation_result["workflow_engines"]
-                             ["NFL"]["22.10.0"]["default_parameters"]))[0]
+                             ["NFL"]["23.04.1"]["default_parameters"]))[0]
     assert "api" in max_memory
     assert not max_memory["api"]
 
@@ -74,8 +74,8 @@ def test_validate_config(test_validation, test_config):
 
 def test_get_workflow_type_versions(service_info):
     assert service_info.workflow_type_versions() == {
-        "SMK": {"workflow_type_version": ["6.10.0"]},
-        "NFL": {"workflow_type_version": ["22.10.0"]}
+        "SMK": {"workflow_type_version": ["7.30.2"]},
+        "NFL": {"workflow_type_version": ["23.04.1"]}
     }
 
 
@@ -89,8 +89,8 @@ def test_get_supported_filesystem_protocols(service_info):
 
 def test_get_workflow_engine_versions(service_info):
     assert service_info.workflow_engine_versions() == {
-        "SMK": "6.10.0",
-        "NFL": "22.10.0"
+        "SMK": "7.30.2",
+        "NFL": "23.04.1"
     }
 
 
@@ -99,50 +99,50 @@ def test_get_default_workflow_engine_parameters(service_info):
     case = TestCase()
     case.maxDiff = None
     expected = [
-        {"name": "SMK|6.10.0|engine-environment",
+        {"name": "SMK|7.30.2|engine-environment",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "SMK|6.10.0|max-memory",
+        {"name": "SMK|7.30.2|max-memory",
          "default_value": "100m",
          "type": "Optional[str validFor Python.memory_units.Memory.from_str($)]"},
-        {"name": "SMK|6.10.0|max-runtime",
+        {"name": "SMK|7.30.2|max-runtime",
          "default_value": "05:00",
          "type": "Optional[str validFor Python.tempora.parse_timedelta($)]"},
-        {"name": "SMK|6.10.0|accounting-name",
+        {"name": "SMK|7.30.2|accounting-name",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "SMK|6.10.0|job-name",
+        {"name": "SMK|7.30.2|job-name",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "SMK|6.10.0|group",
+        {"name": "SMK|7.30.2|group",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "SMK|6.10.0|queue",
+        {"name": "SMK|7.30.2|queue",
          "default_value": None,
          "type": "Optional[str]"},
 
-        {"name": "NFL|22.10.0|accounting-name",
+        {"name": "NFL|23.04.1|accounting-name",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "NFL|22.10.0|job-name",
+        {"name": "NFL|23.04.1|job-name",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "NFL|22.10.0|group",
+        {"name": "NFL|23.04.1|group",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "NFL|22.10.0|queue",
+        {"name": "NFL|23.04.1|queue",
          "default_value": None,
          "type": "Optional[str]"},
-        {"name": "NFL|22.10.0|trace",
+        {"name": "NFL|23.04.1|trace",
          "default_value": "true",
          "type": "bool"},
-        {"name": "NFL|22.10.0|timeline",
+        {"name": "NFL|23.04.1|timeline",
          "default_value": "true",
          "type": "bool"},
-        {"name": "NFL|22.10.0|graph",
+        {"name": "NFL|23.04.1|graph",
          "default_value": "true",
          "type": "bool"},
-        {"name": "NFL|22.10.0|report",
+        {"name": "NFL|23.04.1|report",
          "default_value": "true",
          "type": "bool"}
     ]

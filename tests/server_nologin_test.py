@@ -24,7 +24,7 @@ class TestOpenEndpoint:
         response = test_client_nologin.get("/ga4gh/wes/v1/service-info")
         assert response.status_code == 200, response.json
         assert response.json["workflow_engine_versions"] == {
-            "SMK": "6.10.0"
+            "SMK": "7.30.2"
         }
 
 

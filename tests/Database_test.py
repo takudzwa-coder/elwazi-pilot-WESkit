@@ -21,7 +21,7 @@ from weskit.utils import updated
 def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
                         workflow_type="SMK",
-                        workflow_type_version="6.10.0",
+                        workflow_type_version="7.30.2",
                         user_id="test_id")
     test_database.insert_run(run1)
     run2 = test_database.get_run(run1.id)
@@ -34,7 +34,7 @@ def test_insert_and_load_run(test_database):
 def test_except_on_duplicate_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     test_database.insert_run(run)
     with pytest.raises(DatabaseOperationError):
         test_database.insert_run(run)
@@ -44,7 +44,7 @@ def test_except_on_duplicate_run(test_database):
 def test_update_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     test_database.insert_run(run)
     new_run = copy.copy(run)
     # Runs in processing stage SUBMITTED_EXECUTION must have a celery_task_id.
@@ -60,7 +60,7 @@ def test_update_run(test_database):
 def test_except_update_on_current_update(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
 
     # Now simulate a concurrent run, by just changing the value before writing it to the database.
     # The only thing necessary is to modify the db_version counter. We don't do any content
@@ -80,7 +80,7 @@ def test_except_update_on_current_update(test_database):
 def test_except_update_on_missing_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     # Modify the run, to ensure an update is attempted.
     run.processing_stage = ProcessingStage.SUBMITTED_EXECUTION
     with pytest.raises(DatabaseOperationError):
@@ -99,7 +99,7 @@ def test_get_runs(test_database):
 def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     test_database.insert_run(run)
     assert test_database.delete_run(run)
     find_run = test_database.get_run(run.id)

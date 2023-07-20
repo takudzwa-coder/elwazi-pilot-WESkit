@@ -1,4 +1,4 @@
-#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+#  Copyright (c) 2023. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
 #
 #  Distributed under the MIT License. Full text at
 #
@@ -59,6 +59,8 @@ stages:
       CI_COMMIT_SHORT_SHA='$CI_COMMIT_SHORT_SHA'
       CI_COMMIT_TAG='$CI_COMMIT_TAG'
       CI_COMMIT_BRANCH='$CI_COMMIT_BRANCH'
+      CI_MERGE_REQUEST_SOURCE_BRANCH_NAME='$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
+      CI_MERGE_REQUEST_TARGET_BRANCH_NAME='$CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
       Publishing '$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG'
       From '$DOCKER_FILE'
       THE_END
@@ -73,58 +75,117 @@ stages:
         .
     - docker push "$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG"
 
+
+tag_branch_base_image:
+  stage: build
+  extends: .gitlab-registry
+  rules:
+    # If there are no changes of the environment or docker files, just reuse the existing image
+    # of the target branch and tag it with the source branch name.
+    #
+    # The purpose of this rule is to have not only a branch-specific image if there are changes
+    # to the environment or dockerfile, but always. This image can then be used again as
+    # target-branch image of a branch deriving from this branch. As these are only tags,
+    # and tags are automatically collected after some time, this won't add much overhead to the CI.
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        # As soon as https://gitlab.com/gitlab-org/gitlab/-/issues/369916 is implemented, change
+        # this to:
+        # compare_to: "refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+        compare_to: "refs/heads/master"
+        paths:
+          - environment.yaml
+          - Dockerfile-Base
+      when:
+        never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  variables:
+    DOCKER_FILE: Dockerfile-Base
+    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api-base
+    VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+  script:
+    - |
+      cat - <<THE_END
+      CI_PIPELINE_SOURCE='$CI_PIPELINE_SOURCE'
+      CI_COMMIT_SHORT_SHA='$CI_COMMIT_SHORT_SHA'
+      CI_COMMIT_TAG='$CI_COMMIT_TAG'
+      CI_COMMIT_BRANCH='$CI_COMMIT_BRANCH'
+      CI_MERGE_REQUEST_SOURCE_BRANCH_NAME='$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
+      CI_MERGE_REQUEST_TARGET_BRANCH_NAME='$CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+      Publishing '$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG'
+      From '$DOCKER_FILE'
+      THE_END
+    - |
+      docker tag \
+        "$REGISTRY/$CONTAINER_IMAGE_NAME/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
+        "$REGISTRY/$CONTAINER_IMAGE_NAME/$VERSION_TAG"
+    - docker push "$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG"
+
+
 build_branch_base_image:
   stage: build
   extends: .build_image
   rules:
     # The base-image should be built for merge result pipelines and only if the environment.yaml
-    # or the Dockerfile-Base were changed. Otherwise, no image should be built.
-    - if: '$CI_COMMIT_BRANCH == "master"'
-      when: never
-    - if: '"$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" = ""'
-      when: never
-    - changes:
-        compare_to: 'refs/heads/main'
+    # or the Dockerfile-Base were changed, compared to the target branch of the MR.
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        compare_to: "refs/heads/master"
+        # As soon as https://gitlab.com/gitlab-org/gitlab/-/issues/369916 is implemented, change
+        # this to:
+        # compare_to: "refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
         paths:
           - environment.yaml
           - Dockerfile-Base
   variables:
     DOCKER_FILE: Dockerfile-Base
-    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api-base
+    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
     VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
 
+
 test:
-  # Use the image that may have been built in the last phase (build).
-  image: "$REGISTRY/$CONTAINER_IMAGE_NAME:$CI_COMMIT_BRANCH"
+  image: "$REGISTRY/one-touch-pipeline/weskit/api/base:$IMAGE_VERSION"
   stage: test
   needs:
     - job: build_branch_base_image
       optional: true
+    - job: tag_branch_base_image
+      optional: true
   rules:
-    # Run the tests in merge-commits, and in all branches with new commits, unless they have an
-    # open merge request.
-    # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"    # yes, on merge request pipeline
-    - if: $CI_COMMIT_TAG                                  # yes, if a tagged image is created
-    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS    # not, if there is on open MR
+    # Do not run on commits of a branch, if there is an open merge request for the branch.
+    # In that case rather the first rule will match, which runs on the merge-commit.
+    # This is to prevent double runs on both, branch-commits and merge-commits.
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
       when: never
-    - if: $CI_COMMIT_BRANCH                               # yes, on new commits
-#    - if: $CI_COMMIT_REF_PROTECTED                        # not, if this is a protected branch
-#      when: never                                         #      because tested already in merge
-#                                                          #      result pipeline
+    # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
+    # If this is a merge-request pipeline, run the test. Always use the source branch image tag.
+    # That source image tag always exists, independent of whether there are changes in the
+    # environment or docker file or not. See "build_branch_base_image" and "tag_branch_base_image".
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        IMAGE_VERSION: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
+    # If this is a commit with a tag, run the test. Relates to job "build_tagged_image"
+    - if: '$CI_COMMIT_TAG'
+    # Otherwise, on commits on branches without a merge request, run the tests.
+    # Again just use the branch-tagged image, probably created by "tag_branch_base_image".
+    - if: '$CI_COMMIT_BRANCH'
+      variables:
+        IMAGE_VERSION: '$CI_COMMIT_BRANCH'
   script:
-    - mypy --install-types --non-interactive weskit/ tests/
+    - mypy weskit/ tests/
     - flake8
     - bandit -r weskit/ uwsgi_server/
     - cp tests/remote-template.yaml tests/remote.yaml
     - python -m pytest -vvv --cov=weskit/ --cov-report term-missing -m "not slow and not ssh"
 
-build_latest_base_image:
+build_master_base_image:
   stage: deploy
   extends: .build_image
   needs:
-    # Only build latest base-images on master, if the QA jobs succeeded.
-    - job: test
+#    # Only build master base-images on master, if the QA jobs succeeded.
+#    - job: test
+#      optional: true   # Gitlab-CI seems not smart enough to recognize that this job's rules
+#                       # match only on a subset of the rules on "test" job.
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
       changes:
@@ -133,17 +194,19 @@ build_latest_base_image:
           - Dockerfile-Base
   variables:
     DOCKER_FILE: Dockerfile-Base
-    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api-base
-    VERSION_TAG: latest
+    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
+    VERSION_TAG: master
 
 build_latest_image:
   stage: deploy
   extends: .build_image
   needs:
-    # Only build latest images on master, if the QA jobs succeeded.
-    - job: test
-    # Build the latest image only after the latest base-image was build, if one had to be built.
-    - job: build_latest_base_image
+    # Only build master images, if the QA jobs succeeded.
+#    - job: test
+#      optional: true   # Gitlab-CI seems not smart enough to recognize that this job's rules
+#                       # match only on a subset of the rules on "test" job.
+    # Build the master image only after the master base-image was build, if one had to be built.
+    - job: build_master_base_image
       optional: true
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
@@ -156,17 +219,3 @@ build_latest_image:
     DOCKER_FILE: Dockerfile
     CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api
     VERSION_TAG: latest
-
-# Build images for tagged commits. Commit tags with the pattern \d+\.\d+\.\d+
-# are not garbage collected.
-build_tagged_image:
-  stage: deploy
-  extends: .build_image
-  # Implicitly depends on one-touch-pipeline/weskit/api-base:latest. That latest image, however,
-  # was not necessarily build recently, but only for the last conda environment change.
-  rules:
-    - if: $CI_COMMIT_TAG
-  variables:
-    DOCKER_FILE: Dockerfile
-    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api
-    VERSION_TAG: $CI_COMMIT_TAG
