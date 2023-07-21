@@ -114,7 +114,9 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"task_conda_pkgs_dir"}),
     EngineParameter({"task_conda_envs_path"}),
     EngineParameter({"task_home"}),
-    EngineParameter({"NXF_work"})
+    EngineParameter({"NXF_work"}),
+    EngineParameter({"with_tower"}),
+    EngineParameter({"tower_access_token"})
 ])
 
 

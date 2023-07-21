@@ -73,7 +73,7 @@ def test_create_snakemake():
          {"name": "use-conda", "value": "TRUE", "api": True},
          {"name": "profile", "value": "TRUE", "api": True},
          {"name": "tes", "value": "TRUE", "api": True},
-         {"name": "resume", "value": "TRUE", "api": True},]
+         {"name": "resume", "value": "FALSE", "api": True}]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"cores"}), "2", True),
@@ -81,7 +81,7 @@ def test_create_snakemake():
         ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"resume"}), "TRUE", True)
+        ActualEngineParameter(EngineParameter({"resume"}), "FALSE", True)
     ]
     assert engine.name() == "SMK"
 
@@ -280,7 +280,10 @@ def test_create_nextflow():
          {"name": "report", "value": "T", "api": True},
          {"name": "graph", "value": "Y", "api": True},
          {"name": "timeline", "value": "True", "api": True},
-         {"name": "resume", "value": "True", "api": True}]
+         {"name": "resume", "value": "True", "api": True},
+         {"name": "with_tower", "value": "True", "api": True},
+         {"name": "tower_access_token", "value": "hfdsjhfdskl", "api": True}
+         ]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"engine-environment"}), "/path/to/script", False),
@@ -289,7 +292,9 @@ def test_create_nextflow():
         ActualEngineParameter(EngineParameter({"report"}), "T", True),
         ActualEngineParameter(EngineParameter({"graph"}), "Y", True),
         ActualEngineParameter(EngineParameter({"timeline"}), "True", True),
-        ActualEngineParameter(EngineParameter({"resume"}), "True", True)
+        ActualEngineParameter(EngineParameter({"resume"}), "True", True),
+        ActualEngineParameter(EngineParameter({"with_tower"}), "True", True),
+        ActualEngineParameter(EngineParameter({"tower_access_token"}), "hfdsjhfdskl", True)
     ]
     assert engine.name() == "NFL"
 
@@ -305,11 +310,13 @@ def test_create_nextflow():
                                 '-with-report',
                                 '-with-dag',
                                 '-with-timeline',
-                                '-resume']
+                                '-resume',
+                                '-with-tower']
     assert created1.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
-        "WESKIT_WORKFLOW_PATH": "/some/path"
+        "WESKIT_WORKFLOW_PATH": "/some/path",
+        'TOWER_ACCESS_TOKEN': "hfdsjhfdskl"
     }
     assert created1.workdir == Path("/some/workdir")
 
@@ -325,11 +332,13 @@ def test_create_nextflow():
                                 'source', '/path/to/script', ss('&&'),
                                 'nextflow', "run", "/some/path",
                                 '-params-file', '/the/config.file',
-                                '-resume']
+                                '-resume',
+                                '-with-tower']
     assert created2.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
-        "WESKIT_WORKFLOW_PATH": "/some/path"
+        "WESKIT_WORKFLOW_PATH": "/some/path",
+        "TOWER_ACCESS_TOKEN": "hfdsjhfdskl"
     }
     assert created2.workdir == Path("/a/workdir")
 

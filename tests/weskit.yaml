@@ -197,6 +197,13 @@ workflow_engines:
           value: "./"
           api: false
           type: "str validFor Python.pathlib.Path"
+        - name: "with_tower"
+          value: "false"
+          api: false
+          type: "bool"          
+        - name: "tower_access_token"
+          api: false
+          type: "Optional[str]"
 
   SMK:
     "7.30.2":

@@ -273,10 +273,10 @@ class Snakemake(WorkflowEngine):
         result = super()._environment(workflow_path, parameters)
 
         for var in self.ENVVARS_DICT:
-            for p in parameters:
-                if p.value is not None:
-                    if p.param == self.known_parameters()[var]:
-                        result[self.ENVVARS_DICT[var]] = str(p.value)
+            for param in parameters:
+                if param.value is not None:
+                    if param.param == self.known_parameters()[var]:
+                        result[self.ENVVARS_DICT[var]] = str(param.value)
         return result
 
     def command(self,
@@ -324,22 +324,33 @@ class Nextflow(WorkflowEngine):
                                               "max-memory",
                                               "tempdir",
                                               "resume",
-                                              "NXF_work"})
+                                              "NXF_work",
+                                              "with_tower",
+                                              "tower_access_token"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
+
+    ENVVARS_DICT = {
+        "tower_access_token": "TOWER_ACCESS_TOKEN",
+    }
 
     def _environment(self,
                      workflow_path: Path,
                      parameters: List[ActualEngineParameter]) -> Dict[str, str]:
         result = super()._environment(workflow_path, parameters)
-        for param in parameters:
-            if param.param == self.known_parameters()["max-memory"]:
-                if param.value is None:
-                    raise ValueError("max-memory must have valid value")
-                else:
-                    result["NXF_OPTS"] = "-Xmx%sm" % \
-                                         math.ceil(Memory.from_str(param.value).
-                                                   to(Unit.MEGA, False).value)
+
+        for var in self.ENVVARS_DICT:
+            for param in parameters:
+                if param.param == self.known_parameters()[var]:
+                    if param.value is not None:
+                        result[self.ENVVARS_DICT[var]] = str(param.value)
+                if param.param == self.known_parameters()["max-memory"]:
+                    if param.value is None:
+                        raise ValueError("max-memory must have valid value")
+                    else:
+                        result["NXF_OPTS"] = "-Xmx%sm" % \
+                                            math.ceil(Memory.from_str(param.value).
+                                                      to(Unit.MEGA, False).value)
         return result
 
     def _command_params(self, parameters: List[ActualEngineParameter]) -> List[str]:
@@ -362,6 +373,7 @@ class Nextflow(WorkflowEngine):
             result += self._optional_param(param, "graph", "-with-dag")
             result += self._optional_param(param, "resume", "-resume")
             result += self._argument_param(param, "NXF_work", "-w")
+            result += self._optional_param(param, "with_tower", "-with-tower")
         return result
 
     def command(self,
