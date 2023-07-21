@@ -72,14 +72,16 @@ def test_create_snakemake():
          {"name": "use-singularity", "value": "TRUE", "api": True},
          {"name": "use-conda", "value": "TRUE", "api": True},
          {"name": "profile", "value": "TRUE", "api": True},
-         {"name": "tes", "value": "TRUE", "api": True}]
+         {"name": "tes", "value": "TRUE", "api": True},
+         {"name": "resume", "value": "TRUE", "api": True},]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"cores"}), "2", True),
         ActualEngineParameter(EngineParameter({"use-singularity"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True)
+        ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True),
+        ActualEngineParameter(EngineParameter({"resume"}), "TRUE", True)
     ]
     assert engine.name() == "SMK"
 
@@ -98,7 +100,7 @@ def test_command_with_default_parameters():
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
-         {"name": "resume", "value": "T", "api": True},
+         {"name": "resume", "value": "F", "api": True},
          {"name": "profile", "value": "myprofile", "api": True},
          {"name": "tes", "value": "https://some/test/URL", "api": True},
          {"name": "jobs", "value": "1", "api": True},
@@ -123,6 +125,7 @@ def test_command_with_default_parameters():
                                '--cores', '2',
                                '--use-singularity',
                                '--use-conda',
+                               '--forceall',
                                '--profile', 'myprofile',
                                '--tes', 'https://some/test/URL',
                                '--jobs', '1',
