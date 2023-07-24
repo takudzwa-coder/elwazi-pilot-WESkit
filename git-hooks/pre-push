@@ -11,12 +11,10 @@ hooksDir="$(dirname "$BASH_SOURCE")"
 
 # The pre-commit checks are fast and added again here, because if you do a rebase you may end up
 # with failing code. So before you push, everything should be checked (again).
-"$hooksDir/pre-commit"
 
 if [[ ! -v NO_PUSH_CHECKS || (-v NO_PUSH_CHECKS && "$NO_PUSH_CHECKS" != "true") ]]; then
-
   # Run the tests
-  echo "pytest ..." >> /dev/stderr
+  "$hooksDir/pre-commit"
   python -m pytest -v --cov=weskit/ -m "not slow"
 
 fi
