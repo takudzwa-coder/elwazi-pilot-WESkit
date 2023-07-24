@@ -137,6 +137,13 @@ build_branch_base_image:
         paths:
           - environment.yaml
           - Dockerfile-Base
+    # Also build the image on the master branch, if there were changes. This must happen in the
+    # build phase, before the test phase, such that the image is present if the tests are run.
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        paths:
+          - environment.yaml
+          - Dockerfile-Base
   variables:
     DOCKER_FILE: Dockerfile-Base
     CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
@@ -178,24 +185,6 @@ test:
     - cp tests/remote-template.yaml tests/remote.yaml
     - python -m pytest -vvv --cov=weskit/ --cov-report term-missing -m "not slow and not ssh"
 
-build_master_base_image:
-  stage: deploy
-  extends: .build_image
-  needs:
-#    # Only build master base-images on master, if the QA jobs succeeded.
-#    - job: test
-#      optional: true   # Gitlab-CI seems not smart enough to recognize that this job's rules
-#                       # match only on a subset of the rules on "test" job.
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master"
-      changes:
-        paths:
-          - environment.yaml
-          - Dockerfile-Base
-  variables:
-    DOCKER_FILE: Dockerfile-Base
-    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
-    VERSION_TAG: master
 
 build_latest_image:
   stage: deploy
