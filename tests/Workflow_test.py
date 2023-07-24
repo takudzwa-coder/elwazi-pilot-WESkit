@@ -246,7 +246,7 @@ def test_execute_nextflow(manager,
         "-with-dag",
         "-with-report",
         "-w",
-        ""
+        "./"
     ]
 
 

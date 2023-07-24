@@ -194,7 +194,7 @@ workflow_engines:
           type: "bool"
           api: false
         - name: "NXF_work"
-          value: ""
+          value: "./"
           api: false
           type: "str validFor Python.pathlib.Path"
 
