@@ -30,9 +30,9 @@ variables:
   REGISTRY: registry.gitlab.com
 
 stages:
-  - build          # Build the branch's api-base container
-  - test           # Test the code using the branch's api-base container
-  - deploy         # Build the deployment container, using the branch's api-base container
+  - build          # Build the branch's api/base container
+  - test           # Test the code using the branch's api/base container
+  - deploy         # Build the deployment container, using the branch's api/base container
 
 # See
 # https://docs.gitlab.com/ee/user/project/deploy_tokens/index.html
@@ -98,10 +98,10 @@ tag_branch_base_image:
           - Dockerfile-Base
       when:
         never
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '(($CI_COMMIT_BRANCH != "master") && ($CI_PIPELINE_SOURCE != "merge_request_event"))'
   variables:
     DOCKER_FILE: Dockerfile-Base
-    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api-base
+    CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
     VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
   script:
     - |
@@ -137,17 +137,20 @@ build_branch_base_image:
         paths:
           - environment.yaml
           - Dockerfile-Base
-    # Also build the image on the master branch, if there were changes. This must happen in the
-    # build phase, before the test phase, such that the image is present if the tests are run.
-    - if: $CI_COMMIT_BRANCH == "master"
+      variables:
+        VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    # Also build the image on the master branch, if there were changes.
+    - if: '$CI_COMMIT_BRANCH == "master"'
       changes:
+        compare_to: "refs/heads/master^1"
         paths:
           - environment.yaml
           - Dockerfile-Base
+      variables:
+        VERSION_TAG: "$CI_COMMIT_BRANCH"
   variables:
     DOCKER_FILE: Dockerfile-Base
     CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
-    VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
 
 
 test:
@@ -191,19 +194,26 @@ build_latest_image:
   extends: .build_image
   needs:
     # Only build master images, if the QA jobs succeeded.
-#    - job: test
-#      optional: true   # Gitlab-CI seems not smart enough to recognize that this job's rules
-#                       # match only on a subset of the rules on "test" job.
+    - job: test
+      optional: true   # Gitlab-CI seems not smart enough to recognize that this job's rules
+                       # match only on a subset of the rules on "test" job.
     # Build the master image only after the master base-image was build, if one had to be built.
     - job: build_master_base_image
       optional: true
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
       changes:
+        compare_to: "refs/heads/master^1"
         paths:
+          # The image depends on the base-image ...
           - environment.yaml
           - Dockerfile-Base
           - Dockerfile
+          # ... and includes the code for running WESkit.
+          - uwsgi_server/**/*
+          - weskit/**/*
+          - tools/**/*
+          - config/**/*
   variables:
     DOCKER_FILE: Dockerfile
     CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api

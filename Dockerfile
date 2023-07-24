@@ -8,6 +8,9 @@
 
 FROM registry.gitlab.com/one-touch-pipeline/weskit/api/base:master
 
+LABEL maintainer="Philip R. Kensche <p.kensche@dkfz.de>"
+LABEL org.opencontainers.image.source="https://registry.gitlab.com/one-touch-pipeline/weskit/api"
+
 EXPOSE 5000
 
 # For development bind your weskit repository to /weskit. It needs to be readable by the

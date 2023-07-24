@@ -8,6 +8,9 @@
 
 FROM continuumio/miniconda3:23.5.2-0
 
+LABEL maintainer="Philip R. Kensche <p.kensche@dkfz.de>"
+LABEL org.opencontainers.image.source="https://registry.gitlab.com/one-touch-pipeline/weskit/api/base"
+
 # Capitalized versions for many tools. Minuscle version at least for apt.
 ARG HTTP_PROXY=""
 ARG http_proxy="$HTTP_PROXY"
