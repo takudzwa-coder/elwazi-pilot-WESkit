@@ -143,7 +143,7 @@ workflow_engines:
   # interpreted in any way.
   #
   NFL:
-    "22.10.0":
+    "23.04.1":
       default_parameters:
         - name: "engine-environment"
           value: null
@@ -185,7 +185,7 @@ workflow_engines:
           value: "true"
           api: true
           type: "bool"
-        - name: "report"
+        - name: "report"   # Not supported by 23.04.1
           value: "true"
           api: true
           type: "bool"
@@ -199,7 +199,7 @@ workflow_engines:
           type: "str validFor Python.pathlib.Path"
 
   SMK:
-    "6.10.0":
+    "7.30.2":
       default_parameters:
         - name: "engine-environment"
           value: null

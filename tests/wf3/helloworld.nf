@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+ * Copyright (c) 2023. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
  *
  * Distributed under the MIT License. Full text at
  *
@@ -14,13 +14,18 @@ process sayHello {
     publishDir "./", mode: "rellink"
 
 	output:
-	file 'hello_world.txt' into output_ch
+	file 'hello_world.txt'
 
 	script:
 	"""
 	echo '$params.text' > hello_world.txt
 	"""
 }
+
+workflow {
+	sayHello()
+}
+
 
 workflow.onComplete {
     log.info "Success!"

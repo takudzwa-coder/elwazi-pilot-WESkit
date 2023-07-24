@@ -46,7 +46,7 @@ def request(**kwargs) -> dict:
     default = {
         "workflow_params": "{}",
         "workflow_type": "SMK",
-        "workflow_type_version": "6.10.0",
+        "workflow_type_version": "7.30.2",
         "workflow_url": "file:tests/wf/Snakefile"
     }
     return {**default, **kwargs}
@@ -98,16 +98,16 @@ def test_validate_run_dir_tag(run_request_validator_rundir):
 
 def test_workflow_type(run_request_validator):
     assert isinstance(run_request_validator.validate(request(workflow_type="SMK",
-                                                             workflow_type_version="6.10.0")),
+                                                             workflow_type_version="7.30.2")),
                       dict)
     assert isinstance(run_request_validator.validate(request(workflow_type="NFL",
-                                                             workflow_type_version="22.10.0")),
+                                                             workflow_type_version="23.04.1")),
                       dict)
     assert run_request_validator.validate(request(workflow_type="blabla")) == \
         ["Unknown workflow_type 'blabla'. Know NFL, SMK"]
     assert run_request_validator.validate(request(workflow_type="NFL",
                                                   workflow_type_version="blabla")) == \
-        ["Unknown workflow_type_version 'blabla'. Know 22.10.0"]
+        ["Unknown workflow_type_version 'blabla'. Know 23.04.1"]
 
 
 def test_workflow_type_version(run_request_validator):
@@ -170,7 +170,7 @@ def test_validate_workflow_params(run_request_validator):
     )) == {
         'workflow_params': '{}',
         'workflow_type': 'SMK',
-        'workflow_type_version': '6.10.0',
+        'workflow_type_version': '7.30.2',
         'workflow_url': 'file:tests/wf/Snakefile',
     }
 
@@ -179,7 +179,7 @@ def test_validate_workflow_params(run_request_validator):
     )) == {
         'workflow_params': '{"engine-environment": "bla"}',
         'workflow_type': 'SMK',
-        'workflow_type_version': '6.10.0',
+        'workflow_type_version': '7.30.2',
         'workflow_url': 'file:tests/wf/Snakefile',
     }
     assert run_request_validator.validate(request(
@@ -187,7 +187,7 @@ def test_validate_workflow_params(run_request_validator):
     )) == {
         'workflow_params': '{"engine-environment": []}',
         'workflow_type': 'SMK',
-        'workflow_type_version': '6.10.0',
+        'workflow_type_version': '7.30.2',
         'workflow_url': 'file:tests/wf/Snakefile',
     }
 
@@ -208,7 +208,7 @@ def test_validate_workflow_engine_parameters(run_request_validator):
     )) == {
                'workflow_params': '{}',
                'workflow_type': 'SMK',
-               'workflow_type_version': '6.10.0',
+               'workflow_type_version': '7.30.2',
                'workflow_url': 'file:tests/wf/Snakefile',
            }
 
@@ -217,7 +217,7 @@ def test_validate_workflow_engine_parameters(run_request_validator):
     )) == {
                'workflow_params': '{"engine-environment": "bla"}',
                'workflow_type': 'SMK',
-               'workflow_type_version': '6.10.0',
+               'workflow_type_version': '7.30.2',
                'workflow_url': 'file:tests/wf/Snakefile',
            }
     assert run_request_validator.validate(request(
@@ -225,6 +225,6 @@ def test_validate_workflow_engine_parameters(run_request_validator):
     )) == {
                'workflow_params': '{"engine-environment": []}',
                'workflow_type': 'SMK',
-               'workflow_type_version': '6.10.0',
+               'workflow_type_version': '7.30.2',
                'workflow_url': 'file:tests/wf/Snakefile',
            }

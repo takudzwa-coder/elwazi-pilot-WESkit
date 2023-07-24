@@ -67,7 +67,7 @@ def test_actual_parameter():
 def test_create_snakemake():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "TRUE", "api": True},
          {"name": "use-conda", "value": "TRUE", "api": True},
@@ -94,7 +94,7 @@ def test_create_snakemake():
 def test_command_with_default_parameters():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "cores", "value": "2", "api": True},
          {"name": "use-singularity", "value": "T", "api": True},
          {"name": "use-conda", "value": "T", "api": True},
@@ -136,7 +136,7 @@ def test_command_with_default_parameters():
         'AWS_SECRET_ACCESS_KEY': 'basTuIRppYhACCdXS6yYZb1XhUTksJPq',
         'CONDA_ENVS_PATH': 'some/relative/path/',
         'HOME': '/tmp',
-        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert command.workdir == Path("/some/workdir")
@@ -145,7 +145,7 @@ def test_command_with_default_parameters():
 def test_command_with_run_parameter():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "cores", "value": "2", "api": True}]
     )
 
@@ -158,7 +158,7 @@ def test_command_with_run_parameter():
                                '--cores', '1',
                                '--configfile', '/the/config.file']
     assert command.environment == {
-        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert command.workdir == Path("/a/workdir")
@@ -167,7 +167,7 @@ def test_command_with_run_parameter():
 def test_engine_execution_settings():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "job-name", "value": None, "api": True},
          {"name": "max-runtime", "value": "15:00", "api": True},
          {"name": "max-memory", "value": "5G", "api": True},
@@ -206,7 +206,7 @@ def test_engine_execution_settings():
 def test_forbidden_engine_execution_settings():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "job-name", "value": None, "api": False},
          {"name": "max-runtime", "value": "15:00", "api": True},
          {"name": "max-memory", "value": "5G", "api": True},
@@ -230,7 +230,7 @@ def test_forbidden_engine_execution_settings():
 def test_command_with_unset_parameter():
     engine = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "cores", "value": "2", "api": True}]
     )
 
@@ -243,7 +243,7 @@ def test_command_with_unset_parameter():
                                '--snakefile', '/some/path',
                                '--configfile', '/the/config.file']
     assert command.environment == {
-        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert command.workdir == Path("/a/workdir")
@@ -252,7 +252,7 @@ def test_command_with_unset_parameter():
 def test_command_setting_non_api_parameter():
     engine2 = WorkflowEngineFactory.create_engine(
         Snakemake,
-        "6.10.0",
+        "7.30.2",
         [{"name": "engine-environment", "value": None, "api": False},  # test: accept None value
          {"name": "cores", "value": "2", "api": False},
          {"name": "use-singularity", "value": "T", "api": True},
@@ -269,7 +269,7 @@ def test_command_setting_non_api_parameter():
 def test_create_nextflow():
     engine = WorkflowEngineFactory.create_engine(
         Nextflow,
-        "21.04.0",
+        "23.04.1",
         # Note that different variants of `True` values are used.
         [{"name": "engine-environment", "value": "/path/to/script", "api": False},
          {"name": "max-memory", "value": "2G", "api": False},
@@ -305,7 +305,7 @@ def test_create_nextflow():
                                 '-resume']
     assert created1.environment == {
         "NXF_OPTS": "-Xmx2048m",
-        "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
+        "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert created1.workdir == Path("/some/workdir")
@@ -325,7 +325,7 @@ def test_create_nextflow():
                                 '-resume']
     assert created2.environment == {
         "NXF_OPTS": "-Xmx2048m",
-        "WESKIT_WORKFLOW_ENGINE": "NFL=21.04.0",
+        "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert created2.workdir == Path("/a/workdir")
