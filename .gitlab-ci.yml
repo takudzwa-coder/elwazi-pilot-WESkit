@@ -80,25 +80,28 @@ tag_branch_base_image:
   stage: build
   extends: .gitlab-registry
   rules:
+    # The purpose of this rule is to have not only a branch-specific image if there are changes
+    # to the environment or dockerfile, but always. Furthermore, this image can then be used again
+    # as target-branch image of a branch deriving from this branch. As these are only tags,
+    # and tags are automatically collected after some time, this will neither add much overhead to
+    # the CI nor need extra storage.
+    #
+    # For now this is implemented with the "master" branch as only target branch. A soon as
+    # https://gitlab.com/gitlab-org/gitlab/-/issues/369916 is implemented, change we may
+    # `compare_to: "refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"` and implement this and
+    # the build rule by comparing to the target branch.
+    #
     # If there are no changes of the environment or docker files, just reuse the existing image
     # of the target branch and tag it with the source branch name.
-    #
-    # The purpose of this rule is to have not only a branch-specific image if there are changes
-    # to the environment or dockerfile, but always. This image can then be used again as
-    # target-branch image of a branch deriving from this branch. As these are only tags,
-    # and tags are automatically collected after some time, this won't add much overhead to the CI.
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH != "master"'
       changes:
-        # As soon as https://gitlab.com/gitlab-org/gitlab/-/issues/369916 is implemented, change
-        # this to:
-        # compare_to: "refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
         compare_to: "refs/heads/master"
         paths:
           - environment.yaml
           - Dockerfile-Base
       when:
         never
-    - if: '(($CI_COMMIT_BRANCH != "master") && ($CI_PIPELINE_SOURCE != "merge_request_event"))'
+    - if: '$CI_COMMIT_BRANCH != "master"'
   variables:
     DOCKER_FILE: Dockerfile-Base
     CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
@@ -126,19 +129,15 @@ build_branch_base_image:
   stage: build
   extends: .build_image
   rules:
-    # The base-image should be built for merge result pipelines and only if the environment.yaml
-    # or the Dockerfile-Base were changed, compared to the target branch of the MR.
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    # Build a branch-specific image for all branches with changes relative to the master branch.
+    - if: '$CI_COMMIT_BRANCH != "master"'
       changes:
         compare_to: "refs/heads/master"
-        # As soon as https://gitlab.com/gitlab-org/gitlab/-/issues/369916 is implemented, change
-        # this to:
-        # compare_to: "refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
         paths:
           - environment.yaml
           - Dockerfile-Base
       variables:
-        VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+        VERSION_TAG: "$CI_COMMIT_BRANCH"
     # Also build the image on the master branch, if there were changes.
     - if: '$CI_COMMIT_BRANCH == "master"'
       changes:
