@@ -8,12 +8,12 @@
 
 import json
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 from time import sleep
 
 import requests
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey, RSAPrivateKey
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from jwt.algorithms import RSAAlgorithm
@@ -126,7 +126,7 @@ def _copy_jwt_vars_to_toplevel_config(flaskapp: Flask, config: dict) \
         flaskapp.config[key] = config['login']['jwt'][key]
 
 
-def _retrieve_rsa_public_key(oidc_config: dict) -> RSAPublicKey:
+def _retrieve_rsa_public_key(oidc_config: dict) -> Union[RSAPrivateKey, RSAPublicKey]:
     """
     Do a sequence of requests to the identity provider to retrieve its public key
     :param issuer_url:
@@ -142,7 +142,7 @@ def _retrieve_oidc_config(issuer_url: str, timeout_sec: int = 10) -> dict:
     oidc_config: Optional[dict] = None
     for retry in range(4, -1, -1):
         try:
-            response = requests.get(config_url)
+            response = requests.get(config_url, timeout=60)
             oidc_config = _validate_issuer_config_response(response)
             break
 
@@ -195,7 +195,7 @@ def _validate_issuer_config_response(response) -> dict:
 def _retrieve_issuers_public_key_jwt(jwks_uri: str) -> str:
     logger.info("Extracting public certificate from issuer")
     try:
-        response = requests.get(jwks_uri).json()
+        response = requests.get(jwks_uri, timeout=60).json()
         public_key_jwt = json.dumps(response["keys"][0])
 
     except Exception as e:

@@ -223,74 +223,71 @@ class TestOpenEndpoint:
         assert response.json["workflow_type_versions"] == {
             "NFL": {
               "workflow_type_version": [
-                "22.10.0"
+                "23.04.1"
               ]
             },
             "SMK": {
               "workflow_type_version": [
-                "6.10.0"
+                "7.30.2"
               ]
             }
           }
         assert response.json["supported_wes_versions"] == ["1.0.0"]
         assert response.json["supported_filesystem_protocols"] == ["file", "S3"]
         assert response.json["workflow_engine_versions"] == {
-            "NFL": "22.10.0",
-            "SMK": "6.10.0"
+            "NFL": "23.04.1",
+            "SMK": "7.30.2"
           }
 
         def as_dict(params: list):
             """Used to make get to dictionaries that are comparable by ==."""
             return {p["name"]: p for p in params}
+
         assert as_dict(response.json["default_workflow_engine_parameters"]) == as_dict([
-              {"name": "SMK|6.10.0|engine-environment",
+              {"name": "SMK|7.30.2|engine-environment",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "SMK|6.10.0|max-memory",
+              {"name": "SMK|7.30.2|max-memory",
                "default_value": "100m",
                "type": "Optional[str validFor Python.memory_units.Memory.from_str($)]"},
-              {"name": "SMK|6.10.0|max-runtime",
+              {"name": "SMK|7.30.2|max-runtime",
                "default_value": "05:00",
                "type": "Optional[str validFor Python.tempora.parse_timedelta($)]"},
-              {"name": "SMK|6.10.0|accounting-name",
+              {"name": "SMK|7.30.2|accounting-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": 'SMK|6.10.0|forceall',
-               'default_value': 'false',
-               'name': 'SMK|6.10.0|forceall',
-               'type': 'bool'},
-              {"name": "SMK|6.10.0|job-name",
+              {"name": "SMK|7.30.2|job-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "SMK|6.10.0|group",
+              {"name": "SMK|7.30.2|group",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "SMK|6.10.0|queue",
+              {"name": "SMK|7.30.2|queue",
                "default_value": None,
                "type": "Optional[str]"},
 
-              {"name": "NFL|22.10.0|accounting-name",
+              {"name": "NFL|23.04.1|accounting-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|22.10.0|job-name",
+              {"name": "NFL|23.04.1|job-name",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|22.10.0|group",
+              {"name": "NFL|23.04.1|group",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|22.10.0|queue",
+              {"name": "NFL|23.04.1|queue",
                "default_value": None,
                "type": "Optional[str]"},
-              {"name": "NFL|22.10.0|trace",
+              {"name": "NFL|23.04.1|trace",
                "default_value": "true",
                "type": "bool"},
-              {"name": "NFL|22.10.0|timeline",
+              {"name": "NFL|23.04.1|timeline",
                "default_value": "true",
                "type": "bool"},
-              {"name": "NFL|22.10.0|graph",
+              {"name": "NFL|23.04.1|graph",
                "default_value": "true",
                "type": "bool"},
-              {"name": "NFL|22.10.0|report",
+              {"name": "NFL|23.04.1|report",
                "default_value": "true",
                "type": "bool"}
           ])
@@ -358,7 +355,7 @@ class TestWithHeaderToken:
         data["workflow_params"] = '{"text": "hello world"}'
         data["workflow_url"] = "Snakefile"
         data["workflow_type"] = "SMK"
-        data["workflow_type_version"] = "6.10.0"
+        data["workflow_type_version"] = "7.30.2"
         data["workflow_attachment"] = (open("tests/wf1/Snakefile", "rb"), "Snakefile")
         data["workflow_engine_parameters"] = "{}"
 
@@ -427,7 +424,7 @@ class TestWithHeaderToken:
         data["workflow_params"] = '{"text": "hello world"}'
         data["workflow_url"] = "file:tests/wf1/Snakefile"
         data["workflow_type"] = "SMK"
-        data["workflow_type_version"] = "6.10.0"
+        data["workflow_type_version"] = "7.30.2"
         data["workflow_engine_parameters"] = """
         {
             "max-memory": "150m",
@@ -481,7 +478,7 @@ class TestWithHeaderToken:
                 "queue": "testqueue"
             },
             "workflow_type": "SMK",
-            "workflow_type_version": "6.10.0",
+            "workflow_type_version": "7.30.2",
             # tags should be a string of JSON text. JSON "null" is mapped to None in Python and
             # valid JSON. This is what we return, if no tags were provided at submission.
             "tags": None,

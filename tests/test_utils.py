@@ -67,7 +67,7 @@ def get_workflow_data(snakefile, config, engine_params: Optional[Dict[str, str]]
     data = {
         "workflow_params": workflow_params,
         "workflow_type": "SMK",
-        "workflow_type_version": "6.10.0",
+        "workflow_type_version": "7.30.2",
         "workflow_url": snakefile,
         "workflow_engine_parameters": json.dumps(engine_params)
     }

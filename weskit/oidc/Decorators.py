@@ -69,7 +69,8 @@ def validate(app) -> bool:
     try:
         j = requests.post(
             data=payload,
-            url=app.oidc_login.introspection_endpoint
+            url=app.oidc_login.introspection_endpoint,
+            timeout=60
         ).json()
 
     except Exception as e:
@@ -99,7 +100,8 @@ def validate_userinfo(app) -> bool:
     try:
         claim_response = requests.get(
             url=app.oidc_login.userinfo_endpoint,
-            headers=header
+            headers=header,
+            timeout=60
         ).json()
     except Exception as e:
         logger.error("Could not reach OIDC provider for userinfo validation", exc_info=e)

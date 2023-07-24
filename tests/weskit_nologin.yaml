@@ -116,7 +116,7 @@ workflow_engines:
   # May need revision. See https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/91.
 
   SMK:
-    "6.10.0":
+    "7.30.2":
       default_parameters:
         - name: cores
           value: "1"

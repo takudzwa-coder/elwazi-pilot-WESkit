@@ -26,7 +26,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     # 1.) use workflow on server
     run = get_mock_run(workflow_url="wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     manager.database.insert_run(run)
     run = manager.prepare_execution(run, files=[])
     assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
@@ -35,7 +35,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     #     -> error message outputs execution
     run = get_mock_run(workflow_url="wf1/Filesnake",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     try:
         manager.database.insert_run(run)
         manager.prepare_execution(run, files=[])
@@ -50,7 +50,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
         files = ImmutableMultiDict({"workflow_attachment": [wf_file]})
         run = get_mock_run(workflow_url=wf_url,
                            workflow_type="SMK",
-                           workflow_type_version="6.10.0")
+                           workflow_type_version="7.30.2")
         manager.database.insert_run(run)
         run = manager.prepare_execution(run, files)
     assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
@@ -59,7 +59,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     # 4.) set custom workdir
     run = get_mock_run(workflow_url="wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0",
+                       workflow_type_version="7.30.2",
                        tags={"run_dir": "sample1/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
     assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
@@ -68,7 +68,7 @@ def test_snakemake_prepare_execution(manager, manager_rundir):
     # 5.) check relative "file:" scheme on custom workdir
     run = get_mock_run(workflow_url="wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0",
+                       workflow_type_version="7.30.2",
                        tags={"run_dir": "file:sample2/my_workdir"})
     run = manager_rundir.prepare_execution(run, files=[])
     assert run.processing_stage == ProcessingStage.PREPARED_EXECUTION
@@ -83,7 +83,7 @@ def test_execute_snakemake(manager,
     engine_env_path = manager.executor_context.workflows_dir.absolute() / "wf1" / "env.sh"
     run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0",
+                       workflow_type_version="7.30.2",
                        workflow_engine_parameters={
                            "engine-environment": str(engine_env_path)
                        })
@@ -108,7 +108,7 @@ def test_execute_snakemake(manager,
 
     assert run.execution_log["env"] == {
         "CONDA_ENVS_PATH": "conda_envs/",
-        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
         "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
     }
     assert run.execution_log["cmd"] == [
@@ -128,7 +128,7 @@ def test_fail_execute_snakemake(manager,
                                 celery_worker):
     run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0",
+                       workflow_type_version="7.30.2",
                        workflow_engine_parameters={},
                        workflow_params={"missing": "variable"})
     run = manager.prepare_execution(run, files=[])
@@ -153,7 +153,7 @@ def test_fail_execute_snakemake(manager,
 
     assert run.execution_log["env"] == {
         "CONDA_ENVS_PATH": "conda_envs/",
-        "WESKIT_WORKFLOW_ENGINE": "SMK=6.10.0",
+        "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
         "WESKIT_WORKFLOW_PATH": str(run.rundir_rel_workflow_path)
     }
     assert run.execution_log["cmd"] == [
@@ -171,7 +171,7 @@ def test_without_workflow_params_snakemake(manager,
                                            celery_worker):
     run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0",
+                       workflow_type_version="7.30.2",
                        workflow_engine_parameters={},
                        workflow_params={})
     run = manager.prepare_execution(run, files=[])
@@ -206,7 +206,7 @@ def test_execute_nextflow(manager,
                           celery_worker):
     run = get_mock_run(workflow_url="file:wf3/helloworld.nf",
                        workflow_type="NFL",
-                       workflow_type_version="22.10.0",
+                       workflow_type_version="23.04.1",
                        workflow_engine_parameters={"trace": "False"})
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)
@@ -233,7 +233,7 @@ def test_execute_nextflow(manager,
 
     assert run.execution_log["env"] == {
         "NXF_OPTS": "-Xmx256m",
-        "WESKIT_WORKFLOW_ENGINE": "NFL=22.10.0",
+        "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
         "WESKIT_WORKFLOW_PATH":  str(run.rundir_rel_workflow_path),
     }
     assert run.execution_log["cmd"] == [
@@ -244,7 +244,9 @@ def test_execute_nextflow(manager,
         "-params-file", f"{run.id}.yaml",
         "-with-timeline",
         "-with-dag",
-        "-with-report"
+        "-with-report",
+        "-w",
+        "./"
     ]
 
 
@@ -271,7 +273,7 @@ def test_update_all_runs(manager,
                          celery_worker):
     run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
-                       workflow_type_version="6.10.0")
+                       workflow_type_version="7.30.2")
     manager.database.insert_run(run)
     run = manager.prepare_execution(run, files=[])
     run = manager.execute(run)

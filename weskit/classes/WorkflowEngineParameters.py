@@ -105,7 +105,7 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"max-runtime"}),
     EngineParameter({"use-singularity"}),
     EngineParameter({"use-conda"}),
-    EngineParameter({"forceall"}),
+    EngineParameter({"resume"}),
     EngineParameter({"profile"}),
     EngineParameter({"tes"}),
     EngineParameter({"jobs"}),
@@ -113,7 +113,8 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"data_aws_secret_access_key"}),
     EngineParameter({"task_conda_pkgs_dir"}),
     EngineParameter({"task_conda_envs_path"}),
-    EngineParameter({"task_home"})
+    EngineParameter({"task_home"}),
+    EngineParameter({"NXF_work"})
 ])
 
 
