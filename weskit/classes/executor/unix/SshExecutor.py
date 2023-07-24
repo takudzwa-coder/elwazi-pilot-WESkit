@@ -20,7 +20,7 @@ from urllib3.util import Url
 from classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
-from weskit.classes.executor.ExecutionState import ExecutionState
+from weskit.classes.executor.ExecutionState import ExecutionState, Start
 from weskit.classes.executor.Executor \
     import ExecutionSettings
 from weskit.classes.executor.unix.UnixExecutor import UnixExecutor
@@ -86,15 +86,12 @@ class SshExecutor(UnixExecutor):
                 print(f"export {var_name}={shlex.quote(var_value)}", file=file)
             return Path(file.name)
 
-    async def _upload_helper_scripts(self,
-                                     execution_id: WESkitExecutionId,
-                                     command: ShellCommand):
+    async def _stage_helper_scripts(self,
+                                    execution_id: WESkitExecutionId,
+                                    command: ShellCommand):
         """
         SSH usually does not allow to set environment variables. Therefore, we create a little
         script that sets up the environment for the remote process.
-
-        The environment script will be put into a directory that uniquely identifies the process
-        and uses information about the parent process (the one running the SSHExecutor).
 
         The usage protocol is
 
@@ -138,9 +135,9 @@ class SshExecutor(UnixExecutor):
     async def _execute(self,
                        execution_id: WESkitExecutionId,
                        command: ShellCommand,
-                       stdout_file: Optional[Url] = None,
-                       stderr_file: Optional[Url] = None,
-                       stdin_file: Optional[Url] = None,
+                       stdout_url: Optional[Url] = None,
+                       stderr_url: Optional[Url] = None,
+                       stdin_url: Optional[Url] = None,
                        settings: Optional[ExecutionSettings] = None,
                        **kwargs) \
             -> ExecutionState[UnixState]:
@@ -170,18 +167,24 @@ class SshExecutor(UnixExecutor):
         execution_state = Start(execution_id)
         log_dir = self._log_dir(command.workdir, execution_id)
         try:
-
            async with self._connection.context():
+
+                # PREPARE INPUTS
                 # Note: If the log dir exists this means that the execution_id was reused. The
                 #       execution_id, however should be used for a single execution attempt only!
                 await self.storage.create_dir(log_dir, exists_ok=False, mode=0o750)
 
-                await self._upload_helper_scripts(execution_id, effective_command)
+                await self.storage.put(self._wrapper_source_path,
+                                       self._wrapper_path(log_dir))
 
+                # TODO copy the environment file. Remove the "helper" script to the log_dir.
+                # TODO add the environment file as env parameter to the wrapper call.
+                await self._stage_helper_scripts(execution_id, effective_command)
+
+                # RUN PROCESS
                 # SSH is always associated with a shell. Therefore, a *string* is processed by
                 # asyncssh, rather than a list of strings like for subprocess.run/Popen). Therefore,
                 # we use the command_expression here.
-                # TODO Read stdin and stderr of submission process for error-tracking
                 process: SSHClientProcess = await self._connection. \
                     create_process(command=effective_command.command_expression,
                                    stdout=PIPE,
@@ -195,7 +198,10 @@ class SshExecutor(UnixExecutor):
                            # Executor.EXECUTION_ID_VARIABLE: str(execution_id),
                            # **command.environment
                            # }
+                # TODO Read stdin and stderr of submission process for error-tracking. Get wrapper's JSON output.
 
+
+                # TODO Do we want to update from the process? Or just use the stdout from the wrapper?
                 # The process already was sent to the background. We recover the process information.
                 execution_state = self.update_status(execution_state,
                                                      Url(scheme="file",

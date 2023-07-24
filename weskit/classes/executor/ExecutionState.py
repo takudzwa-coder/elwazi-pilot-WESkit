@@ -11,7 +11,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 from typing import Optional, List, TypeVar, Generic, Self
 
-from utils import mop
+from weskit.utils import mop
 from weskit.classes.executor.ProcessId import ProcessId, WESkitExecutionId
 
 # Type alias.
@@ -512,7 +512,7 @@ class SystemError(Generic[S], TerminalExecutionState[S]):
 # transitive closure of the state transition graph.
 # Compare https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/157#note_1190792806
 ALLOWED_TRANSITIVE_TRANSITIONS = {
-    (str(k), [str(v) for v in vs])
+    str(k): [str(v) for v in vs]
     for k, vs in {
         Start: [
             Start,

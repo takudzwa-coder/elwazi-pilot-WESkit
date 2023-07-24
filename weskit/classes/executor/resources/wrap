@@ -9,15 +9,25 @@
 #  * filename (no '/' included): A different filename in the log-directory.
 #  * absolute path: Anyway contains a '/' and will be used as is.
 #
-# wrap [-l .log-XXXX] [-n /dev/null] [-i /dev/null] [-o stdout] [-e stderr] [-p pid] [-x exit_code] [-a] -- command ...
+# wrap [-l .log-XXXX] \
+#      [-n /dev/null] \
+#      [-i /dev/null] \
+#      [-o stdout] \
+#      [-e stderr] \
+#      [-p pid] \
+#      [-x exit_code] \
+#      [-a] \
+#      [-w ./] \
+#      -- command ...
 #
 # -l log file
-# -n enviroment file sourced before execution
+# -n environment file sourced before execution
 # -i stdin file
 # -o stdout file
 # -e stderr file
 # -p pid file
 # -x exit code file
+# -w work dir
 # -a If -a is set, the command is expected to be a string that is then subjected to a call to `eval`.
 #    Otherwise, the command can be multiple command segments, that are together executed as command.
 #    The following is equivalent.
@@ -28,13 +38,18 @@
 #    but the second command needs quoting because of the redirection. Use quoting with `-a` if the
 #    command needs any shell specials (e.g. ';', '&', '<').
 #
+# The workDir defaults to `./` -- whatever that may be. You may run the script via an SSH connection
+# and these may not have a valid working directory set. In this case `./` will probably lead to
+# undefined results or an error.
+#
 # You can execute shell functions that are exported with `export -f` from the calling environment.
 # See the tests in test_wrap.sh to get some ideas.
 #
 # Output to standard output is a JSON report of the form
 # {
-#    "exit_code": $int,
+#    "exitCode": $int,
 #    "pid": $pid,
+#    "workDir": "...",
 #    "logDir": "...",
 #    "stderrFile": "...",
 #    "stdoutFile": "...",
@@ -43,6 +58,7 @@
 #    "pidFile": "...",
 #    "envFile": "..."
 # }
+#
 set -o pipefail -ue
 
 # Default values
@@ -54,6 +70,7 @@ pidFile="pid"
 exitFile="exit_code"
 doEval="false"
 envFile="/dev/null"
+workDir="./"
 
 lastLen=-1
 while [[ $# -gt 0 ]]; do
@@ -91,6 +108,10 @@ while [[ $# -gt 0 ]]; do
       envFile="$2"
       shift 2 # argument + value
       ;;
+    -w|--workDir)
+      workDir="$2"
+      shift 2 # argument + value
+      ;;
     -a|--eval)
       doEval="true"
       shift # argument
@@ -111,6 +132,9 @@ declare -a command=("$@")
 # Paths
 createLogDir="false"
 fixDir() {
+  # Interpret relative paths as relative to the logDir.
+  # Schedule creation of the logDir only if any of the files will be located there based on its
+  # relative path.
   local varName="${1:?No variable name}"
   if echo "${!varName}" | grep -q -v "/"; then
     # shellcheck disable=SC2140
@@ -119,12 +143,15 @@ fixDir() {
   fi
 }
 
-# Note that the stdin file is either /dev/null (default) or whatever file is provided. No
-# path magic for stdinFile or envFile.
+# Note that the stdin file is either /dev/null (default) or whatever file is provided.
+# No path magic for stdinFile or envFile. If these are relative paths, they will be interpreted
+# relative to the workDir!
 fixDir stdoutFile
 fixDir stderrFile
 fixDir pidFile
 fixDir exitFile
+
+cd "$workDir"
 
 if [[ "$createLogDir" == "true" ]]; then
   mkdir -p "$logDir"
@@ -159,8 +186,9 @@ echo "$exit_code" > "$exitFile"
 
 cat - <<JSON_END >> /dev/stdout
 {
-    "exit_code": $exit_code,
+    "exitCode": $exit_code,
     "pid": $pid,
+    "workDir": "$workDir",
     "logDir": "$logDir",
     "stderrFile": "$stderrFile",
     "stdoutFile": "$stdoutFile",

@@ -52,7 +52,6 @@ class LocalExecutor(Generic[S], UnixExecutor[S]):
         """
         return socket.gethostname()
 
-    @property
     def _wrapper_path(self, stage_dir: Optional[Path] = None) -> Path:
         return self._wrapper_source_path
 
@@ -75,8 +74,14 @@ class LocalExecutor(Generic[S], UnixExecutor[S]):
         try:
             # Note: If the log dir exists this means that the execution_id was reused. The
             #       execution_id, however should be used for a single execution attempt only!
+            #       Throw FileExistsError, if the directory exists.
             self.storage.create_dir(log_dir, exists_ok=False, mode=0o750)
 
+            # Stage the wrapper script in the log dir
+            self.storage.put(self._wrapper_source_path,
+                             self._wrapper_path(log_dir))
+
+            # TODO Consider getting the STDOUT with the wrapper's JSON output.
             process = subprocess.Popen(effective_command.command,
                                        cwd=command.workdir,
                                        env={
@@ -101,9 +106,6 @@ class LocalExecutor(Generic[S], UnixExecutor[S]):
             return execution_state
 
         except FileNotFoundError as e:
-            # The other executors recognize inaccessible working directories or missing commands
-            # only after the wait_for(). We emulate this behaviour here such that all executors
-            # behave identically with respect to these problems.
             if str(e).startswith(f"[Errno 2] No such file or directory: {repr(command.workdir)}"):
                 # cd /dir/does/not/exist: exit code 1
                 # Since somewhere between 3.7.9 and 3.10.4 the e.strerror does not contain the
@@ -127,7 +129,7 @@ class LocalExecutor(Generic[S], UnixExecutor[S]):
                                                 repr(effective_command.command_expression)),
                               127)
         except FileExistsError as e:
-            raise NonRetryableExecutorError(f"Tried to rerun execution ID {execution_id}")
+            raise NonRetryableExecutorError(f"Tried to rerun execution ID {execution_id}", e)
 
     def kill(self,
              state: ExecutionState[S],

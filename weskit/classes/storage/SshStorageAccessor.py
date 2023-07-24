@@ -5,7 +5,6 @@
 import shlex
 from contextlib import asynccontextmanager
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import List, Iterator, IO
 
 import asyncssh
@@ -125,76 +124,21 @@ class SshStorageAccessor(StorageAccessor):
                    **kwargs) \
             -> Iterator[IO[str]]:
         """
-        This buffers the remote file locally. In write mode, the local temporary file is copied
-        back to the server, after the block is left. Note that in write-mode, if the with-block
-        ends with an exception, the possibly broken result file anyway is uploaded to the server!
-        This is to mimic the behaviour of a local IO operation as much as possible.
+        Open the remote file for IO with `mode`. This uses the SFTP protocol, which needs to be
+        supported by the server.
 
-        Still, this differs in terms of file access from os.open(), in that the writing operations
-        do not modify an existing file, but create a new directory entry for a file with the same
-        name as a possibly existing file. Concurrent remote processes will not be affected in the
-        same way as local processes are by os.open().
-
-        The `url` scheme must be undefined, `file`, or `ssh`. For undefined and `file` it is
+        The `url.scheme` must be undefined, `file`, or `ssh`. For undefined and `file` it is
         assumed that the file is on the server side. If the `url` has a host set, then the
         host must match the hostname of the connection.
         """
-        def is_write(mode: str) -> bool:
-            return len(set(mode.split()).intersection({"w", "x", "a"})) > 0
-
-        def is_truncating_write(mode: str) -> bool:
-            return "+" in mode
-
-        def is_exclusive_creation(mode: str) -> bool:
-            return "x" in mode
-
         if url.scheme is None or url.scheme == "file" or url.scheme == "ssh" \
                 and (url.hostname is None or url.hostname == self._connection.hostname):
             file = Path(url.path)
 
-            if not is_write(mode):
-                with NamedTemporaryFile(encoding=encoding, mode=mode) as local:
-                    # Try to copy the file from remote. This fails, if the file does not exist.
-                    await asyncssh.scp((self._connection, file), local.name, block_size=block_size)
-                    # We have to re-open the file, because the copy operation
-                    # overwrite the original temporary file.
-                    with open(local.name, mode=mode, encoding=encoding,
-                              *args, **kwargs) as fh:
-                        yield fh
-
-            else:  # is_write(mode)
-                try:
-                    with NamedTemporaryFile(encoding=encoding, mode=mode) as local:
-                        if is_exclusive_creation(mode):
-                            proc = await self._connection.run(["bash", "-c",
-                                                              f"[ -f {shlex.quote(str(file))} ]"])
-                            if proc.exit_status == 0:
-                                raise FileExistsError(f"File exists on {self._connection.hostname}: "
-                                                      f"{url}")
-                            else:
-                                # Create a new local file.
-                                yield local
-                        else:  # not is_exclusive_creation(mode)
-                            if is_truncating_write(mode):
-                                yield local
-                            else:  # not is_truncating_write(mode)
-                                try:
-                                    # Copy the remote file, if it exists.
-                                    await asyncssh.scp((self._connection.raw, file),
-                                                       local.name,
-                                                       block_size=block_size)
-                                except ...:
-                                    # If the file does not exist, fine. Just create a local file.
-                                    # TODO: Which error to catch, if remote file does not exist?
-                                with open(local.name, mode=mode, encoding=encoding,
-                                          *args, **kwargs) as fh:
-                                    # We have to re-open the file, because the copy operation
-                                    # overwrite the original temporary file.
-                                    yield fh
-                finally:
-                    # Copy back the result, if the file was opened in any write-mode.
-                    await asyncssh.scp(local.name,
-                                       (self._connection.raw, file),
-                                       block_size=block_size)
+            sftp_client = await self._connection.raw.start_sftp_client()
+            async with sftp_client.open(file, mode,
+                                        encoding=encoding,
+                                        block_size=block_size) as fh:
+                yield fh
         else:
             raise ValueError(f"Can only use file:// or ssh:// URLs: '{url}'")

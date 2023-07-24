@@ -21,11 +21,12 @@ pushd "$testDir" > /dev/null
   $wrap -l "$test"  -a -- "echo hallo; echo du > /dev/stderr; exit 1" \
     > "$test.json" \
     || expect_fail
-  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 11 ]
-  [ "$(cat "$test.json" | jq .exit_code )" -eq 1 ]
+  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 12 ]
+  [ "$(cat "$test.json" | jq .exitCode )" -eq 1 ]
   [ "$(cat "$test/exit_code")" -eq 1 ]
   [ "$(cat "$test/stdout")" == "hallo" ]
   [ "$(cat "$test/stderr")" == "du" ]
+  [ "$(cat "$test.json" | jq -r .workDir )" == "./" ]
   [ "$(cat "$test.json" | jq -r .stdinFile )" == "/dev/null" ]
   [ "$(cat "$test.json" | jq -r .stdoutFile )" == "$test/stdout" ]
   [ "$(cat "$test.json" | jq -r .stderrFile )" == "$test/stderr" ]
@@ -38,7 +39,7 @@ pushd "$testDir" > /dev/null
   test="eval_success_stdout_stderr"
   $wrap -l "$test"  -a -- "echo hallo; echo du > /dev/stderr; exit 0" \
     > "$test.json"
-  [ "$(cat "$test.json" | jq .exit_code )" -eq 0 ]
+  [ "$(cat "$test.json" | jq .exitCode )" -eq 0 ]
   [ "$(cat "$test/exit_code")" -eq 0 ]
 }
 
@@ -47,8 +48,8 @@ pushd "$testDir" > /dev/null
   $wrap -l "$test"  -a -- false \
     > "$test.json" \
     || expect_fail
-  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 11 ]
-  [ "$(cat "$test.json" | jq .exit_code )" -eq 1 ]
+  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 12 ]
+  [ "$(cat "$test.json" | jq .exitCode )" -eq 1 ]
   [ "$(cat "$test/exit_code")" -eq 1 ]
   [ "$(cat "$test/stdout")" == "" ]
   [ "$(cat "$test/stderr")" == "" ]
@@ -64,16 +65,18 @@ export -f run_with_output
 
 {
   test="fail_stdout_stderr"
+  workDir="$PWD"
   $wrap -l "$test" -o "./$test.stdout" -e "$PWD/$test.stderr" -p "$test.pid" -x "$test.exit_code" \
-    -- run_with_output 11 \
+    -w "$workDir" -- run_with_output 11 \
     > "$test.json" \
     || expect_fail
-  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 11 ]
-  [ "$(cat "$test.json" | jq .exit_code )" -eq 11 ]
+  [ "$(wc -l "$test.json" | cut -f 1 -d ' ')" -eq 12 ]
+  [ "$(cat "$test.json" | jq .exitCode )" -eq 11 ]
   [ "$(cat "$test/$test.exit_code")" -eq 11 ]
   [ -f "$test/$test.pid" ]
   [ "$(cat "$test.stdout")" == "out" ]
   [ "$(cat "$test.stderr")" == "err" ]
+  [ "$(cat "$test.json" | jq -r .workDir )" == "$PWD" ]
   [ "$(cat "$test.json" | jq -r .stdoutFile )" == "./$test.stdout" ]
   [ "$(cat "$test.json" | jq -r .stderrFile )" == "$PWD/$test.stderr" ]
   [ "$(cat "$test.json" | jq -r .exitFile )" == "$test/$test.exit_code" ]
@@ -84,7 +87,7 @@ export -f run_with_output
   test="success_stdout_stderr"
   $wrap -l "$test" -- run_with_output 0 \
     > "$test.json"
-  [ "$(cat "$test.json" | jq .exit_code )" -eq 0 ]
+  [ "$(cat "$test.json" | jq .exitCode )" -eq 0 ]
   [ "$(cat "$test/exit_code")" -eq 0 ]
   [ "$(cat "$test/stdout")" == "out" ]
   [ "$(cat "$test/stderr")" == "err" ]
@@ -101,7 +104,7 @@ export -f run_with_input
   echo "hello" > "$test.stdin"
   $wrap -l "$test" -i "$test.stdin" -- run_with_input \
     > "$test.json"
-  [ "$(cat "$test.json" | jq .exit_code )" -eq 0 ]
+  [ "$(cat "$test.json" | jq .exitCode )" -eq 0 ]
   [ "$(cat "$test.json" | jq -r .stdinFile )" == "$test.stdin" ]
   [ "$(cat "$test/exit_code")" -eq 0 ]
   [ "$(cat "$test/stdout")" == "hello" ]
