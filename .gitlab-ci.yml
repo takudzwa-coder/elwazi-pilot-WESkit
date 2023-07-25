@@ -93,7 +93,7 @@ tag_branch_base_image:
     #
     # If there are no changes of the environment or docker files, just reuse the existing image
     # of the target branch and tag it with the source branch name.
-    - if: '$CI_COMMIT_BRANCH != "master"'
+    - if: '$CI_COMMIT_BRANCH && ($CI_COMMIT_BRANCH != "master")'
       changes:
         compare_to: "refs/heads/master"
         paths:
@@ -101,11 +101,13 @@ tag_branch_base_image:
           - Dockerfile-Base
       when:
         never
-    - if: '$CI_COMMIT_BRANCH != "master"'
+    - if: '$CI_COMMIT_BRANCH && ($CI_COMMIT_BRANCH != "master")'
+      variables:
+        REFERENCE_TAG: master
+        VERSION_TAG: "$CI_COMMIT_BRANCH"
   variables:
     DOCKER_FILE: Dockerfile-Base
     CONTAINER_IMAGE_NAME: one-touch-pipeline/weskit/api/base
-    VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
   script:
     - |
       cat - <<THE_END
@@ -115,13 +117,12 @@ tag_branch_base_image:
       CI_COMMIT_BRANCH='$CI_COMMIT_BRANCH'
       CI_MERGE_REQUEST_SOURCE_BRANCH_NAME='$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
       CI_MERGE_REQUEST_TARGET_BRANCH_NAME='$CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
-      Publishing '$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG'
-      From '$DOCKER_FILE'
+      VERSION_TAG='$VERSION_TAG'
+      REFERENCE_TAG='$REFERENCE_TAG'
+      Re-tagging '$REGISTRY/$CONTAINER_IMAGE_NAME:$REFERENCE_TAG' as '$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG'
       THE_END
-    - |
-      docker tag \
-        "$REGISTRY/$CONTAINER_IMAGE_NAME/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
-        "$REGISTRY/$CONTAINER_IMAGE_NAME/$VERSION_TAG"
+    - docker pull "$REGISTRY/$CONTAINER_IMAGE_NAME:$REFERENCE_TAG"
+    - docker tag "$REGISTRY/$CONTAINER_IMAGE_NAME:$REFERENCE_TAG" "$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG"
     - docker push "$REGISTRY/$CONTAINER_IMAGE_NAME:$VERSION_TAG"
 
 
