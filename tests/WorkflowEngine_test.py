@@ -104,11 +104,11 @@ def test_command_with_default_parameters():
          {"name": "profile", "value": "myprofile", "api": True},
          {"name": "tes", "value": "https://some/test/URL", "api": True},
          {"name": "jobs", "value": "1", "api": True},
-         {"name": "data_aws_access_key_id", "value": "GyCCggXpRpKQ3hBB", "api": True},
-         {"name": "data_aws_secret_access_key", "value": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
+         {"name": "data-aws-access-key-id", "value": "GyCCggXpRpKQ3hBB", "api": True},
+         {"name": "data-aws-secret-access-key", "value": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
           "api": True},
-         {"name": "task_conda_envs_path", "value": "some/relative/path/", "api": True},
-         {"name": "task_home", "value": "/tmp", "api": True}
+         {"name": "task-conda-envs-path", "value": "some/relative/path/", "api": True},
+         {"name": "task-home", "value": "/tmp", "api": True}
          ]
     )
 
@@ -116,10 +116,10 @@ def test_command_with_default_parameters():
     command = engine.command(Path("/some/path"),
                              Path("/some/workdir"),
                              [Path("/some/config.yaml")],
-                             {"data_aws_access_key_id": "GyCCggXpRpKQ3hBB",
-                              "data_aws_secret_access_key": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
-                              "task_conda_envs_path": "some/relative/path/",
-                              "task_home": "/tmp"})
+                             {"data-aws-access-key-id": "GyCCggXpRpKQ3hBB",
+                              "data-aws-secret-access-key": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
+                              "task-conda-envs-path": "some/relative/path/",
+                              "task-home": "/tmp"})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
@@ -281,8 +281,10 @@ def test_create_nextflow():
          {"name": "graph", "value": "Y", "api": True},
          {"name": "timeline", "value": "True", "api": True},
          {"name": "resume", "value": "True", "api": True},
-         {"name": "with_tower", "value": "True", "api": True},
-         {"name": "tower_access_token", "value": "hfdsjhfdskl", "api": True}
+         {"name": "with-tower", "value": "True", "api": True},
+         {"name": "tower-access-token", "value": "hfdsjhfdskl", "api": True},
+         {"name": "nxf-assets", "value": "/path/dir", "api": True},
+         {"name": "workflow-revision", "value": "/path/to/repo/", "api": True}
          ]
     )
     assert engine.default_params == [
@@ -293,8 +295,10 @@ def test_create_nextflow():
         ActualEngineParameter(EngineParameter({"graph"}), "Y", True),
         ActualEngineParameter(EngineParameter({"timeline"}), "True", True),
         ActualEngineParameter(EngineParameter({"resume"}), "True", True),
-        ActualEngineParameter(EngineParameter({"with_tower"}), "True", True),
-        ActualEngineParameter(EngineParameter({"tower_access_token"}), "hfdsjhfdskl", True)
+        ActualEngineParameter(EngineParameter({"with-tower"}), "True", True),
+        ActualEngineParameter(EngineParameter({"tower-access-token"}), "hfdsjhfdskl", True),
+        ActualEngineParameter(EngineParameter({"nxf-assets"}), "/path/dir", True),
+        ActualEngineParameter(EngineParameter({"workflow-revision"}), "/path/to/repo/", True)
     ]
     assert engine.name() == "NFL"
 
@@ -311,12 +315,14 @@ def test_create_nextflow():
                                 '-with-dag',
                                 '-with-timeline',
                                 '-resume',
-                                '-with-tower']
+                                '-with-tower',
+                                '-r', '/path/to/repo/']
     assert created1.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
         "WESKIT_WORKFLOW_PATH": "/some/path",
-        'TOWER_ACCESS_TOKEN': "hfdsjhfdskl"
+        "tower-access-token": "hfdsjhfdskl",
+        "NFX_ASSETS": "/path/dir"
     }
     assert created1.workdir == Path("/some/workdir")
 
@@ -333,12 +339,14 @@ def test_create_nextflow():
                                 'nextflow', "run", "/some/path",
                                 '-params-file', '/the/config.file',
                                 '-resume',
-                                '-with-tower']
+                                '-with-tower',
+                                '-r', '/path/to/repo/']
     assert created2.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
         "WESKIT_WORKFLOW_PATH": "/some/path",
-        "TOWER_ACCESS_TOKEN": "hfdsjhfdskl"
+        "tower-access-token": "hfdsjhfdskl",
+        "NFX_ASSETS": "/path/dir"
     }
     assert created2.workdir == Path("/a/workdir")
 

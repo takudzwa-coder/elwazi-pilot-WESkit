@@ -81,7 +81,7 @@ dependencies:
   - pip:
     # In Conda these were conflicting with Python 3.11.*, but not in Pip
     # Development
-    - testcontainers==3.0.0
+    - testcontainers==3.7.1
     - typing
     - typing_extensions
     # .. mypy packages

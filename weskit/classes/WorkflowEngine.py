@@ -230,11 +230,11 @@ class Snakemake(WorkflowEngine):
                                               "profile",
                                               "tes",
                                               "jobs",
-                                              "data_aws_access_key_id",
-                                              "data_aws_secret_access_key",
-                                              "task_conda_pkgs_dir",
-                                              "task_conda_envs_path",
-                                              "task_home",
+                                              "data-aws-access-key-id",
+                                              "data-aws-secret-access-key",
+                                              "task-conda-pkgs-dir",
+                                              "task-conda-envs-path",
+                                              "task-home",
                                               "prefix_conda_envs_path"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
@@ -260,11 +260,11 @@ class Snakemake(WorkflowEngine):
     #                                    on a writable volume mounted into the container
 
     ENVVARS_DICT = {
-            "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
-            "data_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
-            "task_conda_pkgs_dir": "CONDA_PKGS_DIRS",
-            "task_conda_envs_path": "CONDA_ENVS_PATH",
-            "task_home": "HOME"
+            "data-aws-access-key-id": "AWS_ACCESS_KEY_ID",
+            "data-aws-secret-access-key": "AWS_SECRET_ACCESS_KEY",
+            "task-conda-pkgs-dir": "CONDA_PKGS_DIRS",
+            "task-conda-envs-path": "CONDA_ENVS_PATH",
+            "task-home": "HOME"
         }
 
     def _environment(self,
@@ -324,14 +324,17 @@ class Nextflow(WorkflowEngine):
                                               "max-memory",
                                               "tempdir",
                                               "resume",
-                                              "NXF_work",
-                                              "with_tower",
-                                              "tower_access_token"})
+                                              "nxf-work",
+                                              "with-tower",
+                                              "tower-access-token",
+                                              "nxf-assets",
+                                              "workflow-revision"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
 
     ENVVARS_DICT = {
-        "tower_access_token": "TOWER_ACCESS_TOKEN",
+        "tower-access-token": "tower-access-token",
+        "nxf-assets": "NFX_ASSETS"
     }
 
     def _environment(self,
@@ -372,8 +375,9 @@ class Nextflow(WorkflowEngine):
             result += self._optional_param(param, "timeline", "-with-timeline")
             result += self._optional_param(param, "graph", "-with-dag")
             result += self._optional_param(param, "resume", "-resume")
-            result += self._argument_param(param, "NXF_work", "-w")
-            result += self._optional_param(param, "with_tower", "-with-tower")
+            result += self._argument_param(param, "nxf-work", "-w")
+            result += self._optional_param(param, "with-tower", "-with-tower")
+            result += self._argument_param(param, "workflow-revision", "-r")
         return result
 
     def command(self,
