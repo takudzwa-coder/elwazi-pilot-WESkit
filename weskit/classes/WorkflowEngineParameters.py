@@ -116,7 +116,7 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"task-home"}),
     EngineParameter({"nxf-work"}),
     EngineParameter({"with-tower"}),
-    EngineParameter({"tower-access-token"}),
+    EngineParameter({"nxf-tower-access-token"}),
     EngineParameter({"nxf-assets"}),
     EngineParameter({"workflow-revision"})
 ])
