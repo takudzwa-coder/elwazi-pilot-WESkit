@@ -73,7 +73,9 @@ def test_create_snakemake():
          {"name": "use-conda", "value": "TRUE", "api": True},
          {"name": "profile", "value": "TRUE", "api": True},
          {"name": "tes", "value": "TRUE", "api": True},
-         {"name": "resume", "value": "FALSE", "api": True}]
+         {"name": "resume", "value": "FALSE", "api": True},
+         {"name": "wms-monitor", "value": "http://127.0.0.1:5000", "api": True},
+         {"name": "wms-monitor-arg", "value": "12345", "api": True}]
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter({"cores"}), "2", True),
@@ -81,7 +83,9 @@ def test_create_snakemake():
         ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True),
         ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"resume"}), "FALSE", True)
+        ActualEngineParameter(EngineParameter({"resume"}), "FALSE", True),
+        ActualEngineParameter(EngineParameter({"wms-monitor"}), "http://127.0.0.1:5000", True),
+        ActualEngineParameter(EngineParameter({"wms-monitor-arg"}), "12345", True)
     ]
     assert engine.name() == "SMK"
 
@@ -108,7 +112,9 @@ def test_command_with_default_parameters():
          {"name": "data-aws-secret-access-key", "value": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
           "api": True},
          {"name": "task-conda-envs-path", "value": "some/relative/path/", "api": True},
-         {"name": "task-home", "value": "/tmp", "api": True}
+         {"name": "task-home", "value": "/tmp", "api": True},
+         {"name": "wms-monitor", "value": "http://127.0.0.1:5000", "api": True},
+         {"name": "wms-monitor-arg", "value": "12345", "api": True}
          ]
     )
 
@@ -129,6 +135,8 @@ def test_command_with_default_parameters():
                                '--profile', 'myprofile',
                                '--tes', 'https://some/test/URL',
                                '--jobs', '1',
+                               '--wms-monitor', 'http://127.0.0.1:5000',
+                               '--wms-monitor-arg', '12345',
                                '--configfile', '/some/config.yaml',
                                '--envvars', "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
                                "CONDA_ENVS_PATH", "HOME"
@@ -217,6 +225,8 @@ def test_forbidden_engine_execution_settings():
          {"name": "group", "value": None, "api": True},
          {"name": "accounting-name", "value": None, "api": True},
          {"name": "queue", "value": None, "api": True},
+         {"name": "wms-monitor", "value": None, "api": True},
+         {"name": "wms-monitor-arg", "value": None, "api": True},
          ]
     )
 

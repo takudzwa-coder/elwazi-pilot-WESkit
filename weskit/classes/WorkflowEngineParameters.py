@@ -118,7 +118,9 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"with-tower"}),
     EngineParameter({"nxf-tower-access-token"}),
     EngineParameter({"nxf-assets"}),
-    EngineParameter({"workflow-revision"})
+    EngineParameter({"workflow-revision"}),
+    EngineParameter({"wms-monitor"}),
+    EngineParameter({"wms-monitor-arg"})
 ])
 
 

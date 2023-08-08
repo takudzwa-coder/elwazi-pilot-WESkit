@@ -281,6 +281,12 @@ workflow_engines:
         - name: "jobs"
           api: false
           type: "Optional[int]"
+        - name: "wms-monitor"
+          api: false
+          type: "str"
+        - name: "wms-monitor-arg"
+          api: false
+          type: "str"
 
 
 cors:
