@@ -236,7 +236,7 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
     @classmethod
     def from_previous(cls,
                       previous_state: ExecutionState[S],
-                      external_state: ExternalState[S]) \
+                      external_state: Optional[ExternalState[S]]) \
             -> Self:
         """
         To ensure continuity of the execution_id from state to state change you usually use this

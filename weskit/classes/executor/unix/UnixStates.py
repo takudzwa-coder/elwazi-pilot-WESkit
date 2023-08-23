@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Optional
 
-from classes.executor.ProcessId import ProcessId
+from weskit.classes.executor.ProcessId import ProcessId
 from weskit.classes.executor.ExecutionState \
     import ExecutionState, ExternalState, Succeeded, Failed, Running, SystemError, Paused, Reason, TerminalExternalState
 from weskit.classes.executor.StateMapper import AbstractStateMapper
@@ -100,6 +100,7 @@ class UnixStateMapper(AbstractStateMapper[UnixState]):
     def _suggest_next_state(self,
                             executor_state: ExecutionState[UnixState],
                             external_state: ExternalState[UnixState],
+                            *args,
                             **kwargs
                             ) -> ExecutionState[UnixState]:
         if external_state.state in [UnixState.Paging, UnixState.Parked, UnixState.Wakekill]:

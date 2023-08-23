@@ -11,18 +11,18 @@ from asyncio import AbstractEventLoop
 from os import PathLike
 from pathlib import Path
 from subprocess import PIPE  # nosec: B404
-from typing import Optional, Union, List, cast
+from typing import Optional, cast
 
 from asyncssh import SSHClientProcess, \
     SSHCompletedProcess
 from urllib3.util import Url
 
-from classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
-from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
+from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.ExecutionState import ExecutionState, Start
 from weskit.classes.executor.Executor \
     import ExecutionSettings
+from weskit.classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.executor.unix.UnixExecutor import UnixExecutor
 from weskit.classes.executor.unix.UnixStates import UnixState
 from weskit.classes.storage.SshStorageAccessor import SshStorageAccessor
@@ -40,8 +40,10 @@ class SshExecutor(UnixExecutor):
 
     def __init__(self,
                  connection: RetryableSshConnection,
+                 log_dir_base: Optional[Path] = None,
                  event_loop: Optional[AbstractEventLoop] = None):  # nosec B108
         super().__init__(SshStorageAccessor(connection),
+                         log_dir_base,
                          event_loop)
         self._executor_id = uuid.uuid4()
         self._connection = connection
@@ -54,67 +56,43 @@ class SshExecutor(UnixExecutor):
     def hostname(self) -> str:
         return self._connection.hostname
 
-    def _env_path(self, execution_id: WESkitExecutionId) -> Path:
-        return self._process_directory(execution_id) / "env.sh"
-
-    def _wrapper_path(self, stage_path: Optional[Path]) -> Path:
-        if stage_path is None:
-            raise RuntimeError("Oops! No staging directory provided")
-        else:
-            return stage_path / "wrap"
-
-    async def _create_env_script(self, command: ShellCommand) -> Path:
+    async def _create_env_script(self, command: ShellCommand)\
+            -> Path:
         """
-        We assume Bash is available on the remote side. Detection of the shell is tricky, if at all
-        possible. Therefore, if you want to support other shells, make this configurable via a
-        WESkit variable.
-
-        The protocol is
-
-                source env.sh && command arg1 arg2 ...
+        Create an environment file with the variables requested via the command.
         """
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
-            print("#!/bin/bash", file=file)
-            # Whatever command is executed later, make sure to catch all errors. This is also
-            # important for the `cd`, which may fail if the working directory is not
-            # accessible.
-            print("set -o pipefail -ue", file=file)
-            print("echo 'Current working directory:' $PWD", file=file)
-            if command.workdir is not None:
-                print(f"cd {shlex.quote(str(command.workdir))}", file=file)
             for var_name, var_value in command.environment.items():
                 print(f"export {var_name}={shlex.quote(var_value)}", file=file)
             return Path(file.name)
 
-    async def _stage_helper_scripts(self,
-                                    execution_id: WESkitExecutionId,
-                                    command: ShellCommand):
+    async def _stage_remote_files(self,
+                                  execution_id: WESkitExecutionId,
+                                  command: ShellCommand):
         """
-        SSH usually does not allow to set environment variables. Therefore, we create a little
-        script that sets up the environment for the remote process.
-
-        The usage protocol is
-
-            source env.sh && command arg1 ...
-
-        :param command:
-        :return:
+        Stage the environment requested by the command (as file) and the wrapper script that
+        wraps the execution of the command, including changing the workdir and reading the
+        environment. The remote staging directory is the logging directory for the process.
         """
-        local_env_file = await self._create_env_script(command)
-        remote_dir = self._process_directory(execution_id)
+        log_dir = self._log_dir(command.workdir, execution_id)
+        local_env_file: Optional[Path] = None
         try:
+            local_env_file = await self._create_env_script(command)
             async with self._connection.context():
-                await self.storage.create_dir(remote_dir,
-                                              mode=0o0770,
-                                              exists_ok=True)
+                # Note: If the log dir exists this means that the execution_id was reused. The
+                #       execution_id, however should be used for a single execution attempt only!
+                await self.storage.create_dir(log_dir,
+                                              mode=0o750,
+                                              exists_ok=False)
                 await self.storage.put(local_env_file,
-                                       self._env_path(execution_id),
+                                       self._env_path(log_dir),
                                        dirs_exist_ok=True)
                 await self.storage.put(self._wrapper_source_path,
-                                       self._wrapper_path(...TODO...),
+                                       self._wrapper_path(log_dir),
                                        dirs_exist_ok=True)
         finally:
-            os.unlink(local_env_file)
+            if local_env_file is not None:
+                os.unlink(local_env_file)
 
     async def _is_executable(self, path: PathLike) -> bool:
         """
@@ -168,22 +146,10 @@ class SshExecutor(UnixExecutor):
         log_dir = self._log_dir(command.workdir, execution_id)
         try:
            async with self._connection.context():
+                await self._stage_remote_files(execution_id, effective_command)
 
-                # PREPARE INPUTS
-                # Note: If the log dir exists this means that the execution_id was reused. The
-                #       execution_id, however should be used for a single execution attempt only!
-                await self.storage.create_dir(log_dir, exists_ok=False, mode=0o750)
-
-                await self.storage.put(self._wrapper_source_path,
-                                       self._wrapper_path(log_dir))
-
-                # TODO copy the environment file. Remove the "helper" script to the log_dir.
-                # TODO add the environment file as env parameter to the wrapper call.
-                await self._stage_helper_scripts(execution_id, effective_command)
-
-                # RUN PROCESS
                 # SSH is always associated with a shell. Therefore, a *string* is processed by
-                # asyncssh, rather than a list of strings like for subprocess.run/Popen). Therefore,
+                # asyncssh, rather than a list of strings, like for subprocess.run/Popen). Therefore,
                 # we use the command_expression here.
                 process: SSHClientProcess = await self._connection. \
                     create_process(command=effective_command.command_expression,

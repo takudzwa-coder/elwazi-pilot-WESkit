@@ -7,29 +7,24 @@
 #  Authors: The WESkit Team
 import glob
 import logging
-import os
 import re
-import socket
-import subprocess  # nosec B603 B404
 from abc import ABCMeta, abstractmethod
 from asyncio import AbstractEventLoop
 from builtins import super, property
-from importlib.abc import Traversable
 from pathlib import Path
 from signal import Signals
 from typing import Optional, List, TypeVar, Generic, cast
 
 from urllib3.util.url import Url
 
-from classes.storage.StorageAccessor import StorageAccessor
-from utils import resource_path
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.ExecutionState import ExecutionState, ExternalState, Failed, Start
+from weskit.classes.executor.ExecutionState import ExecutionState, ExternalState
 from weskit.classes.executor.Executor import Executor, ExecutionSettings
 from weskit.classes.executor.ExecutorError import NonRetryableExecutorError
 from weskit.classes.executor.ProcessId import WESkitExecutionId, ProcessId
 from weskit.classes.executor.unix.UnixStates import UnixState, UnixStateMapper
-from weskit.classes.storage.LocalStorageAccessor import LocalStorageAccessor
+from weskit.classes.storage.StorageAccessor import StorageAccessor
+from weskit.utils import resource_path
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +42,9 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
 
     def __init__(self,
                  storage: StorageAccessor,
+                 log_dir_base: Optional[Path] = None,
                  event_loop: Optional[AbstractEventLoop] = None):
-        super().__init__(event_loop)
+        super().__init__(log_dir_base, event_loop)
         self._storage = storage
 
     @property
@@ -66,10 +62,15 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
     def _log_dir(self,
                  workdir: Optional[Path],
                  execution_id: WESkitExecutionId) -> Path:
-        if workdir is not None:
-            return workdir / f".weskit-{execution_id.value}"
+        """
+        Return the logging directory for the process. It is composed of the work-dir, the base-log
+        dir and the execution ID. If the log-dir-base is absolute or the work-dir is not defined,
+        then the log-dir base is used and extended by the execution ID.
+        """
+        if workdir is not None and not self.log_dir_base.is_absolute():
+            return workdir / self.log_dir_base / str(execution_id.value)
         else:
-            return Path(f".weskit-{execution_id.value}")
+            return Path(self.log_dir_base, str(execution_id.value))
 
     def _file_url_to_path(self, url: Url) -> Path:
         if url.scheme is not None and url.scheme is not "file":
@@ -81,9 +82,11 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
     def _wrapper_source_path(self) -> Path:
         return cast(Path, resource_path("weskit.classes.executor.resources", "wrap"))
 
-    @abstractmethod
-    def _wrapper_path(self, stage_path: Optional[Path] = None) -> Path:
-        pass
+    def _env_path(self, stage_path: Path) -> Path:
+        return stage_path / "env.sh"
+
+    def _wrapper_path(self, stage_path: Path) -> Path:
+        return stage_path / "wrap"
 
     def _wrapped_command(self,
                          execution_id: WESkitExecutionId,
@@ -108,6 +111,7 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
         log_dir = self._log_dir(command.workdir, execution_id)
         wrapped_command = [self._wrapper_path(log_dir), "-a"]
         wrapped_command += ["-l", log_dir]
+        wrapped_command += ["-n", self._env_path(log_dir)]
         wrapped_command += _optional_file("-o", stdout_url)
         wrapped_command += _optional_file("-e", stderr_url)
         wrapped_command += _optional_file("-i", stdin_url)

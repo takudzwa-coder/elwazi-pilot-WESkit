@@ -34,10 +34,9 @@ class LocalExecutor(Generic[S], UnixExecutor[S]):
     by the operating system. Therefore, there is no asynchronous job management here.
     """
 
-    _map_to_next_state = UnixStateMapper()
-
-    def __init__(self):
-        super().__init__(LocalStorageAccessor())
+    def __init__(self,
+                 log_dir_base: Optional[Path] = None):
+        super().__init__(LocalStorageAccessor(), log_dir_base)
 
     @property
     def storage(self) -> LocalStorageAccessor:

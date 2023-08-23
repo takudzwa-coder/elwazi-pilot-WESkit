@@ -60,7 +60,8 @@ RUN echo "Creating environment ..." && \
     mamba env create -n weskit -f /weskit/environment.yaml && \
     source activate weskit && \
     echo "Cleaning packages ..." && \
-    conda clean --all -f -y
+    conda clean --all -f -y && \
+    echo "source activate nf-seq-convert" >> ~/.bashrc
 
 # Ensures the following path will be a file, when mounted into the container (otherwise it will be a
 # directory).

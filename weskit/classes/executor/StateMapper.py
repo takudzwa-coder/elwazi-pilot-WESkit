@@ -6,8 +6,9 @@
 #
 #  Authors: The WESkit Team
 from __future__ import annotations
-from typing import Generic, TypeVar, Dict, Type, Callable, Optional
+
 from abc import ABCMeta, abstractmethod
+from typing import Generic, TypeVar, Dict, Type, Callable, Optional
 
 from weskit.classes.executor.ExecutionState \
     import ExecutionState, ExternalState, _TombstoneExternalState, ALLOWED_TRANSITIVE_TRANSITIONS
@@ -16,8 +17,7 @@ S = TypeVar("S")
 
 
 class AbstractStateMapper(Generic[S],
-                          Callable[[ExecutionState[S], ExternalState[S]],
-                                   (ExecutionState[S], ExecutionState[S])],
+                          # Callable[[ExecutionState[S], Optional[ExternalState[S]]], ExecutionState[S]],
                           metaclass=ABCMeta):
     """
     Abstract class for state mappers.
@@ -66,7 +66,7 @@ class AbstractStateMapper(Generic[S],
 
     def _accept_external_state(self,
                                executor_state: ExecutionState[S],
-                               external_state: ExternalState[S]
+                               external_state: Optional[ExternalState[S]]
                                ) -> ExecutionState[S]:
         """
         Accept the observed `external_state` as member of the current `executor_state`.
@@ -77,7 +77,8 @@ class AbstractStateMapper(Generic[S],
     @abstractmethod
     def _suggest_next_state(self,
                             executor_state: ExecutionState[S],
-                            external_state: ExternalState[S],
+                            external_state: Optional[ExternalState[S]],
+                            *args,
                             **kwargs
                             ) -> ExecutionState[S]:
         """
@@ -89,7 +90,8 @@ class AbstractStateMapper(Generic[S],
 
     def _handle_unkown_external_state(self,
                                       executor_state: ExecutionState[S],
-                                      external_state: ExternalState[S],
+                                      external_state: Optional[ExternalState[S]],
+                                      *args,
                                       **kwargs
                                       ) -> ExecutionState[S]:
         """
@@ -103,6 +105,7 @@ class AbstractStateMapper(Generic[S],
     def __call__(self,
                  executor_state: ExecutionState[S],
                  external_state: Optional[ExternalState[S]],
+                 *args,
                  **kwargs
                  ) -> ExecutionState[S]:
         """
@@ -119,10 +122,14 @@ class AbstractStateMapper(Generic[S],
         subclasses.
         """
         if not external_state.is_known:
-            return self._handle_unkown_external_state(executor_state, external_state, **kwargs)
+            return self._handle_unkown_external_state(executor_state,
+                                                      external_state,
+                                                      *args,
+                                                      **kwargs)
         else:
             suggested_next_state = self._suggest_next_state(executor_state,
                                                             external_state,
+                                                            *args,
                                                             **kwargs)
             if executor_state.name == suggested_next_state.name:
                 return self._accept_external_state(executor_state, external_state)
@@ -146,7 +153,8 @@ class SimpleStateMapper(Generic[S], AbstractStateMapper[S]):
 
     def _suggest_next_state(self,
                             executor_state: ExecutionState[S],
-                            external_state: ExternalState[S],
+                            external_state: Optional[ExternalState[S]],
+                            *args,
                             **kwargs
                             ) -> ExecutionState[S]:
         """

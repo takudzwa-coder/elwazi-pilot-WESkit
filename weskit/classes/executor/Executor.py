@@ -11,6 +11,7 @@ from asyncio import AbstractEventLoop
 from builtins import property, bool, str
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from signal import Signals
 from typing import Optional, TypeVar, Generic, ClassVar
 from uuid import uuid4, UUID
@@ -183,16 +184,22 @@ class Executor(Generic[S], metaclass=ABCMeta):
     EXECUTION_ID_VARIABLE: ClassVar[str] = "weskit_execution_id"
 
     def __init__(self,
+                 log_dir_base: Optional[Path] = None,
                  event_loop: Optional[AbstractEventLoop] = None):
         """
         Some the methods are asynchronous. We keep an event loop ready for them.
         """
         self._executor_id = Identifier(uuid4())
         logger.info(f"Starting executor with ID {self._executor_id}")
+        self._log_dir_base = log_dir_base if log_dir_base is not None else Path(".weskit")
         if event_loop is None:
             self._event_loop = get_event_loop()
         else:
             self._event_loop = event_loop
+
+    @property
+    def log_dir_base(self) -> Path:
+        return self._log_dir_base
 
     @property
     def id(self) -> Identifier[UUID]:
