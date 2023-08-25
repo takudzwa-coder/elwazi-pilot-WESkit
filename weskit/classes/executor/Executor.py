@@ -184,8 +184,9 @@ class Executor(Generic[S], metaclass=ABCMeta):
     EXECUTION_ID_VARIABLE: ClassVar[str] = "weskit_execution_id"
 
     def __init__(self,
+                 id: Identifier[str],
                  log_dir_base: Optional[Path] = None):
-        self._executor_id = Identifier(uuid4())
+        self._executor_id = id
         logger.info(f"Starting executor with ID {self._executor_id}")
         self._log_dir_base = log_dir_base if log_dir_base is not None else Path(".weskit")
 
@@ -194,10 +195,9 @@ class Executor(Generic[S], metaclass=ABCMeta):
         return self._log_dir_base
 
     @property
-    def id(self) -> Identifier[UUID]:
+    def id(self) -> Identifier[str]:
         """
-        Executors are identifiable. The ID is reported in the logs of the containing for which
-        the executor was created.
+        Executors are identifiable. The ID is reported in the logs.
         """
         return self._executor_id
 

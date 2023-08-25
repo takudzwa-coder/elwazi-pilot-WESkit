@@ -146,7 +146,8 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
                                     f"stderr={stderr_lines}")
             else:
                 cluster_job_id = \
-                    ProcessId(self.extract_jobid_from_submission_output(stdout_lines))
+                    ProcessId(self.extract_jobid_from_submission_output(stdout_lines),
+                              self.name)
 
         # Remove the remote file once the submission has been executed.
         await self.storage.remove_file(target_script)

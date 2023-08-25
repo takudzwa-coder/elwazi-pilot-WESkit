@@ -5,21 +5,20 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
-from asyncio import AbstractEventLoop
 from datetime import timedelta
 from os import PathLike
 from signal import Signals
 from typing import Optional, List
 
-import kubernetes
 from kubernetes.client import ApiClient, ApiException, V1Job, V1JobSpec, V1PodFailurePolicyRule, V1PodTemplateSpec, \
-    V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements, V1EnvVar, V1VolumeDevice, V1VolumeMount
+    V1ObjectMeta, V1PodSpec, V1Container, V1ResourceRequirements, V1EnvVar, V1VolumeDevice, V1VolumeMount, BatchV1Api
 
-from classes.executor.ExecutionState import ExecutionState
-from classes.executor.kubernetes.KubernetesPhase import KubernetesPhase
-from memory_units import Unit
+from weskit.classes.executor.ExecutionState import ExecutionState
+from weskit.classes.executor.kubernetes.KubernetesPhase import KubernetesPhase
+from weskit.memory_units import Unit
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import Executor, ExecutionSettings
+from weskit.classes.executor.ProcessId import Identifier
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 
 
@@ -30,14 +29,14 @@ class KubernetesExecutor(Executor):
     """
 
     def __init__(self,
+                 id: Identifier[str],
                  kubernetes_client: ApiClient,
                  namespace: str,
                  volume_devices: Optional[List[V1VolumeDevice]] = None,
                  volume_mounts: Optional[List[V1VolumeMount]] = None,
-                 event_loop: Optional[AbstractEventLoop] = None,
                  # We set a default TTL for jobs after finish of 1 week.
                  ttl_seconds: int = 604800):
-        super().__init__(event_loop)
+        super().__init__(id)
         self._kubernetes_client: ApiClient = kubernetes_client
         self._namespace = namespace
         self._ttl_seconds = ttl_seconds
@@ -88,7 +87,7 @@ class KubernetesExecutor(Executor):
         :param settings: Execution parameters on the execution infrastructure.
         :return: A representation of the executed command.
         """
-        api_instance = kubernetes.client.BatchV1Api(self._kubernetes_client)
+        api_instance = BatchV1Api(self._kubernetes_client)
         limits = {}
         if settings.memory is not None:
             limits["memory"] = f"{settings.memory.to(Unit.KILO).value}Ki"
@@ -151,7 +150,7 @@ class KubernetesExecutor(Executor):
         Get the status of the process in the execution infrastructure. The `process.result` is not
         modified.
         """
-        api_instance = kubernetes.client.BatchV1Api(self._kubernetes_client)
+        api_instance = BatchV1Api(self._kubernetes_client)
         try:
             job: V1Job = api_instance.read_namespaced_job_status(self._namespace,
                                                                  job_name,
@@ -182,7 +181,7 @@ class KubernetesExecutor(Executor):
         may not be immediately effective, this method immediately returns after sending the kill
         signal.
         """
-        api_instance = kubernetes.client.BatchV1Api(self._kubernetes_client)
+        api_instance = BatchV1Api(self._kubernetes_client)
         try:
             job: V1Job = api_instance.delete_namespaced_job(self._namespace,
                                                             ...)

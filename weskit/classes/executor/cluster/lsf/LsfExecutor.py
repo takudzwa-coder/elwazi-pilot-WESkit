@@ -102,7 +102,8 @@ class LsfExecutor(ClusterExecutor[LsfState]):
                                     f"stderr={stderr_lines}")
             else:
                 cluster_job_id = \
-                    ProcessId(self.extract_jobid_from_submission_output(stdout_lines))
+                    ProcessId(self.extract_jobid_from_submission_output(stdout_lines),
+                              self.hostname)
 
         logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
 

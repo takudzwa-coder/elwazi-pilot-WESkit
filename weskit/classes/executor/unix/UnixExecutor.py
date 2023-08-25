@@ -57,19 +57,6 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
         """
         pass
 
-    def _log_dir(self,
-                 workdir: Optional[Path],
-                 execution_id: WESkitExecutionId) -> Path:
-        """
-        Return the logging directory for the process. It is composed of the work-dir, the base-log
-        dir and the execution ID. If the log-dir-base is absolute or the work-dir is not defined,
-        then the log-dir base is used and extended by the execution ID.
-        """
-        if workdir is not None and not self.log_dir_base.is_absolute():
-            return workdir / self.log_dir_base / str(execution_id.value)
-        else:
-            return Path(self.log_dir_base, str(execution_id.value))
-
     def _file_url_to_path(self, url: Url) -> Path:
         if url.scheme is not None and url.scheme is not "file":
             raise ValueError("LocalExecutor only accepts file:// URLs for stdin/stdout/stderr")
@@ -83,7 +70,10 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
     def _command_log_dir(self,
                          execution_id: WESkitExecutionId,
                          command: ShellCommand) -> Path:
-        return self._log_dir(command.workdir, execution_id)
+        """
+        Return the logging directory for the process.
+        """
+        return command.workdir / self.log_dir_base / str(execution_id.value)
 
     def _env_path(self, stage_path: Path) -> Path:
         return stage_path / "env.sh"
@@ -117,6 +107,9 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
         to the wrapper. The variables will be set in the command, which means that the command
         expression gets longer, with a chance to hit the command length restriction of the shell.
         """
+        if command.workdir is None:
+            raise ValueError("No workdir for command. Currently only support commands with defined workdir.")
+
         if env is None:
             env = {}
 
@@ -170,7 +163,7 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
             -> ExecutionState[UnixState]:
         pass
 
-    async def _retrieve_state_via_pid(self, pid: int)\
+    async def _retrieve_state_by_pid(self, pid: int)\
             -> Optional[ExternalState[UnixState]]:
         try:
             with self.storage.open(f"/proc/{pid}/stat", "r") as stat_fh:
@@ -179,7 +172,10 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
                                      status_line)
                 if the_match is not None:
                     state_code = the_match[2]
-                    return UnixState.as_external_state(ProcessId(str(pid)), state_code, None, None)
+                    return UnixState.as_external_state(ProcessId(str(pid), self.hostname),
+                                                       state_code,
+                                                       None,
+                                                       None)
                 else:
                     # This should not happen. The file format is pretty fixed. If we can open the
                     # file, then we should also be able to parse it.
@@ -193,7 +189,7 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
             raise NonRetryableExecutorError("Could not parse process ID from "
                                             f"'/proc/{pid}/stat: {status_line}")
 
-    async def _retrieve_state_via_execution_id(self, execution_id: WESkitExecutionId)\
+    async def _retrieve_state_by_execution_id(self, execution_id: WESkitExecutionId)\
             -> Optional[ExternalState[UnixState]]:
         """
         This searches for a process ID with the matching `weskit_execution_id` environment
@@ -217,11 +213,11 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
             # We just parse the state using this found PID. It is possible that the process
             # ended in the meantime, but that's just how it is. We return the state then as
             # that state.
-            return self._retrieve_state_via_pid(int(pid))
+            return await self._retrieve_state_by_pid(int(pid))
         else:
             return None
 
-    async def _retrieve_state_via_logdir(self, log_dir: Path)\
+    async def _retrieve_state_by_logdir(self, log_dir: Path)\
             -> Optional[ExternalState[UnixState]]:
         """
         This function assumes that no information is in the /proc filesystem. The only
@@ -241,7 +237,7 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
                 # by server crash). All these are fatal system errors
                 exit_code = int(exit_fh.readlines()[0])
 
-            return UnixState.as_external_state(ProcessId(str(pid)),
+            return UnixState.as_external_state(ProcessId(str(pid), self.hostname),
                                                None,
                                                exit_code,
                                                "Process not in /proc")
@@ -276,22 +272,24 @@ class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
         anymore.
         """
         if pid is not None:
-            result = self._retrieve_state_via_pid(pid)
+            result = await self._retrieve_state_by_pid(pid)
         else:
-            result = self._retrieve_state_via_execution_id(execution_id)
+            result = await self._retrieve_state_by_execution_id(execution_id)
         if result is None and log_dir is not None:
-            result = self._retrieve_state_via_logdir(self._file_url_to_path(log_dir))
+            result = await self._retrieve_state_by_logdir(self._file_url_to_path(log_dir))
         return result
 
     async def update_status(self,
-                            current_state: ExecutionState[S],
+                            current_state: ExecutionState[UnixState],
                             log_dir: Optional[Url] = None,
                             pid: Optional[int] = None) \
-            -> Optional[ExecutionState[S]]:
+            -> Optional[ExecutionState[UnixState]]:
         """
         Update the executed process, if possible.
         """
-        external_state = self.get_status(current_state.execution_id, log_dir, pid)
+        external_state = await self.get_status(current_state.execution_id,
+                                               log_dir,
+                                               pid if pid is None else current_state.external_pid)
         if external_state is not None:
             return UnixExecutor._map_to_next_state(current_state, external_state)
         else:

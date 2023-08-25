@@ -24,6 +24,9 @@ class Identifier(Generic[T]):
         return self._value
 
     def __repr__(self) -> str:
+        """
+        Just a default representation.
+        """
         return f"{self.__class__}(value={str(self.value)})"
 
 
@@ -51,5 +54,23 @@ class ProcessId(Identifier[str]):
     """
     The process ID's value is the native ID of the executor, such as a UNIX PID or a cluster job
     ID assigned by the cluster upon submission. It is available only **after** the submission.
+
+    A process always is executed on some execution infrastructure. This can be a host, a compute
+    cluster, etc. Therefore, the process ID additionally has a `where` field.
     """
-    pass
+
+    def __init__(self,
+                 value: str,
+                 where: str):
+        super().__init__(value)
+        self._where = where
+
+    @property
+    def where(self) -> str:
+        return self._where
+
+    def __repr__(self) -> str:
+        """
+        Return infrastructure name and process ID as string separated by ::
+        """
+        return f"{self.where}::{self.value}"

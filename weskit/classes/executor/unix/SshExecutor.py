@@ -9,7 +9,7 @@ import tempfile
 import uuid
 from os import PathLike
 from pathlib import Path
-from subprocess import PIPE  # nosec: B404
+from subprocess import DEVNULL  # nosec: B404
 from typing import Optional, cast
 
 from asyncssh import SSHClientProcess, \
@@ -20,7 +20,7 @@ from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.ExecutionState import ExecutionState, Start
 from weskit.classes.executor.Executor \
-    import ExecutionSettings, Executor
+    import ExecutionSettings
 from weskit.classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.executor.unix.UnixExecutor import UnixExecutor
 from weskit.classes.executor.unix.UnixStates import UnixState
@@ -80,7 +80,7 @@ class SshExecutor(UnixExecutor):
         wraps the execution of the command, including changing the workdir and reading the
         environment. The remote target directory is the logging directory for the process.
         """
-        log_dir = self._log_dir(command.workdir, execution_id)
+        log_dir = self._command_log_dir(execution_id, command)
         local_env_file: Optional[Path] = None
         try:
             local_env_file = await self._create_env_script_locally(execution_id, command)
@@ -125,13 +125,7 @@ class SshExecutor(UnixExecutor):
                                                   command,
                                                   stdout_url,
                                                   stderr_url,
-                                                  stdin_url,
-                                                  env={
-                                                    # Tag the wrapper process with `weskit_process_id` to make it
-                                                    # recoverable with a query of the environment variables
-                                                    # of process (e.g. on /proc/).
-                                                    Executor.EXECUTION_ID_VARIABLE: str(execution_id)
-                                                  })
+                                                  stdin_url)
 
         execution_state = Start(execution_id)
         log_dir = self._command_log_dir(execution_id, command)
@@ -143,15 +137,16 @@ class SshExecutor(UnixExecutor):
                 # asyncssh, rather than a list of strings. Therefore, we use the command_expression here.
                 process: SSHClientProcess = await self._connection. \
                     create_process(command=effective_command.command_expression,
-                                   stdout=PIPE,
-                                   stderr=PIPE,
+                                   # Ignore the standard streams. The wrapper writes to log files.
+                                   stdout=DEVNULL,
+                                   stderr=DEVNULL,
+                                   stdin=DEVNULL,
                                    **kwargs)
 
                 # The process already was sent to the background. We recover the process information.
-                execution_state = self.update_status(execution_state,
-                                                     Url(scheme="file",
-                                                         path=str(log_dir)),
-                                                     process.pid???)
+                execution_state = await self.update_status(execution_state,
+                                                           Url(scheme="file",
+                                                               path=str(log_dir)))
                 logger.debug(f"Executor {self.id} started process {execution_id} with PID " +
                              f"{execution_state.last_known_external_state.pid}: {effective_command}")
                 return execution_state
