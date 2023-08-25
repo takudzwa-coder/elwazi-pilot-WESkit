@@ -59,6 +59,7 @@ RUN echo "Creating environment ..." && \
     conda config --set channel_priority flexible && \
     mamba env create -n weskit -f /weskit/environment.yaml && \
     source activate weskit && \
+    TMPDIR=/tmp nextflow info && \
     echo "Cleaning packages ..." && \
     conda clean --all -f -y && \
     echo "source activate nf-seq-convert" >> ~/.bashrc
