@@ -122,7 +122,7 @@ class Manager:
                 run.processing_stage = ProcessingStage.SYSTEM_ERROR
                 return run
 
-        run.processing_stage = ProcessingStage.from_celery_and_exit_code(celery_task.state,
+        run.processing_stage = ProcessingStage.from_celery_and_exit_code(celery_task.wrapped_state,
                                                                          run.exit_code)
         return run
 
@@ -139,9 +139,9 @@ class Manager:
             # AsyncResult sets celery state to "PENDING" if ID is not in backend
             celery_task = self._run_task.AsyncResult(run.celery_task_id)
             logger.debug("Run %s with processing stage %s has Celery task %s in state '%s'" % (
-                run.id, run.processing_stage.name, run.celery_task_id, celery_task.state))
+                run.id, run.processing_stage.name, run.celery_task_id, celery_task.wrapped_state))
             # celery state should not be pending for finished runs
-            if not (celery_task.state == "PENDING" and
+            if not (celery_task.wrapped_state == "PENDING" and
                     run.processing_stage.name == "FINISHED_EXECUTION"):
                 run = self._update_run_results(run, celery_task)
 

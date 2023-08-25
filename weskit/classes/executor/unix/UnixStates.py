@@ -73,7 +73,7 @@ class UnixState(Enum):
                           observed_at: Optional[datetime] = None)\
             -> ExternalState[UnixState]:
         """
-        Wrap the UnixState as `ExternalState` to provide the API necessary for the ExecutorState.
+        Wrap the UnixState as `ExternalState` to provide the API necessary for the ExecutionState.
 
         Compare https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/157#note_1190792806
 
@@ -103,7 +103,7 @@ class UnixStateMapper(AbstractStateMapper[UnixState]):
                             *args,
                             **kwargs
                             ) -> ExecutionState[UnixState]:
-        if external_state.state in [UnixState.Paging, UnixState.Parked, UnixState.Wakekill]:
+        if external_state.wrapped_state in [UnixState.Paging, UnixState.Parked, UnixState.Wakekill]:
             # States that should not occur for newer kernels.
             return SystemError.from_previous(executor_state, external_state)
         if isinstance(external_state, TerminalExternalState):
@@ -113,13 +113,13 @@ class UnixStateMapper(AbstractStateMapper[UnixState]):
                 return Succeeded.from_previous(executor_state, external_state)
             elif external_state.exit_code > 0:
                 return Failed.from_previous(executor_state, external_state)
-        elif external_state.state in [UnixState.Running,
-                                      UnixState.InterruptibleSleep,
-                                      UnixState.Idle,
-                                      UnixState.DiskSleep,
-                                      UnixState.TracingStopped]:
+        elif external_state.wrapped_state in [UnixState.Running,
+                                              UnixState.InterruptibleSleep,
+                                              UnixState.Idle,
+                                              UnixState.DiskSleep,
+                                              UnixState.TracingStopped]:
             return Running.from_previous(executor_state, external_state)
-        elif external_state.state in [UnixState.Stopped]:
+        elif external_state.wrapped_state in [UnixState.Stopped]:
             return Paused.from_previous(executor_state, external_state)
         else:
             raise RuntimeError(f"Bug! Unhandled ExternalState '{external_state}'")

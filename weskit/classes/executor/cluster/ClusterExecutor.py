@@ -257,7 +257,7 @@ class ClusterExecutor(Generic[S], Executor[S]):
         return process
 
     @abstractmethod
-    def execute(self,
+    async def execute(self,
                 command: ShellCommand,
                 stdout_file: Optional[PathLike] = None,
                 stderr_file: Optional[PathLike] = None,
@@ -288,3 +288,14 @@ class ClusterExecutor(Generic[S], Executor[S]):
         :return: A representation of the executed command.
         """
         pass
+
+
+    async def kill(self, state: ExecutionState[LsfState], signal: Signals = Signals.SIGINT) -> bool:
+        await self.executor.execute(WESkitExecutionId(),
+                                    self._command_set.kill([state.external_pid.value], signal.name))
+        ## TODO Check exit code: Code process get killed? Did it exist? Throw? Return value?
+
+    async def wait(self, state: ExecutionState[LsfState]) -> None:
+        await self.executor.execute(WESkitExecutionId(),
+                                    self._command_set.wait_for(state.external_pid.value))
+        ## TODO Check exit code: Command succeeded?

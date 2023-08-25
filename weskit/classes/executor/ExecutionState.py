@@ -18,13 +18,14 @@ from weskit.classes.executor.ProcessId import ProcessId, WESkitExecutionId
 Reason = str
 
 
+# The type used to model the external states. Usually enum.
 S = TypeVar("S")
 
 
 class ExternalState(Generic[S], metaclass=ABCMeta):
     """
     Decorator for external states, i.e. states related to some non-WESkit internal execution system,
-    like those modelled by the Executor subclasses. The external state is usually modeled as a
+    like those modelled by the Executor subclasses. The external state `S` is usually modeled as a
     simple enumeration value. Python enumerations are singletons, and consequently, can only
     carry global state. This `ExternalState` class takes such an enum as a representation of the
     status name of the external system, and adds exit codes, timestamps, and reasons.
@@ -38,8 +39,8 @@ class ExternalState(Generic[S], metaclass=ABCMeta):
     ```
 
     The `ExternalState` should hold all information that are necessary to describe the known
-    state of a job in the external executor in all detail. For WESkit not all these details are
-    necessary.
+    state of a job in the external executor in some detail. For WESkit not all these details are
+    necessary, but they may be relevant for debugging.
 
     * is_known: Whether the state is currently known, i.e. currently not in Absent state.
     * terminal states are modelled as TerminalExternalState with an additional field exit_code.
@@ -64,7 +65,7 @@ class ExternalState(Generic[S], metaclass=ABCMeta):
         generalized transition graph for WESkit.
         """
         self._pid = pid
-        self._state = state
+        self._wrapped_state = state
         self._observed_at = observed_at if observed_at is not None else datetime.now()
         self._reasons = reasons if reasons is not None else []
 
@@ -84,8 +85,8 @@ class ExternalState(Generic[S], metaclass=ABCMeta):
         return self._reasons
 
     @property
-    def state(self) -> Optional[S]:
-        return self._state
+    def wrapped_state(self) -> Optional[S]:
+        return self._wrapped_state
 
     @property
     def is_terminal(self) -> bool:
@@ -106,7 +107,7 @@ class ExternalState(Generic[S], metaclass=ABCMeta):
     @property
     def is_tombstone(self) -> bool:
         """
-        A tombstone state is only used internally, to mark the end of a sequence of external
+        A tombstone state is used by WESkit to mark the end of a sequence of external
         states and thus closes an `ExecutionState`.
         """
         return False
@@ -114,7 +115,7 @@ class ExternalState(Generic[S], metaclass=ABCMeta):
     def __str__(self) -> str:
         return f"{self.__class__}(" + ", ".join([
             f"pid={self.pid}",
-            f"state={self.state}",
+            f"state={self.wrapped_state}",
             f"reasons={self.reasons}",
             f"observed_at={self.observed_at}"
         ]) + ")"
@@ -131,7 +132,7 @@ class UnknownExternalState(ExternalState[S]):
                  reasons: Optional[List[Reason]] = None,
                  observed_at: Optional[datetime] = None):
         """
-        Note that state usually will be `None` but some executors may have a special state for
+        Note that `state` usually will be `None` but some executors may have a special state for
         unknown states.
         """
         super().__init__(pid, state, reasons, observed_at)
@@ -170,8 +171,7 @@ class TerminalExternalState(ExternalState[S]):
 
 class _TombstoneExternalState(ExternalState[S]):
     """
-    `_TombstoneExternalState` is used to close a state that was last unknown. It is used to
-    mark the end time of `ExecutionState`.
+    `_TombstoneExternalState` is used to mark the end time of `ExecutionState`.
     """
 
     def __init__(self,
@@ -181,7 +181,8 @@ class _TombstoneExternalState(ExternalState[S]):
         """
         Use the state that is responsible for the tombstone as `state`, if one exists. If this
         tombstone is set, because the system gave up waiting for a state from the external
-        job system, then you may also use `None` as `state`.
+        job system, then you may also use `None` as `state`, or however an unknown state is
+        represented by the external executor.
         """
         super().__init__(pid, state, observed_at=observed_at)
 
@@ -191,9 +192,10 @@ class _TombstoneExternalState(ExternalState[S]):
 
 class ExecutionState(Generic[S], metaclass=ABCMeta):
     """
-    The `ExecutionState` classes model the state of execution of a process on an `Executor`.
+    The `ExecutionState` classes model the state of execution of a process on an `Executor` in
+    WESkit. `S` is the type of the external state class, e.g. enum.
 
-    `ExecutionStates` has multiple functions:
+    Specifically, `ExecutionStates` has multiple functions:
 
     1. It represents a generalized transition graph. In principle, only certain external state
        transitions should be allowed by the external system. In some cases, they may not be
@@ -201,9 +203,9 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
        of external states to generalized `ExecutionState`s and let the `ExecutionState` follow a
        simplified state graph. The external job management decides, which state labels correspond
        to which `ExecutionState`.
-    2. State tracking. A single `ExecutionState` may correspond to multiple external states. We
-       allow ta add all observations that map to one `ExecutionState`. State transitions to a
-       new `ExecutionState` are then explicitly modeled as new `ExecutionState` instance.
+    2. State tracking. A single `ExecutionState` may correspond to a sequence of observed external
+       states. We allow ta add all observations that map to one `ExecutionState`. State transitions
+       to a new `ExecutionState` are then explicitly modeled as new `ExecutionState` instance.
 
     Note: There is no unknown `ExecutionState`. If the `ExternalState` was unknown/unobserved for
           too long (e.g. due to network interruptions, downtimes, etc.), then some logic may
@@ -213,7 +215,7 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
 
     Note: The `ExecutionState` is not an "executor" state. In particular, errors of the executor,
           such as timeouts, etc., should not be modelled as individual `ExecutorState`s. However,
-          if the executor fails terminally, it necessary to put the execution of a process on that
+          if the executor fails terminally, it is necessary to put the execution of a process on that
           executor into a `SystemError`. The `ExternalState` that represents the execution states
           as represented by the executor, should then contain the failure reason in its `reasons`
           field.
@@ -239,10 +241,10 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
                       external_state: Optional[ExternalState[S]]) \
             -> Self:
         """
-        To ensure continuity of the execution_id from state to state change you usually use this
-        constructor.
+        To ensure continuity of the execution_id from state-to-state change you usually use this
+        constructor function.
 
-        :return Compare https://peps.python.org/pep-0673/.
+        :return An instance of cls, correctly typed. Compare https://peps.python.org/pep-0673/.
         """
         return cls(previous_state.execution_id, external_state, previous_state)
 
@@ -353,7 +355,7 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
                                  f"added to {self}")
             elif new_state.observed_at < self.last_external_state.observed_at:
                 raise ValueError("Tried to add state with earlier timestamp than last state: " +
-                                 f"{self.last_external_state.state} ({self.last_external_state.observed_at}) -/-> " +
+                                 f"{self.last_external_state.wrapped_state} ({self.last_external_state.observed_at}) -/-> " +
                                  f"{new_state} ({new_state.observed_at})")
             else:
                 self._external_states.append(new_state)
@@ -397,7 +399,7 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
 
             Running -> Unknown -> Tombstone
 
-        the lifetime will be the time between the first Running and the last Tombstone state.
+        the lifetime will be the time between the first Running and the Tombstone state.
         """
         if self.last_known_at is not None:
             return self.last_external_state.observed_at - self.created_at

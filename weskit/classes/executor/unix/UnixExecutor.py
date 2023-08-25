@@ -5,19 +5,21 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+from __future__ import annotations
+
 import glob
 import logging
 import re
+import shlex
 from abc import ABCMeta, abstractmethod
-from asyncio import AbstractEventLoop
 from builtins import super, property
 from pathlib import Path
 from signal import Signals
-from typing import Optional, List, TypeVar, Generic, cast
+from typing import Optional, List, cast, Dict
 
 from urllib3.util.url import Url
 
-from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.ExecutionState import ExecutionState, ExternalState
 from weskit.classes.executor.Executor import Executor, ExecutionSettings
 from weskit.classes.executor.ExecutorError import NonRetryableExecutorError
@@ -29,10 +31,7 @@ from weskit.utils import resource_path
 logger = logging.getLogger(__name__)
 
 
-S = TypeVar("S")
-
-
-class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
+class UnixExecutor(Executor[UnixState], metaclass=ABCMeta):
     """
     Execute commands in a Unix process. The commands are executed asynchronously in the background
     managed by the operating system.
@@ -42,9 +41,8 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
 
     def __init__(self,
                  storage: StorageAccessor,
-                 log_dir_base: Optional[Path] = None,
-                 event_loop: Optional[AbstractEventLoop] = None):
-        super().__init__(log_dir_base, event_loop)
+                 log_dir_base: Optional[Path] = None):
+        super().__init__(log_dir_base)
         self._storage = storage
 
     @property
@@ -82,6 +80,11 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
     def _wrapper_source_path(self) -> Path:
         return cast(Path, resource_path("weskit.classes.executor.resources", "wrap"))
 
+    def _command_log_dir(self,
+                         execution_id: WESkitExecutionId,
+                         command: ShellCommand) -> Path:
+        return self._log_dir(command.workdir, execution_id)
+
     def _env_path(self, stage_path: Path) -> Path:
         return stage_path / "env.sh"
 
@@ -93,7 +96,8 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
                          command: ShellCommand,
                          stdout_url: Optional[Url] = None,
                          stderr_url: Optional[Url] = None,
-                         stdin_url: Optional[Url] = None
+                         stdin_url: Optional[Url] = None,
+                         env: Optional[Dict[str, str]] = None
                          )\
             -> ShellCommand:
         """
@@ -103,33 +107,70 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
 
         The execution logs go into a directory `.log-{execution_id}`, unless other files
         were requested via the `stdout_url`, etc. parameters.
+
+        Note that the stdout and stderr of the wrapper script is written to the log_dir/wrapper_stdout
+        and log_dir/wrapper_stderr files.
+
+        The env variable should be used to attach environment variables to the wrapper script. This
+        is different from the -n parameter of the wrapper, that attaches variables to the wrapped
+        command. The main purpose of the env variable here, is to attach the weskit execution ID
+        to the wrapper. The variables will be set in the command, which means that the command
+        expression gets longer, with a chance to hit the command length restriction of the shell.
         """
+        if env is None:
+            env = {}
+
         def _optional_file(param: str, url: Optional[Url]) -> List[str]:
             if url is not None:
                 path = self._file_url_to_path(url)
                 return [param, path]
-        log_dir = self._log_dir(command.workdir, execution_id)
-        wrapped_command = [self._wrapper_path(log_dir), "-a"]
-        wrapped_command += ["-l", log_dir]
-        wrapped_command += ["-n", self._env_path(log_dir)]
+
+        command_log_dir = self._command_log_dir(execution_id, command)
+        wrapped_command = []
+        for envvar, envval in env.items():
+            wrapped_command += [f"{envvar}={shlex.quote(envval)}"]
+        wrapped_command += ["nohup"]    # Ensure process is not killed upon shell exit.
+        wrapped_command += [self._wrapper_path(command_log_dir), "-a"]
+        wrapped_command += ["-w", command.workdir]   # A working directory is mandatory!
+        wrapped_command += ["-l", command_log_dir]
+        wrapped_command += ["-n", self._env_path(command_log_dir)]
         wrapped_command += _optional_file("-o", stdout_url)
         wrapped_command += _optional_file("-e", stderr_url)
         wrapped_command += _optional_file("-i", stdin_url)
         wrapped_command += ["--", command.command_expression]
+        wrapped_command += [ss("1>"), command_log_dir / "wrapper_stdout"]
+        wrapped_command += [ss("2>"), command_log_dir / "wrapper_stderr"]
+        wrapped_command += [ss("&")]     # Send process to the background.
         return command.copy(command=wrapped_command)
 
-    def execute(self,
-                execution_id: WESkitExecutionId,
-                command: ShellCommand,
-                stdout_url: Optional[Url] = None,
-                stderr_url: Optional[Url] = None,
-                stdin_url: Optional[Url] = None,
-                settings: Optional[ExecutionSettings] = None,
-                **kwargs) \
+    async def _create_env_script(self,
+                                 path: Path,
+                                 execution_id: WESkitExecutionId,
+                                 env: Dict[str, str]) -> None:
+        """
+        Create an environment file with the variables requested via the command. With the script we get better
+        logging, and we can ensure does not fail because of a long command line.
+        """
+        with open(path, "r") as env_fh:
+            # Tag the process with `weskit_process_id` to make it
+            # recoverable with a query of the environment variables
+            # of process (e.g. on /proc/).
+            print(f"{Executor.EXECUTION_ID_VARIABLE}={str(execution_id)}", file=env_fh)
+            for envvar, envval in env.items():
+                print(f"export {envvar}={shlex.quote(envval)}", file=env_fh)
+
+    async def execute(self,
+                      execution_id: WESkitExecutionId,
+                      command: ShellCommand,
+                      stdout_url: Optional[Url] = None,
+                      stderr_url: Optional[Url] = None,
+                      stdin_url: Optional[Url] = None,
+                      settings: Optional[ExecutionSettings] = None,
+                      **kwargs) \
             -> ExecutionState[UnixState]:
         pass
 
-    def _retrieve_state_via_pid(self, pid: int)\
+    async def _retrieve_state_via_pid(self, pid: int)\
             -> Optional[ExternalState[UnixState]]:
         try:
             with self.storage.open(f"/proc/{pid}/stat", "r") as stat_fh:
@@ -152,7 +193,7 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
             raise NonRetryableExecutorError("Could not parse process ID from "
                                             f"'/proc/{pid}/stat: {status_line}")
 
-    def _retrieve_state_via_execution_id(self, execution_id: WESkitExecutionId)\
+    async def _retrieve_state_via_execution_id(self, execution_id: WESkitExecutionId)\
             -> Optional[ExternalState[UnixState]]:
         """
         This searches for a process ID with the matching `weskit_execution_id` environment
@@ -180,7 +221,7 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
         else:
             return None
 
-    def _retrieve_state_via_logdir(self, log_dir: Path)\
+    async def _retrieve_state_via_logdir(self, log_dir: Path)\
             -> Optional[ExternalState[UnixState]]:
         """
         This function assumes that no information is in the /proc filesystem. The only
@@ -216,10 +257,10 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
         except PermissionError as e:
             raise NonRetryableExecutorError(f"No permission to open {log_file}")
 
-    def get_status(self,
-                   execution_id: WESkitExecutionId,
-                   log_dir: Optional[Url] = None,
-                   pid: Optional[int] = None) \
+    async def get_status(self,
+                         execution_id: WESkitExecutionId,
+                         log_dir: Optional[Url] = None,
+                         pid: Optional[int] = None) \
             -> Optional[ExternalState[UnixState]]:
         """
         If the PID is provided, try to get the information using the PID
@@ -242,10 +283,10 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
             result = self._retrieve_state_via_logdir(self._file_url_to_path(log_dir))
         return result
 
-    def update_status(self,
-                      current_state: ExecutionState[S],
-                      log_dir: Optional[Url] = None,
-                      pid: Optional[int] = None) \
+    async def update_status(self,
+                            current_state: ExecutionState[S],
+                            log_dir: Optional[Url] = None,
+                            pid: Optional[int] = None) \
             -> Optional[ExecutionState[S]]:
         """
         Update the executed process, if possible.
@@ -257,9 +298,9 @@ class UnixExecutor(Generic[S], Executor[S], metaclass=ABCMeta):
             return None
 
     @abstractmethod
-    def kill(self,
-             state: ExecutionState[S],
-             signal: Signals = Signals.SIGINT) -> bool:
+    async def kill(self,
+                   state: ExecutionState[UnixState],
+                   signal: Signals = Signals.SIGINT) -> bool:
         """
         Send a signal to the process with the given state. The signal should generally be
         termination signal (e.g. SIGKILL, SIGINT, etc.) -- any signal issued with the intention

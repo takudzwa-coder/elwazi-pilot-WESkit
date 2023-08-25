@@ -133,16 +133,20 @@ def run_command(command: ShellCommand,
             pass
 
         wid = WESkitExecutionId()
-        # TODO Update run database
+        # TODO Update run database.
 
-        process =\
-            run_command.executor.execute(
-                shell_command,
-                execution_id=wid,
-                stdout_url=executor_context.stdout_file(workdir, start_time),
-                stderr_url=executor_context.stderr_file(workdir, start_time),
-                settings=execution_settings)
-        result = run_command.executor.wait_for(process)
+        execution_state = \
+            run_command.event_loop.run_to_completion(
+                run_command.executor.execute(
+                    shell_command,
+                    execution_id=wid,
+                    stdout_url=executor_context.stdout_file(workdir, start_time),
+                    stderr_url=executor_context.stderr_file(workdir, start_time),
+                    settings=execution_settings)
+            )
+
+        # TODO Update execution state in database.
+        # The rest will be done in the monitoring job.
 
     finally:
         # The execution context is the run-directory. It is used to create all paths to be reported

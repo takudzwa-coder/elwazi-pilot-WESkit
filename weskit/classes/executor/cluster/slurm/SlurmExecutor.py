@@ -9,8 +9,8 @@ from pathlib import Path
 
 from typing import Optional, Match
 
-from classes.executor.ExecutionState import ExecutionState
-from classes.executor.ProcessId import WESkitExecutionId
+from weskit.classes.executor.ExecutionState import ExecutionState
+from weskit.classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.executor.cluster.slurm.SlurmState import SlurmState
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.Executor import \
@@ -71,7 +71,7 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
     def _extract_exit_code(self, match: Match[str]) -> str:
         return match.group(3)
 
-    def _create_command_script(self, command: ShellCommand) -> Path:
+    async def _create_command_script(self, command: ShellCommand) -> Path:
         """
         We assume Bash is used on the remote side. The command (bash script) is written locally
         into a NamedTemporaryFile.
@@ -83,14 +83,14 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
                     print(export, end="\n", sep=" ", file=file)
             return Path(file.name)
 
-    def execute(self,
-                execution_id: WESkitExecutionId,
-                command: ShellCommand,
-                stdout_file: Optional[PathLike] = None,
-                stderr_file: Optional[PathLike] = None,
-                stdin_file: Optional[PathLike] = None,
-                settings: Optional[ExecutionSettings] = None,
-                **kwargs) -> ExecutionState[SlurmState]:
+    async def execute(self,
+                      execution_id: WESkitExecutionId,
+                      command: ShellCommand,
+                      stdout_file: Optional[PathLike] = None,
+                      stderr_file: Optional[PathLike] = None,
+                      stdin_file: Optional[PathLike] = None,
+                      settings: Optional[ExecutionSettings] = None,
+                      **kwargs) -> ExecutionState[SlurmState]:
         """
         stdout, stderr, and stdin files are *remote files on the cluster nodes*.
 
@@ -104,8 +104,8 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
         # Note that there are at two shell involved: The environment on the submission host
         # and the environment on the compute-node, on which the actual command is executed.
 
-        def _create_process(job_id: ProcessId,
-                            execution_status: ExecutionStatus):
+        async def _create_process(job_id: ProcessId,
+                                  execution_status: ExecutionStatus):
             process = ExecutedProcess(executor=self,
                                       process_handle=job_id,
                                       pre_result=ExecutionResult(command=command,
@@ -117,13 +117,13 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
                                                                  status=execution_status))
             return process
 
-        source_script = self._create_command_script(command)
+        source_script = await self._create_command_script(command)
         target_script = Path(str(command.workdir), ".weskit_submitted_command.sh")
         try:
-            self._event_loop.run_until_complete(self.storage.put(source_script, target_script))
+            await self.storage.put(source_script, target_script)
         except ExecutorError:
-            return _create_process(job_id=ProcessId(0),
-                                   execution_status=ExecutionStatus(1, "EXIT"))
+            return await _create_process(job_id=ProcessId(0),
+                                         execution_status=ExecutionStatus(1, "EXIT"))
 
         # Note that source and target are never the same file. Thus, the latter removal will only
         # remove the (possibly remote) copy.
@@ -137,8 +137,7 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
         # result and then use the cluster job ID returned from the submission command, as process
         # ID to query the cluster job status later.
 
-        with execute(self._executor, submission_command) \
-             as (result, stdout, stderr):
+        async with execute(self._executor, submission_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
             if result.status.failed:
@@ -150,14 +149,11 @@ class SlurmExecutor(ClusterExecutor[SlurmState]):
                     ProcessId(self.extract_jobid_from_submission_output(stdout_lines))
 
         # Remove the remote file once the submission has been executed.
-        self._event_loop.run_until_complete(self.storage.remove_file(target_script))
+        await self.storage.remove_file(target_script)
 
         logger.debug(f"Cluster job ID {cluster_job_id}: {submission_command}")
         # NOTE: We could now create an additional `wait` process that waits for the cluster job
         # ID. However, we postpone the creation of this to a later stage. The process
         # handle is just the cluster job ID.
-        return _create_process(job_id=cluster_job_id,
-                               execution_status=ExecutionStatus(None))
-
-    def kill(self, process: ExecutedProcess):
-        raise NotImplementedError()
+        return await _create_process(job_id=cluster_job_id,
+                                     execution_status=ExecutionStatus(None))

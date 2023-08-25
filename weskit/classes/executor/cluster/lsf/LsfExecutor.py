@@ -4,17 +4,16 @@
 
 import logging
 from os import PathLike
-from signal import Signals
 from typing import Optional, Match
 
-from classes.executor.ExecutionState import ExecutionState
-from weskit.classes.executor.cluster.lsf.LsfState import LsfState
 from weskit.classes.ShellCommand import ShellCommand
+from weskit.classes.executor.ExecutionState import ExecutionState
 from weskit.classes.executor.Executor import \
     Executor, ExecutionResult, ProcessId, ExecutionSettings
 from weskit.classes.executor.ExecutorError import ExecutorError
 from weskit.classes.executor.cluster.ClusterExecutor import ClusterExecutor, execute, CommandSet
 from weskit.classes.executor.cluster.lsf.LsfCommandSet import LsfCommandSet
+from weskit.classes.executor.cluster.lsf.LsfState import LsfState
 from weskit.utils import now
 
 logger = logging.getLogger(__name__)
@@ -67,17 +66,17 @@ class LsfExecutor(ClusterExecutor[LsfState]):
     def _success_exit_value(self) -> str:
         return "-"
 
-    def execute(self,
-                command: ShellCommand,
-                stdout_file: Optional[PathLike] = None,
-                stderr_file: Optional[PathLike] = None,
-                stdin_file: Optional[PathLike] = None,
-                settings: Optional[ExecutionSettings] = None,
-                **kwargs) -> ExecutionState[LsfState]:
+    async def execute(self,
+                      command: ShellCommand,
+                      stdout_file: Optional[PathLike] = None,
+                      stderr_file: Optional[PathLike] = None,
+                      stdin_file: Optional[PathLike] = None,
+                      settings: Optional[ExecutionSettings] = None,
+                      **kwargs) -> ExecutionState[LsfState]:
         """
         WARNING: Do not set too many environment variables in `command.environment`. The
-                implementation uses `bsub -env` and too many variables may result in a too long
-                command-line.
+                 implementation uses `bsub -env` and too many variables may result in a too long
+                 command-line.
         """
 
         if stdin_file is not None:
@@ -92,8 +91,7 @@ class LsfExecutor(ClusterExecutor[LsfState]):
         # result and then use the cluster job ID returned from the submission command
         # as process ID to query the cluster's job status later.
 
-        with execute(self._executor, submission_command) \
-             as (result, stdout, stderr):
+        async with execute(self._executor, submission_command) as (result, stdout, stderr):
             stdout_lines = stdout.readlines()
             stderr_lines = stderr.readlines()
             start_time = now()
@@ -120,6 +118,3 @@ class LsfExecutor(ClusterExecutor[LsfState]):
                                                           stdin_url=stdin_file,
                                                           status=ExecutionStatus(None),
                                                           start_time=start_time))
-
-    def kill(self, state: ExecutionState[LsfState], signal: Signals = Signals.SIGINT) -> bool:
-        raise NotImplementedError("should use bkill")

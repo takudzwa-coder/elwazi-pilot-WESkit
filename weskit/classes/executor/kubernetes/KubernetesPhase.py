@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Optional
 
-from classes.executor.ProcessId import ProcessId
+from weskit.classes.executor.ProcessId import ProcessId
 from weskit.classes.executor.ExecutionState import \
     Reason, ExternalState, UnknownExternalState, Pending, \
     Running, Succeeded, Failed

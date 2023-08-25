@@ -145,7 +145,7 @@ fixDir() {
 
 # Note that the stdin file is either /dev/null (default) or whatever file is provided.
 # No path magic for stdinFile or envFile. If these are relative paths, they will be interpreted
-# relative to the workDir!
+# relative to the workDir, because both files usually exist before the logDir!
 fixDir stdoutFile
 fixDir stderrFile
 fixDir pidFile

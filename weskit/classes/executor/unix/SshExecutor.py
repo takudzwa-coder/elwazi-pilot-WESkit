@@ -7,7 +7,6 @@ import os
 import shlex
 import tempfile
 import uuid
-from asyncio import AbstractEventLoop
 from os import PathLike
 from pathlib import Path
 from subprocess import PIPE  # nosec: B404
@@ -21,7 +20,7 @@ from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor.ExecutionState import ExecutionState, Start
 from weskit.classes.executor.Executor \
-    import ExecutionSettings
+    import ExecutionSettings, Executor
 from weskit.classes.executor.ProcessId import WESkitExecutionId
 from weskit.classes.executor.unix.UnixExecutor import UnixExecutor
 from weskit.classes.executor.unix.UnixStates import UnixState
@@ -40,11 +39,9 @@ class SshExecutor(UnixExecutor):
 
     def __init__(self,
                  connection: RetryableSshConnection,
-                 log_dir_base: Optional[Path] = None,
-                 event_loop: Optional[AbstractEventLoop] = None):  # nosec B108
+                 log_dir_base: Optional[Path] = None):  # nosec B108
         super().__init__(SshStorageAccessor(connection),
-                         log_dir_base,
-                         event_loop)
+                         log_dir_base)
         self._executor_id = uuid.uuid4()
         self._connection = connection
 
@@ -56,15 +53,24 @@ class SshExecutor(UnixExecutor):
     def hostname(self) -> str:
         return self._connection.hostname
 
-    async def _create_env_script(self, command: ShellCommand)\
+    async def _create_env_script_locally(self,
+                                         execution_id: WESkitExecutionId,
+                                         command: ShellCommand)\
             -> Path:
         """
         Create an environment file with the variables requested via the command.
+
+        Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
+        the server, environment variables to be set for the target process cannot be used
+        with the standard SSH-client code (e.g. via the env-parameter). For this reason,
+        we create a remote temporary file on the remote host, that is sourced before the
+        actual command is executed remotely.
         """
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as file:
-            for var_name, var_value in command.environment.items():
-                print(f"export {var_name}={shlex.quote(var_value)}", file=file)
-            return Path(file.name)
+        file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False)
+        self._create_env_script(file.name,
+                                execution_id,
+                                command.environment)
+        return Path(file.name)
 
     async def _stage_remote_files(self,
                                   execution_id: WESkitExecutionId,
@@ -72,14 +78,14 @@ class SshExecutor(UnixExecutor):
         """
         Stage the environment requested by the command (as file) and the wrapper script that
         wraps the execution of the command, including changing the workdir and reading the
-        environment. The remote staging directory is the logging directory for the process.
+        environment. The remote target directory is the logging directory for the process.
         """
         log_dir = self._log_dir(command.workdir, execution_id)
         local_env_file: Optional[Path] = None
         try:
-            local_env_file = await self._create_env_script(command)
+            local_env_file = await self._create_env_script_locally(execution_id, command)
             async with self._connection.context():
-                # Note: If the log dir exists this means that the execution_id was reused. The
+                # Note: If the remote log dir exists this means that the execution_id was reused. The
                 #       execution_id, however should be used for a single execution attempt only!
                 await self.storage.create_dir(log_dir,
                                               mode=0o750,
@@ -106,68 +112,41 @@ class SshExecutor(UnixExecutor):
                 await self._connection.run(f"which {shlex.quote(str(path))}")
         return result.returncode == 0
 
-    def execute(self, *args, **kwargs) \
+    async def execute(self,
+                      execution_id: WESkitExecutionId,
+                      command: ShellCommand,
+                      stdout_url: Optional[Url] = None,
+                      stderr_url: Optional[Url] = None,
+                      stdin_url: Optional[Url] = None,
+                      settings: Optional[ExecutionSettings] = None,
+                      **kwargs) \
             -> ExecutionState[UnixState]:
-        return self._event_loop.run_until_complete(self._execute(*args, **kwargs))
-
-    async def _execute(self,
-                       execution_id: WESkitExecutionId,
-                       command: ShellCommand,
-                       stdout_url: Optional[Url] = None,
-                       stderr_url: Optional[Url] = None,
-                       stdin_url: Optional[Url] = None,
-                       settings: Optional[ExecutionSettings] = None,
-                       **kwargs) \
-            -> ExecutionState[UnixState]:
-        """
-        Only client-side stdout/stderr/stdin-files are supported. If you want that standard input,
-        output and error refer to remote files, then include them into the command (e.g. with
-        shell redirections).
-
-        :param command:
-        :param stdout_url:
-        :param stderr_url:
-        :param stdin_url:
-        :param settings:
-        :return:
-        """
-        # Unless AcceptEnv or PermitUserEnvironment are configured in the sshd_config of
-        # the server, environment variables to be set for the target process cannot be used
-        # with the standard SSH-client code (e.g. via the env-parameter). For this reason,
-        # we create a remote temporary file on the remote host, that is sourced before the
-        # actual command is executed remotely.
-
         effective_command = self._wrapped_command(execution_id,
                                                   command,
                                                   stdout_url,
                                                   stderr_url,
-                                                  stdin_url)
+                                                  stdin_url,
+                                                  env={
+                                                    # Tag the wrapper process with `weskit_process_id` to make it
+                                                    # recoverable with a query of the environment variables
+                                                    # of process (e.g. on /proc/).
+                                                    Executor.EXECUTION_ID_VARIABLE: str(execution_id)
+                                                  })
+
         execution_state = Start(execution_id)
-        log_dir = self._log_dir(command.workdir, execution_id)
+        log_dir = self._command_log_dir(execution_id, command)
         try:
-           async with self._connection.context():
+            async with self._connection.context():
                 await self._stage_remote_files(execution_id, effective_command)
 
                 # SSH is always associated with a shell. Therefore, a *string* is processed by
-                # asyncssh, rather than a list of strings, like for subprocess.run/Popen). Therefore,
-                # we use the command_expression here.
+                # asyncssh, rather than a list of strings. Therefore, we use the command_expression here.
                 process: SSHClientProcess = await self._connection. \
                     create_process(command=effective_command.command_expression,
                                    stdout=PIPE,
                                    stderr=PIPE,
                                    **kwargs)
-                    # TODO cwd=command.workdir,
-                    # TODO env={
-                           # Tag the process with `weskit_process_id` to make it
-                           # recoverable with a query of the environment variables
-                           # # of process (e.g. on /proc/).
-                           # Executor.EXECUTION_ID_VARIABLE: str(execution_id),
-                           # **command.environment
-                           # }
-                # TODO Read stdin and stderr of submission process for error-tracking. Get wrapper's JSON output.
 
-
-                # TODO Do we want to update from the process? Or just use the stdout from the wrapper?
                 # The process already was sent to the background. We recover the process information.
                 execution_state = self.update_status(execution_state,
                                                      Url(scheme="file",
@@ -206,7 +185,17 @@ class SshExecutor(UnixExecutor):
         except FileExistsError as e:
             raise NonRetryableExecutorError(f"Tried to rerun execution ID {execution_id}")
 
+    async def kill(self, execution_state: ExecutionState[UnixState]) -> bool:
+        process: SSHClientProcess = await self._connection. \
+            create_process(command=f"kill -s SIGINT {execution_state.external_pid}")
+        process.wait()
+        if process.returncode == 1:
+            # TODO if kill fails, process most likely has ended already. Check that the result files
+            #      contain the exit code. Only then return True. Otherwise, something else may have
+            #      gone wrong (tampered with process ID? Wrong host?). Then return False.
+            return True
 
-    def kill(self, execution_state: ExecutionState[UnixState]) -> bool:
-        pass
-        # TODO Invoke `kill -s SIGINT` remotely.
+    async def wait(self, execution_state: ExecutionState[UnixState]) -> None:
+        process: SSHClientProcess = await self._connection. \
+            create_process(command=f"wait {execution_state.external_pid}")
+        process.wait()

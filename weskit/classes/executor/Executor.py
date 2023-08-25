@@ -38,7 +38,7 @@ class ExecutionResult(Generic[S]):
     such as the currently produced standard output, even though the process is not terminated.
     Therefore, the exit_code is optional.
 
-    Note that the process_id may be None, namely shortly after the process was submitted
+    Note that the process_id may be None, namely shortly after the process was submitted.
     """
 
     def __init__(self,
@@ -113,7 +113,7 @@ class ExecutionResult(Generic[S]):
 @dataclass
 class ExecutionSettings:
     """
-    Any information that is needed for executing the command on the execution infrastructure.
+    Settings needed for executing the command on the execution infrastructure.
     All information is optional, and it is the responsibility of the Executor to decide, which of
     the information to use, or what to do if information is missing.
     """
@@ -184,18 +184,10 @@ class Executor(Generic[S], metaclass=ABCMeta):
     EXECUTION_ID_VARIABLE: ClassVar[str] = "weskit_execution_id"
 
     def __init__(self,
-                 log_dir_base: Optional[Path] = None,
-                 event_loop: Optional[AbstractEventLoop] = None):
-        """
-        Some the methods are asynchronous. We keep an event loop ready for them.
-        """
+                 log_dir_base: Optional[Path] = None):
         self._executor_id = Identifier(uuid4())
         logger.info(f"Starting executor with ID {self._executor_id}")
         self._log_dir_base = log_dir_base if log_dir_base is not None else Path(".weskit")
-        if event_loop is None:
-            self._event_loop = get_event_loop()
-        else:
-            self._event_loop = event_loop
 
     @property
     def log_dir_base(self) -> Path:
@@ -216,18 +208,18 @@ class Executor(Generic[S], metaclass=ABCMeta):
 
     # TODO Create a process directory
     # TODO Create a wrapper and write it via the storage accessor to the process directory.
-    def _wrapper(self):
+    async def _wrapper(self):
         pass
 
     @abstractmethod
-    def execute(self,
-                execution_id: WESkitExecutionId,
-                command: ShellCommand,
-                stdout_file: Optional[Url] = None,
-                stderr_file: Optional[Url] = None,
-                stdin_file: Optional[Url] = None,
-                settings: Optional[ExecutionSettings] = None,
-                **kwargs) \
+    async def execute(self,
+                      execution_id: WESkitExecutionId,
+                      command: ShellCommand,
+                      stdout_file: Optional[Url] = None,
+                      stderr_file: Optional[Url] = None,
+                      stdin_file: Optional[Url] = None,
+                      settings: Optional[ExecutionSettings] = None,
+                      **kwargs) \
             -> ExecutionState[S]:
         """
         Submit a command to the execution infrastructure.
@@ -262,10 +254,10 @@ class Executor(Generic[S], metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_status(self,
-                   execution_id: WESkitExecutionId,
-                   log_dir: Optional[Url] = None,
-                   pid: Optional[int] = None) \
+    async def get_status(self,
+                         execution_id: WESkitExecutionId,
+                         log_dir: Optional[Url] = None,
+                         pid: Optional[int] = None) \
             -> Optional[ExternalState[S]]:
         """
         Get the status of the process in the execution infrastructure.
@@ -275,10 +267,10 @@ class Executor(Generic[S], metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update_status(self,
-                      current_state: ExecutionState[S],
-                      log_dir: Optional[Url] = None,
-                      pid: Optional[int] = None)\
+    async def update_status(self,
+                            current_state: ExecutionState[S],
+                            log_dir: Optional[Url] = None,
+                            pid: Optional[int] = None)\
             -> Optional[ExecutionState[S]]:
         """
         Update the status of the executed process, if possible.
@@ -288,16 +280,16 @@ class Executor(Generic[S], metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_result(self, state: ExecutionState[S]) -> ExecutionResult[S]:
+    async def get_result(self, state: ExecutionState[S]) -> ExecutionResult[S]:
         """
         Query the executing backend for the status of the process and return the execution info.
         """
         pass
 
     @abstractmethod
-    def kill(self,
-             state: ExecutionState[S],
-             signal: Signals) -> bool:
+    async def kill(self,
+                   state: ExecutionState[S],
+                   signal: Signals) -> bool:
         """
         Cancel the process. Note that the killing operation may fail.
         Furthermore, note that if the process cannot be killed because it does not exist (anymore)
@@ -306,6 +298,20 @@ class Executor(Generic[S], metaclass=ABCMeta):
         the last status check and the killing command. Finally, even though the killing itself
         may not be immediately effective, this method immediately returns after sending the kill
         signal. You should call `wait_for` or poll the state yourself.
+        """
+        pass
+
+    @abstractmethod
+    async def wait(self, state: ExecutionState[S]) -> None:
+        """
+        Wait for the process to finish. This should be implemented efficiently, e.g. with wait (UNIX)
+        or bwait (LSF). Avoid polling.
+
+        Note that wait() is still async. The reasons are (1) the waiting may require calling an async
+        method (e.g. a remote call), which would be hard without event loop, and (2) there is no reason
+        to assume that the calling process should be blocked completely. Probably it will even get
+        blocked async, because anyway also the other async methods of this class will be used in the same
+        context.
         """
         pass
 

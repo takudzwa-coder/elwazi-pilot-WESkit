@@ -161,5 +161,5 @@ class SimpleStateMapper(Generic[S], AbstractStateMapper[S]):
         This the simple strategy. Just consider the current state, and the external state to
         suggest a next state.
         """
-        return self.state_map[external_state.state].from_previous(executor_state,
-                                                                  external_state)
+        return self.state_map[external_state.wrapped_state].from_previous(executor_state,
+                                                                          external_state)
