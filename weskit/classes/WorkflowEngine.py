@@ -330,14 +330,14 @@ class Nextflow(WorkflowEngine):
                                               "resume",
                                               "nxf-work",
                                               "with-tower",
-                                              "nxf-tower-access-token",
+                                              "tower-access-token",
                                               "nxf-assets",
                                               "workflow-revision"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
 
     ENVVARS_DICT = {
-        "nxf-tower-access-token": "TOWER_ACCESS_TOKEN",
+        "tower-access-token": "TOWER_ACCESS_TOKEN",
         "nxf-assets": "NFX_ASSETS"
     }
 

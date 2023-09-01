@@ -201,7 +201,7 @@ workflow_engines:
           value: "false"
           api: false
           type: "bool"          
-        - name: "nxf-tower-access-token"
+        - name: "tower-access-token"
           api: false
           type: "Optional[str]"
         - name: "nxf-assets"

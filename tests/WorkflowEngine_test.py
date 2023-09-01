@@ -292,7 +292,7 @@ def test_create_nextflow():
          {"name": "timeline", "value": "True", "api": True},
          {"name": "resume", "value": "True", "api": True},
          {"name": "with-tower", "value": "True", "api": True},
-         {"name": "nxf-tower-access-token", "value": "hfdsjhfdskl", "api": True},
+         {"name": "tower-access-token", "value": "hfdsjhfdskl", "api": True},
          {"name": "nxf-assets", "value": "/path/dir", "api": True},
          {"name": "workflow-revision", "value": "/path/to/repo/", "api": True}
          ]
@@ -306,7 +306,7 @@ def test_create_nextflow():
         ActualEngineParameter(EngineParameter({"timeline"}), "True", True),
         ActualEngineParameter(EngineParameter({"resume"}), "True", True),
         ActualEngineParameter(EngineParameter({"with-tower"}), "True", True),
-        ActualEngineParameter(EngineParameter({"nxf-tower-access-token"}), "hfdsjhfdskl", True),
+        ActualEngineParameter(EngineParameter({"tower-access-token"}), "hfdsjhfdskl", True),
         ActualEngineParameter(EngineParameter({"nxf-assets"}), "/path/dir", True),
         ActualEngineParameter(EngineParameter({"workflow-revision"}), "/path/to/repo/", True)
     ]
