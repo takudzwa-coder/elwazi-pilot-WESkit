@@ -230,12 +230,14 @@ class Snakemake(WorkflowEngine):
                                               "profile",
                                               "tes",
                                               "jobs",
-                                              "data_aws_access_key_id",
-                                              "data_aws_secret_access_key",
-                                              "task_conda_pkgs_dir",
-                                              "task_conda_envs_path",
-                                              "task_home",
-                                              "prefix_conda_envs_path"})
+                                              "data-aws-access-key-id",
+                                              "data-aws-secret-access-key",
+                                              "task-conda-pkgs-dir",
+                                              "task-conda-envs-path",
+                                              "task-home",
+                                              "prefix_conda_envs_path",
+                                              "wms-monitor",
+                                              "wms-monitor-arg"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
@@ -250,6 +252,8 @@ class Snakemake(WorkflowEngine):
             result += self._argument_param(param, "profile", "--profile")
             result += self._argument_param(param, "tes", "--tes")
             result += self._argument_param(param, "jobs", "--jobs")
+            result += self._argument_param(param, "wms-monitor", "--wms-monitor")
+            result += self._argument_param(param, "wms-monitor-arg", "--wms-monitor-arg")
         return result
 
     # For submission of the workload tasks to e.g. the TES server or a container,
@@ -260,11 +264,11 @@ class Snakemake(WorkflowEngine):
     #                                    on a writable volume mounted into the container
 
     ENVVARS_DICT = {
-            "data_aws_access_key_id": "AWS_ACCESS_KEY_ID",
-            "data_aws_secret_access_key": "AWS_SECRET_ACCESS_KEY",
-            "task_conda_pkgs_dir": "CONDA_PKGS_DIRS",
-            "task_conda_envs_path": "CONDA_ENVS_PATH",
-            "task_home": "HOME"
+            "data-aws-access-key-id": "AWS_ACCESS_KEY_ID",
+            "data-aws-secret-access-key": "AWS_SECRET_ACCESS_KEY",
+            "task-conda-pkgs-dir": "CONDA_PKGS_DIRS",
+            "task-conda-envs-path": "CONDA_ENVS_PATH",
+            "task-home": "HOME"
         }
 
     def _environment(self,
@@ -273,10 +277,10 @@ class Snakemake(WorkflowEngine):
         result = super()._environment(workflow_path, parameters)
 
         for var in self.ENVVARS_DICT:
-            for p in parameters:
-                if p.value is not None:
-                    if p.param == self.known_parameters()[var]:
-                        result[self.ENVVARS_DICT[var]] = str(p.value)
+            for param in parameters:
+                if param.value is not None:
+                    if param.param == self.known_parameters()[var]:
+                        result[self.ENVVARS_DICT[var]] = str(param.value)
         return result
 
     def command(self,
@@ -324,22 +328,36 @@ class Nextflow(WorkflowEngine):
                                               "max-memory",
                                               "tempdir",
                                               "resume",
-                                              "NXF_work"})
+                                              "nxf-work",
+                                              "with-tower",
+                                              "tower-access-token",
+                                              "nxf-assets",
+                                              "workflow-revision"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
+
+    ENVVARS_DICT = {
+        "tower-access-token": "TOWER_ACCESS_TOKEN",
+        "nxf-assets": "NFX_ASSETS"
+    }
 
     def _environment(self,
                      workflow_path: Path,
                      parameters: List[ActualEngineParameter]) -> Dict[str, str]:
         result = super()._environment(workflow_path, parameters)
-        for param in parameters:
-            if param.param == self.known_parameters()["max-memory"]:
-                if param.value is None:
-                    raise ValueError("max-memory must have valid value")
-                else:
-                    result["NXF_OPTS"] = "-Xmx%sm" % \
-                                         math.ceil(Memory.from_str(param.value).
-                                                   to(Unit.MEGA, False).value)
+
+        for var in self.ENVVARS_DICT:
+            for param in parameters:
+                if param.param == self.known_parameters()[var]:
+                    if param.value is not None:
+                        result[self.ENVVARS_DICT[var]] = str(param.value)
+                if param.param == self.known_parameters()["max-memory"]:
+                    if param.value is None:
+                        raise ValueError("max-memory must have valid value")
+                    else:
+                        result["NXF_OPTS"] = "-Xmx%sm" % \
+                                            math.ceil(Memory.from_str(param.value).
+                                                      to(Unit.MEGA, False).value)
         return result
 
     def _command_params(self, parameters: List[ActualEngineParameter]) -> List[str]:
@@ -361,7 +379,9 @@ class Nextflow(WorkflowEngine):
             result += self._optional_param(param, "timeline", "-with-timeline")
             result += self._optional_param(param, "graph", "-with-dag")
             result += self._optional_param(param, "resume", "-resume")
-            result += self._argument_param(param, "NXF_work", "-w")
+            result += self._argument_param(param, "nxf-work", "-w")
+            result += self._optional_param(param, "with-tower", "-with-tower")
+            result += self._argument_param(param, "workflow-revision", "-r")
         return result
 
     def command(self,

@@ -193,10 +193,25 @@ workflow_engines:
           value: "false"
           type: "bool"
           api: false
-        - name: "NXF_work"
+        - name: "nxf-work"
           value: "./"
           api: false
           type: "str validFor Python.pathlib.Path"
+        - name: "with-tower"
+          value: "false"
+          api: false
+          type: "bool"          
+        - name: "tower-access-token"
+          api: false
+          type: "Optional[str]"
+        - name: "nxf-assets"
+          api: false
+          type: "Optional[str]" 
+        - name: "workflow-revision"
+          api: false
+          value: null
+          type: str
+          
 
   SMK:
     "7.30.2":
@@ -243,20 +258,20 @@ workflow_engines:
         - name: "tes"
           api: false
           type: "Optional[Url]"
-        - name: "data_aws_access_key_id"
+        - name: "data-aws-access-key-id"
           api: false
           type: "Optional[str]"
-        - name: "data_aws_secret_access_key"
+        - name: "data-aws-secret-access-key"
           api: false
           type: "Optional[str]"
-        - name: "task_conda_pkgs_dir"
+        - name: "task-conda-pkgs-dir"
           api: false
           type: "Optional[Path]"
-        - name: "task_conda_envs_path"
+        - name: "task-conda-envs-path"
           api: false
           type: "Optional[Path]"
           value: "conda_envs/"
-        - name: "task_home"
+        - name: "task-home"
           api: false
           type: "Optional[Path]"
         - name: "resume"
@@ -266,6 +281,12 @@ workflow_engines:
         - name: "jobs"
           api: false
           type: "Optional[int]"
+        - name: "wms-monitor"
+          api: false
+          type: "str"
+        - name: "wms-monitor-arg"
+          api: false
+          type: "str"
 
 
 cors:
