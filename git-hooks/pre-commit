@@ -4,6 +4,9 @@
 #
 # git-hooks/pre-commit
 #
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
 
 set -ue
 
@@ -20,6 +23,9 @@ if [[ ! -v NO_COMMIT_CHECKS || (-v NO_COMMIT_CHECKS && "$NO_COMMIT_CHECKS" != "t
   # Security
   echo "bandit ..." >> /dev/stderr
   bandit -r weskit/ uwsgi_server/
+
+  # Licences checks
+  reuse lint
 
   # Run unit tests
   echo "pytest ..." >> /dev/stderr

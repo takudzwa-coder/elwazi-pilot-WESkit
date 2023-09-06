@@ -1,10 +1,8 @@
-#  Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
+
 from os import unlink, rmdir, walk, makedirs
 from pathlib import Path
 from shutil import copytree, copy2, rmtree

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+
+SPDX-License-Identifier: MIT
+-->
+
 @twardzso   Sven Twardziok
 @vinjana    Philip R. Kensche
 @schneiva   Valentin Schneider-Lunitz

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
+
 ## Flask configuration values
 ## (see https://flask.palletsprojects.com/en/1.1.x/config/#builtin-configuration-values)
 

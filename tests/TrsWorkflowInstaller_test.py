@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
+
 import shutil
 from pathlib import Path
 from typing import Optional, Union, List

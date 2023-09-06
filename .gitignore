@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
+
 *.code-workspace
 tmp/
 trash/
@@ -23,3 +27,4 @@ testfile
 uwsgi_server/certs
 !uwsgi_server/certs/.keep
 tests/remote.yaml
+/builds/

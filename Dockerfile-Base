@@ -5,6 +5,10 @@
 #      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
 #
 #  Authors: The WESkit Team
+#
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
 
 FROM continuumio/miniconda3:23.5.2-0
 

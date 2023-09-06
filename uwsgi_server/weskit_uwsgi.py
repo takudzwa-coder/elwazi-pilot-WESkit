@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
 
 from weskit import create_app, create_database
 from weskit.celery_app import celery_app, update_celery_config_from_env

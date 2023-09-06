@@ -1,10 +1,8 @@
-#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
+
 import json
 import time
 import uuid
@@ -14,7 +12,7 @@ import yaml
 
 from weskit.classes.Run import Run
 from weskit.classes.ProcessingStage import ProcessingStage
-from weskit.utils import now
+from weskit.utils import now, check_env_licences
 
 
 def get_mock_run(workflow_url,
@@ -81,3 +79,7 @@ def assert_stage_is_not_failed(stage: ProcessingStage):
 def test_now_has_no_nanoseconds():
     t = now().timestamp()   # time in POSIX format: float in microseconds
     assert t - int(t) < 1
+
+
+def test_env_licences():
+    assert check_env_licences()

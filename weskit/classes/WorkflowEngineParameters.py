@@ -1,10 +1,8 @@
-#  Copyright (c) 2022. Deutsches Krebsforschungszentrum (DKFZ) and Berlin Institute of Health (BIH)
+# Copyright (c) 2022. Deutsches Krebsforschungszentrum (DKFZ) and Berlin Institute of Health (BIH)
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
+
 from __future__ import annotations
 
 from typing import Optional, Dict, FrozenSet, Any, Set, Union, TypeVar, Generic, List

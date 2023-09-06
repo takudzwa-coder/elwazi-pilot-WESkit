@@ -1,10 +1,7 @@
-#  Copyright (c) 2023. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# Copyright (c) 2023. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
 
 # Official language image. Look for the different tagged releases at:
 # https://hub.docker.com/r/library/python/tags/
@@ -130,6 +127,15 @@ build_branch_base_image:
   stage: build
   extends: .build_image
   rules:
+    # Build the image for merge-requests.
+    - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
+      changes:
+        compare_to: "refs/heads/master^1"
+        paths:
+          - environment.yaml
+          - Dockerfile-Base
+      variables:
+        VERSION_TAG: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
     # Build a branch-specific image for all branches with changes relative to the master branch.
     - if: '$CI_COMMIT_BRANCH != "master"'
       changes:
@@ -182,6 +188,7 @@ test:
       variables:
         IMAGE_VERSION: '$CI_COMMIT_BRANCH'
   script:
+    - reuse lint
     - mypy weskit/ tests/
     - flake8
     - bandit -r weskit/ uwsgi_server/

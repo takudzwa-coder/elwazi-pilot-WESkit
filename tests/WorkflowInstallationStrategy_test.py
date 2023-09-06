@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
+
 from pathlib import Path
 
 from weskit.classes.TrsWorkflowInstaller import WorkflowInfo

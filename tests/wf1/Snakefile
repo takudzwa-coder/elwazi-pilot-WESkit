@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
+
+
 rule all:
     input:
         file="hello_world.txt"
