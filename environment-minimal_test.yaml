@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+#
+# SPDX-License-Identifier: MIT
+
+# This (almost) minimal environment specification should contain only the minimal set of packages.
+# Use it to update the environment.yaml that contains all packages:
+#
+# ```bash
+# mamba env create -n weskit -f environment-minimal.yaml
+# mamba activate weskit
+# mamba env export > environment.yaml
+# ```
+#
+# > NOTE: You might get widely different envs with strict and flexible channel priority.
+#         e.g. with strict you might get asyncssh 2.5.0 that does not support the
+#         `connect(env, send_env)` options
+# TODO Next time, again try to build with strict channel priority.
+#
+# After that edit the environment.yaml and remove all paths (prefix) and check that the channels
+# are exactly as specified here. You can then check in the environment.yaml and build the
+# containers.
+#
+# When modifying this file, make sure to put packages for optional features, or for soon to be
+# removed features (e.g. supporting Nextflow or Snakemake in the container!) in the dedicated
+# sections.
+#
+name: weskit
+channels:
+  - bioconda
+  - conda-forge
+  - nodefaults
+dependencies:
+  # Development
+  - coverage=6
+  - flake8
+  - mccabe
+  - mypy
+  - mypy_extensions
+  - types-setuptools
+  - types-six
+  - types-toml
+  - jq
+  - sqlalchemy
+  - pymysql
+  # ... Pip: Some pip-packages need gcc :(. E.g. datrie, a dependency of python-kubernetes.
+  - gcc_linux-64
+  # ... integration tests with Nextflow
+  # WESkit core packages
+  - python>=3.10.8
+  - pip
+  - asyncssh>=2.12.0
+  - bcrypt
+  - bandit
+  - celery=5
+  - cerberus=1
+  - dataclasses
+  - flask=2
+  - flask-cors
+  - flask-jwt-extended
+  - jaraco.functools
+  - jinja2=3
+  - more-itertools
+  - nest-asyncio
+  - pymongo
+  - pytest
+  - pytest-asyncio
+  - pytest-celery
+  - pytest-cov
+  - werkzeug
+  - tempora
+  - cryptography
+  - kombu
+  - tenacity=8
+  - validators
+  - bson
+  - yaml
+  - zlib
+  - uwsgi>=2
+  # TRS feature
+  - bzip2
+  - flufl.lock=7
+  - xz
+  - pip:
+    # In Conda these were conflicting with Python 3.11.*, but not in Pip
+    # Development
+    - testcontainers==3.7.1
+    - typing
+    - typing_extensions
+    # .. mypy packages
+    - types-pyyaml
+    - types-requests
+    - types-urllib3
+    - types-decorator
+    - types-pyOpenSSL
+    # WESkit core packages
+    - gevent
+    - python-kubernetes
+    - redis==4
+    - ulid_py
+    - requests
+    - urllib3
+    - boto3
+    - requests-mock
+    # TRS feature
+    - trs-cli==0.7.0
+    - pydantic==1.10.11   # Newest 1er version!
+    - typing-extensions

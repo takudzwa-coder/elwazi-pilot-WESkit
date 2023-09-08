@@ -215,6 +215,13 @@ def test_execute_nextflow(manager,
         assert is_within_timeout(start_time), "Test timed out"
         stage = run.processing_stage
         if stage != ProcessingStage.FINISHED_EXECUTION:
+            if stage == ProcessingStage.EXECUTOR_ERROR:
+                with open(run.run_dir(manager.weskit_context) /
+                          run.execution_log["stderr_file"], "r") as fh:
+                    print(fh.readlines())
+                with open(run.run_dir(manager.weskit_context) /
+                          run.execution_log["stdout_file"], "r") as fh:
+                    print(fh.readlines())
             assert_stage_is_not_failed(stage)
             print("Waiting ... (stage=%s)" % stage.name)
             time.sleep(1)
