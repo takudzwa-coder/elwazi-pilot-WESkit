@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-#  Copyright (c) 2021. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 The WESkit Contributors
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
+
 from __future__ import annotations
 
 from logging import Logger

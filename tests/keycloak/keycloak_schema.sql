@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2023 The WESkit Contributors
+--
+-- SPDX-License-Identifier: MIT
+
 -- MySQL dump 10.13  Distrib 8.0.23, for Linux (x86_64)
 --
 -- Host: localhost    Database: keycloak

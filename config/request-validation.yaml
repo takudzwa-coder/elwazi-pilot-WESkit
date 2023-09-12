@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 The WESkit Contributors
+#
+# SPDX-License-Identifier: MIT
+
 # Compare GA4GH WES-API
 run_request:
   workflow_params:

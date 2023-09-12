@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 The WESkit Contributors
+#
+# SPDX-License-Identifier: MIT
+
 # Licence: Unlicense
 # Author: Michael Hall (https://github.com/mbhall88)
 # Repository: https://github.com/mbhall88/MemoryUnits

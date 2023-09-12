@@ -1,10 +1,7 @@
-#  Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 The WESkit Contributors
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
+# SPDX-License-Identifier: MIT
+
 from typing import Dict, List, Union, Optional
 
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine

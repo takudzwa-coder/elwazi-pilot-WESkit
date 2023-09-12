@@ -1,12 +1,6 @@
-#  Copyright (c) 2022. Berlin Institute of Health (BIH) and Deutsches Krebsforschungszentrum (DKFZ).
+# SPDX-FileCopyrightText: 2023 The WESkit Contributors
 #
-#  Distributed under the MIT License. Full text at
-#
-#      https://gitlab.com/one-touch-pipeline/weskit/api/-/blob/master/LICENSE
-#
-#  Authors: The WESkit Team
-#
-# Put the static Celery configuration options here.
+# SPDX-License-Identifier: MIT
 
 # If True, the task will report their status as ‘started’ when the task is executed by a worker.
 task_track_started = True

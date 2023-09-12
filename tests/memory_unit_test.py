@@ -1,5 +1,7 @@
-# Licence: Unlicense
-# Author: Michael Hall (https://github.com/mbhall88)
+# SPDX-FileCopyrightText: Michael Hall (https://github.com/mbhall88)
+#
+# SPDX-License-Identifier: Unlicense
+
 # Repository: https://github.com/mbhall88/MemoryUnits
 
 import pytest

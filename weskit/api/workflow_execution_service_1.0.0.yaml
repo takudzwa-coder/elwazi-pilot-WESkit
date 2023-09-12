@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 The WESkit Contributors
+#
+# SPDX-License-Identifier: MIT
+
 basePath: '/ga4gh/wes/v1'
 swagger: '2.0'
 info:
