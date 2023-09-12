@@ -1,9 +1,7 @@
-# SPDX-FileCopyrightText: 2023 2023 The WESkit Team
+# SPDX-FileCopyrightText: Michael Hall (https://github.com/mbhall88)
 #
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Unlicense
 
-# Licence: Unlicense
-# Author: Michael Hall (https://github.com/mbhall88)
 # Repository: https://github.com/mbhall88/MemoryUnits
 
 import pytest
