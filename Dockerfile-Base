@@ -61,7 +61,7 @@ ENV http_proxy="$HTTP_PROXY"
 ENV https_proxy="$HTTPS_PROXY"
 
 RUN micromamba config set channel_priority strict
-COPY environment_test.yaml /weskit/environment.yaml
+COPY environment.yaml /weskit/environment.yaml
 
 RUN echo "Creating environment ..." && \
     micromamba config set channel_priority flexible 

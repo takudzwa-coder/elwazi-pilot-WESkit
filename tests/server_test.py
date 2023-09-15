@@ -524,7 +524,6 @@ class TestWithHeaderToken:
 
         # Test that S3 outputs are valid URLs
         for output_url in log_response.json["outputs"]["S3"]:
-            print(output_url)
             assert validate_url(output_url)
 
         # Files in the S3 output should be the same, and in the same order as in the filesystem.
