@@ -26,27 +26,27 @@ require_workdir_tag: false
 # is needed, but is ignored for all "local" executor types.
 executor:
   type: "local"
-  remote_data_dir: "/tmp"
-  remote_workflows_dir: "/tmp"
-  singularity_engines_dir: "/tmp"
-  login:
-    username: "user"
-    hostname: "localhost"
-    port: 22
-    knownhosts_file: "~/.ssh/known_hosts"
-    keyfile: "~/.ssh/weskit_cluster_test_rsa"
-    keyfile_passphrase: ""
-    keepalive_interval: str = "30s",
-    keepalive_count_max: int = 5,    
-    retry_options:  # Optional
-       wait_exponential:
-         multiplier: 1
-         min: 4
-         max: 300
-       wait_random:
-         min: 0
-         max: 1
-       stop_after_attempt: 5
+#  remote_data_dir: "/tmp"
+#  remote_workflows_dir: "/tmp"
+#  singularity_engines_dir: "/tmp"
+#  login:
+#    username: "user"
+#    hostname: "localhost"
+#    port: 22
+#    knownhosts_file: "~/.ssh/known_hosts"
+#    keyfile: "~/.ssh/weskit_cluster_test_rsa"
+#    keyfile_passphrase: ""
+#    keepalive_interval: str = "30s",
+#    keepalive_count_max: int = 5,    
+#    retry_options:  # Optional
+#       wait_exponential:
+#         multiplier: 1
+#         min: 4
+#         max: 300
+#       wait_random:
+#         min: 0
+#         max: 1
+#       stop_after_attempt: 5
 
 
 static_service_info:

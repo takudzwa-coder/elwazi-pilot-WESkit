@@ -27,7 +27,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
         if len(not_allowed) > 0:
-            raise ValueError(f"Non-allowed default parameters for {type(self).name()}: " +
+            raise ValueError(f"Non-allowed default parameters for {type(self).name(self)}: " +
                              str(not_allowed))
         self.default_params = default_params
         self._version = version
@@ -45,7 +45,6 @@ class WorkflowEngine(metaclass=ABCMeta):
         }
 
     @classmethod
-    @abstractmethod
     def known_parameters(cls) -> ParameterIndex:
         """
         Get an index of the workflow engine parameters allowed for this WorkflowEngine subclass.
@@ -181,9 +180,8 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         pass
 
-    @staticmethod
     @abstractmethod
-    def name() -> str:
+    def name(self) -> str:
         pass
 
     def execution_settings(self,
@@ -428,9 +426,8 @@ class ContainerWrapperEngine(WorkflowEngine):
     def _conatiner_command(self) -> ShellCommand:
         pass
 
-    @abstractmethod
-    def name() -> str:
-        pass
+    def name(self) -> str:
+        return self.actual_engine.name()
 
 
 class SingularityWrappedEngine(ContainerWrapperEngine):
@@ -440,8 +437,12 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
         self._actual_engine = actual_engine
         self._executor_context = executor_context
 
+    @property
+    def actual_engine(self) -> WorkflowEngine:
+        return self._actual_engine
+
     def name(self) -> str:
-        return self._actual_engine.name()
+        return self.actual_engine.name()
 
     def _conatiner_command(self) -> ShellCommand:
 
@@ -481,4 +482,6 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
         workflow_commmand = \
             container_command.command + actual_engine_command.command
 
-        return ShellCommand(command=workflow_commmand)
+        return ShellCommand(command=workflow_commmand,
+                            workdir=actual_engine_command.workdir,
+                            environment=actual_engine_command.environment)
