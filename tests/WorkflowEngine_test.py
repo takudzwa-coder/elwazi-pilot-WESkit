@@ -9,8 +9,8 @@ import pytest
 
 from weskit.classes.ShellCommand import ss
 from weskit.classes.PathContext import PathContext
-from weskit import WorkflowEngineFactory
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow, SingularityWorkflowEngine
+from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow, SingularityWrappedEngine
 from weskit.classes.WorkflowEngineParameters import \
     EngineParameter, ActualEngineParameter, ParameterIndex
 from weskit.exceptions import ClientError
@@ -401,7 +401,7 @@ def test_wrapper_command():
                                    workflows_dir="/path/to/remote_workflows_dir",
                                    singularity_engines_dir="/path/to/singularity_engines_dir")
 
-    command = SingularityWorkflowEngine(engine, executor_context).\
+    command = SingularityWrappedEngine(engine, executor_context).\
         command(Path("/some/path"),
                 Path("/some/workdir"),
                 [Path("/some/config.yaml")],
@@ -417,7 +417,6 @@ def test_wrapper_command():
                                '--bind',
                                '/path/to/remote_workflows_dir:/path/to/remote_workflows_dir',
                                '/path/to/singularity_engines_dir/snakemake_7.30.2.sif',
-                               '&&',
                                'snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',

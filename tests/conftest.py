@@ -20,7 +20,7 @@ from testcontainers.redis import RedisContainer
 
 from weskit.classes.executor.cluster.lsf.LsfExecutor import LsfExecutor
 from weskit.classes.executor.cluster.slurm.SlurmExecutor import SlurmExecutor
-from weskit import create_app, create_database, Manager, WorkflowEngineFactory, PathContext
+from weskit import create_app, create_database, Manager, PathContext
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
 from weskit.classes.executor.unix.LocalExecutor import LocalExecutor
 from weskit.classes.executor.unix.SshExecutor import SshExecutor
@@ -304,8 +304,6 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
     return Manager(celery_app=celery_session_app,
                    database=test_database,
                    config=test_config,
-                   workflow_engines=WorkflowEngineFactory.
-                   create(test_config["workflow_engines"]),
                    weskit_context=common_context,
                    executor_context=common_context,
                    executor_type=EngineExecutorType.from_string(test_config["executor"]["type"]),

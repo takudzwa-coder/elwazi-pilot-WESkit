@@ -24,7 +24,6 @@ from weskit.classes.Manager import Manager
 from weskit.classes.PathContext import PathContext
 from weskit.api.ServiceInfo import ServiceInfo
 from weskit.classes.WESApp import WESApp
-from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.oidc import Factory as OIDCFactory
 from weskit.utils import create_validator
 
@@ -126,8 +125,6 @@ def create_app(celery: Celery,
         Manager(celery_app=celery,
                 database=database,
                 config=config,
-                workflow_engines=WorkflowEngineFactory.
-                create(config["workflow_engines"]),
                 weskit_context=container_context,
                 executor_context=executor_context,
                 executor_type=executor_type,
