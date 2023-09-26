@@ -444,6 +444,9 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
     def name(self) -> str:
         return self.actual_engine.name()
 
+    def __repr__(self):
+        return 'Singularity ' + self.name()
+
     def _conatiner_command(self) -> ShellCommand:
 
         workflowEngine_dict = {"SMK": "snakemake",

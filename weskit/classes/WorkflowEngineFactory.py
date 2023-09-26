@@ -83,29 +83,6 @@ class WorkflowEngineFactory:
             return {}
 
     @staticmethod
-    def _maybe_wrapper(engine_class,
-                       engine_params: Dict[str, Dict[str, ConfVersions]]) \
-            -> Dict[str, Dict[str, WorkflowEngine]]:
-        """
-        Create a WorkflowEngine entry, if the engine is defined in the configuration.
-        """
-        def engine_is_defined() -> bool:
-            return engine_class.name() in engine_params
-
-        def some_version_is_defined() -> bool:
-            return len(engine_params[engine_class.name()]) > 0
-
-        if engine_is_defined() and some_version_is_defined():
-            return {engine_class.name(): WorkflowEngineFactory.
-                    _create_versions(engine_class,
-                                     {version: configuration_option["default_parameters"]
-                                      for version, configuration_option
-                                      in engine_params[engine_class.name()].items()
-                                      })}
-        else:
-            return {}
-
-    @staticmethod
     def create(engine_params: Dict[str, Dict[str, ConfVersions]]) -> \
             Dict[str, Dict[str, WorkflowEngine]]:
         """

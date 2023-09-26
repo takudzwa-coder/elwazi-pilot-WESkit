@@ -37,7 +37,7 @@ executor:
 #    keyfile: "~/.ssh/weskit_cluster_test_rsa"
 #    keyfile_passphrase: ""
 #    keepalive_interval: str = "30s",
-#    keepalive_count_max: int = 5,    
+#    keepalive_count_max: int = 5,
 #    retry_options:  # Optional
 #       wait_exponential:
 #         multiplier: 1

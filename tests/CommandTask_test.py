@@ -45,7 +45,7 @@ def test_run_command(temporary_dir, test_config):
 
 
 @pytest.mark.ssh
-def test_run_command_ssh(temporary_dir, test_config, remote_config):
+def test_run_command_ssh(temporary_dir, remote_config):
     with tempfile.NamedTemporaryFile("w", prefix="config", suffix=".yaml") as config_file:
         config = {
             "executor": {

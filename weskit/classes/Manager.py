@@ -396,14 +396,16 @@ class Manager:
         # Execute run
         config_files: List[Path] = [Path(f"{run.id}.yaml")]
         command: ShellCommand
-        command = WorkflowFactory.create(self.config, self.executor_context,
-                                         workflow_engines[workflow_type][workflow_type_version]).\
+        command = WorkflowFactory.create_wrapper(self.config, self.executor_context,
+                                                 workflow_engines[workflow_type]
+                                                                 [workflow_type_version]).\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
                     config_files=config_files,
                     engine_params=run.request.get("workflow_engine_parameters", {}))
 
-        execution_settings: ExecutionSettings = workflow_engines[workflow_type][workflow_type_version].\
+        execution_settings: ExecutionSettings = \
+            workflow_engines[workflow_type][workflow_type_version].\
             execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
         run.execution_log["cmd"] = command.command
         run.execution_log["env"] = command.environment
