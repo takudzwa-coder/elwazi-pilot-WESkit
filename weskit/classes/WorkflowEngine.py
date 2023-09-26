@@ -206,7 +206,34 @@ class WorkflowEngine(metaclass=ABCMeta):
             cores=mop(get_value(parameter_idx.get("cores")), int))
 
 
-class Snakemake(WorkflowEngine):
+class ActualWorkflowEngine(WorkflowEngine):
+
+    def __init__(self,
+                 version: str,
+                 default_params: List[ActualEngineParameter]):
+        super().__init__(version, default_params)
+
+    @abstractmethod
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files: List[Path],
+                engine_params: Dict[str, Optional[str]]) \
+            -> ShellCommand:
+        """
+        Use the instance variables and run parameters to compose a command to be executed
+        by the run method. The workflow_engine_params are just a list of parameters. It is a
+        responsibility of the WorkflowEngine implementation to sort these into slots and
+        check whether they are allowed to be set or not.
+        """
+        pass
+
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+
+class Snakemake(ActualWorkflowEngine):
 
     def __init__(self,
                  version: str,
@@ -304,7 +331,7 @@ class Snakemake(WorkflowEngine):
                             environment=self._environment(workflow_path, parameters))
 
 
-class Nextflow(WorkflowEngine):
+class Nextflow(ActualWorkflowEngine):
 
     def __init__(self,
                  version: str,
@@ -403,15 +430,15 @@ class Nextflow(WorkflowEngine):
 
 
 class ContainerWrapperEngine(WorkflowEngine):
-    _actual_engine: WorkflowEngine
+    _actual_engine: ActualWorkflowEngine
 
-    def __init__(self, actual_engine: WorkflowEngine,
+    def __init__(self, actual_engine: ActualWorkflowEngine,
                  executor_context: PathContext):
         self._actual_engine = actual_engine
         self.executor_context = executor_context
 
     @property
-    def actual_engine(self) -> WorkflowEngine:
+    def actual_engine(self) -> ActualWorkflowEngine:
         return self._actual_engine
 
     @abstractmethod
@@ -432,13 +459,13 @@ class ContainerWrapperEngine(WorkflowEngine):
 
 class SingularityWrappedEngine(ContainerWrapperEngine):
 
-    def __init__(self, actual_engine: WorkflowEngine,
+    def __init__(self, actual_engine: ActualWorkflowEngine,
                  executor_context: PathContext):
         self._actual_engine = actual_engine
         self._executor_context = executor_context
 
     @property
-    def actual_engine(self) -> WorkflowEngine:
+    def actual_engine(self) -> ActualWorkflowEngine:
         return self._actual_engine
 
     def name(self) -> str:
@@ -449,11 +476,7 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
 
     def _conatiner_command(self) -> ShellCommand:
 
-        workflowEngine_dict = {"SMK": "snakemake",
-                               "NFL": "nextflow"
-                               }
-
-        workflowEngine_name = workflowEngine_dict[self.name()]
+        workflowEngine_name = self.name()
 
         container_command: List[Union[str, ShellSpecial]]
         container_command = ["singularity", "run",

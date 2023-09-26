@@ -4,7 +4,7 @@
 
 from typing import Dict, List, Union, Optional
 
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow, ActualWorkflowEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
 
 # Type aliases to simplify the signature of the type annotations.
@@ -25,7 +25,7 @@ class WorkflowEngineFactory:
     def create_engine(engine_class,
                       engine_version: str,
                       parameters: ConfParameters) \
-            -> WorkflowEngine:
+            -> ActualWorkflowEngine:
         """
         Convert a list of parameter name/value dictionaries of actual parameters to a dictionary of
         ActualEngineParams.
@@ -46,7 +46,7 @@ class WorkflowEngineFactory:
 
     @staticmethod
     def _create_versions(engine_class, engine_params: ConfVersions) \
-            -> Dict[str, WorkflowEngine]:
+            -> Dict[str, ActualWorkflowEngine]:
         """
         :param engine_class: WorkflowEngine class
         :param engine_params: Version name -> List of dictionaries, one for each parameter.
@@ -62,7 +62,7 @@ class WorkflowEngineFactory:
     @staticmethod
     def _maybe_engine(engine_class,
                       engine_params: Dict[str, Dict[str, ConfVersions]]) \
-            -> Dict[str, Dict[str, WorkflowEngine]]:
+            -> Dict[str, Dict[str, ActualWorkflowEngine]]:
         """
         Create a WorkflowEngine entry, if the engine is defined in the configuration.
         """
@@ -84,7 +84,7 @@ class WorkflowEngineFactory:
 
     @staticmethod
     def create(engine_params: Dict[str, Dict[str, ConfVersions]]) -> \
-            Dict[str, Dict[str, WorkflowEngine]]:
+            Dict[str, Dict[str, ActualWorkflowEngine]]:
         """
         Return a dictionary of all WorkflowEngines mapping workflow_engine to
         workflow_engine_version to WorkflowEngine instances.

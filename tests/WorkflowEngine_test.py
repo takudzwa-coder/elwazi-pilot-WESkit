@@ -418,7 +418,7 @@ def test_wrapper_command():
                                '/path/to/remote_data_dir:/path/to/remote_data_dir',
                                '--bind',
                                '/path/to/remote_workflows_dir:/path/to/remote_workflows_dir',
-                               '/path/to/singularity_engines_dir/snakemake_7.30.2.sif',
+                               '/path/to/singularity_engines_dir/SMK_7.30.2.sif',
                                'snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
