@@ -213,25 +213,6 @@ class ActualWorkflowEngine(WorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @abstractmethod
-    def command(self,
-                workflow_path: Path,
-                workdir: Optional[Path],
-                config_files: List[Path],
-                engine_params: Dict[str, Optional[str]]) \
-            -> ShellCommand:
-        """
-        Use the instance variables and run parameters to compose a command to be executed
-        by the run method. The workflow_engine_params are just a list of parameters. It is a
-        responsibility of the WorkflowEngine implementation to sort these into slots and
-        check whether they are allowed to be set or not.
-        """
-        pass
-
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
 
 class Snakemake(ActualWorkflowEngine):
 
@@ -429,35 +410,8 @@ class Nextflow(ActualWorkflowEngine):
                             environment=self._environment(workflow_path, parameters))
 
 
-class ContainerWrapperEngine(WorkflowEngine):
+class ContainerWrappedEngine(WorkflowEngine):
     _actual_engine: ActualWorkflowEngine
-
-    def __init__(self, actual_engine: ActualWorkflowEngine,
-                 executor_context: PathContext):
-        self._actual_engine = actual_engine
-        self.executor_context = executor_context
-
-    @property
-    def actual_engine(self) -> ActualWorkflowEngine:
-        return self._actual_engine
-
-    @abstractmethod
-    def command(self,
-                workflow_path: Path,
-                workdir: Optional[Path],
-                config_files:  List[Path],
-                engine_params: Dict[str, Optional[str]]) -> ShellCommand:
-        pass
-
-    @abstractmethod
-    def _conatiner_command(self) -> ShellCommand:
-        pass
-
-    def name(self) -> str:
-        return self.actual_engine.name()
-
-
-class SingularityWrappedEngine(ContainerWrapperEngine):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
                  executor_context: PathContext):
@@ -471,12 +425,24 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
     def name(self) -> str:
         return self.actual_engine.name()
 
+
+class SingularityWrappedEngine(ContainerWrappedEngine):
+
+    def __init__(self, actual_engine: ActualWorkflowEngine,
+                 executor_context: PathContext):
+        super().__init__(actual_engine, executor_context)
+
+    @property
+    def actual_engine(self) -> ActualWorkflowEngine:
+        return self._actual_engine
+
+    def name(self) -> str:
+        return self.actual_engine.name()
+
     def __repr__(self):
         return 'Singularity ' + self.name()
 
-    def _conatiner_command(self) -> ShellCommand:
-
-        workflowEngine_name = self.name()
+    def _container_command(self) -> ShellCommand:
 
         container_command: List[Union[str, ShellSpecial]]
         container_command = ["singularity", "run",
@@ -486,7 +452,7 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
                              "--bind", ":".join([str(self._executor_context.workflows_dir),
                                                  str(self._executor_context.workflows_dir)]),
                              (f"{self._executor_context.singularity_engines_dir}/"
-                                 f"{workflowEngine_name}_"
+                                 f"{self.name()}_"
                                  f"{self._actual_engine.version}.sif")
                              ]
         return ShellCommand(command=container_command)
@@ -498,14 +464,13 @@ class SingularityWrappedEngine(ContainerWrapperEngine):
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
 
-        container_command = self._conatiner_command()
+        container_command = self._container_command()
 
         actual_engine_command = self._actual_engine.command(workflow_path,
                                                             workdir,
                                                             config_files,
                                                             engine_params)
-        workflow_commmand: List[Union[str, ShellSpecial]]
-        workflow_commmand = \
+        workflow_commmand: List[Union[str, ShellSpecial]] = \
             container_command.command + actual_engine_command.command
 
         return ShellCommand(command=workflow_commmand,

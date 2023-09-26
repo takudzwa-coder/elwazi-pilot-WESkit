@@ -2,10 +2,17 @@
 #
 # SPDX-License-Identifier: MIT
 
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, Any
 
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow, ActualWorkflowEngine
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine, \
+    ActualWorkflowEngine, SingularityWrappedEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
+from weskit.classes.EngineExecutorType import EngineExecutorType
+from weskit.classes.PathContext import PathContext
+
+# Type aliases to simplify the signature of the type annotations.
+ConfigParams = Dict[str, Dict[str, Any]]
+
 
 # Type aliases to simplify the signature of the type annotations.
 ConfParameter = Dict[str, Optional[Union[str, bool]]]
@@ -102,3 +109,19 @@ class WorkflowEngineFactory:
         # See also https://github.com/ga4gh/workflow-execution-service-schemas/issues/171
 
         return workflow_engines
+
+    @staticmethod
+    def create_wrapper(config_file: ConfigParams,
+                       executor_context: PathContext,
+                       workflow_engine: ActualWorkflowEngine) \
+            -> Union[WorkflowEngine, ActualWorkflowEngine]:
+
+        """
+        Wrappes a workflow engine command when workload is executed remotely.
+        """
+
+        executor_type = EngineExecutorType.from_string(str(config_file["executor"]["type"]))
+        if executor_type.needs_login_credentials:
+            return SingularityWrappedEngine(workflow_engine, executor_context)
+        else:
+            return workflow_engine

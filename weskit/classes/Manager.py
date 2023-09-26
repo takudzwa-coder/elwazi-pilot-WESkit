@@ -29,7 +29,6 @@ from weskit.classes.TrsWorkflowInstaller \
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.classes.EngineExecutor import EngineExecutorType
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
-from weskit.classes.WorkflowFactory import WorkflowFactory
 from weskit.exceptions import ClientError
 from weskit.utils import return_pre_signed_url, now
 
@@ -396,9 +395,9 @@ class Manager:
         # Execute run
         config_files: List[Path] = [Path(f"{run.id}.yaml")]
         command: ShellCommand
-        command = WorkflowFactory.create_wrapper(self.config, self.executor_context,
-                                                 workflow_engines[workflow_type]
-                                                                 [workflow_type_version]).\
+        command = WorkflowEngineFactory.create_wrapper(self.config, self.executor_context,
+                                                       workflow_engines[workflow_type]
+                                                                       [workflow_type_version]).\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
                     config_files=config_files,

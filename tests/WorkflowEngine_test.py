@@ -10,7 +10,6 @@ import pytest
 from weskit.classes.ShellCommand import ss
 from weskit.classes.PathContext import PathContext
 from weskit.classes.EngineExecutorType import EngineExecutorType
-from weskit.classes.WorkflowFactory import WorkflowFactory
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow, SingularityWrappedEngine
 from weskit.classes.WorkflowEngineParameters import \
@@ -457,7 +456,7 @@ def test_singularity_warapper(remote_config):
                         singularity_engines_dir=login_params["executor"]
                                                             ["singularity_engines_dir"])
 
-    workflow_engine = WorkflowFactory.create_wrapper(login_params,
-                                                     executor_context,
-                                                     workflow_engine)
+    workflow_engine = WorkflowEngineFactory.create_wrapper(login_params,
+                                                           executor_context,
+                                                           workflow_engine)
     assert repr(workflow_engine) == 'Singularity NFL'
