@@ -29,12 +29,12 @@ RUN if grep -q '^ID=alpine$' /etc/os-release; then \
     fi && \
     usermod \
         "--login=$USER" \
-        "--home=/home/$USER" \
+        "--home=/home/weskit" \
         --move-home \
         "--uid=$USER_ID" \
         "$MAMBA_USER" && \
     groupmod \
-        "--new-name=$USER" \
+        "--new-name=$GROUP" \
         "--gid=$USER_GID" \
         "$MAMBA_USER" && \
     if grep -q '^ID=alpine$' /etc/os-release; then \
