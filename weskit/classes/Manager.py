@@ -27,7 +27,6 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
-from weskit.classes.EngineExecutor import EngineExecutorType
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.exceptions import ClientError
 from weskit.utils import return_pre_signed_url, now
@@ -43,14 +42,14 @@ class Manager:
                  celery_app: Celery,
                  database: Database,
                  config: ConfigParams,
+                 workflow_engines: dict,
                  weskit_context: PathContext,
                  executor_context: PathContext,
-                 executor_type: EngineExecutorType,
                  require_workdir_tag: bool) -> None:
         self.config = config
+        self.workflow_engines = workflow_engines
         self.weskit_context = weskit_context
         self.executor_context = executor_context
-        self.executor_type = executor_type
         self.celery_app = celery_app
         self.database = database
         self.require_workdir_tag = require_workdir_tag
@@ -156,7 +155,7 @@ class Manager:
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
-                    run_id: Optional[Union[UUID, str]] = None,
+                    run_id: Optional[UUID] = None,
                     max_tries: int = 1) -> List[Run]:
         """
         Update all runs in a non-terminal state, or (always) the single run with the requested
@@ -359,29 +358,26 @@ class Manager:
             self.database.update_run(run, resolution_fun=Run.merge)
             return run
 
-        # create dict of workflow engine from config file
-        workflow_engines = WorkflowEngineFactory.create(self.config["workflow_engines"])
-
         # Set workflow_type
-        if run.request["workflow_type"] in workflow_engines.keys():
+        if run.request["workflow_type"] in self.workflow_engines.keys():
             workflow_type = run.request["workflow_type"]
         else:
             # This should have been found in the validation.
             logger.error("Workflow type '%s' is not known. Know %s" %
                          (run.request["workflow_type"],
-                          ", ".join(workflow_engines.keys())))
+                          ", ".join(self.workflow_engines.keys())))
             run.processing_stage = ProcessingStage.SYSTEM_ERROR
             self.database.update_run(run, resolution_fun=Run.merge)
             return run
 
         # Set workflow type version
-        if run.request["workflow_type_version"] in workflow_engines[workflow_type].keys():
+        if run.request["workflow_type_version"] in self.workflow_engines[workflow_type].keys():
             workflow_type_version = run.request["workflow_type_version"]
         else:
             # This should have been found in the validation.
             logger.error("Workflow type version '%s' is not known. Know %s" %
                          (run.request["workflow_type_version"],
-                          ", ".join(workflow_engines[workflow_type].keys())))
+                          ", ".join(self.workflow_engines[workflow_type].keys())))
             run.processing_stage = ProcessingStage.SYSTEM_ERROR
             self.database.update_run(run, resolution_fun=Run.merge)
             return run
@@ -394,17 +390,18 @@ class Manager:
 
         # Execute run
         config_files: List[Path] = [Path(f"{run.id}.yaml")]
-        command: ShellCommand
-        command = WorkflowEngineFactory.create_wrapper(self.config, self.executor_context,
-                                                       workflow_engines[workflow_type]
-                                                                       [workflow_type_version]).\
+        command: ShellCommand = \
+            WorkflowEngineFactory.create_wrapper(self.config,
+                                                 self.executor_context,
+                                                 self.workflow_engines[workflow_type]
+                                                 [workflow_type_version]).\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
                     config_files=config_files,
                     engine_params=run.request.get("workflow_engine_parameters", {}))
 
         execution_settings: ExecutionSettings = \
-            workflow_engines[workflow_type][workflow_type_version].\
+            self.workflow_engines[workflow_type][workflow_type_version].\
             execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
         run.execution_log["cmd"] = command.command
         run.execution_log["env"] = command.environment

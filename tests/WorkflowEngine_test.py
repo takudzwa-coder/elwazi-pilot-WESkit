@@ -459,4 +459,4 @@ def test_singularity_warapper(remote_config):
     workflow_engine = WorkflowEngineFactory.create_wrapper(login_params,
                                                            executor_context,
                                                            workflow_engine)
-    assert repr(workflow_engine) == 'Singularity NFL'
+    assert repr(workflow_engine) == 'Singularity + NFL'

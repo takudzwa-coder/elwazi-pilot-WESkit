@@ -296,8 +296,7 @@ def test_update_all_runs(manager,
 
 
 @pytest.mark.integration
-def test_missing_files(manager,
-                       celery_worker):
+def test_missing_celery_id(manager):
     run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="7.30.2")
@@ -312,8 +311,7 @@ def test_missing_files(manager,
 
 
 @pytest.mark.integration
-def test_run_id_type(manager,
-                     celery_worker):
+def test_run_id_existence(manager):
     run = get_mock_run(workflow_url="file:wf1/Snakefile",
                        workflow_type="SMK",
                        workflow_type_version="7.30.2")

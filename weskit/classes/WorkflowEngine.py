@@ -206,7 +206,7 @@ class WorkflowEngine(metaclass=ABCMeta):
             cores=mop(get_value(parameter_idx.get("cores")), int))
 
 
-class ActualWorkflowEngine(WorkflowEngine):
+class ActualWorkflowEngine(WorkflowEngine, metaclass=ABCMeta):
 
     def __init__(self,
                  version: str,
@@ -410,20 +410,31 @@ class Nextflow(ActualWorkflowEngine):
                             environment=self._environment(workflow_path, parameters))
 
 
-class ContainerWrappedEngine(WorkflowEngine):
-    _actual_engine: ActualWorkflowEngine
+class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
                  executor_context: PathContext):
         self._actual_engine = actual_engine
         self._executor_context = executor_context
 
-    @property
-    def actual_engine(self) -> ActualWorkflowEngine:
-        return self._actual_engine
+    @abstractmethod
+    def _container_command(self) -> ShellCommand:
+        """" Will return the command prefix 'singularity run ... ' """
 
+    @abstractmethod
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files:  List[Path],
+                engine_params: Dict[str, Optional[str]])\
+            -> ShellCommand:
+        """" Composes a command based on the results of _container_command() and
+            self._actual_engine.command()
+        """
+
+    @abstractmethod
     def name(self) -> str:
-        return self.actual_engine.name()
+        """" Calls ActualWorkflowEngine.name"""
 
 
 class SingularityWrappedEngine(ContainerWrappedEngine):
@@ -432,15 +443,11 @@ class SingularityWrappedEngine(ContainerWrappedEngine):
                  executor_context: PathContext):
         super().__init__(actual_engine, executor_context)
 
-    @property
-    def actual_engine(self) -> ActualWorkflowEngine:
-        return self._actual_engine
-
     def name(self) -> str:
-        return self.actual_engine.name()
+        return self._actual_engine.name()
 
     def __repr__(self):
-        return 'Singularity ' + self.name()
+        return 'Singularity + ' + self.name()
 
     def _container_command(self) -> ShellCommand:
 
@@ -451,9 +458,9 @@ class SingularityWrappedEngine(ContainerWrappedEngine):
                                                  str(self._executor_context.data_dir)]),
                              "--bind", ":".join([str(self._executor_context.workflows_dir),
                                                  str(self._executor_context.workflows_dir)]),
-                             (f"{self._executor_context.singularity_engines_dir}/"
-                                 f"{self.name()}_"
-                                 f"{self._actual_engine.version}.sif")
+                             str(self._executor_context.singularity_engines_dir /
+                                 Path(f"{self.name()}_"
+                                      f"{self._actual_engine.version}.sif"))
                              ]
         return ShellCommand(command=container_command)
 
