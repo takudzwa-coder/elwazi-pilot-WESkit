@@ -6,7 +6,6 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-
 from weskit.classes.ShellCommand import ss
 from weskit.classes.PathContext import PathContext
 from weskit.classes.EngineExecutorType import EngineExecutorType
@@ -437,7 +436,7 @@ def test_wrapper_command():
     assert command.workdir == Path("/some/workdir")
 
 
-def test_singularity_warapper(remote_config):
+def test_singularity_wrapper():
     login_params = {
             "executor": {
                 "type": "ssh_slurm",
@@ -460,3 +459,18 @@ def test_singularity_warapper(remote_config):
                                                            executor_context,
                                                            workflow_engine)
     assert repr(workflow_engine) == 'Singularity + NFL'
+
+
+def test_forbidden_parameter():
+    param = EngineParameter({"a"})
+    a1 = ActualEngineParameter(param, "1")
+    # Snakemake
+    with pytest.raises(ValueError):
+        Snakemake(version="1.0", default_params=[a1]) == 1
+    with pytest.raises(ValueError):
+        SingularityWrappedEngine(Snakemake(version="1.0", default_params=[a1]) == 1)
+    # Nextflow
+    with pytest.raises(ValueError):
+        Nextflow(version="1.0", default_params=[a1]) == 1
+    with pytest.raises(ValueError):
+        SingularityWrappedEngine(Nextflow(version="1.0", default_params=[a1]) == 1)

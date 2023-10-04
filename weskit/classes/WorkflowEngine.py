@@ -27,7 +27,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
         if len(not_allowed) > 0:
-            raise ValueError(f"Non-allowed default parameters for {type(self).name(self)}: " +
+            raise ValueError(f"Non-allowed default parameters for {self.name()}: " +
                              str(not_allowed))
         self.default_params = default_params
         self._version = version

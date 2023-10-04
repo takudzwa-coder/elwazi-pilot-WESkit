@@ -23,7 +23,6 @@ from weskit.classes.Database import Database
 from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
 from weskit.classes.ProcessingStage import ProcessingStage
-from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -390,7 +389,7 @@ class Manager:
 
         # Execute run
         config_files: List[Path] = [Path(f"{run.id}.yaml")]
-        command: ShellCommand = \
+        command = \
             WorkflowEngineFactory.create_wrapper(self.config,
                                                  self.executor_context,
                                                  self.workflow_engines[workflow_type]
