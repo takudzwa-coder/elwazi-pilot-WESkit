@@ -121,7 +121,8 @@ class WorkflowEngineFactory:
         """
 
         executor_type = EngineExecutorType.from_string(str(config_file["executor"]["type"]))
-        if executor_type.needs_login_credentials:
+        # check if executor_type is a ClusterExecutor
+        if executor_type.name.lower() in ["ssh_lsf", "ssh_slurm"]:
             return SingularityWrappedEngine(workflow_engine, executor_context)
         else:
             return workflow_engine

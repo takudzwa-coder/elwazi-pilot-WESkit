@@ -27,7 +27,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
         if len(not_allowed) > 0:
-            raise ValueError(f"Non-allowed default parameters for {self.name()}: " +
+            raise ValueError(f"Forbidden default parameters for {self.name()}: " +
                              str(not_allowed))
         self.default_params = default_params
         self._version = version
@@ -180,6 +180,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         pass
 
+    @classmethod
     @abstractmethod
     def name(self) -> str:
         pass
@@ -221,8 +222,8 @@ class Snakemake(ActualWorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @staticmethod
-    def name():
+    @classmethod
+    def name(self):
         return "SMK"
 
     @classmethod
@@ -319,8 +320,8 @@ class Nextflow(ActualWorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @staticmethod
-    def name():
+    @classmethod
+    def name(self):
         return "NFL"
 
     @classmethod
@@ -432,6 +433,7 @@ class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
             self._actual_engine.command()
         """
 
+    @classmethod
     @abstractmethod
     def name(self) -> str:
         """" Calls ActualWorkflowEngine.name"""
@@ -443,6 +445,7 @@ class SingularityWrappedEngine(ContainerWrappedEngine):
                  executor_context: PathContext):
         super().__init__(actual_engine, executor_context)
 
+    @classmethod
     def name(self) -> str:
         return self._actual_engine.name()
 
