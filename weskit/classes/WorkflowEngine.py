@@ -180,7 +180,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         pass
 
-    @classmethod
+    @staticmethod
     @abstractmethod
     def name(self) -> str:
         pass
@@ -433,10 +433,9 @@ class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
             self._actual_engine.command()
         """
 
-    @classmethod
-    @abstractmethod
+    @staticmethod
     def name(self) -> str:
-        """" Calls ActualWorkflowEngine.name"""
+        return self._actual_engine.name()
 
 
 class SingularityWrappedEngine(ContainerWrappedEngine):
@@ -445,12 +444,6 @@ class SingularityWrappedEngine(ContainerWrappedEngine):
                  executor_context: PathContext):
         super().__init__(actual_engine, executor_context)
 
-    @classmethod
-    def name(self) -> str:
-        return self._actual_engine.name()
-
-    def __repr__(self):
-        return 'Singularity + ' + self.name()
 
     def _container_command(self) -> ShellCommand:
 

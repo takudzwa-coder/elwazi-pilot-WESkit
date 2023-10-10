@@ -48,6 +48,8 @@ class WorkflowEngineFactory:
             actual_params += [ActualEngineParameter(param,
                                                     None if value is None else str(value),
                                                     is_api_parameter)]
+        if "singularity" in engine_version:
+                
         return engine_class(engine_version,
                             actual_params)
 

@@ -148,8 +148,13 @@ workflow_engines:
   # interpreted in any way.
   #
   NFL:
-    "23.04.1":
-      default_parameters:
+    "23.04.1-singularity": 
+      container:
+         type: singularity
+         engines_dir: "/tmp"
+         data_dir: "/tmp"
+         workflow_dir: "/tmp"
+      default_parameters: &default_nfl_engine_parameters
         - name: "engine-environment"
           value: null
           api: false
@@ -216,7 +221,7 @@ workflow_engines:
           api: false
           value: null
           type: str
-          
+    "23.04.1": *default_nfl_engine_parameters
 
   SMK:
     "7.30.2":
