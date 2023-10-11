@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
-from weskit.utils import format_timestamp
+from weskit.utils import format_timestamp, mop
 
 
 class PathContext:
@@ -15,18 +16,18 @@ class PathContext:
     def __init__(self,
                  data_dir: Path,
                  workflows_dir: Path,
-                 singularity_engines_dir: Path,
+                 singularity_containers_dir: Optional[Path] = None,
                  log_base_subdir: Path = Path(".weskit")):
         self.__data_dir = data_dir
         self.__workflows_dir = workflows_dir
-        self.__singularity_engines_dir = singularity_engines_dir
+        self.__singularity_containers_dir = singularity_containers_dir
         self.__log_base_subdir = log_base_subdir
 
     def __eq__(self, other) -> bool:
         return isinstance(other, PathContext) and \
             self.__data_dir == other.__data_dir and \
             self.__workflows_dir == other.__workflows_dir and \
-            self.__singularity_engines_dir == other.__singularity_engines_dir and \
+            self.__singularity_containers_dir == other.__singularity_containers_dir and \
             self.__log_base_subdir == other.__log_base_subdir
 
     @property
@@ -38,8 +39,8 @@ class PathContext:
         return self.__workflows_dir
 
     @property
-    def singularity_engines_dir(self) -> Path:
-        return self.__singularity_engines_dir
+    def singularity_containers_dir(self) -> Optional[Path]:
+        return self.__singularity_containers_dir
 
     @property
     def log_base_subdir(self) -> Path:
@@ -49,19 +50,18 @@ class PathContext:
         return {
             "data_dir": str(self.data_dir),
             "workflows_dir": str(self.workflows_dir),
-            "singularity_engines_dir": str(self.singularity_engines_dir)
+            "singularity_containers_dir": mop(self.singularity_containers_dir, str)
         }
 
     @staticmethod
     def decode_json(json: dict):
         return PathContext(data_dir=Path(json["data_dir"]),
                            workflows_dir=Path(json["workflows_dir"]),
-                           singularity_engines_dir=Path(json["singularity_engines_dir"])
-                           )
+                           singularity_containers_dir=mop(json["singularity_containers_dir"], Path))
 
     # Methods for context-dependent paths. Note that these have convenience counterparts in Run.
     # Note that these here do not depend on Run, but just the simpler arguments, because they are
-    # used in the worker, where there is no Run object.
+    # used in the worker, where there are no Run objects (yet).
 
     def run_dir(self, sub_dir: Path) -> Path:
         return self.data_dir / sub_dir

@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Union
 
 from tempora import parse_timedelta
 
+from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
@@ -412,7 +413,7 @@ class Nextflow(ActualWorkflowEngine):
 class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
-                 container_context: dict[str, str]):
+                 container_context: PathContext):
         """
         Note that paths in the `container_context` are mounted into the container with these
         same paths. So the (within-)container context is the same as the outer context.
@@ -442,19 +443,23 @@ class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
 class SingularityWrappedEngine(ContainerWrappedEngine):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
-                 container_context: dict[str, str]):
+                 container_context: PathContext):
         super().__init__(actual_engine, container_context)
+        if container_context.singularity_containers_dir is None:
+            raise ValueError("SingularityWrappedEngine requested without container directory")
 
     def _container_command(self) -> ShellCommand:
-
+        singularity_container_dir = self._container_context.singularity_containers_dir
+        if singularity_container_dir is None:
+            raise ValueError("SingularityWrappedEngine requested without container directory")
         container_command: List[Union[str, ShellSpecial]]
         container_command = ["singularity", "run",
                              "--no-home", "-e", "--env", "LC_ALL=POSIX",
-                             "--bind", ":".join([str(self._container_context["data_dir"]),
-                                                 str(self._container_context["data_dir"])]),
-                             "--bind", ":".join([str(self._container_context["workflows_dir"]),
-                                                 str(self._container_context["workflows_dir"])]),
-                             str(self._container_context["engines_dir"] /
+                             "--bind", ":".join([str(self._container_context.data_dir),
+                                                 str(self._container_context.data_dir)]),
+                             "--bind", ":".join([str(self._container_context.workflows_dir),
+                                                 str(self._container_context.workflows_dir)]),
+                             str(singularity_container_dir /
                                  Path(f"{self.name()}_"
                                       f"{self._actual_engine.version}.sif"))
                              ]

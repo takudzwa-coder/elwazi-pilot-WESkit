@@ -50,7 +50,7 @@ executor:
           - ssh
           - ssh_slurm
           - ssh_lsf
-    singularity_engines_dir:
+    singularity_containers_dir:
       type: string
       required: false
       dependencies:
@@ -213,12 +213,10 @@ workflow_engines:
             schema:
               type:
                 type: string
-              engines_dir:
+                required: true
+              containers_dir:
                 type: string
-              data_dir:
-                type: string
-              workflow_dir:
-                type: string
+                required: true
           default_parameters:
             type: list
             default: []

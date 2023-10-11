@@ -28,7 +28,7 @@ executor:
   type: "local"
 #  remote_data_dir: "/tmp"
 #  remote_workflows_dir: "/tmp"
-#  singularity_engines_dir: "/tmp"
+#  singularity_containers_dir: "/tmp"
 #  login:
 #    username: "user"
 #    hostname: "localhost"
@@ -151,9 +151,7 @@ workflow_engines:
     "23.04.1-singularity": 
       container:
          type: "singularity"
-         engines_dir: "/tmp"
-         data_dir: "/tmp"
-         workflow_dir: "/tmp"
+         containers_dir: "/tmp"
       default_parameters: &default_nfl_engine_parameters
         - name: "engine-environment"
           value: null
@@ -228,9 +226,7 @@ workflow_engines:
     "7.30.2-singularity":
       container:
          type: singularity
-         engines_dir: "/tmp"
-         data_dir: "/tmp"
-         workflow_dir: "/tmp"
+         containers_dir: "/tmp"
       default_parameters: &default_smk_engine_parameters
         - name: "engine-environment"
           value: null

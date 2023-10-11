@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ss
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow, SingularityWrappedEngine
@@ -367,7 +368,7 @@ def test_create_engines():
     engines = WorkflowEngineFactory.create({
         "NFL": {"vers1": {"default_parameters": [{"name": "max-memory", "value": "50gb"}]}},
         "SMK": {"vers2": {"default_parameters": [{"name": "cores", "value": "100"}]}}
-    })
+    }, PathContext(Path("data"), Path("workflows"), Path("singularity")))
 
     assert engines["NFL"]["vers1"].name() == "NFL"
     assert engines["NFL"]["vers1"].version == "vers1"
@@ -395,9 +396,10 @@ def test_wrapper_command():
     )
 
     # Test singularity wrapper
-    container_context = {"data_dir": "/path/to/remote_data_dir",
-                         "workflows_dir": "/path/to/remote_workflows_dir",
-                         "engines_dir": "/path/to/singularity_engines_dir"}
+    container_context = PathContext(
+        Path("/path/to/remote_data_dir"),
+        Path("/path/to/remote_workflows_dir"),
+        Path("/path/to/singularity_containers_dir"))
 
     command = SingularityWrappedEngine(engine, container_context).\
         command(Path("/some/path"),
@@ -414,7 +416,7 @@ def test_wrapper_command():
                                '/path/to/remote_data_dir:/path/to/remote_data_dir',
                                '--bind',
                                '/path/to/remote_workflows_dir:/path/to/remote_workflows_dir',
-                               '/path/to/singularity_engines_dir/SMK_7.30.2.sif',
+                               '/path/to/singularity_containers_dir/SMK_7.30.2.sif',
                                'snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
@@ -439,11 +441,11 @@ def test_forbidden_parameter():
     a1 = ActualEngineParameter(param, "1")
     # Snakemake
     with pytest.raises(ValueError):
-        Snakemake(version="1.0", default_params=[a1]) == 1
+        _ = Snakemake(version="1.0", default_params=[a1]) == 1
     with pytest.raises(ValueError):
         SingularityWrappedEngine(Snakemake(version="1.0", default_params=[a1]) == 1)
     # Nextflow
     with pytest.raises(ValueError):
-        Nextflow(version="1.0", default_params=[a1]) == 1
+        _ = Nextflow(version="1.0", default_params=[a1]) == 1
     with pytest.raises(ValueError):
         SingularityWrappedEngine(Nextflow(version="1.0", default_params=[a1]) == 1)

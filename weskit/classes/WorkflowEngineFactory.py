@@ -4,6 +4,7 @@
 
 from typing import Dict, List, Union, Optional
 
+from weskit.classes.PathContext import PathContext
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow,\
     ActualWorkflowEngine, SingularityWrappedEngine, WorkflowEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
@@ -46,7 +47,9 @@ class WorkflowEngineFactory:
                             actual_params)
 
     @staticmethod
-    def _create_versions(engine_class, engine_params: Dict[str, Union[ConfVersions]]) \
+    def _create_versions(engine_class,
+                         engine_params: Dict[str, Union[ConfVersions]],
+                         execution_path_context: PathContext) \
             -> Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]:
         """
         :param engine_class: WorkflowEngine class
@@ -66,14 +69,14 @@ class WorkflowEngineFactory:
                                                                   by_version[0],
                                                                   by_version[1]
                                                                   ['default_parameters']),
-                                                    by_version[1]['container']
-                                                                        )
-                                            ),
+                                                    execution_path_context
+                                            )),
                         engine_params.items()))
 
     @staticmethod
     def _maybe_engine(engine_class,
-                      engine_params: Dict[str, Dict[str, ConfVersions]]) \
+                      engine_params: Dict[str, Dict[str, ConfVersions]],
+                      execution_path_context: PathContext) \
             -> Dict[str, Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]]:
         """
         Create a WorkflowEngine entry, if the engine is defined in the configuration.
@@ -90,23 +93,33 @@ class WorkflowEngineFactory:
                                      {version: configuration_option
                                       for version, configuration_option
                                       in engine_params[engine_class.name()].items()
-                                      })}
+                                      },
+                                     execution_path_context)}
         else:
             return {}
 
     @staticmethod
-    def create(engine_params: Dict[str, Dict[str, ConfVersions]]) -> \
+    def create(engine_params: Dict[str, Dict[str, ConfVersions]],
+               execution_path_context: PathContext) -> \
             Dict[str, Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]]:
         """
         Return a dictionary of all WorkflowEngines mapping workflow_engine to
         workflow_engine_version to WorkflowEngine instances.
 
+        The `execution_path_context` is needed if the actual workflow engine (e.g. Snakemake)
+        has to be wrapped by a container. The container needs to know which external paths to
+        mount into the container.
+
         This is yet statically implemented, but could at some
         point by done with https://stackoverflow.com/a/3862957/8784544.
         """
         workflow_engines = {}
-        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Snakemake, engine_params))
-        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Nextflow, engine_params))
+        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Snakemake,
+                                                                    engine_params,
+                                                                    execution_path_context))
+        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Nextflow,
+                                                                    engine_params,
+                                                                    execution_path_context))
 
         # The semantics of workflow_type and workflow_engine_parameters is not completely defined
         # yet. There is also a proposal for a workflow_engine_name parameter.
