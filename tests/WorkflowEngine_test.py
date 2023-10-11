@@ -7,8 +7,6 @@ from pathlib import Path
 
 import pytest
 from weskit.classes.ShellCommand import ss
-from weskit.classes.PathContext import PathContext
-from weskit.classes.EngineExecutorType import EngineExecutorType
 from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
 from weskit.classes.WorkflowEngine import Snakemake, Nextflow, SingularityWrappedEngine
 from weskit.classes.WorkflowEngineParameters import \
@@ -397,11 +395,11 @@ def test_wrapper_command():
     )
 
     # Test singularity wrapper
-    executor_context = PathContext(data_dir="/path/to/remote_data_dir",
-                                   workflows_dir="/path/to/remote_workflows_dir",
-                                   singularity_engines_dir="/path/to/singularity_engines_dir")
+    container_context = {"data_dir": "/path/to/remote_data_dir",
+                         "workflows_dir": "/path/to/remote_workflows_dir",
+                         "engines_dir": "/path/to/singularity_engines_dir"}
 
-    command = SingularityWrappedEngine(engine, executor_context).\
+    command = SingularityWrappedEngine(engine, container_context).\
         command(Path("/some/path"),
                 Path("/some/workdir"),
                 [Path("/some/config.yaml")],
@@ -434,31 +432,6 @@ def test_wrapper_command():
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert command.workdir == Path("/some/workdir")
-
-
-def test_singularity_wrapper():
-    login_params = {
-            "executor": {
-                "type": "ssh_slurm",
-                "remote_data_dir": "/tmp",
-                "remote_workflows_dir": "/tmp",
-                "singularity_engines_dir": "/tmp"
-            }
-        }
-
-    workflow_engine = Nextflow
-    executor_type = EngineExecutorType.from_string(login_params["executor"]["type"])
-    if executor_type.needs_login_credentials:
-        executor_context = \
-            PathContext(data_dir=login_params["executor"]["remote_data_dir"],
-                        workflows_dir=login_params["executor"]["remote_workflows_dir"],
-                        singularity_engines_dir=login_params["executor"]
-                                                            ["singularity_engines_dir"])
-
-    workflow_engine = WorkflowEngineFactory.create_wrapper(login_params,
-                                                           executor_context,
-                                                           workflow_engine)
-    assert repr(workflow_engine) == 'Singularity + NFL'
 
 
 def test_forbidden_parameter():

@@ -2,17 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-from typing import Dict, List, Union, Optional, Any
+from typing import Dict, List, Union, Optional
 
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine, \
-    ActualWorkflowEngine, SingularityWrappedEngine
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow,\
+    ActualWorkflowEngine, SingularityWrappedEngine, WorkflowEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
-from weskit.classes.EngineExecutorType import EngineExecutorType
-from weskit.classes.PathContext import PathContext
-
-# Type aliases to simplify the signature of the type annotations.
-ConfigParams = Dict[str, Dict[str, Any]]
-
 
 # Type aliases to simplify the signature of the type annotations.
 ConfParameter = Dict[str, Optional[Union[str, bool]]]
@@ -48,14 +42,12 @@ class WorkflowEngineFactory:
             actual_params += [ActualEngineParameter(param,
                                                     None if value is None else str(value),
                                                     is_api_parameter)]
-        if "singularity" in engine_version:
-                
         return engine_class(engine_version,
                             actual_params)
 
     @staticmethod
-    def _create_versions(engine_class, engine_params: ConfVersions) \
-            -> Dict[str, ActualWorkflowEngine]:
+    def _create_versions(engine_class, engine_params: Dict[str, Union[ConfVersions]]) \
+            -> Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]:
         """
         :param engine_class: WorkflowEngine class
         :param engine_params: Version name -> List of dictionaries, one for each parameter.
@@ -65,13 +57,24 @@ class WorkflowEngineFactory:
                                             WorkflowEngineFactory.
                                             create_engine(engine_class,
                                                           by_version[0],
-                                                          by_version[1])),
+                                                          by_version[1]['default_parameters'])
+                                            if "singularity" not in by_version[0]
+                                            else
+                                            SingularityWrappedEngine(
+                                                    WorkflowEngineFactory.
+                                                    create_engine(engine_class,
+                                                                  by_version[0],
+                                                                  by_version[1]
+                                                                  ['default_parameters']),
+                                                    by_version[1]['container']
+                                                                        )
+                                            ),
                         engine_params.items()))
 
     @staticmethod
     def _maybe_engine(engine_class,
                       engine_params: Dict[str, Dict[str, ConfVersions]]) \
-            -> Dict[str, Dict[str, ActualWorkflowEngine]]:
+            -> Dict[str, Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]]:
         """
         Create a WorkflowEngine entry, if the engine is defined in the configuration.
         """
@@ -84,7 +87,7 @@ class WorkflowEngineFactory:
         if engine_is_defined() and some_version_is_defined():
             return {engine_class.name(): WorkflowEngineFactory.
                     _create_versions(engine_class,
-                                     {version: configuration_option["default_parameters"]
+                                     {version: configuration_option
                                       for version, configuration_option
                                       in engine_params[engine_class.name()].items()
                                       })}
@@ -93,7 +96,7 @@ class WorkflowEngineFactory:
 
     @staticmethod
     def create(engine_params: Dict[str, Dict[str, ConfVersions]]) -> \
-            Dict[str, Dict[str, ActualWorkflowEngine]]:
+            Dict[str, Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]]:
         """
         Return a dictionary of all WorkflowEngines mapping workflow_engine to
         workflow_engine_version to WorkflowEngine instances.
@@ -111,20 +114,3 @@ class WorkflowEngineFactory:
         # See also https://github.com/ga4gh/workflow-execution-service-schemas/issues/171
 
         return workflow_engines
-
-    @staticmethod
-    def create_wrapper(config_file: ConfigParams,
-                       executor_context: PathContext,
-                       workflow_engine: ActualWorkflowEngine) \
-            -> Union[WorkflowEngine, ActualWorkflowEngine]:
-
-        """
-        Wrappes a workflow engine command when workload is executed remotely.
-        """
-
-        executor_type = EngineExecutorType.from_string(str(config_file["executor"]["type"]))
-        # check if executor_type is a ClusterExecutor
-        if executor_type.name.lower() in ["ssh_lsf", "ssh_slurm"]:
-            return SingularityWrappedEngine(workflow_engine, executor_context)
-        else:
-            return workflow_engine

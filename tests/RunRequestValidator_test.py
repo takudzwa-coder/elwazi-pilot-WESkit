@@ -104,7 +104,7 @@ def test_workflow_type(run_request_validator):
         ["Unknown workflow_type 'blabla'. Know NFL, SMK"]
     assert run_request_validator.validate(request(workflow_type="NFL",
                                                   workflow_type_version="blabla")) == \
-        ["Unknown workflow_type_version 'blabla'. Know 23.04.1"]
+        ["Unknown workflow_type_version 'blabla'. Know 23.04.1-singularity, 23.04.1"]
 
 
 def test_workflow_type_version(run_request_validator):

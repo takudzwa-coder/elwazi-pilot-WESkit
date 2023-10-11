@@ -219,20 +219,20 @@ class TestOpenEndpoint:
         assert response.json["workflow_type_versions"] == {
             "NFL": {
               "workflow_type_version": [
-                "23.04.1"
+                "23.04.1-singularity", "23.04.1"
               ]
             },
             "SMK": {
               "workflow_type_version": [
-                "7.30.2"
+                "7.30.2-singularity", "7.30.2"
               ]
             }
           }
         assert response.json["supported_wes_versions"] == ["1.0.0"]
         assert response.json["supported_filesystem_protocols"] == ["file", "S3"]
         assert response.json["workflow_engine_versions"] == {
-            "NFL": "23.04.1",
-            "SMK": "7.30.2"
+            "NFL": "23.04.1-singularity,23.04.1",
+            "SMK": "7.30.2-singularity,7.30.2"
           }
 
         def as_dict(params: list):
@@ -240,6 +240,31 @@ class TestOpenEndpoint:
             return {p["name"]: p for p in params}
 
         assert as_dict(response.json["default_workflow_engine_parameters"]) == as_dict([
+
+              {'default_value': None,
+               'name': 'SMK|7.30.2-singularity|accounting-name',
+               'type': 'Optional[str]'},
+              {'default_value': None,
+               'name': 'SMK|7.30.2-singularity|engine-environment',
+               'type': 'Optional[str]'},
+              {'default_value': None,
+               'name': 'SMK|7.30.2-singularity|group',
+               'type': 'Optional[str]'},
+              {'default_value': None,
+               'name': 'SMK|7.30.2-singularity|job-name',
+               'type': 'Optional[str]'},
+              {'default_value': '100m',
+               'name': 'SMK|7.30.2-singularity|max-memory',
+               'type': 'Optional[str validFor '
+               'Python.memory_units.Memory.from_str($)]'},
+              {'default_value': '05:00',
+               'name': 'SMK|7.30.2-singularity|max-runtime',
+               'type': 'Optional[str validFor '
+               'Python.tempora.parse_timedelta($)]'},
+              {'default_value': None,
+               'name': 'SMK|7.30.2-singularity|queue',
+               'type': 'Optional[str]'},
+
               {"name": "SMK|7.30.2|engine-environment",
                "default_value": None,
                "type": "Optional[str]"},
@@ -261,6 +286,31 @@ class TestOpenEndpoint:
               {"name": "SMK|7.30.2|queue",
                "default_value": None,
                "type": "Optional[str]"},
+
+              {'default_value': None,
+               'name': 'NFL|23.04.1-singularity|accounting-name',
+               'type': 'Optional[str]'},
+              {'default_value': 'true',
+               'name': 'NFL|23.04.1-singularity|graph',
+               'type': 'bool'},
+              {'default_value': None,
+               'name': 'NFL|23.04.1-singularity|group',
+               'type': 'Optional[str]'},
+              {'default_value': None,
+               'name': 'NFL|23.04.1-singularity|job-name',
+               'type': 'Optional[str]'},
+              {'default_value': None,
+               'name': 'NFL|23.04.1-singularity|queue',
+               'type': 'Optional[str]'},
+              {'default_value': 'true',
+               'name': 'NFL|23.04.1-singularity|report',
+               'type': 'bool'},
+              {'default_value': 'true',
+               'name': 'NFL|23.04.1-singularity|timeline',
+               'type': 'bool'},
+              {'default_value': 'true',
+               'name': 'NFL|23.04.1-singularity|trace',
+               'type': 'bool'},
 
               {"name": "NFL|23.04.1|accounting-name",
                "default_value": None,

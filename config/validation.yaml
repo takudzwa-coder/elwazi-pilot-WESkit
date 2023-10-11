@@ -207,6 +207,18 @@ workflow_engines:
       valuesrules:
         type: dict
         schema:
+          container:
+            type: dict
+            required: false
+            schema:
+              plattform:
+                type: "str"
+              engines_dir:
+                type: "str validFor Python.pathlib.Path"
+              data_dir:
+                type: "str validFor Python.pathlib.Path"
+              workflow_dir:
+                type: "str validFor Python.pathlib.Path"
           default_parameters:
             type: list
             default: []

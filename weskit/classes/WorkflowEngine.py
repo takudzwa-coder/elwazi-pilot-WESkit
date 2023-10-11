@@ -10,7 +10,6 @@ from typing import List, Dict, Optional, Union
 from tempora import parse_timedelta
 
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
-from weskit.classes.PathContext import PathContext
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -27,7 +26,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
         if len(not_allowed) > 0:
-            raise ValueError(f"Forbidden default parameters for {self.name()}: " +
+            raise ValueError(f"Forbidden default parameters for {type(self).name(self)}: " +
                              str(not_allowed))
         self.default_params = default_params
         self._version = version
@@ -180,7 +179,6 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         pass
 
-    @staticmethod
     @abstractmethod
     def name(self) -> str:
         pass
@@ -214,6 +212,14 @@ class ActualWorkflowEngine(WorkflowEngine, metaclass=ABCMeta):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
+    @staticmethod
+    def name(self, engine_name) -> str:
+        try:
+            plattform = "-".join([engine_name, self._version.split("-")[1]])
+        except Exception:
+            plattform = engine_name
+        return plattform
+
 
 class Snakemake(ActualWorkflowEngine):
 
@@ -222,9 +228,8 @@ class Snakemake(ActualWorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @classmethod
     def name(self):
-        return "SMK"
+        return super().__name__("SMK")
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
@@ -320,9 +325,8 @@ class Nextflow(ActualWorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @classmethod
     def name(self):
-        return "NFL"
+        return super().__name__("NFL")
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
@@ -414,9 +418,9 @@ class Nextflow(ActualWorkflowEngine):
 class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
-                 executor_context: PathContext):
+                 container_context: dict[str, str]):
         self._actual_engine = actual_engine
-        self._executor_context = executor_context
+        self._container_context = container_context
 
     @abstractmethod
     def _container_command(self) -> ShellCommand:
@@ -433,28 +437,23 @@ class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
             self._actual_engine.command()
         """
 
-    @staticmethod
-    def name(self) -> str:
-        return self._actual_engine.name()
-
 
 class SingularityWrappedEngine(ContainerWrappedEngine):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
-                 executor_context: PathContext):
-        super().__init__(actual_engine, executor_context)
-
+                 container_context: dict[str, str]):
+        super().__init__(actual_engine, container_context)
 
     def _container_command(self) -> ShellCommand:
 
         container_command: List[Union[str, ShellSpecial]]
         container_command = ["singularity", "run",
                              "--no-home", "-e", "--env", "LC_ALL=POSIX",
-                             "--bind", ":".join([str(self._executor_context.data_dir),
-                                                 str(self._executor_context.data_dir)]),
-                             "--bind", ":".join([str(self._executor_context.workflows_dir),
-                                                 str(self._executor_context.workflows_dir)]),
-                             str(self._executor_context.singularity_engines_dir /
+                             "--bind", ":".join([str(self._container_context["data_dir"]),
+                                                 str(self._container_context["data_dir"])]),
+                             "--bind", ":".join([str(self._container_context["workflows_dir"]),
+                                                 str(self._container_context["workflows_dir"])]),
+                             str(self._container_context["engines_dir"] /
                                  Path(f"{self.name()}_"
                                       f"{self._actual_engine.version}.sif"))
                              ]
