@@ -150,7 +150,7 @@ workflow_engines:
   NFL:
     "23.04.1-singularity": 
       container:
-         plattform: "singularity"
+         type: "singularity"
          engines_dir: "/tmp"
          data_dir: "/tmp"
          workflow_dir: "/tmp"

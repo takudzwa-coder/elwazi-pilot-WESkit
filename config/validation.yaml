@@ -211,14 +211,14 @@ workflow_engines:
             type: dict
             required: false
             schema:
-              plattform:
-                type: "str"
+              type:
+                type: string
               engines_dir:
-                type: "str validFor Python.pathlib.Path"
+                type: string
               data_dir:
-                type: "str validFor Python.pathlib.Path"
+                type: string
               workflow_dir:
-                type: "str validFor Python.pathlib.Path"
+                type: string
           default_parameters:
             type: list
             default: []

@@ -26,10 +26,14 @@ class WorkflowEngine(metaclass=ABCMeta):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
         if len(not_allowed) > 0:
-            raise ValueError(f"Forbidden default parameters for {type(self).name(self)}: " +
+            raise ValueError(f"Forbidden default parameters for {self.name()}: " +
                              str(not_allowed))
         self.default_params = default_params
         self._version = version
+
+    @abstractmethod
+    def name(self) -> str:
+        pass
 
     @property
     def version(self) -> str:
@@ -179,10 +183,6 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
     def execution_settings(self,
                            engine_params: Dict[str, Optional[str]]) -> ExecutionSettings:
 
@@ -212,14 +212,6 @@ class ActualWorkflowEngine(WorkflowEngine, metaclass=ABCMeta):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @staticmethod
-    def name(self, engine_name) -> str:
-        try:
-            plattform = "-".join([engine_name, self._version.split("-")[1]])
-        except Exception:
-            plattform = engine_name
-        return plattform
-
 
 class Snakemake(ActualWorkflowEngine):
 
@@ -228,8 +220,9 @@ class Snakemake(ActualWorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    def name(self):
-        return super().__name__("SMK")
+    @classmethod
+    def name(cls):
+        return "SMK"
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
@@ -325,8 +318,9 @@ class Nextflow(ActualWorkflowEngine):
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    def name(self):
-        return super().__name__("NFL")
+    @classmethod
+    def name(cls):
+        return "NFL"
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
@@ -419,12 +413,19 @@ class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
 
     def __init__(self, actual_engine: ActualWorkflowEngine,
                  container_context: dict[str, str]):
+        """
+        Note that paths in the `container_context` are mounted into the container with these
+        same paths. So the (within-)container context is the same as the outer context.
+        """
         self._actual_engine = actual_engine
         self._container_context = container_context
 
     @abstractmethod
     def _container_command(self) -> ShellCommand:
         """" Will return the command prefix 'singularity run ... ' """
+
+    def name(self) -> str:
+        return self._actual_engine.name()
 
     @abstractmethod
     def command(self,
