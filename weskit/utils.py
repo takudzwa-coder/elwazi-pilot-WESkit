@@ -8,6 +8,8 @@ import os
 import traceback
 from asyncio import AbstractEventLoop
 from datetime import datetime
+from importlib.abc import Traversable
+from importlib.resources import files
 from typing import Dict, Union, List, TypeVar, Optional, Callable, Any, Mapping
 from urllib.parse import urlparse
 
@@ -153,3 +155,11 @@ def updated(d: Mapping[str, Any], **kwargs) -> Mapping[str, Any]:
     for k, v in kwargs.items():
         dc[k] = v
     return dc
+
+
+def resource_path(module: str, name: str) -> Traversable:
+    return files(module).joinpath(name)
+
+
+def read_resource(module: str, name: str) -> str:
+    return resource_path(module, name).read_text(encoding="utf-8")

@@ -1,0 +1,203 @@
+#!/bin/bash
+# Wrap a command such that stdout, stderr, exit code and pid are associated with files.
+# By default, theses files are all located in the log directory and named stdout, stderr,
+# pid, and exit_code.
+#
+# You can set these files to arbitrary paths
+#  * /dev/null: Ignore the output/input.
+#  * relative path with '/' included: Path relative to the working directory.
+#  * filename (no '/' included): A different filename in the log-directory.
+#  * absolute path: Anyway contains a '/' and will be used as is.
+#
+# wrap [-l .log-XXXX] \
+#      [-n /dev/null] \
+#      [-i /dev/null] \
+#      [-o stdout] \
+#      [-e stderr] \
+#      [-p pid] \
+#      [-x exit_code] \
+#      [-a] \
+#      [-w ./] \
+#      -- command ...
+#
+# -l log file
+# -n environment file sourced before execution
+# -i stdin file
+# -o stdout file
+# -e stderr file
+# -p pid file
+# -x exit code file
+# -w work dir
+# -a If -a is set, the command is expected to be a string that is then subjected to a call to `eval`.
+#    Otherwise, the command can be multiple command segments, that are together executed as command.
+#    The following is equivalent.
+#
+#      wrap ... -- echo "hallo"
+#      wrap ... -a -- "echo \"hallo\" > /dev/stdout"
+#
+#    but the second command needs quoting because of the redirection. Use quoting with `-a` if the
+#    command needs any shell specials (e.g. ';', '&', '<').
+#
+# The workDir defaults to `./` -- whatever that may be. You may run the script via an SSH connection
+# and these may not have a valid working directory set. In this case `./` will probably lead to
+# undefined results or an error.
+#
+# You can execute shell functions that are exported with `export -f` from the calling environment.
+# See the tests in test_wrap.sh to get some ideas.
+#
+# Output to standard output is a JSON report of the form
+# {
+#    "exitCode": $int,
+#    "pid": $pid,
+#    "workDir": "...",
+#    "logDir": "...",
+#    "stderrFile": "...",
+#    "stdoutFile": "...",
+#    "stdinFile": "...",
+#    "exitFile": "...",
+#    "pidFile": "...",
+#    "envFile": "..."
+# }
+#
+set -o pipefail -ue
+
+# Default values
+logDir="$(mktemp -d -u ".log-XXXX")"
+stdinFile="/dev/null"
+stdoutFile="stdout"
+stderrFile="stderr"
+pidFile="pid"
+exitFile="exit_code"
+doEval="false"
+envFile="/dev/null"
+workDir="./"
+
+lastLen=-1
+while [[ $# -gt 0 ]]; do
+  if [[ $# -eq $lastLen ]]; then
+    echo "CLI parse error" >> /dev/stderr
+    exit 1
+  fi
+  lastLen=$#
+  case $1 in
+    -l|--logDir)
+      logDir="$2"
+      shift 2 # argument + value
+      ;;
+    -i|--stdin)
+      stdinFile="$2"
+      shift 2 # argument + value
+      ;;
+    -o|--stdout)
+      stdoutFile="$2"
+      shift 2 # argument + value
+      ;;
+    -e|--stderr)
+      stderrFile="$2"
+      shift 2 # argument + values
+      ;;
+    -x|--exit)
+      exitFile="$2"
+      shift 2 # argument + values
+      ;;
+    -p|--pid)
+      pidFile="$2"
+      shift 2 # argument + values
+      ;;
+    -n|--env)
+      envFile="$2"
+      shift 2 # argument + value
+      ;;
+    -w|--workDir)
+      workDir="$2"
+      shift 2 # argument + value
+      ;;
+    -a|--eval)
+      doEval="true"
+      shift # argument
+      ;;
+    --)
+      shift
+      break # The rest after -- is the command to execute.
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+  esac
+done
+
+declare -a command=("$@")
+
+# Paths
+createLogDir="false"
+fixDir() {
+  # Interpret relative paths as relative to the logDir.
+  # Schedule creation of the logDir only if any of the files will be located there based on its
+  # relative path.
+  local varName="${1:?No variable name}"
+  if echo "${!varName}" | grep -q -v "/"; then
+    # shellcheck disable=SC2140
+    declare -g "$varName"="$logDir/${!varName}"
+    createLogDir="true"
+  fi
+}
+
+# Note that the stdin file is either /dev/null (default) or whatever file is provided.
+# No path magic for stdinFile or envFile. If these are relative paths, they will be interpreted
+# relative to the workDir, because both files usually exist before the logDir!
+fixDir stdoutFile
+fixDir stderrFile
+fixDir pidFile
+fixDir exitFile
+
+cd "$workDir"
+
+if [[ "$createLogDir" == "true" ]]; then
+  mkdir -p "$logDir"
+fi
+pid=-1
+if [[ "$envFile" != "/dev/null" ]]; then
+  # shellcheck source=/dev/null
+  source "$envFile"
+fi
+if [[ "$doEval" == "true" ]]; then
+  eval "${command[*]}" \
+    < "$stdinFile" \
+    1> "$stdoutFile" \
+    2> "$stderrFile" \
+    & pid="$!"
+  echo "$pid" > "$pidFile"
+else
+  "${command[@]}" \
+    < "$stdinFile" \
+    1> "$stdoutFile" \
+    2> "$stderrFile" \
+    & pid="$!"
+  echo "$pid" > "$pidFile"
+fi
+
+set +e
+wait "$pid"
+exit_code="$?"
+set -e
+
+echo "$exit_code" > "$exitFile"
+
+cat - <<JSON_END >> /dev/stdout
+{
+    "exitCode": $exit_code,
+    "pid": $pid,
+    "workDir": "$workDir",
+    "logDir": "$logDir",
+    "stderrFile": "$stderrFile",
+    "stdoutFile": "$stdoutFile",
+    "stdinFile": "$stdinFile",
+    "exitFile": "$exitFile",
+    "pidFile": "$pidFile",
+    "envFile": "$envFile"
+}
+JSON_END
+
+
+exit $exit_code
