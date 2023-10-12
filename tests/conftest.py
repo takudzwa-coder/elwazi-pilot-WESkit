@@ -294,15 +294,17 @@ def create_manager(celery_session_app, redis_container, test_config, test_databa
     workflows_base_dir = Path("tests")
     os.environ["WESKIT_WORKFLOWS"] = str(workflows_base_dir)
     test_dir = Path("test-data")
+    singularity_containers_dir = Path("test-engines")
     if not (test_dir.exists() and test_dir.is_dir()):
         test_dir.mkdir()
     common_context = PathContext(workflows_dir=workflows_base_dir,
-                                 data_dir=test_dir)
+                                 data_dir=test_dir,
+                                 singularity_containers_dir=singularity_containers_dir)
     return Manager(celery_app=celery_session_app,
                    database=test_database,
                    config=test_config,
                    workflow_engines=WorkflowEngineFactory.
-                   create(test_config["workflow_engines"]),
+                   create(test_config["workflow_engines"], common_context),
                    weskit_context=common_context,
                    executor_context=common_context,
                    require_workdir_tag=require_workdir_tag)

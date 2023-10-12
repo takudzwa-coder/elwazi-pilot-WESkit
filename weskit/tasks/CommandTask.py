@@ -146,7 +146,7 @@ def run_command(command: ShellCommand,
     finally:
         # The execution context is the run-directory. It is used to create all paths to be reported
         # relative to the run-directory.
-        rundir_context = PathContext(Path("."), Path("."))
+        rundir_context = PathContext(Path("."), Path("."), Path("."))
 
         # Collect files, but ignore those that are in the .weskit/ directory. They are tracked by
         # the fields in the execution log (or that of previous runs in this directory).

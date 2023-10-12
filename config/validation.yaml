@@ -50,6 +50,16 @@ executor:
           - ssh
           - ssh_slurm
           - ssh_lsf
+    singularity_containers_dir:
+      type: string
+      required: false
+      dependencies:
+        type:
+          - local_slurm
+          - local_lsf
+          - ssh
+          - ssh_slurm
+          - ssh_lsf
     login:
       type: dict
       required: false
@@ -197,6 +207,16 @@ workflow_engines:
       valuesrules:
         type: dict
         schema:
+          container:
+            type: dict
+            required: false
+            schema:
+              type:
+                type: string
+                required: true
+              containers_dir:
+                type: string
+                required: true
           default_parameters:
             type: list
             default: []

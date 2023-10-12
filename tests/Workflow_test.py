@@ -293,3 +293,34 @@ def test_update_all_runs(manager,
     db_run = manager.get_run(run.id)
     assert db_run is not None
     assert db_run.processing_stage == ProcessingStage.FINISHED_EXECUTION
+
+
+@pytest.mark.integration
+def test_missing_celery_id(manager):
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="7.30.2")
+    manager.database.insert_run(run)
+    run = manager.prepare_execution(run, files=[])
+    run = manager.execute(run)
+    run = manager.database.update_run(run)
+    run.processing_stage = ProcessingStage.REQUESTED_CANCEL
+    run.celery_task_id = None
+    run = manager.update_run(run)
+    assert run.processing_stage == ProcessingStage.SYSTEM_ERROR
+
+
+@pytest.mark.integration
+def test_run_id_existence(manager):
+    run = get_mock_run(workflow_url="file:wf1/Snakefile",
+                       workflow_type="SMK",
+                       workflow_type_version="7.30.2")
+    manager.database.insert_run(run)
+    run = manager.prepare_execution(run, files=[])
+    run = manager.execute(run)
+    run = manager.database.update_run(run)
+    run_id = str("12345678123456781234567812345678")
+    run_list = manager.update_runs(run_id)
+    # run_id is not an actual run
+    # and thus has no databse entry
+    assert run_list == []

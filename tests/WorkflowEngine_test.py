@@ -6,10 +6,10 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-
+from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ss
-from weskit import WorkflowEngineFactory
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow
+from weskit.classes.WorkflowEngineFactory import WorkflowEngineFactory
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow, SingularityWrappedEngine
 from weskit.classes.WorkflowEngineParameters import \
     EngineParameter, ActualEngineParameter, ParameterIndex
 from weskit.exceptions import ClientError
@@ -368,7 +368,7 @@ def test_create_engines():
     engines = WorkflowEngineFactory.create({
         "NFL": {"vers1": {"default_parameters": [{"name": "max-memory", "value": "50gb"}]}},
         "SMK": {"vers2": {"default_parameters": [{"name": "cores", "value": "100"}]}}
-    })
+    }, PathContext(Path("data"), Path("workflows"), Path("singularity")))
 
     assert engines["NFL"]["vers1"].name() == "NFL"
     assert engines["NFL"]["vers1"].version == "vers1"
@@ -379,3 +379,73 @@ def test_create_engines():
     assert engines["SMK"]["vers2"].default_params == [
         ActualEngineParameter(Snakemake.known_parameters()["cores"], "100")
     ]
+
+
+def test_wrapper_command():
+    engine = WorkflowEngineFactory.create_engine(
+        Snakemake,
+        "7.30.2",
+        [{"name": "cores", "value": "2", "api": True},
+         {"name": "use-singularity", "value": "T", "api": True},
+         {"name": "use-conda", "value": "T", "api": True},
+         {"name": "resume", "value": "F", "api": True},
+         {"name": "profile", "value": "myprofile", "api": True},
+         {"name": "tes", "value": "https://some/test/URL", "api": True},
+         {"name": "jobs", "value": "1", "api": True}
+         ]
+    )
+
+    # Test singularity wrapper
+    container_context = PathContext(
+        Path("/path/to/remote_data_dir"),
+        Path("/path/to/remote_workflows_dir"),
+        Path("/path/to/singularity_containers_dir"))
+
+    command = SingularityWrappedEngine(engine, container_context).\
+        command(Path("/some/path"),
+                Path("/some/workdir"),
+                [Path("/some/config.yaml")],
+                {})
+    assert command.command == ['singularity',
+                               'run',
+                               '--no-home',
+                               '-e',
+                               '--env',
+                               'LC_ALL=POSIX',
+                               '--bind',
+                               '/path/to/remote_data_dir:/path/to/remote_data_dir',
+                               '--bind',
+                               '/path/to/remote_workflows_dir:/path/to/remote_workflows_dir',
+                               '/path/to/singularity_containers_dir/SMK_7.30.2.sif',
+                               'snakemake',
+                               '--snakefile', '/some/path',
+                               '--cores', '2',
+                               '--use-singularity',
+                               '--use-conda',
+                               '--forceall',
+                               '--profile', 'myprofile',
+                               '--tes', 'https://some/test/URL',
+                               '--jobs', '1',
+                               '--configfile', '/some/config.yaml'
+                               ]
+
+    assert command.environment == {
+        "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
+        "WESKIT_WORKFLOW_PATH": "/some/path"
+    }
+    assert command.workdir == Path("/some/workdir")
+
+
+def test_forbidden_parameter():
+    param = EngineParameter({"a"})
+    a1 = ActualEngineParameter(param, "1")
+    # Snakemake
+    with pytest.raises(ValueError):
+        _ = Snakemake(version="1.0", default_params=[a1]) == 1
+    with pytest.raises(ValueError):
+        SingularityWrappedEngine(Snakemake(version="1.0", default_params=[a1]) == 1)
+    # Nextflow
+    with pytest.raises(ValueError):
+        _ = Nextflow(version="1.0", default_params=[a1]) == 1
+    with pytest.raises(ValueError):
+        SingularityWrappedEngine(Nextflow(version="1.0", default_params=[a1]) == 1)

@@ -4,7 +4,9 @@
 
 from typing import Dict, List, Union, Optional
 
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow, WorkflowEngine
+from weskit.classes.PathContext import PathContext
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow,\
+    ActualWorkflowEngine, SingularityWrappedEngine, WorkflowEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
 
 # Type aliases to simplify the signature of the type annotations.
@@ -25,7 +27,7 @@ class WorkflowEngineFactory:
     def create_engine(engine_class,
                       engine_version: str,
                       parameters: ConfParameters) \
-            -> WorkflowEngine:
+            -> ActualWorkflowEngine:
         """
         Convert a list of parameter name/value dictionaries of actual parameters to a dictionary of
         ActualEngineParams.
@@ -45,8 +47,10 @@ class WorkflowEngineFactory:
                             actual_params)
 
     @staticmethod
-    def _create_versions(engine_class, engine_params: ConfVersions) \
-            -> Dict[str, WorkflowEngine]:
+    def _create_versions(engine_class,
+                         engine_params: Dict[str, Union[ConfVersions]],
+                         execution_path_context: PathContext) \
+            -> Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]:
         """
         :param engine_class: WorkflowEngine class
         :param engine_params: Version name -> List of dictionaries, one for each parameter.
@@ -56,13 +60,24 @@ class WorkflowEngineFactory:
                                             WorkflowEngineFactory.
                                             create_engine(engine_class,
                                                           by_version[0],
-                                                          by_version[1])),
+                                                          by_version[1]['default_parameters'])
+                                            if "singularity" not in by_version[0]
+                                            else
+                                            SingularityWrappedEngine(
+                                                    WorkflowEngineFactory.
+                                                    create_engine(engine_class,
+                                                                  by_version[0],
+                                                                  by_version[1]
+                                                                  ['default_parameters']),
+                                                    execution_path_context
+                                            )),
                         engine_params.items()))
 
     @staticmethod
     def _maybe_engine(engine_class,
-                      engine_params: Dict[str, Dict[str, ConfVersions]]) \
-            -> Dict[str, Dict[str, WorkflowEngine]]:
+                      engine_params: Dict[str, Dict[str, ConfVersions]],
+                      execution_path_context: PathContext) \
+            -> Dict[str, Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]]:
         """
         Create a WorkflowEngine entry, if the engine is defined in the configuration.
         """
@@ -75,26 +90,36 @@ class WorkflowEngineFactory:
         if engine_is_defined() and some_version_is_defined():
             return {engine_class.name(): WorkflowEngineFactory.
                     _create_versions(engine_class,
-                                     {version: configuration_option["default_parameters"]
+                                     {version: configuration_option
                                       for version, configuration_option
                                       in engine_params[engine_class.name()].items()
-                                      })}
+                                      },
+                                     execution_path_context)}
         else:
             return {}
 
     @staticmethod
-    def create(engine_params: Dict[str, Dict[str, ConfVersions]]) -> \
-            Dict[str, Dict[str, WorkflowEngine]]:
+    def create(engine_params: Dict[str, Dict[str, ConfVersions]],
+               execution_path_context: PathContext) -> \
+            Dict[str, Dict[str, Union[ActualWorkflowEngine, WorkflowEngine]]]:
         """
         Return a dictionary of all WorkflowEngines mapping workflow_engine to
         workflow_engine_version to WorkflowEngine instances.
+
+        The `execution_path_context` is needed if the actual workflow engine (e.g. Snakemake)
+        has to be wrapped by a container. The container needs to know which external paths to
+        mount into the container.
 
         This is yet statically implemented, but could at some
         point by done with https://stackoverflow.com/a/3862957/8784544.
         """
         workflow_engines = {}
-        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Snakemake, engine_params))
-        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Nextflow, engine_params))
+        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Snakemake,
+                                                                    engine_params,
+                                                                    execution_path_context))
+        workflow_engines.update(WorkflowEngineFactory._maybe_engine(Nextflow,
+                                                                    engine_params,
+                                                                    execution_path_context))
 
         # The semantics of workflow_type and workflow_engine_parameters is not completely defined
         # yet. There is also a proposal for a workflow_engine_name parameter.

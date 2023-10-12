@@ -19,7 +19,8 @@ from weskit.tasks.CommandTask import run_command
 def test_run_command(temporary_dir, test_config):
     command = ["echo", "hello world", ss(">"), "x"]
     context = PathContext(data_dir=Path(temporary_dir).parent,
-                          workflows_dir=Path(temporary_dir))
+                          workflows_dir=Path(temporary_dir),
+                          singularity_containers_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
     command_obj = ShellCommand(command=command,
                                workdir=workdir)
@@ -44,7 +45,7 @@ def test_run_command(temporary_dir, test_config):
 
 
 @pytest.mark.ssh
-def test_run_command_ssh(temporary_dir, test_config, remote_config):
+def test_run_command_ssh(temporary_dir, remote_config):
     with tempfile.NamedTemporaryFile("w", prefix="config", suffix=".yaml") as config_file:
         config = {
             "executor": {
@@ -54,10 +55,12 @@ def test_run_command_ssh(temporary_dir, test_config, remote_config):
                 "login": remote_config["ssh"]  # "ssh" in remote.yaml
             }
         }
+
+        # Not suited for concurrently running tests.
         original_config = os.getenv("WESKIT_CONFIG")
 
         try:
-            print(yaml.dump(config), file=config_file)
+            print(yaml.dump(config), file=config_file, flush=True)
             os.environ["WESKIT_CONFIG"] = config_file.name
 
             command = ["echo", "hello world", ss(">"), "x"]

@@ -327,7 +327,9 @@ def test_std_fds_are_closed(local_executor, temporary_dir):
 @pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
 def test_get_status(executor_prefix, request):
     executor, _ = request.getfixturevalue(executor_prefix + "_executor")
-    command = ShellCommand(["sleep", "30" if isinstance(executor, (SlurmExecutor, LsfExecutor))
+    # On a slow head-node, the get_status request below may take longer than the job. Therefore,
+    # the job-runtime has to be long enough.
+    command = ShellCommand(["sleep", "60" if isinstance(executor, (SlurmExecutor, LsfExecutor))
                             else "1"],
                            workdir=Path("./"))
     process = executor.execute(command,
@@ -357,10 +359,14 @@ def test_get_status(executor_prefix, request):
 def test_update_process(executor_prefix, request):
     executor, _ = request.getfixturevalue(executor_prefix + "_executor")
 
+    # The first part of the tests, checks whether the job is still running. Dependent on the
+    # performance (and load) on the head-node, the status-request may take long. Therefore,
+    # these sleep durations may have to be increased (and thus also the time for the test to
+    # finish, even in case of high performance.
     if isinstance(executor, LocalExecutor):
         sleep_duration = 1
     elif isinstance(executor, LsfExecutor):
-        sleep_duration = 30
+        sleep_duration = 60
     elif isinstance(executor, SlurmExecutor):
         sleep_duration = 30
     else:

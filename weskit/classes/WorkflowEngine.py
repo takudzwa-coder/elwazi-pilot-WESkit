@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Union
 
 from tempora import parse_timedelta
 
+from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss, ShellSpecial
 from weskit.classes.WorkflowEngineParameters import \
     ActualEngineParameter, ParameterIndex, KNOWN_PARAMS, EngineParameter
@@ -26,10 +27,14 @@ class WorkflowEngine(metaclass=ABCMeta):
         not_allowed = list(filter(lambda param: param.param not in self.known_parameters().all,
                                   default_params))
         if len(not_allowed) > 0:
-            raise ValueError(f"Non-allowed default parameters for {type(self).name()}: " +
+            raise ValueError(f"Forbidden default parameters for {self.name()}: " +
                              str(not_allowed))
         self.default_params = default_params
         self._version = version
+
+    @abstractmethod
+    def name(self) -> str:
+        pass
 
     @property
     def version(self) -> str:
@@ -44,7 +49,6 @@ class WorkflowEngine(metaclass=ABCMeta):
         }
 
     @classmethod
-    @abstractmethod
     def known_parameters(cls) -> ParameterIndex:
         """
         Get an index of the workflow engine parameters allowed for this WorkflowEngine subclass.
@@ -180,11 +184,6 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         pass
 
-    @staticmethod
-    @abstractmethod
-    def name() -> str:
-        pass
-
     def execution_settings(self,
                            engine_params: Dict[str, Optional[str]]) -> ExecutionSettings:
 
@@ -207,15 +206,23 @@ class WorkflowEngine(metaclass=ABCMeta):
             cores=mop(get_value(parameter_idx.get("cores")), int))
 
 
-class Snakemake(WorkflowEngine):
+class ActualWorkflowEngine(WorkflowEngine, metaclass=ABCMeta):
 
     def __init__(self,
                  version: str,
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @staticmethod
-    def name():
+
+class Snakemake(ActualWorkflowEngine):
+
+    def __init__(self,
+                 version: str,
+                 default_params: List[ActualEngineParameter]):
+        super().__init__(version, default_params)
+
+    @classmethod
+    def name(cls):
         return "SMK"
 
     @classmethod
@@ -305,15 +312,15 @@ class Snakemake(WorkflowEngine):
                             environment=self._environment(workflow_path, parameters))
 
 
-class Nextflow(WorkflowEngine):
+class Nextflow(ActualWorkflowEngine):
 
     def __init__(self,
                  version: str,
                  default_params: List[ActualEngineParameter]):
         super().__init__(version, default_params)
 
-    @staticmethod
-    def name():
+    @classmethod
+    def name(cls):
         return "NFL"
 
     @classmethod
@@ -401,3 +408,79 @@ class Nextflow(WorkflowEngine):
         return ShellCommand(command=command,
                             workdir=None if workdir is None else Path(workdir),
                             environment=self._environment(workflow_path, parameters))
+
+
+class ContainerWrappedEngine(WorkflowEngine, metaclass=ABCMeta):
+
+    def __init__(self, actual_engine: ActualWorkflowEngine,
+                 container_context: PathContext):
+        """
+        Note that paths in the `container_context` are mounted into the container with these
+        same paths. So the (within-)container context is the same as the outer context.
+        """
+        self._actual_engine = actual_engine
+        self._container_context = container_context
+
+    @abstractmethod
+    def _container_command(self) -> ShellCommand:
+        """" Will return the command prefix 'singularity run ... ' """
+
+    def name(self) -> str:
+        return self._actual_engine.name()
+
+    @abstractmethod
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files:  List[Path],
+                engine_params: Dict[str, Optional[str]])\
+            -> ShellCommand:
+        """" Composes a command based on the results of _container_command() and
+            self._actual_engine.command()
+        """
+
+
+class SingularityWrappedEngine(ContainerWrappedEngine):
+
+    def __init__(self, actual_engine: ActualWorkflowEngine,
+                 container_context: PathContext):
+        super().__init__(actual_engine, container_context)
+        if container_context.singularity_containers_dir is None:
+            raise ValueError("SingularityWrappedEngine requested without container directory")
+
+    def _container_command(self) -> ShellCommand:
+        singularity_container_dir = self._container_context.singularity_containers_dir
+        if singularity_container_dir is None:
+            raise ValueError("SingularityWrappedEngine requested without container directory")
+        container_command: List[Union[str, ShellSpecial]]
+        container_command = ["singularity", "run",
+                             "--no-home", "-e", "--env", "LC_ALL=POSIX",
+                             "--bind", ":".join([str(self._container_context.data_dir),
+                                                 str(self._container_context.data_dir)]),
+                             "--bind", ":".join([str(self._container_context.workflows_dir),
+                                                 str(self._container_context.workflows_dir)]),
+                             str(singularity_container_dir /
+                                 Path(f"{self.name()}_"
+                                      f"{self._actual_engine.version}.sif"))
+                             ]
+        return ShellCommand(command=container_command)
+
+    def command(self,
+                workflow_path: Path,
+                workdir: Optional[Path],
+                config_files:  List[Path],
+                engine_params: Dict[str, Optional[str]])\
+            -> ShellCommand:
+
+        container_command = self._container_command()
+
+        actual_engine_command = self._actual_engine.command(workflow_path,
+                                                            workdir,
+                                                            config_files,
+                                                            engine_params)
+        workflow_commmand: List[Union[str, ShellSpecial]] = \
+            container_command.command + actual_engine_command.command
+
+        return ShellCommand(command=workflow_commmand,
+                            workdir=actual_engine_command.workdir,
+                            environment=actual_engine_command.environment)

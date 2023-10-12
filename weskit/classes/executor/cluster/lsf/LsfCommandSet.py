@@ -66,7 +66,7 @@ class LsfCommandSet(CommandSet):
     def _walltime_string(self, walltime: timedelta) -> str:
         """
         Return a string representation of a time interval for LSF. The hours are at least two
-        digits, optionally will leading zeros, but may also increase beyond 24 hours.
+        digits, optionally with leading zeros, but may also increase beyond 24 hours.
         """
         hours, without_hours = divmod(walltime.total_seconds(), 3600)
         minutes, seconds = divmod(without_hours, 60)

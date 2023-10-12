@@ -23,7 +23,6 @@ from weskit.classes.Database import Database
 from weskit.classes.PathContext import PathContext
 from weskit.classes.Run import Run
 from weskit.classes.ProcessingStage import ProcessingStage
-from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.TrsWorkflowInstaller \
     import TrsWorkflowInstaller, WorkflowInfo, WorkflowInstallationMetadata
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -147,14 +146,14 @@ class Manager:
 
         elif run.processing_stage.is_running or \
                 run.processing_stage == ProcessingStage.REQUESTED_CANCEL:
-            logger.error(f"No Celery task ID for run {run.id}",
-                         f" in stage {run.processing_stage}")
+            logger.error((f"No Celery task ID for run {run.id}",
+                         f" in stage {run.processing_stage}"))
             run.processing_stage = ProcessingStage.SYSTEM_ERROR
 
         return self.database.update_run(run, Run.merge, max_tries)
 
     def update_runs(self,
-                    run_id: Optional[Union[UUID, str]] = None,
+                    run_id: Optional[UUID] = None,
                     max_tries: int = 1) -> List[Run]:
         """
         Update all runs in a non-terminal state, or (always) the single run with the requested
@@ -388,12 +387,14 @@ class Manager:
             return run
 
         # Execute run
-        config_files: Optional[List[Path]] = [Path(f"{run.id}.yaml")]
-        command: ShellCommand = self.workflow_engines[workflow_type][workflow_type_version].\
+        config_files: List[Path] = [Path(f"{run.id}.yaml")]
+        command = \
+            self.workflow_engines[workflow_type][workflow_type_version].\
             command(workflow_path=run.rundir_rel_workflow_path,
                     workdir=run.sub_dir,
                     config_files=config_files,
                     engine_params=run.request.get("workflow_engine_parameters", {}))
+
         execution_settings: ExecutionSettings = \
             self.workflow_engines[workflow_type][workflow_type_version].\
             execution_settings(run.request.get("workflow_engine_parameters", {}))  # noqa F841
