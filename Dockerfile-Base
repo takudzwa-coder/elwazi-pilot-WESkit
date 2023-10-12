@@ -28,8 +28,10 @@ RUN if grep -q '^ID=alpine$' /etc/os-release; then \
       apk add --no-cache --virtual temp-packages shadow=4.13-r0; \
     fi && \
     usermod \
-        "--login=$USER" \ 
+        "--login=$USER" \
         "--home=/home/$USER" \
+        "--login=$NEW_MAMBA_USER" \
+        "--home=/home/$NEW_MAMBA_USER" \
         --move-home \
         "--uid=$USER_ID" \
         "$MAMBA_USER" && \
@@ -63,7 +65,7 @@ RUN micromamba config set channel_priority strict
 COPY environment.yaml /weskit/environment.yaml
 
 RUN echo "Creating environment ..." && \
-    micromamba config set channel_priority flexible 
+    micromamba config set channel_priority flexible
 RUN micromamba install -y -n base -f /weskit/environment.yaml && \
     micromamba clean --all --yes
 # If you would like an ENTRYPOINT command to be executed within an active conda environment, 
