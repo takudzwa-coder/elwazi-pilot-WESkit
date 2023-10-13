@@ -7,6 +7,11 @@ SPDX-License-Identifier: MIT
 ## Summary
 
 <!-- Summarize the bug encountered concisely -->
+<!-- Stack trace (Traceback)  -->
+<!-- OS, Platform and Version (Windows, Linux, macOS, x86, ARM) --> 
+<!-- Version of the interpreter, compiler, SDK, runtime environment, package manager, depending on what seems relevant. --> 
+<!-- Possibly your input and the output  -->
+<!-- Can you reliably reproduce the issue? And can you also reproduce it with older versions? --> 
 
 ## Steps to reproduce
 
