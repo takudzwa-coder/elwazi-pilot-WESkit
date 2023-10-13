@@ -17,10 +17,10 @@ ARG no_proxy="$NO_PROXY"
 
 # https://micromamba-docker.readthedocs.io/en/latest/advanced_usage.html#changing-the-user-id-or-name
 # Changing the user id or name
-ARG NEW_MAMBA_USER=weskit
-ARG NEW_MAMBA_GROUP=weskit
-ARG NEW_MAMBA_USER_ID="35671"
-ARG NEW_MAMBA_USER_GID="35671"
+ARG USER=weskit
+ARG GROUP=weskit
+ARG USER_ID="35671"
+ARG USER_GID="35671"
 USER root
 
 RUN if grep -q '^ID=alpine$' /etc/os-release; then \
@@ -28,14 +28,14 @@ RUN if grep -q '^ID=alpine$' /etc/os-release; then \
       apk add --no-cache --virtual temp-packages shadow=4.13-r0; \
     fi && \
     usermod \
-        "--login=$NEW_MAMBA_USER" \ 
-        "--home=/home/$NEW_MAMBA_USER" \
+        "--login=$USER" \ 
+        "--home=/home/$USER" \
         --move-home \
-        "--uid=$NEW_MAMBA_USER_ID" \
+        "--uid=$USER_ID" \
         "$MAMBA_USER" && \
     groupmod \
-        "--new-name=$NEW_MAMBA_USER" \
-        "--gid=$NEW_MAMBA_USER_GID" \
+        "--new-name=$USER" \
+        "--gid=$USER_GID" \
         "$MAMBA_USER" && \
     if grep -q '^ID=alpine$' /etc/os-release; then \
       # remove the packages that were only needed for usermod/groupmod
@@ -43,13 +43,11 @@ RUN if grep -q '^ID=alpine$' /etc/os-release; then \
     fi && \
     # Update the expected value of MAMBA_USER for the
     # _entrypoint.sh consistency check.
-    echo "$NEW_MAMBA_USER" > "/etc/arg_mamba_user" && \
+    echo "$USER" > "/etc/arg_mamba_user" && \
     :
-ENV MAMBA_USER=$NEW_MAMBA_USER
-ENV MAMBA_GROUP=$NEW_MAMBA_GROUP
 
 RUN mkdir /weskit \
-    && chown -R "$MAMBA_USER:$MAMBA_GROUP" /weskit /opt/conda \
+    && chown -R "$USER:$GROUP" /weskit /opt/conda \
     && chmod -R 0770 /home/weskit /weskit /opt/conda \
     && umask 0770
 
@@ -58,8 +56,8 @@ RUN apt-get --allow-releaseinfo-change update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-USER $MAMBA_USER
-
+USER $USER
+ENV MAMBA_USER=$USER
 
 RUN micromamba config set channel_priority strict
 COPY environment.yaml /weskit/environment.yaml
