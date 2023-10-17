@@ -30,8 +30,10 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - libcurl>=8.4.0
+  - curl>=8.4.0
   # Development
-  - coverage=6
+  - coverage>=6
   - flake8
   - mccabe
   - mypy
@@ -42,13 +44,13 @@ dependencies:
   - jq
   - sqlalchemy
   - pymysql
+  - reuse
   # ... Pip: Some pip-packages need gcc :(. E.g. datrie, a dependency of python-kubernetes.
   - gcc_linux-64
   # ... integration tests with Nextflow
-  - nextflow=23.04.1
-  - filelock
+  - openjdk=17
   # WESkit core packages
-  - python>=3.10.8
+  - python>=3.11.4
   - pip
   - asyncssh>=2.12.0
   - bcrypt
@@ -83,29 +85,34 @@ dependencies:
   - flufl.lock=7
   - xz
   - pip:
-    # In Conda these were conflicting with Python 3.11.*, but not in Pip
+    # In Conda these were conflicting with Python 3.11.*, but not in Pip.
+    # Some packages (kubernetes) seem not to install correctly with Conda.
     # Development
     - testcontainers==3.7.1
     - typing
     - typing_extensions
+    - pip-licenses
     # .. mypy packages
     - types-pyyaml
     - types-requests
     - types-urllib3
     - types-decorator
     - types-pyOpenSSL
-    # .. integration tests with Snakemake
-    - snakemake==7.30.2
     # WESkit core packages
     - gevent
-    - python-kubernetes
     - redis==4
     - ulid_py
     - requests
     - urllib3
     - boto3
     - requests-mock
+    - kubernetes>=1.25.3
     # TRS feature
     - trs-cli==0.7.0
     - pydantic==1.10.11   # Newest 1er version!
     - typing-extensions
+    # Integration tests with Snakemake
+    - snakemake==7.30.2
+    # Integration tests with Nextflow. `nextflow info` needs to be run afterwards!
+    - nextflow==23.04.1
+    - filelock

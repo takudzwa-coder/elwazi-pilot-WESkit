@@ -17,8 +17,8 @@ from typing import Optional, TypeVar, Generic, ClassVar
 from urllib3.util.url import Url
 
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor.ExecutionState import ExecutionState
-from weskit.classes.executor.ProcessId import WESkitExecutionId, ProcessId, Identifier
+from weskit.classes.executor2.ExecutionState import ExecutionState, ObservedExecutionState
+from weskit.classes.executor2.ProcessId import WESkitExecutionId, ProcessId, Identifier
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.memory_units import Memory
 from weskit.serializer import decode_json
@@ -43,11 +43,11 @@ class ExecutionResult(Generic[S]):
                  stdout_url: Optional[Url],
                  stderr_url: Optional[Url],
                  stdin_url: Optional[Url],
-                 status: ExecutionState[S],
+                 state: ObservedExecutionState[S],
                  start_time: datetime,
                  end_time: Optional[datetime] = None):
         self._command = command
-        self._status = status
+        self._state = state
         self._stdout_url = stdout_url
         self._stderr_url = stderr_url
         self._stdin_url = stdin_url
@@ -56,7 +56,7 @@ class ExecutionResult(Generic[S]):
 
     @property
     def execution_id(self) -> WESkitExecutionId:
-        return self._status.execution_id
+        return self._state.execution_id
 
     @property
     def command(self) -> ShellCommand:
@@ -64,7 +64,7 @@ class ExecutionResult(Generic[S]):
 
     @property
     def process_id(self) -> ProcessId:
-        return self._status.last_external_state.pid
+        return self._state.last_external_state.pid
 
     @property
     def stdout_url(self) -> Optional[Url]:
@@ -83,12 +83,12 @@ class ExecutionResult(Generic[S]):
         return self._start_time
 
     @property
-    def status(self) -> ExecutionState[S]:
-        return self._status
+    def state(self) -> ObservedExecutionState[S]:
+        return self._state
 
-    @status.setter
-    def status(self, value: ExecutionState[S]):
-        self._status = value
+    @state.setter
+    def state(self, value: ObservedExecutionState[S]):
+        self._state = value
 
     @property
     def end_time(self) -> Optional[datetime]:
@@ -99,11 +99,11 @@ class ExecutionResult(Generic[S]):
         self._end_time = value
 
     def __repr__(self):
-        return f"CommandResult(" + ", ".join([
+        return "CommandResult(" + ", ".join([
             f"execution_id={self.execution_id}",
             f"command={self.command}",
             f"process_id={self.process_id}",
-            f"status={self.status}"
+            f"status={self.state}"
         ]) + ")"
 
 
@@ -132,13 +132,13 @@ class ExecutionSettings:
         Some sanity checks on the values done at construction time of the dataclass instance.
         """
         if self.max_retries is not None:
-            assert(self.max_retries >= 0)
+            assert self.max_retries >= 0
         if self.cores is not None:
-            assert(self.cores > 0)
+            assert self.cores > 0
         if self.walltime is not None:
-            assert(self.walltime.total_seconds() > 0)
+            assert self.walltime.total_seconds() > 0
         if self.memory is not None:
-            assert(self.memory.bytes() > 0)
+            assert self.memory.bytes() > 0
 
     def __iter__(self):
         for i in {
@@ -201,11 +201,6 @@ class Executor(Generic[S], metaclass=ABCMeta):
     @property
     @abstractmethod
     def hostname(self) -> str:
-        pass
-
-    # TODO Create a process directory
-    # TODO Create a wrapper and write it via the storage accessor to the process directory.
-    async def _wrapper(self):
         pass
 
     @abstractmethod
@@ -303,14 +298,14 @@ class Executor(Generic[S], metaclass=ABCMeta):
     @abstractmethod
     async def wait(self, state: ExecutionState[S]) -> None:
         """
-        Wait for the process to finish. This should be implemented efficiently, e.g. with wait (UNIX)
-        or bwait (LSF). Avoid polling.
+        Wait for the process to finish. This should be implemented efficiently, e.g. with wait
+        (UNIX) or bwait (LSF). Avoid polling.
 
-        Note that wait() is still async. The reasons are (1) the waiting may require calling an async
-        method (e.g. a remote call), which would be hard without event loop, and (2) there is no reason
-        to assume that the calling process should be blocked completely. Probably it will even get
-        blocked async, because anyway also the other async methods of this class will be used in the same
-        context.
+        Note that wait() is still async. The reasons are (1) the waiting may require calling an
+        async method (e.g. a remote call), which would be hard without event loop, and (2) there
+        is no reason to assume that the calling process should be blocked completely. Probably it
+        will even get blocked async, because anyway also the other async methods of this class
+        will be used in the same context.
         """
         pass
 

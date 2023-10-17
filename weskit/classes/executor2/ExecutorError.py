@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-from typing import Optional
-
 class ExecutorError(Exception):
     """
     Any error in the Executor, including e.g. parse errors, etc.

@@ -104,10 +104,10 @@ def test_submit_failing_command(executor_prefix, request):
                                    walltime=timedelta(minutes=5.0),
                                    memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
-    assert result.status.code == 127
-    assert not result.status.success
-    assert result.status.finished
-    assert result.status.failed
+    assert result.state.code == 127
+    assert not result.state.success
+    assert result.state.finished
+    assert result.state.failed
 
 
 @pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
@@ -121,7 +121,7 @@ def test_submit_nonexisting_command(executor_prefix, request):
                                    walltime=timedelta(minutes=5.0),
                                    memory=Memory(100, Unit.MEGA)))
     result = executor.wait_for(process)
-    assert result.status.code == 127
+    assert result.state.code == 127
 
 
 @pytest.mark.parametrize("executor_prefix", conftest.executor_prefixes)
@@ -139,7 +139,7 @@ def test_inacessible_workdir(executor_prefix, request):
     # Note: SLURM exits with code 0. It changes to /tmp if dir does not exist.
     # This behaviour can be changes by the admin. slurm.conf
     # ssh exits with 0
-    assert result.status.code in [1, 2], result.status
+    assert result.state.code in [1, 2], result.state
 
 
 class ExecuteProcess(metaclass=ABCMeta):
@@ -198,11 +198,11 @@ class ExecuteProcess(metaclass=ABCMeta):
             #    bash -c 'echo "-$test-$other-"'
         )
 
-        assert result.status.code == 0, result
+        assert result.state.code == 0, result
 
-        assert result.status.success
-        assert result.status.finished
-        assert not result.status.failed
+        assert result.state.success
+        assert result.state.finished
+        assert not result.state.failed
         assert result.start_time is not None
         assert result.end_time is not None
 
@@ -471,7 +471,7 @@ def test_executor_context_manager():
     executor = MockExecutor(target_status=0)
     with execute(executor, command) as (result, stdout, stderr):
         assert executor.wait_for_called_with.id.value == 12234
-        assert result.status.code == 0
+        assert result.state.code == 0
         assert stderr.readlines() == ["stderr\n"]
         assert stdout.readlines() == ["stdout\n"]
         assert result.stdout_file == Path(stdout.name)

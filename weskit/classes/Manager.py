@@ -94,7 +94,7 @@ class Manager:
         other conditions or because of previous query results) with SUCCESSFUL Celery state,
         update the Run with information from the Celery task.
         """
-        if not run.processing_stage.is_terminal and celery_task.status == "SUCCESS":
+        if not run.processing_stage.is_terminal and celery_task.state == "SUCCESS":
             # The command itself may have failed, though, because run_command catches execution
             # errors of the command and lets the Celery job succeed.
             result = celery_task.get()

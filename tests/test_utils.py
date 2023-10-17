@@ -6,6 +6,7 @@ import os
 import json
 import time
 import uuid
+from textwrap import dedent
 from typing import Dict, Optional
 
 import yaml
@@ -84,31 +85,35 @@ def test_now_has_no_nanoseconds():
 def test_env_licences():
     """Check if all used packages have a weak copyleft
     or are only required during compilation"""
-    conda_env = os.system(''.join(['cat $CONDA_PREFIX/conda-meta/*.json | jq ".name, .license" ',
-                                   '| paste - - | sort -k 2 | grep -v BSD | grep -v MIT ',
-                                   '| grep -v Apache | grep -v LGPL | grep -v GCC-exception ',
-                                   '| grep -v "ISC" | grep -v "OFL" | grep -v "EPL-1.0" ',
-                                   '| grep -vP "Zlib|zlib" | grep -v "Unlicense" | grep -v "TCL" ',
-                                   '| grep -vP "Python|PSF" | grep -v "Public-Domain" ',
-                                   '| grep -v "HPND" | grep -v "IJG" ',
-                                   '| grep -v "Classpath-exception" | grep -v "bzip2-1.0.6" ',
-                                   '| grep -v "Ubuntu Font" ',
-                                   '| grep -v -e "libnsl" -e "binutils_impl_linux-64" ',
-                                   '-e "ld_impl_linux-64" -e "_libgcc_mutex" -e "uwsgi" ',
-                                   '-e "readline" -e "libgcc" -e "coreutils" -e "python-debian" ',
-                                   '-e "curl" -e "freetype"']))  # nosec
+    conda_env = os.system(dedent("""\
+    cat $CONDA_PREFIX/conda-meta/*.json | jq ".name, .license" \
+        | paste - - | sort -k 2 | grep -v BSD | grep -v MIT \
+        | grep -v Apache | grep -v LGPL | grep -v GCC-exception \
+        | grep -v "ISC" | grep -v "OFL" | grep -v "EPL-1.0" \
+        | grep -vP "Zlib|zlib" | grep -v "Unlicense" | grep -v "TCL" \
+        | grep -vP "Python|PSF" | grep -v "Public-Domain" \
+        | grep -v "HPND" | grep -v "IJG" \
+        | grep -v "Classpath-exception" | grep -v "bzip2-1.0.6" \
+        | grep -v "Ubuntu Font" \
+        | grep -v -e "libnsl" -e "binutils_impl_linux-64" \
+        -e "ld_impl_linux-64" -e "_libgcc_mutex" -e "uwsgi" \
+        -e "readline" -e "libgcc" -e "coreutils" -e "python-debian" \
+        -e "curl" -e "freetype"
+    """))
     # libnsl, binutils_impl_linux-64, _libgcc_mutex are GCC dependencies
 
-    pip_env = os.system(''.join(['pip-licenses | grep -v BSD   | grep -v MIT   | grep -v Apache  ',
-                                 '| grep -v LGPL   | grep -v GCC-exception   | grep -v "ISC" ',
-                                 '| grep -v "OFL"   | grep -v "EPL-1.0"   | grep -vP "Zlib|zlib" ',
-                                 '| grep -v "Unlicense"   | grep -v "TCL" ',
-                                 '| grep -vP "Python|PSF" | grep -v "Public-Domain" ',
-                                 '| grep -v "HPND"   | grep -v "IJG" ',
-                                 '| grep -v "Classpath-exception" | grep -v "bzip2-1.0.6" ',
-                                 '| grep -v "Eclipse Public License v2.0" | grep -v "MPL 2.0" ',
-                                 '| grep -v "Zope Public License" | grep -v -e "uWSGI" ',
-                                 '-e "dataclasses" -e "python-debian"']))  # nosec
+    pip_env = os.system(dedent("""\
+    pip-licenses | grep -v BSD   | grep -v MIT   | grep -v Apache \
+        | grep -v LGPL   | grep -v GCC-exception   | grep -v "ISC" \
+        | grep -v "OFL"   | grep -v "EPL-1.0"   | grep -vP "Zlib|zlib" \
+        | grep -v "Unlicense"   | grep -v "TCL" \
+        | grep -vP "Python|PSF" | grep -v "Public-Domain" \
+        | grep -v "HPND"   | grep -v "IJG" \
+        | grep -v "Classpath-exception" | grep -v "bzip2-1.0.6" \
+        | grep -v "Eclipse Public License v2.0" | grep -v "MPL 2.0" \
+        | grep -v "Zope Public License" | grep -v -e "uWSGI" \
+        -e "dataclasses" -e "python-debian"
+    """))
     # "dataclasses" is under Apache licence
     # 'https://github.com/ericvsmith/dataclasses/blob/master/LICENSE.txt'
     # Note uWGSI is GPL-2 (https://github.com/unbit/uwsgi/blob/master/LICENSE)
