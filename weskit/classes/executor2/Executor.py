@@ -103,7 +103,7 @@ class ExecutionResult(Generic[S]):
             f"execution_id={self.execution_id}",
             f"command={self.command}",
             f"process_id={self.process_id}",
-            f"status={self.state}"
+            f"state={self.state}"
         ]) + ")"
 
 

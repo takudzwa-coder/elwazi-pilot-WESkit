@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2023 The OTP authors
+#
+# SPDX-License-Identifier: MIT
+
 set -eu -o pipefail
 shopt -s inherit_errexit
 

@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# SPDX-FileCopyrightText: 2023 The OTP authors
+#
+# SPDX-License-Identifier: MIT
+
 # Wrap a command such that stdout, stderr, exit code and pid are associated with files.
 # By default, theses files are all located in the log directory and named stdout, stderr,
 # pid, and exit_code.
