@@ -398,7 +398,8 @@ class SystemError(Generic[S], TerminalExecutionState[S]):
 # transitive closure of the state transition graph.
 # Compare https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/157#note_1190792806
 ALLOWED_TRANSITIVE_TRANSITIONS: Dict[str, List[str]] = {
-    str(k): [str(v) for v in vs]
+    k.__name__: [v.__name__ for v in vs]       # type: ignore
+    # Change everything into strings. The classes below are used for programming convenience.
     for k, vs in {
         Start: [
             Start,
