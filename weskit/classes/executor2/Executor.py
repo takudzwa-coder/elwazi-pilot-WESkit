@@ -132,13 +132,17 @@ class ExecutionSettings:
         Some sanity checks on the values done at construction time of the dataclass instance.
         """
         if self.max_retries is not None:
-            assert self.max_retries >= 0
+            if self.max_retries < 0:
+                raise ValueError("max_tries needs to be 0 or larger")
         if self.cores is not None:
-            assert self.cores > 0
+            if self.cores <= 0:
+                raise ValueError("walltime cores needs to be 1 or larger")
         if self.walltime is not None:
-            assert self.walltime.total_seconds() > 0
+            if self.walltime.total_seconds() <= 0:
+                raise ValueError("walltime total_seconds needs to be 1 or larger")
         if self.memory is not None:
-            assert self.memory.bytes() > 0
+            if self.memory.bytes() <= 0:
+                raise ValueError("memory needs to be larger than 1 byte")
 
     def __iter__(self):
         for i in {
