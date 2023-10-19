@@ -28,7 +28,7 @@ RUN if grep -q '^ID=alpine$' /etc/os-release; then \
       apk add --no-cache --virtual temp-packages shadow=4.13-r0; \
     fi && \
     usermod \
-        "--login=$USER" \ 
+        "--login=$USER" \
         "--home=/home/$USER" \
         --move-home \
         "--uid=$USER_ID" \
@@ -63,11 +63,14 @@ RUN micromamba config set channel_priority strict
 COPY environment.yaml /weskit/environment.yaml
 
 RUN echo "Creating environment ..." && \
-    micromamba config set channel_priority flexible 
+    micromamba config set channel_priority flexible
 RUN micromamba install -y -n base -f /weskit/environment.yaml && \
     micromamba clean --all --yes
 # If you would like an ENTRYPOINT command to be executed within an active conda environment, 
 # then add "/usr/local/bin/_entrypoint.sh" as the first element of the JSON array argument to ENTRYPOINT. 
+
+# Nextflow is installed as script via Pip. We download the required JARs into the container.
+RUN /usr/local/bin/_entrypoint.sh micromamba run -a '' -n base nextflow info
 
 # -a "" for disabling stream redirection
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh","micromamba", "run", "-a", "", "-n", "base"]

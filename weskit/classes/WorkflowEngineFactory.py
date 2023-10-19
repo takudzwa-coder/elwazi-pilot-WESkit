@@ -5,7 +5,7 @@
 from typing import Dict, List, Union, Optional
 
 from weskit.classes.PathContext import PathContext
-from weskit.classes.WorkflowEngine import Snakemake, Nextflow,\
+from weskit.classes.WorkflowEngine import Snakemake, Nextflow, \
     ActualWorkflowEngine, SingularityWrappedEngine, WorkflowEngine
 from weskit.classes.WorkflowEngineParameters import ActualEngineParameter
 
