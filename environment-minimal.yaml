@@ -106,7 +106,7 @@ dependencies:
     - urllib3
     - boto3
     - requests-mock
-    - kubernetes>=1.25.3
+    - kubernetes==27.2.0
     # TRS feature
     - trs-cli==0.7.0
     - pydantic==1.10.11   # Newest 1er version!

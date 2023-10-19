@@ -30,8 +30,6 @@ RUN if grep -q '^ID=alpine$' /etc/os-release; then \
     usermod \
         "--login=$USER" \
         "--home=/home/$USER" \
-        "--login=$NEW_MAMBA_USER" \
-        "--home=/home/$NEW_MAMBA_USER" \
         --move-home \
         "--uid=$USER_ID" \
         "$MAMBA_USER" && \
@@ -72,7 +70,7 @@ RUN micromamba install -y -n base -f /weskit/environment.yaml && \
 # then add "/usr/local/bin/_entrypoint.sh" as the first element of the JSON array argument to ENTRYPOINT. 
 
 # Nextflow is installed as script via Pip. We download the required JARs into the container.
-RUN nextflow info
+RUN /usr/local/bin/_entrypoint.sh micromamba run -a '' -n base nextflow info
 
 # -a "" for disabling stream redirection
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh","micromamba", "run", "-a", "", "-n", "base"]
