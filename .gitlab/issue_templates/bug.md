@@ -4,6 +4,9 @@ SPDX-FileCopyrightText: 2023 The WESkit Contributors
 SPDX-License-Identifier: MIT
 -->
 
+## WARNING
+If this is a security-related bug, then you should not post bug report here as a GitLab issue. In this case, please report the bug at <weskit@dkfz-heidelberg.de>.
+
 ## Summary
 
 <!-- Summarize the bug encountered concisely -->

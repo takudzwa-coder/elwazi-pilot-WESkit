@@ -9,16 +9,18 @@ SPDX-License-Identifier: MIT
 ## Developer Certificate of Origin + License
 
 By contributing to WESkit, you accept and agree to the following terms and
-conditions for your contributions submitted to WESkit. Except for the license granted herein to WESkit and recipients of software
-distributed by WESkit, you reserve all right, title, and interest in and to
-your contributions. All contributions are subject to the following DCO + License
-terms.
+conditions for your contributions submitted to WESkit. Except for the license 
+granted herein to WESkit and recipients of software distributed by WESkit, 
+you reserve all right, title, and interest in and to your contributions. 
+All contributions are subject to the following DCO + License terms.
 
 [DCO + License](https://developercertificate.org/)
 
 ## Sign off Your Work
 
-Contributors must sign-off that they adhere to these requirements by adding a `Signed-off-by` line to commit messages.
+Contributors must sign-off that they adhere to these requirements 
+by adding a `Signed-off-by` line to commit messages. 
+GitLab will ensure that all commits are signed-off.
 
 ```text
 This is my commit message
@@ -41,10 +43,14 @@ See `git help commit`:
 
 First off, thanks for taking the time to contribute!
 
-All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions.
+All types of contributions are encouraged and valued. 
+See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. 
+Please make sure to read the relevant section before making your contribution. 
+It will make it a lot easier for us maintainers and smooth out the experience for all involved. 
+The community looks forward to your contributions.
 
 > And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation, which we would also be very happy about:
-> - Tweet about it
+> - Share it on X (former Twitter) about it
 > - Refer this project in your project's readme
 > - Mention the project at local meetups and tell your friends/colleagues
 
@@ -67,7 +73,9 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 > If you want to ask a question, we assume that you have read the available [Documentation](https://gitlab.com/one-touch-pipeline/weskit/documentation).
 
-Before you ask a question, it is best to search for existing [Issues](https://gitlab.com/one-touch-pipeline/weskit/api/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
+Before you ask a question, it is best to search for existing [Issues](https://gitlab.com/one-touch-pipeline/weskit/api/issues) that might help you. 
+In case you have found a suitable issue and still need clarification, you can write your question in this issue. 
+It is also advisable to search the internet for answers first.
 
 If you then still feel the need to ask a question and need clarification, we recommend the following:
 
@@ -81,7 +89,7 @@ We will then take care of the issue as soon as possible.
 ## I Want To Contribute
 
 > ### Legal Notice <!-- omit in toc -->
-> Please verify that the submitted code agrees with the licence for whis project. 
+> Please verify that the submitted code agrees with the licence for this project. 
 This can be a particular problem for code snippets from websites such as [StackOverflow](https://stackoverflow.com/legal/terms-of-service/public)
 
 ### Reporting Bugs
@@ -89,24 +97,25 @@ This can be a particular problem for code snippets from websites such as [StackO
 <!-- omit in toc -->
 #### Before Submitting a Bug Report
 
-A good bug report shouldn't leave others needing to chase you up for more information. Therefore, we ask you to investigate carefully, collect information and describe the issue in detail in your report. Please complete the following steps in advance to help us fix any potential bug as fast as possible.
+A good bug report shouldn't leave others needing to chase you up for more information. 
+Therefore, we ask you to investigate carefully, collect information and describe the issue in detail in your report. 
+Please complete the following steps in advance to help us fix any potential bug as fast as possible.
 
 - Make sure that you are using the latest version.
 - Determine if your bug is really a bug and not an error on your side e.g. using incompatible environment components/versions (Make sure that you have read the [documentation](https://gitlab.com/one-touch-pipeline/weskit/documentation). If you are looking for support, you might want to check [this section](#i-have-a-question)).
 - To see if other users have experienced (and potentially already solved) the same issue you are having, check if there is not already a bug report existing for your bug.
 - Also make sure to search the internet (including Stack Overflow) to see if users outside of the GitHub community have discussed the issue.
-- Use the bug template ("Description" dropdown list) to provide information. 
+- Use the bug template ("Description" drop-down list) to provide information. 
 
 <!-- omit in toc -->
 #### How Do I Submit a Good Bug Report?
 
-> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <p.kensche@dkfz-heidelberg.de>.
+> WARNING If this is a security-related bug, then you should not post bug report here as a GitLab issue. In this case, please report the bug at <weskit@dkfz-heidelberg.de>.
 <!-- You may add a PGP key to allow the messages to be sent encrypted as well. -->
 
 We use GitHub issues to track bugs and errors. If you run into an issue with the project:
 
-- Open an [Issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new) using the bug template("Description" dropdown list).
-- Explain the behaviour you would expect and the actual behaviour.
+- Open an [Issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new) using the bug template("Description" drop-down list).
 - Please provide as much context as possible within each subsection of the template.
 
 Once it's filed:
@@ -119,7 +128,8 @@ Once it's filed:
 
 ### Suggesting Features
 
-This section guides you through submitting an enhancement suggestion for WESkit, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
+This section guides you through submitting an enhancement suggestion for WESkit, **including completely new features and minor improvements to existing functionality**. 
+Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
 
 <!-- omit in toc -->
 #### Before Submitting a Feature
@@ -134,8 +144,8 @@ This section guides you through submitting an enhancement suggestion for WESkit,
 
 Feature suggestions are tracked as [GitHub issues](https://gitlab.com/one-touch-pipeline/weskit/api/issues).
 
+- Using the feature template(default), please provide a **detailed description of the suggested feature**.
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
-- Provide a **detailed description of the suggested feature** in as many details as possible using the feature template(default).
 
 <!-- omit in toc -->
 ## Attribution
