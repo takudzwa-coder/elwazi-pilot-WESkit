@@ -6,15 +6,11 @@ SPDX-License-Identifier: MIT
 
 <!-- omit in toc -->
 
-## Developer Certificate of Origin + License
+## Contributor License Agreement
 
-By contributing to WESkit, you accept and agree to the following terms and
-conditions for your contributions submitted to WESkit. Except for the license 
-granted herein to WESkit and recipients of software distributed by WESkit, 
-you reserve all right, title, and interest in and to your contributions. 
-All contributions are subject to the following DCO + License terms.
+Contributions to WESkit must be accompanied by a Contributor License Agreement (CLA).
+Please read the current individual or corporate agreements at https://apache.org/licenses/contributor-agreements.html.
 
-[DCO + License](https://developercertificate.org/)
 
 ## Sign off Your Work
 
@@ -32,12 +28,10 @@ See `git help commit`:
 
 ```text
 -s, --signoff
-    Add Signed-off-by line by the committer at the end of the commit log
-    message. The meaning of a signoff depends on the project, but it typically
-    certifies that committer has the rights to submit this work under the same
-    license and agrees to a Developer Certificate of Origin (see
-    http://developercertificate.org/ for more information).
+    Add a Signed-off-by trailer by the committer at the end of the commit log message. The meaning of a signoff depends on the project to which you're committing.
 ```
+
+
 
 # Contributing to WESkit
 
