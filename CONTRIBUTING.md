@@ -95,7 +95,7 @@ that such employer(s) has waived all of their right, title or interest in or to 
 To the fullest extent permitted under applicable law, your contributions are provided on an "as is"
 basis, without any warranties or conditions, expressed or implied, including, without limitation, any implied
 warranties or conditions of non-infringement, merchantability or fitness for a particular purpose. You are not
-required to provide support for your Contributions, except to the extent you desire to provide support.
+required to provide support for your contributions, except to the extent you desire to provide support.
 
 ### No Obligation.
 
@@ -149,7 +149,7 @@ Feel free to ask questions, because they help us to understand the gaps in our d
 
 ### Reporting Bugs
 
-We use Gitlab issues to track bugs and errors. If you run into an issue with the project
+We use GitLab issues to track bugs and errors. If you run into an issue with the project
 
 - open an [issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new) using the bug template ("Description" drop-down list).
 - provide as much context as possible within each subsection of the template.
@@ -165,7 +165,7 @@ Once the bug report is filed
 
 ### Suggesting Features
 
-Like bugs, we track feature requests in Gitlab issues, and have a dedicated feature issue template for this. The template should help you to write a good request, that helps us to understand your use case.
+Like bugs, we track feature requests in GitLab issues, and have a dedicated feature issue template for this. The template should help you to write a good request, that helps us to understand your use case.
 
 ## Branching Scheme
 
@@ -173,11 +173,11 @@ We are using [Github-Flow](https://docs.github.com/en/get-started/quickstart/git
 
 Shortly, we have a "master" branch on which we always keep only stable code. The master branch should always pass all tests. The master branch is also protected. Only from the master branch we release by tagging commits.
 
-We then branch off "feature" branches with descriptive names. Feature branches may not always compile, but the Gitlab-CI ensures that they do so after merging with the master branch.
+We then branch off "feature" branches with descriptive names. Feature branches may not always compile, but the GitLab-CI ensures that they do so after merging with the master branch.
 
 ## Coding Conventions and Co.
 
-We use the Gitlab-CI to enforce certain coding conventions in our code and improve overall code quality.
+We use the GitLab-CI to enforce certain coding conventions in our code and improve overall code quality.
 
 You can enforce these conventions in your local repository copies simply by symlink the git-hooks:
 
