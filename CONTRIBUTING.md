@@ -88,6 +88,8 @@ that such employer(s) has waived all of their right, title or interest in or to 
 
 > Note that this can be a particular problem for code snippets from websites such as [StackOverflow](https://stackoverflow.com/legal/terms-of-service/public).
 
+> This also applies to code licensed with a copyleft license, such as GPLv2, including weak copyleft licenses, such as LGPL. In particular, code with a copyleft license should not pulled in as dependency into the (Conda/Pip) environment of our containers.
+
 ### Disclaimer
 
 To the fullest extent permitted under applicable law, your contributions are provided on an "as is"
@@ -212,3 +214,5 @@ Some security bugs are discovered by [bandit](https://bandit.readthedocs.io/). C
 ### License Management
 
 Finally, we require that all files have an [SPDX](https://spdx.dev/) license header. We use [reuse](https://spdx.dev/) to check this in the CI. Reuse is also a good too for managing the headers.
+
+Licenses of Conda and Pip packages included in the environments that is used to build our containers are checked by tests through `pytest`.
