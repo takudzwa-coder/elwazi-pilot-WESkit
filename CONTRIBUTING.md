@@ -4,19 +4,126 @@ SPDX-FileCopyrightText: 2023 The WESkit Contributors
 SPDX-License-Identifier: MIT
 -->
 
-<!-- omit in toc -->
+# Contributing
+
+**Thank you for submitting your contributions to this project.**
+
+All types of contributions are encouraged and valued, including feature requests, bug reports, documentation improvements.
+
+Please make sure to read the relevant section in this document before making your contribution.
+
+> If you like the project, please support the project and show your appreciation by
+> - Sharing it on social media
+> - Referring this project in your own project's readme
+> - Mentioning the project at local meetups and telling your friends/colleagues
+
+## Table of Contents
+
+- [Contributors License Agreement](#contributor-license-agreement)
+- [Signing off your work](#sign-off-your-work)
+- [I Have a Question](#i-have-a-question)
+- [Reporting Bugs](#reporting-bugs)
+- [Suggesting Features](#suggesting-features)
+- [Coding Conventions & Co.](#coding-conventions-and-co)
 
 ## Contributor License Agreement
+<!-- The text of this CLA is based on fragments of CLA texts found in various projects. -->
 
-Contributions to WESkit must be accompanied by a Contributor License Agreement (CLA).
-Please read the current individual or corporate agreements at https://apache.org/licenses/contributor-agreements.html.
+This contributors license agreement (CLA) has the purpose to add documentation requirements and terms related to the provenance of contributions that are not covered by the license of the project.
 
+If you find that the CLA contradicts the license in any way, then the text of the license has priority over anything written in this CLA.
+
+By signing this CLA, you agree that the following terms apply to your contributions.
+
+> You sign the CLA by adding to every commit of your contributions a "Signed-off-by:" tag in the commit message.
+> This is easily done by adding the `-s` option to the `git commit` command. See section [Sign off Your Work](#sign-off-your-work).
+
+### License
+
+Your contributions will be published under [MIT License](https://opensource.org/licenses/MIT).
+
+### Moral Rights.
+
+To the fullest extent permitted under applicable law, you hereby waive, and agree not to
+assert, all of your [“moral rights”](https://en.wikipedia.org/wiki/Moral_rights) in or relating to your contributions for the benefit of the project.
+
+> [Moral rights](https://en.wikipedia.org/wiki/Moral_rights) refer to the right of attribution, the right to have the work published anonymously or pseudonymously, and the right of the integrity of the work.
+>
+
+> We cannot grant you anonymity or pseudonymity, because WESkit may be used in a regulated context.
+>
+
+> We think that the right of attribution and integrity of the work is already waived by accepting MIT as new license.
+>
+
+> These explanations are not limiting the meaning of "all of your moral rights".
+
+### Third Party Content
+
+You agree to include with the submission of your contribution full details respecting Third Party Content.
+
+Third Party Content is any part of your contribution that is based on any source code, object code, bug fixes, configuration changes, tools,
+specifications, documentation, data, materials, feedback, information or other works of authorship that were not
+_authored_ by you or if there are third party intellectual property or proprietary
+rights associated with your contribution (“Third Party Rights”).
+
+You also agree to document all parts of your contribution that are Third Party Content or are associated with Third Party Rights as follows
+
+  * Identify all aspects and modifications of your contribution that contain Third Party Content or are associated with Third Party Rights
+
+  * Reference the owner/author of the Third Party Content and Third Party Rights, where you obtained the Third Party Content.
+  * List any applicable third party license terms or restrictions respecting the Third Party Content and Third Party Rights.
+
+### Representations
+
+You represent that,
+other than the Third Party Content and Third Party Rights identified by you in accordance with this agreement,
+
+you are the sole author of your contributions and are legally entitled to grant terms and conditions of this CLA for your contributions.
+
+If your contributions were created in the course of your employment with your past or present employer(s), you represent
+
+that such employer(s) has authorized you to make your contributions on behalf of such employer(s) or
+that such employer(s) has waived all of their right, title or interest in or to your contributions.
+
+> Note that this can be a particular problem for code snippets from websites such as [StackOverflow](https://stackoverflow.com/legal/terms-of-service/public).
+
+### Disclaimer
+
+To the fullest extent permitted under applicable law, your contributions are provided on an "as is"
+basis, without any warranties or conditions, expressed or implied, including, without limitation, any implied
+warranties or conditions of non-infringement, merchantability or fitness for a particular purpose. You are not
+required to provide support for your Contributions, except to the extent you desire to provide support.
+
+### No Obligation.
+
+You acknowledge that the maintainers of this project are under no obligation to use or incorporate your contributions
+into the project. The decision to use or incorporate your contributions into the project will be made at the
+sole discretion of the maintainers or their authorized delegates.
 
 ## Sign off Your Work
 
-Contributors must sign-off that they adhere to these requirements 
-by adding a `Signed-off-by` line to commit messages. 
-GitLab will ensure that all commits are signed-off.
+Contributors must sign off that they adhere to the terms and conditions of the CLA.
+
+This is done on a per commit base, and can easily be done by adding the `-s` option to `git commit`:
+
+See `git help commit`:
+
+```text
+-s, --signoff
+    Add a Signed-off-by trailer by the committer at the end of the
+
+    commit log message. The meaning of a signoff depends on the project
+    to which you're committing.
+```
+
+Thus, committing is as easy as
+
+```bash
+git commit -s
+```
+
+Your commit message will then be extended by a "Signed-of-by:" tag similar to the following:
 
 ```text
 This is my commit message
@@ -24,123 +131,84 @@ This is my commit message
 Signed-off-by: Random J Developer <random@developer.example.org>
 ```
 
-See `git help commit`:
-
-```text
--s, --signoff
-    Add a Signed-off-by trailer by the committer at the end of the commit log message. The meaning of a signoff depends on the project to which you're committing.
-```
-
-
-
-# Contributing to WESkit
-
-First off, thanks for taking the time to contribute!
-
-All types of contributions are encouraged and valued. 
-See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. 
-Please make sure to read the relevant section before making your contribution. 
-It will make it a lot easier for us maintainers and smooth out the experience for all involved. 
-The community looks forward to your contributions.
-
-> And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation, which we would also be very happy about:
-> - Share it on X (former Twitter) about it
-> - Refer this project in your project's readme
-> - Mention the project at local meetups and tell your friends/colleagues
-
-<!-- omit in toc -->
-## Table of Contents
-
-- [I Have a Question](#i-have-a-question)
-  - [I Want To Contribute](#i-want-to-contribute)
-  - [Reporting Bugs](#reporting-bugs)
-  - [Suggesting Features](#suggesting-enhancements)
-  - [Your First Code Contribution](#your-first-code-contribution)
-  - [Improving The Documentation](#improving-the-documentation)
-- [Styleguides](#styleguides)
-  - [Commit Messages](#commit-messages)
-- [Join The Project Team](#join-the-project-team)
-
-
+> Note: GitLab will ensure that all commits are signed-off.
 
 ## I Have a Question
 
-> If you want to ask a question, we assume that you have read the available [Documentation](https://gitlab.com/one-touch-pipeline/weskit/documentation).
+There are some resources that may already answer many of your questions, namely
 
-Before you ask a question, it is best to search for existing [Issues](https://gitlab.com/one-touch-pipeline/weskit/api/issues) that might help you. 
-In case you have found a suitable issue and still need clarification, you can write your question in this issue. 
-It is also advisable to search the internet for answers first.
+* the [documentation](https://gitlab.com/one-touch-pipeline/weskit/documentation)
+* existing [issues](https://gitlab.com/one-touch-pipeline/weskit/api/issues)
 
-If you then still feel the need to ask a question and need clarification, we recommend the following:
-
-- Open an [Issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new).
-- Provide as much context as you can about what you're running into.
-
+If these resources do not answer your questions, you can contact us by opening a new [issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new). Please follow the guidelines in the issue templates for details.
 We will then take care of the issue as soon as possible.
 
-
-
-## I Want To Contribute
-
-> ### Legal Notice <!-- omit in toc -->
-> Please verify that the submitted code agrees with the licence for this project. 
-This can be a particular problem for code snippets from websites such as [StackOverflow](https://stackoverflow.com/legal/terms-of-service/public)
+Feel free to ask questions, because they help us to understand the gaps in our documentation or hint at new use cases and requirements. This will help us to improve WESkit's usability for the use cases we want to address, and help us to better understand the domains in which WESkit is applied.
 
 ### Reporting Bugs
 
-<!-- omit in toc -->
-#### Before Submitting a Bug Report
+We use Gitlab issues to track bugs and errors. If you run into an issue with the project
 
-A good bug report shouldn't leave others needing to chase you up for more information. 
-Therefore, we ask you to investigate carefully, collect information and describe the issue in detail in your report. 
-Please complete the following steps in advance to help us fix any potential bug as fast as possible.
+- open an [issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new) using the bug template ("Description" drop-down list).
+- provide as much context as possible within each subsection of the template.
 
-- Make sure that you are using the latest version.
-- Determine if your bug is really a bug and not an error on your side e.g. using incompatible environment components/versions (Make sure that you have read the [documentation](https://gitlab.com/one-touch-pipeline/weskit/documentation). If you are looking for support, you might want to check [this section](#i-have-a-question)).
-- To see if other users have experienced (and potentially already solved) the same issue you are having, check if there is not already a bug report existing for your bug.
-- Also make sure to search the internet (including Stack Overflow) to see if users outside of the GitHub community have discussed the issue.
-- Use the bug template ("Description" drop-down list) to provide information. 
+> The better your bug report is, the better we will be able to fix the bug!
 
-<!-- omit in toc -->
-#### How Do I Submit a Good Bug Report?
+Once the bug report is filed
 
-> WARNING If this is a security-related bug, then you should not post bug report here as a GitLab issue. In this case, please report the bug at <weskit@dkfz-heidelberg.de>.
-<!-- You may add a PGP key to allow the messages to be sent encrypted as well. -->
+- the project team will label the issue accordingly.
+- a team member will try to reproduce the issue with your provided steps and otherwise come back to you.
 
-We use GitHub issues to track bugs and errors. If you run into an issue with the project:
-
-- Open an [Issue](https://gitlab.com/one-touch-pipeline/weskit/api/issues/new) using the bug template("Description" drop-down list).
-- Please provide as much context as possible within each subsection of the template.
-
-Once it's filed:
-
-- The project team will label the issue accordingly.
-- A team member will try to reproduce the issue with your provided steps and otherwise come back to you.
-
-<!-- You might want to create an issue template for bugs and errors that can be used as a guide and that defines the structure of the information to be included. If you do so, reference it here in the description. -->
-
+> WARNING: For submitting security-related bug you should not post bug report as GitLab issue. In this case, please report the bug at <weskit@dkfz-heidelberg.de>.
 
 ### Suggesting Features
 
-This section guides you through submitting an enhancement suggestion for WESkit, **including completely new features and minor improvements to existing functionality**. 
-Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
+Like bugs, we track feature requests in Gitlab issues, and have a dedicated feature issue template for this. The template should help you to write a good request, that helps us to understand your use case.
 
-<!-- omit in toc -->
-#### Before Submitting a Feature
+## Branching Scheme
 
-- Make sure that you are using the latest version.
-- Read the [documentation](https://gitlab.com/one-touch-pipeline/weskit/documentation) carefully and find out if the functionality is already covered, maybe by an individual configuration.
-- Perform a [search](https://gitlab.com/one-touch-pipeline/weskit/api/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
-- Find out whether your idea fits with the scope and aims of the project. It's up to you to make a strong case to convince the project's developers of the merits of this feature. Keep in mind that we want features that will be useful to the majority of our users and not just a small subset. If you're just targeting a minority of users, consider writing an add-on/plugin library.
+We are using [Github-Flow](https://docs.github.com/en/get-started/quickstart/github-flow) scheme, which is well explained for instance [here](https://www.alexhyett.com/git-flow-github-flow/).
 
-<!-- omit in toc -->
-#### How Do I Submit a Good Feature Suggestion?
+Shortly, we have a "master" branch on which we always keep only stable code. The master branch should always pass all tests. The master branch is also protected. Only from the master branch we release by tagging commits.
 
-Feature suggestions are tracked as [GitHub issues](https://gitlab.com/one-touch-pipeline/weskit/api/issues).
+We then branch off "feature" branches with descriptive names. Feature branches may not always compile, but the Gitlab-CI ensures that they do so after merging with the master branch.
 
-- Using the feature template(default), please provide a **detailed description of the suggested feature**.
-- Use a **clear and descriptive title** for the issue to identify the suggestion.
+## Coding Conventions and Co.
 
-<!-- omit in toc -->
-## Attribution
-This guide is based on the **contributing-gen**. [Make your own](https://github.com/bttger/contributing-gen)!
+We use the Gitlab-CI to enforce certain coding conventions in our code and improve overall code quality.
+
+You can enforce these conventions in your local repository copies simply by symlink the git-hooks:
+
+```bash
+cd $projectDir/.git/hooks
+ln -s ../../git/hooks/* .
+```
+
+If you need to turn of the commit or push checks during your work on a branch, you can do this on a per commit base with
+
+```bash
+NO_COMMIT_CHECKS=true git commit -s
+NO_PUSH_CHECKS=true git push
+```
+
+### Testing
+
+Unit and integration tests are implemented with [pytest](https://docs.pytest.org). New code should always have a test coverage above 80%. The more the better, but of course only as is reasonable. We don't require tests for simple getters, for instance.
+
+### Code Style
+
+Code style is enforced by [flake8](https://flake8.pycqa.org/).
+
+### Python Type Checking
+
+One of the greatest shortcomings of Python for the development of more complex projects is its lack of built-in static type checks. Fortunately, there are static type checkers that, when applied, identify a lot of bugs that otherwise could break production deployments.
+
+We use [mypy](https://mypy.readthedocs.io/en/stable/) for static type checking.
+
+### Automated Security Checks
+
+Some security bugs are discovered by [bandit](https://bandit.readthedocs.io/). Contributions to improve our security monitoring and the code security are very welcome.
+
+### License Management
+
+Finally, we require that all files have an [SPDX](https://spdx.dev/) license header. We use [reuse](https://spdx.dev/) to check this in the CI. Reuse is also a good too for managing the headers.
