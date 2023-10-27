@@ -6,6 +6,7 @@ import logging
 import uuid
 from typing import List, Optional, Callable, cast, Dict, Sequence, Mapping, Any
 
+from abc import ABC, abstractmethod
 from bson import CodecOptions, UuidRepresentation, InvalidDocument
 from bson.son import SON
 from pymongo import ReturnDocument, MongoClient
@@ -19,7 +20,49 @@ from weskit.exceptions import ConcurrentModificationError, DatabaseOperationErro
 logger = logging.getLogger(__name__)
 
 
-class Database:
+class AbstractDatabase(ABC):
+    @abstractmethod
+    def initialize(self) -> None:
+        pass
+
+    @abstractmethod
+    def aggregate_runs(self, pipeline) -> dict:
+        pass
+
+    @abstractmethod
+    def get_run(self, run_id: uuid.UUID, **kwargs) -> Optional[Run]:
+        pass
+
+    @abstractmethod
+    def get_runs(self, query) -> List[Run]:
+        pass
+
+    @abstractmethod
+    def list_run_ids_and_stages_and_times(self, user_id) -> List[Dict[str, str]]:
+        pass
+
+    @abstractmethod
+    def count_states(self) -> List[Any]:
+        pass
+
+    @abstractmethod
+    def create_run_id(self) -> uuid.UUID:
+        pass
+
+    @abstractmethod
+    def insert_run(self, run: Run) -> None:
+        pass
+
+    @abstractmethod
+    def update_run(self, run, resolution_fun=None, max_tries=1) -> Run:
+        pass
+
+    @abstractmethod
+    def delete_run(self, run) -> bool:
+        pass
+
+
+class Database(AbstractDatabase):
     """Database abstraction."""
 
     def __init__(self, server_url: str, database_name: str):
