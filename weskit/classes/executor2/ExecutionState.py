@@ -21,7 +21,7 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
     `S` is the type of the foreign state class, e.g. enum. It is considered in the `ExecutionState`
     only insofar as it is wrapped in an `ForeignState[S]`.
 
-    Specifically, `ExecutionStates` has multiple functions:
+    Specifically, `ExecutionState[S]` has multiple functions:
 
     1. It represents a generalized transition graph. In principle, only certain foreign state
        transitions should be allowed by the foreign system. In some cases, they may not be

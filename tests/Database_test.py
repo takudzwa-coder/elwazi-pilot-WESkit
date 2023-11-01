@@ -5,6 +5,8 @@
 import copy
 
 import pytest
+import uuid
+from typing import Optional, List
 
 from weskit.exceptions import DatabaseOperationError, ConcurrentModificationError
 from test_utils import get_mock_run
@@ -13,6 +15,7 @@ from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.utils import updated
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_insert_and_load_run(test_database):
     run1 = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -26,6 +29,7 @@ def test_insert_and_load_run(test_database):
     assert len(run_id_and_states) == 1
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_except_on_duplicate_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -36,6 +40,7 @@ def test_except_on_duplicate_run(test_database):
         test_database.insert_run(run)
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_update_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -52,6 +57,7 @@ def test_update_run(test_database):
     assert run.processing_stage == ProcessingStage.RUN_CREATED
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_except_update_on_current_update(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -72,6 +78,7 @@ def test_except_update_on_current_update(test_database):
         test_database.update_run(run)
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_except_update_on_missing_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -83,6 +90,7 @@ def test_except_update_on_missing_run(test_database):
         test_database.update_run(run)
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_get_runs(test_database):
     runs = test_database.get_runs(query={})
@@ -91,6 +99,7 @@ def test_get_runs(test_database):
         assert isinstance(run, Run)
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_delete_run(test_database):
     run = get_mock_run(workflow_url="tests/wf1/Snakefile",
@@ -100,3 +109,137 @@ def test_delete_run(test_database):
     assert test_database.delete_run(run)
     find_run = test_database.get_run(run.id)
     assert find_run is None
+
+
+class MockDatabase:
+    def __init__(self):
+        self.runs = {}
+
+    def initialize(self) -> None:
+        pass
+
+    def get_run(self, run_id: uuid.UUID) -> Optional[Run]:
+        return self.runs.get(run_id)
+
+    def get_runs(self, query) -> List[Run]:
+        return [run for run in self.runs.values() if query.get("id") == run["id"]]
+
+    def create_run_id(self) -> uuid.UUID:
+        run_id = uuid.uuid4()
+        while run_id in self.runs:
+            run_id = uuid.uuid4()
+        return run_id
+
+    def insert_run(self, run: Run):
+        self.runs[run.id] = run.to_bson_serializable()
+
+    def update_run(self, run, resolution_fun=None, max_tries=1) -> Run:
+        if run.id not in self.runs:
+            raise Exception(f"Run with ID {run.id} not found in the mock database.")
+        if max_tries > 1 and resolution_fun is not None:
+            stored_run = self.runs[run.id]
+            merged_run = resolution_fun(run, stored_run)
+            self.runs[run.id] = merged_run
+            return merged_run
+        else:
+            self.runs[run.id] = run
+            return run
+
+    def delete_run(self, run) -> bool:
+        if run.id in self.runs:
+            del self.runs[run.id]
+            return True
+        return False
+
+    def list_run_ids_and_stages_and_times(self, user_id):
+        return [{
+            "run_id": run["id"],
+            "run_stage": run["processing_stage"],
+            "start_time": run["start_time"],
+            "user_id": run["user_id"],
+            "request": run["request"]
+        } for run in self.runs.values() if run["user_id"] == user_id]
+
+
+mock_run_data = {
+    "id": uuid.uuid4(),
+    "processing_stage": ProcessingStage.RUN_CREATED,
+    "request_time": None,
+    "user_id": "test_id",
+    "request": {
+        "workflow_url": "",
+        "workflow_params": '{"text":"hello_world"}'
+    }
+}
+
+
+@pytest.fixture
+def mock_db():
+    db = MockDatabase()
+    return db
+
+
+def test_create_run_id(mock_db):
+    run_id = mock_db.create_run_id()
+    assert isinstance(run_id, uuid.UUID)
+
+
+def test_insert_run_and_get_run(mock_db):
+    run = Run(**mock_run_data)
+    mock_db.insert_run(run)
+
+    retrieved_run = mock_db.get_run(run.id)
+
+    assert retrieved_run == run.to_bson_serializable()
+    assert retrieved_run is not None
+    assert retrieved_run["id"] == run.id
+    assert retrieved_run["processing_stage"] == "RUN_CREATED"
+    assert retrieved_run["user_id"] == "test_id"
+    assert retrieved_run["request"] == {
+        "workflow_url": "",
+        "workflow_params": '{"text":"hello_world"}'
+    }
+
+
+def test_update_run_v2(mock_db):
+    run = Run(**mock_run_data)
+    mock_db.insert_run(run)
+
+    run.processing_stage = ProcessingStage.FINISHED_EXECUTION
+    updated_run = mock_db.update_run(run)
+
+    assert updated_run.processing_stage == ProcessingStage.FINISHED_EXECUTION
+
+
+def test_delete_run_v2(mock_db):
+    run = Run(**mock_run_data)
+    mock_db.insert_run(run)
+
+    assert mock_db.delete_run(run)
+    assert mock_db.get_run(run.id) is None
+
+
+def test_list_run_ids_and_stages_and_times(mock_db):
+    run1 = Run(**mock_run_data)
+    run2 = Run(**{
+                    "id": uuid.uuid4(),
+                    "processing_stage": ProcessingStage.RUN_CREATED,
+                    "request_time": None,
+                    "user_id": "test_id",
+                    "request": {
+                        "workflow_url": "",
+                        "workflow_params": '{"text":"hello_world"}'
+                    }
+                 }
+               )
+    run2.processing_stage = ProcessingStage.FINISHED_EXECUTION
+    mock_db.insert_run(run1)
+    mock_db.insert_run(run2)
+
+    user_id = run1.user_id  # user_id is the same for both runs
+    run_list = mock_db.list_run_ids_and_stages_and_times(user_id)
+    assert len(run_list) == 2
+    assert run_list[0]["user_id"] == run1.user_id
+    assert run_list[0]["run_stage"] == "RUN_CREATED"
+    assert run_list[1]["user_id"] == run2.user_id
+    assert run_list[1]["run_stage"] == "FINISHED_EXECUTION"
