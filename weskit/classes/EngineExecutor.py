@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import logging
+from typing import Optional
+
 from asyncio import AbstractEventLoop
 
 from weskit.classes.RetryableSshConnection import RetryableSshConnection
@@ -20,14 +22,17 @@ logger = logging.getLogger(__name__)
 
 def get_executor(executor_type: EngineExecutorType,
                  login_parameters: dict,
-                 event_loop: AbstractEventLoop) -> Executor:
+                 event_loop: Optional[AbstractEventLoop]) -> Executor:
     executor: Executor
     executor_info = "".join(f"executor = {executor_type.name}")
     if executor_type.needs_login_credentials:
         if login_parameters is not None:
             connection = RetryableSshConnection(**login_parameters)
-            event_loop.run_until_complete(connection.connect())
-            ssh_executor = SshExecutor(connection, event_loop)
+            if event_loop is not None:
+                event_loop.run_until_complete(connection.connect())
+                ssh_executor = SshExecutor(connection, event_loop)
+            else:
+                ssh_executor = SshExecutor(connection)
             if executor_type == EngineExecutorType.SSH:
                 executor = ssh_executor
             elif executor_type == EngineExecutorType.SSH_LSF:
