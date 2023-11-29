@@ -64,7 +64,7 @@ class ExecutionResult(Generic[S]):
 
     @property
     def process_id(self) -> ProcessId:
-        return self._state.last_external_state.pid
+        return self._state.last_foreign_state.pid
 
     @property
     def stdout_url(self) -> Optional[Url]:
