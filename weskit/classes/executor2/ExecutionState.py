@@ -8,32 +8,32 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 from typing import Optional, List, TypeVar, Generic, Self, cast, Dict
 
-from weskit.classes.executor2.ExternalState import ExternalState, TerminalExternalState
+from weskit.classes.executor2.ForeignState import ForeignState, TerminalForeignState
 from weskit.classes.executor2.ProcessId import ProcessId, WESkitExecutionId
 
-# The type used to model the external states. Usually enum.
+# The type used to model the foreign states. Usually enum.
 S = TypeVar("S")
 
 
 class ExecutionState(Generic[S], metaclass=ABCMeta):
     """
     The `ExecutionState` classes model the state of execution of a process on an `Executor`.
-    `S` is the type of the external state class, e.g. enum. It is considered in the `ExecutionState`
-    only insofar as it is wrapped in an `ExternalState[S]`.
+    `S` is the type of the foreign state class, e.g. enum. It is considered in the `ExecutionState`
+    only insofar as it is wrapped in an `ForeignState[S]`.
 
     Specifically, `ExecutionStates` has multiple functions:
 
-    1. It represents a generalized transition graph. In principle, only certain external state
-       transitions should be allowed by the external system. In some cases, they may not be
+    1. It represents a generalized transition graph. In principle, only certain foreign state
+       transitions should be allowed by the foreign system. In some cases, they may not be
        explicitly defined, or even discouraged (e.g. Kubernetes). We will anyway encode a mapping
-       of external states to generalized `ExecutionState`s and let the `ExecutionState` follow a
+       of foreign states to generalized `ExecutionState`s and let the `ExecutionState` follow a
        simplified state graph. The external job management decides, which state labels correspond
        to which `ExecutionState`.
-    2. State tracking. A single `ExecutionState` may correspond to a sequence of observed external
+    2. State tracking. A single `ExecutionState` may correspond to a sequence of observed foreign
        states. We allow ta add all observations that map to one `ExecutionState`. State transitions
        to a new `ExecutionState` are then explicitly modeled as new `ExecutionState` instance.
 
-    Note: There is no unknown `ExecutionState`. If the `ExternalState` was unknown/unobserved for
+    Note: There is no unknown `ExecutionState`. If the `ForeignState` was unknown/unobserved for
           too long (e.g. due to network interruptions, downtimes, etc.), then some logic may
           choose to continue to wait for a recovery to the same state or to a state in the
           transitive closure of the `ExecutionState`, or it may use SystemError to indicate a
@@ -42,16 +42,16 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
     Note: The `ExecutionState` is not an "executor" state. In particular, errors of the executor,
           such as timeouts, etc., should not be modelled as individual `ExecutionState`s. However,
           if the executor fails terminally, it may be appropriate to put the **execution** state of
-          a process on that executor into a `SystemError`. The `ExternalState` that represents the
+          a process on that executor into a `SystemError`. The `ForeignState` that represents the
           execution states as represented by the executor, should then contain the failure reason
           in its `reasons` field.
     """
 
-    def __init__(self,
-                 execution_id: WESkitExecutionId,
-                 created_at: Optional[datetime] = None):
+    def __init__(
+        self, execution_id: WESkitExecutionId, created_at: Optional[datetime] = None
+    ):
         self._execution_id = execution_id
-        self._closed_by: Optional[ExternalState[S]] = None
+        self._closed_by: Optional[ForeignState[S]] = None
         if created_at is None:
             created_at = datetime.now()
         self._created_at = created_at
@@ -69,25 +69,26 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
     def is_terminal(self) -> bool:
         pass
 
-    def close(self, external_state: ExternalState[S]) -> None:
+    def close(self, foreign_state: ForeignState[S]) -> None:
         """
-        Close this state. No further external states can be added after this method was called.
+        Close this state. No further foreign states can be added after this method was called.
 
         If the ExecutionState is closed because of a transition to a new ExecutionState, use the
-        ExternalState that triggered the transition as argument.
+        ForeignState that triggered the transition as argument.
 
-        If the ExecutionState is closed because of e.g. a timeout, use an `UnkownExternalState` as
+        If the ExecutionState is closed because of e.g. a timeout, use an `UnkownForeignState` as
         argument.
         """
-        self._closed_by = external_state
+        self._closed_by = foreign_state
 
-    def closed_by(self) -> ExternalState[S]:
+    def closed_by(self) -> ForeignState[S]:
         if self._closed_by is not None:
             return self._closed_by
         else:
             raise ValueError(
-                "Cannot retrieved closing ExternalState for a non-closed ExecutionState: " +
-                str(self.execution_id))
+                "Cannot retrieve closing ForeignState for a non-closed ExecutionState: "
+                + str(self.execution_id)
+            )
 
     @property
     def is_closed(self) -> bool:
@@ -98,41 +99,43 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
     def lifetime(self) -> Optional[timedelta]:
         pass
 
-    @property
-    def name(self) -> str:
+    @classmethod
+    def name(cls) -> str:
         """
         The state name is just the class name. This is used for comparisons, e.g. to detect
         state changes.
         """
-        return str(self.__class__)
+        return str(cls.__name__)
 
 
 class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
     """
-    An `ObservedExecutionState` is modelled by a list of observations (`ExternalState`) and always
+    An `ObservedExecutionState` is modelled by a list of observations (`ForeignState`) and always
     references a previous `ExecutionState`, e.g. a `Start` state.
     """
 
-    def __init__(self,
-                 execution_id: WESkitExecutionId,
-                 external_state: ExternalState[S],
-                 previous_state: ExecutionState[S]):
+    def __init__(
+        self,
+        execution_id: WESkitExecutionId,
+        foreign_state: ForeignState[S],
+        previous_state: ExecutionState[S],
+    ):
         """
         The ObservedExecutionState has the creation time set to the observation time of the
-        external state that triggered its creation.
+        foreign state that triggered its creation.
         """
-        super().__init__(execution_id, external_state.observed_at)
+        super().__init__(execution_id, foreign_state.observed_at)
         self._previous_state = previous_state
-        if not external_state.is_known:
+        if not foreign_state.is_known:
             raise RuntimeError(
-                "ObservedExecutionState can only be initialized with known external state")
-        self._external_states: List[ExternalState[S]] = [external_state]
+                "ObservedExecutionState can only be initialized with known foreign state"
+            )
+        self._foreign_states: List[ForeignState[S]] = [foreign_state]
 
     @classmethod
-    def from_previous(cls,
-                      previous_state: ExecutionState[S],
-                      external_state: ExternalState[S]) \
-            -> Self:
+    def from_previous(
+        cls, previous_state: ExecutionState[S], foreign_state: ForeignState[S]
+    ) -> Self:
         """
         To ensure continuity of the execution_id from state-to-state change, you usually use this
         constructor function.
@@ -140,42 +143,44 @@ class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
         :return An instance of cls, correctly typed. See `Self` type:
                 https://peps.python.org/pep-0673/.
         """
-        return cls(previous_state.execution_id, external_state, previous_state)
+        return cls(previous_state.execution_id, foreign_state, previous_state)
 
     @property
-    def external_pid(self) -> ProcessId:
-        return self.last_external_state.pid
+    def foreign_pid(self) -> ProcessId:
+        return self.last_foreign_state.pid
 
     @property
-    def external_states(self) -> List[ExternalState[S]]:
+    def foreign_states(self) -> List[ForeignState[S]]:
         """
-        Return the observed external states in order of observation (latest first).
+        Return the observed foreign states in order of observation (latest first).
         """
-        return self._external_states
+        return self._foreign_states
 
     @property
-    def last_external_state(self) -> ExternalState[S]:
+    def last_foreign_state(self) -> ForeignState[S]:
         """
-        Return the last added external state.
+        Return the last added foreign state.
         """
-        return self.external_states[-1]
+        return self.foreign_states[-1]
 
     @property
     def previous_state(self) -> ExecutionState[S]:
         return self._previous_state
 
     @property
-    def last_known_external_state(self) -> ExternalState[S]:
+    def last_known_foreign_state(self) -> ForeignState[S]:
         """
-        Return the last known state (i.e. not UnKnownExternalState). If the process was
+        Return the last known state (i.e. not UnKnownForeignState). If the process was
         successfully submitted then there is also at a last known state (at least `Pending`).
         """
-        for state in reversed(self.external_states):
+        for state in reversed(self.foreign_states):
             if state.is_known:
                 return state
-        raise RuntimeError("Oops! Should not happen")  # Condition ensured by constructor.
+        raise RuntimeError(
+            "Oops! Should not happen"
+        )  # Condition ensured by constructor.
 
-    def add_observation(self, new_state: ExternalState[S]) -> None:
+    def add_observation(self, new_state: ForeignState[S]) -> None:
         """
         Add new state. This may fail with a ValueError, if
 
@@ -183,35 +188,39 @@ class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
             * the new state has an earlier timestamp than the last added state
 
         Note that ExecutionState has no knowledge of the actual state transition graph for the
-        external system.
+        foreign system.
 
-        It is possible to add unknown external states
+        It is possible to add unknown foreign states
         """
         if self.is_closed:
-            raise ValueError(f"Cannot add new state to closed ExecutionState: {new_state} "
-                             f"added to {self}")
-        elif new_state.observed_at < self.last_external_state.observed_at:
-            raise ValueError("Tried to add state with earlier timestamp than last state: " +
-                             f"{self.last_external_state.wrapped_state} "
-                             f"({self.last_external_state.observed_at}) -/-> " +
-                             f"{new_state} ({new_state.observed_at})")
+            raise ValueError(
+                f"Cannot add new state to closed ExecutionState: {new_state} "
+                f"added to {self}"
+            )
+        elif new_state.observed_at < self.last_foreign_state.observed_at:
+            raise ValueError(
+                "Tried to add state with earlier timestamp than last state: "
+                + f"{self.last_foreign_state.wrapped_state} "
+                f"({self.last_foreign_state.observed_at}) -/-> "
+                + f"{new_state} ({new_state.observed_at})"
+            )
         else:
-            self._external_states.append(new_state)
+            self._foreign_states.append(new_state)
 
     @property
     @abstractmethod
     def is_terminal(self) -> bool:
         pass
 
-    def close(self, external_state: ExternalState[S]) -> None:
+    def close(self, foreign_state: ForeignState[S]) -> None:
         """
-        Close this state. No further external states can be added after this method was called.
+        Close this state. No further foreign states can be added after this method was called.
 
-        If the ExecutionState is closed because of e.g. a timeout, use an `UnkownExternalState` as
+        If the ExecutionState is closed because of e.g. a timeout, use an `UnkownForeignState` as
         argument.
         """
-        self.add_observation(external_state)
-        super().close(external_state)
+        self.add_observation(foreign_state)
+        super().close(foreign_state)
 
     @property
     def lifetime(self) -> Optional[timedelta]:
@@ -219,7 +228,7 @@ class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
         The time between the creation of the state and the last added state, or its closing time.
 
         It is possible that the timespan includes unknown states after which the system went
-        again into this state. For instance, an external state sequence
+        again into this state. For instance, an foreign state sequence
 
             Running -> Unknown -> Running
 
@@ -237,35 +246,37 @@ class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
 
         the lifetime will be the time between the first Running and the Tombstone state.
         """
-        return self.last_external_state.observed_at - self.created_at
+        return self.last_foreign_state.observed_at - self.created_at
 
     def __str__(self) -> str:
-        return f"{self.name}(" + ", ".join([
-            f"execution_id={self.execution_id}"
-            f"external_states={self.external_states}",
-            f"is_closed={self.is_closed}"
-        ]) + ")"
+        return (
+            f"{self.name}("
+            + ", ".join(
+                [
+                    f"execution_id={self.execution_id}"
+                    f"foreign_states={self.foreign_states}",
+                    f"is_closed={self.is_closed}",
+                ]
+            )
+            + ")"
+        )
 
 
-class NonTerminalExecutionState(Generic[S], ObservedExecutionState[S], metaclass=ABCMeta):
-
+class NonTerminalExecutionState(
+    Generic[S], ObservedExecutionState[S], metaclass=ABCMeta
+):
     @property
     def is_terminal(self) -> bool:
-        return True
-
-    def add_observation(self, new_state: ExternalState[S]) -> None:
-        if new_state.is_terminal:
-            raise ValueError("NonTerminalExecutionState must not be fed with "
-                             f"TerminalExternalStates: {new_state} added to {self}")
-        super().add_observation(new_state)
+        return False
 
 
 class TerminalExecutionState(Generic[S], ObservedExecutionState[S], metaclass=ABCMeta):
-
-    def add_observation(self, new_state: ExternalState[S]) -> None:
+    def add_observation(self, new_state: ForeignState[S]) -> None:
         if not new_state.is_terminal:
-            raise ValueError("NonTerminalExecutionState must not be fed with "
-                             f"TerminalExternalStates: {new_state} added to {self}")
+            raise ValueError(
+                "TerminalExecutionState must not be fed with "
+                f"NonTerminalForeignStates: {new_state} added to {self}"
+            )
         super().add_observation(new_state)
 
     @property
@@ -281,14 +292,14 @@ class TerminalExecutionState(Generic[S], ObservedExecutionState[S], metaclass=AB
         `Canceled` it may even depend on the executor, whether a cancellation is associated with
         an exit code.
         """
-        if isinstance(self.last_known_external_state, TerminalExternalState):
-            return cast(TerminalExternalState, self.last_known_external_state).exit_code
+        if isinstance(self.last_known_foreign_state, TerminalForeignState):
+            return cast(TerminalForeignState, self.last_known_foreign_state).exit_code
         else:
             return None
 
 
 # The following subclasses model the simplified state graph for WESkit. The actual mapping of
-# external states to these states is done in the external job management.
+# foreign states to these states is done in the external job management.
 
 
 class Start(ExecutionState[S]):
@@ -297,10 +308,9 @@ class Start(ExecutionState[S]):
     from the executor.
     """
 
-    def __init__(self,
-                 execution_id: WESkitExecutionId):
+    def __init__(self, execution_id: WESkitExecutionId):
         super().__init__(execution_id, datetime.now())
-        self._closed_by: Optional[ExternalState[S]] = None
+        self._closed_by: Optional[ForeignState[S]] = None
 
     @property
     def execution_id(self) -> WESkitExecutionId:
@@ -311,25 +321,26 @@ class Start(ExecutionState[S]):
     def is_terminal(self) -> bool:
         return False
 
-    def close(self, external_state: ExternalState[S]) -> None:
+    def close(self, foreign_state: ForeignState[S]) -> None:
         """
-        Close this state. No further external states can be added after this method was called.
+        Close this state. No further foreign states can be added after this method was called.
 
         If the ExecutionState is closed because of a transition to a new ExecutionState, use the
-        ExternalState that triggered the transition as argument.
+        ForeignState that triggered the transition as argument.
 
-        If the ExecutionState is closed because of e.g. a timeout, use an `UnkownExternalState` as
+        If the ExecutionState is closed because of e.g. a timeout, use an `UnkownForeignState` as
         argument.
         """
-        self._closed_by = external_state
+        self._closed_by = foreign_state
 
-    def closed_by(self) -> ExternalState[S]:
+    def closed_by(self) -> ForeignState[S]:
         if self._closed_by is not None:
             return self._closed_by
         else:
             raise ValueError(
-                "Cannot retrieved closing ExternalState for a non-closed ExecutionState: " +
-                str(self.execution_id))
+                "Cannot retrieve closing ForeignState for a non-closed ExecutionState: "
+                + str(self.execution_id)
+            )
 
     @property
     def is_closed(self) -> bool:
@@ -343,26 +354,22 @@ class Start(ExecutionState[S]):
         """
         return datetime.now() - self._created_at
 
-    @property
-    def name(self) -> str:
-        """
-        The state name is just the class name. This is used for comparisons, e.g. to detect
-        state changes.
-        """
-        return str(self.__class__)
-
     def __str__(self) -> str:
-        return f"{self.name}(" + ", ".join([
-            f"execution_id={self.execution_id}"
-            f"is_closed={self.is_closed}"
-        ]) + ")"
+        return (
+            f"{self.name}("
+            + ", ".join(
+                [f"execution_id={self.execution_id}" f"is_closed={self.is_closed}"]
+            )
+            + ")"
+        )
 
 
 class Pending(Generic[S], NonTerminalExecutionState[S]):
     """
     The first state after submission. This could also be called "Submitted", but `Pending`
-    should also be used for pending-like states in the external execution system.
+    should also be used for pending-like states in the foreign execution system.
     """
+
     pass
 
 
@@ -398,7 +405,7 @@ class SystemError(Generic[S], TerminalExecutionState[S]):
 # transitive closure of the state transition graph.
 # Compare https://gitlab.com/one-touch-pipeline/weskit/api/-/issues/157#note_1190792806
 ALLOWED_TRANSITIVE_TRANSITIONS: Dict[str, List[str]] = {
-    k.__name__: [v.__name__ for v in vs]       # type: ignore
+    k.__name__: [v.__name__ for v in vs]  # type: ignore
     # Change everything into strings. The classes below are used for programming convenience.
     for k, vs in {
         Start: [
@@ -410,7 +417,7 @@ ALLOWED_TRANSITIVE_TRANSITIONS: Dict[str, List[str]] = {
             Succeeded,
             Failed,
             Canceled,
-            SystemError
+            SystemError,
         ],
         Pending: [
             Pending,
@@ -420,7 +427,7 @@ ALLOWED_TRANSITIVE_TRANSITIONS: Dict[str, List[str]] = {
             Succeeded,
             Failed,
             Canceled,
-            SystemError
+            SystemError,
         ],
         Held: [
             Held,
@@ -430,35 +437,13 @@ ALLOWED_TRANSITIVE_TRANSITIONS: Dict[str, List[str]] = {
             Failed,
             Paused,
             Canceled,
-            SystemError
+            SystemError,
         ],
-        Running: [
-            Running,
-            Paused,
-            Succeeded,
-            Failed,
-            Canceled,
-            SystemError
-        ],
-        Paused: [
-            Paused,
-            Running,
-            Failed,
-            Succeeded,
-            Canceled,
-            SystemError
-        ],
-        Failed: [
-            Failed
-            ],
-        Succeeded: [
-            Succeeded
-        ],
-        Canceled: [
-            Canceled
-        ],
-        SystemError: [
-            SystemError
-        ]
+        Running: [Running, Paused, Succeeded, Failed, Canceled, SystemError],
+        Paused: [Paused, Running, Failed, Succeeded, Canceled, SystemError],
+        Failed: [Failed],
+        Succeeded: [Succeeded],
+        Canceled: [Canceled],
+        SystemError: [SystemError],
     }.items()
 }
