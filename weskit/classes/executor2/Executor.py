@@ -276,7 +276,7 @@ class Executor(Generic[S], metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def get_result(self, state: ExecutionState[S]) \
+    async def get_result(self, state: ObservedExecutionState[S]) \
             -> ExecutionResult[S]:
         """
         Query the executing backend for the status of the process and return the execution info.
