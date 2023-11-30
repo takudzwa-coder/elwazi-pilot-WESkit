@@ -55,7 +55,9 @@ def event_loop():
 
     Provide the global event loop via a fixture.
     """
-    return get_event_loop()
+    event_loop = get_event_loop()
+    yield event_loop
+    event_loop.close()
 
 
 @pytest.fixture(scope="function")
