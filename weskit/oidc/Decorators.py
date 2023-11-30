@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def login_required(validate_online: bool = True):
     """
-    This decorator checks if the login is initialized. If not all endpoints are exposed
+    This decorator checks whether the login is initialized. If not all endpoints are exposed
     unprotected. Otherwise, the decorator validates the access_token. If validateOnline==True
     the access_token will be validated by calling the identity provider. ValidateOnline==False
     will only check the certificate of the token offline. validateOnline should be true in
@@ -32,19 +32,27 @@ def login_required(validate_online: bool = True):
     def wrapper(fn: Callable):
         @wraps(fn)
         def decorator(*args, **kwargs):
-            current_app = WESApp.from_current_app(flask_current_app)
-            if current_app.oidc_login is None:
-                # Don't use endpoint protection by OIDC.
-                verify_jwt_in_request(optional=True)
-            else:
-                # An OIDC login is configured.
-                verify_jwt_in_request()
-                if validate_online:
-                    if not validate(current_app):
-                        return {"msg": "Online validation failed"}, 401
-                    if not validate_userinfo(current_app):
-                        return {"msg": "Userinfo validation failed"}, 401
-            return fn(*args, **kwargs)
+            try:
+                current_app = WESApp.from_current_app(flask_current_app)
+                if current_app.oidc_login is None:
+                    # Don't use endpoint protection by OIDC.
+                    verify_jwt_in_request(optional=True)
+                else:
+                    # An OIDC login is configured.
+                    verify_jwt_in_request()
+                    if validate_online:
+                        if not validate(current_app):
+                            return {"msg": "Online validation failed"}, 401
+                        if not validate_userinfo(current_app):
+                            return {"msg": "Userinfo validation failed"}, 401
+                return fn(*args, **kwargs)
+            except Exception as e:
+                # It is important, that we also log errors during this annotation code. The
+                # @login_required annotation is used in all endpoints and would otherwise not
+                # result in a meaningful stacktrace in the logs that could help us to diagnose
+                # problems.
+                logger.error(e, exc_info=True)
+                raise e
 
         return decorator
 

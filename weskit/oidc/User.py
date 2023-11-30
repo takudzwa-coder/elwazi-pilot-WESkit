@@ -15,7 +15,7 @@ not_logged_in_user_id = "not-logged-in-user"
 @dataclass
 class User:
     """
-    This class makes the content of the jwt easily accessible.
+    This class makes the content of the JWT easily accessible.
     """
     id: str = not_logged_in_user_id
     username: Optional[str] = None
