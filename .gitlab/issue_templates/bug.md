@@ -64,5 +64,3 @@ Logs include for instance container logs and stack traces.
 <!--  If you can, link to the line of code that might be responsible for the problem -->
 
 /label ~New ~bug
-
-/cc @vinjana
