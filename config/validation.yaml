@@ -259,48 +259,10 @@ login:
       type: boolean
       required: true
     jwt:
+      # A dictionary of variables as used by flask-jwt-extended. For full documentation see
+      # https://flask-jwt-extended.readthedocs.io/en/stable/options
       type: dict
       required: false
-      schema:
-        JWT_COOKIE_SECURE:
-          type: boolean
-          default: true
-        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
-        JWT_TOKEN_LOCATION:
-          type: list
-          default: ["headers"]
-        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_NAME
-        JWT_HEADER_NAME:
-          type: string
-          default: "Authorization"
-        # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_HEADER_TYPE
-        JWT_HEADER_TYPE:
-          type: string
-          default: "Bearer"
-        JWT_ALGORITHM:
-          type: string
-          default: "RS256"
-        JWT_DECODE_AUDIENCE:
-          type: string
-          nullable: true
-          default: null
-        JWT_IDENTITY_CLAIM:
-          type: string
-          default: "sub"
-        JWT_ACCESS_COOKIE_PATH:
-          type: string
-          default: "/"
-        JWT_REFRESH_COOKIE_PATH:
-          type: string
-          default: "/"
-        userinfo_validation_claim:
-          type: string
-          nullable: true
-          default: null
-        userinfo_validation_value:
-          type: string
-          nullable: true
-          default: null
       default:
         # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
         JWT_TOKEN_LOCATION: [ "headers" ]
