@@ -11,13 +11,13 @@ from datetime import datetime
 from typing import Any
 from celery import Task
 from werkzeug.utils import cached_property
-import uuid
 
 from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor2.Executor import ExecutionSettings
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
+from weskit.classes.executor2.ProcessId import WESkitExecutionId
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +103,12 @@ def run_command(command: ShellCommand,
             executor = run_command.executor
 
         process = executor.execute(
-            execution_id=uuid.uuid4(),
+            execution_id=WESkitExecutionId,
             command=shell_command,
             stdout_file=executor_context.stdout_file(workdir, start_time),
             stderr_file=executor_context.stderr_file(workdir, start_time),
             settings=execution_settings
         )
-
         return process
     except Exception as e:
         logger.error(f"Error during execution: {str(e)}")

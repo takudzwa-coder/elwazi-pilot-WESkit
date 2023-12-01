@@ -108,6 +108,23 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
         return str(cls.__name__)
 
 
+class MockExecutionState(ExecutionState[str]):
+
+    def __init__(self, execution_id: WESkitExecutionId, created_at: Optional[datetime] = None):
+        super().__init__(execution_id, created_at)
+
+    @property
+    def is_terminal(self) -> bool:
+        return False
+
+    def close(self, external_state: ForeignState[str]) -> None:
+        super().close(external_state)
+
+    @property
+    def lifetime(self) -> Optional[timedelta]:
+        return datetime.now() - self.created_at
+
+
 class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
     """
     An `ObservedExecutionState` is modelled by a list of observations (`ForeignState`) and always
@@ -260,6 +277,23 @@ class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
             )
             + ")"
         )
+
+
+class MockObservedExecutionState(ObservedExecutionState[str]):
+    def __init__(self, execution_id: WESkitExecutionId,
+                 external_state: ForeignState[str],
+                 previous_state: ExecutionState[str]):
+        super().__init__(execution_id, external_state, previous_state)
+
+    def add_observation(self, new_state: ForeignState[str]) -> None:
+        super().add_observation(new_state)
+
+    def close(self, external_state: ForeignState[str]) -> None:
+        super().close(external_state)
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.last_known_foreign_state.is_terminal
 
 
 class NonTerminalExecutionState(
