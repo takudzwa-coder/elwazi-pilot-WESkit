@@ -11,8 +11,8 @@ from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.tasks.SubmissionWorker import run_command
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
-from weskit.classes.executor2.Executor import MockExecutor
-from weskit.classes.Database import MockDatabase
+from Executor2_test import MockExecutor
+from Database_test import MockDatabase
 
 
 @pytest.fixture
