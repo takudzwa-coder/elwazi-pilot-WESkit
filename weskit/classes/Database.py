@@ -340,7 +340,7 @@ class MockDatabase:
             return True
         return False
 
-    def list_run_ids_and_stages_and_times(self, user_id):
+    def list_run_ids_and_stages_and_times(self, user_id: str):
         return [{
             "run_id": run["id"],
             "run_stage": run["processing_stage"],

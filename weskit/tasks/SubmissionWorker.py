@@ -99,7 +99,10 @@ def run_command(command: ShellCommand,
         else:
             pass
 
-        if executor is None:
+        if executor is not None:
+            # Use the provided executor if available
+            pass
+        else:
             executor = run_command.executor
 
         process = executor.execute(

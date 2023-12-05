@@ -27,8 +27,6 @@ async def test_execute(executor):
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
     state = await executor.execute(execution_id, command)
-
-    assert state  # Add more specific assertions based on your implementation
     assert isinstance(state, ExecutionState)
     assert state.execution_id == execution_id
     assert state.created_at is not None
@@ -44,6 +42,10 @@ async def test_get_status(executor):
 
     current_state = await executor.get_status(execution_id)
     assert isinstance(current_state, ExecutionState)
+    assert current_state.is_closed is False
+    assert current_state.is_terminal is False
+    assert current_state.lifetime != 0
+    assert current_state.execution_id == execution_id
 
 
 @pytest.mark.asyncio
@@ -54,17 +56,23 @@ async def test_update_status(executor):
 
     updated_state = await executor.update_status(state)
     assert isinstance(updated_state, ExecutionState)
+    assert updated_state.is_closed is False
+    assert updated_state.is_terminal is False
+    assert updated_state.lifetime != 0
+    assert updated_state.execution_id == execution_id
+    assert updated_state.created_at == state.created_at
 
 
 @pytest.mark.asyncio
 async def test_get_result(executor):
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
+    state = await executor.execute(execution_id, command)
 
     extern_state = ForeignState(ProcessId("12345", "localhost"),
                                 state="Running",
                                 observed_at=datetime.now())
-    previous_state = MockExecutionState(execution_id, created_at=datetime.now())
+    previous_state = MockExecutionState(state.execution_id, created_at=state.created_at)
     obs_state = MockObservedExecutionState(execution_id,
                                            external_state=extern_state,
                                            previous_state=previous_state)
@@ -108,10 +116,17 @@ async def test_wait(executor):
 # The following line test the MockExecutionState class
 def test_mock_execution_state():
     execution_id = WESkitExecutionId()
-    previous_state = MockExecutionState(execution_id, created_at=datetime.now())
-    assert previous_state.is_terminal is False
-    assert previous_state.lifetime != 0
-    assert previous_state.execution_id == execution_id
+    state = MockExecutionState(execution_id, created_at=datetime.now())
+
+    extern_state = ForeignState(ProcessId("12345", "localhost"),
+                                state="Finished",
+                                observed_at=state.created_at)
+
+    state.close(extern_state)
+    assert state.is_closed is True
+    assert state.is_terminal is False
+    assert state.lifetime != 0
+    assert state.execution_id == execution_id
 
 
 # The following line test the MockObservedExecutionState class
@@ -120,13 +135,19 @@ def test_mock_observed_execution_state():
     process_id = ProcessId("12345", "localhost")
     previous_state = MockExecutionState(execution_id, created_at=datetime.now())
     external_state = ForeignState(process_id,
-                                  state=None,
+                                  state="Running",
                                   observed_at=datetime.now())
     mock_observed_state = MockObservedExecutionState(execution_id,
                                                      external_state=external_state,
                                                      previous_state=previous_state)
+    finished_state = ForeignState(ProcessId("12345", "localhost"),
+                                  state="Finished",
+                                  observed_at=datetime.now())
+
+    mock_observed_state.close(finished_state)
+    assert mock_observed_state.is_closed is True
     assert mock_observed_state.is_terminal is False
     assert mock_observed_state.execution_id == execution_id
-    assert mock_observed_state.last_known_foreign_state == external_state
+    assert mock_observed_state.last_known_foreign_state == finished_state
     assert mock_observed_state.lifetime != 0
     assert mock_observed_state.created_at is not None
