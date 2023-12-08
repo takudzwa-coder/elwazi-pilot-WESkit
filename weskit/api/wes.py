@@ -206,7 +206,7 @@ def RunWorkflow(*args, **kwargs):
 
         logger.info("Executing Workflow %s" % run.id)
         run = current_app.manager.execute(run)
-        run = current_app.manager.database.update_run(run)
+        # run = current_app.manager.database.update_run(run)
 
         return {"run_id": run.id}, 200
 
