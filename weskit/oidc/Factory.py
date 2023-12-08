@@ -82,7 +82,7 @@ def setup(app: WESApp, config: dict) -> None:
         app.config['JWT_COOKIE_CSRF_PROTECT'] = False
         jwt_manager = JWTManager(app)
 
-        # A a Login object to allow access to some information from the login_required decorator.
+        # A Login object to allow access to some information from the login_required decorator.
         app.oidc_login = Login(client_id=client_id,
                                client_secret=client_secret,
                                realm=realm,

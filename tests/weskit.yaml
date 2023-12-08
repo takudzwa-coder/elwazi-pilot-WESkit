@@ -310,8 +310,8 @@ cors:
 login:
   enabled: true
   jwt:
-    # Only allow JWT cookies to be sent over https. In production, this
-    # should likely be True
+    # https://flask-jwt-extended.readthedocs.io/en/stable/options.html#JWT_COOKIE_SECURE
+    # Should be true in production.
     JWT_COOKIE_SECURE: true
     # https://flask-jwt-extended.readthedocs.io/en/stable/options/#JWT_TOKEN_LOCATION
     JWT_TOKEN_LOCATION: ["headers"]
