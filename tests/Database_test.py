@@ -169,7 +169,9 @@ mock_run_data = {
     "request": {
         "workflow_url": "",
         "workflow_params": '{"text":"hello_world"}'
-    }
+    },
+    "exit_code": None,
+    "sub_dir": None
 }
 
 

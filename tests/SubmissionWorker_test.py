@@ -15,8 +15,7 @@ from weskit.tasks.SubmissionWorker import run_command
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
 from Executor2_test import MockExecutor
-from Database_test import MockDatabase
-from Runs_test import mock_run_data
+from Database_test import MockDatabase, mock_run_data
 
 
 @pytest.fixture

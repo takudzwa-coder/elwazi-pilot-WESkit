@@ -71,32 +71,33 @@ def custom_run_command(task_func):
     def wrapper(*args, **kwargs):
         # Create an instance of CommandTask with executor and database
         command_task_instance = CommandTask()
-        command_task_instance.executor = kwargs.pop('executor', None)
-        command_task_instance.database = kwargs.pop('database', None)
-
+        command_task_instance.executor = kwargs["executor"]
+        command_task_instance.database = kwargs["database"]
         # Call the original task function with the modified CommandTask instance
-        return task_func(command_task_instance, *args, **kwargs)
+        return task_func({'command_task_instance': command_task_instance}, *args, **kwargs)
 
     return wrapper
 
 
 @celery_app.task
 @custom_run_command
-def run_command(command: ShellCommand,
+def run_command(
+                command_task_instance,
+                command: ShellCommand,
                 execution_settings: ExecutionSettings,
                 worker_context: PathContext,
                 executor_context: PathContext,
                 run_id: UUID,
                 executor: Any,
                 database: Database):
-
     start_time = datetime.now()
+    command_task_instance = command_task_instance['command_task_instance']
     if command.workdir is None:
         raise RuntimeError(f"No working directory defined for command: {command}")
     else:
         workdir = command.workdir
 
-    if run_command.executor_type.executes_engine_remotely:
+    if command_task_instance.executor_type.executes_engine_remotely:
         logger.info(
             f"Running command in {worker_context.run_dir(workdir)} (worker) = "
             f"{executor_context.run_dir(workdir)} (executor): {repr(command.command)}"
@@ -122,13 +123,13 @@ def run_command(command: ShellCommand,
         log_dir = worker_context.log_dir(workdir, start_time)
         logger.info(f"Creating log-dir {log_dir}")
         os.makedirs(log_dir)
-        if run_command.executor_type.executes_engine_locally or \
-           run_command.config["executor"]["login"]["hostname"] == "localhost":
+        if command_task_instance.executor_type.executes_engine_locally or \
+           command_task_instance.config["executor"]["login"]["hostname"] == "localhost":
             shell_command.environment = {**dict(os.environ), **shell_command.environment}
         else:
             pass
 
-        executor = run_command.executor
+        executor = command_task_instance.executor
 
         executor.execute(
             execution_id=WESkitExecutionId(),
@@ -166,11 +167,13 @@ def run_command(command: ShellCommand,
             json.dump(execution_log, fh)
             print("\n", file=fh)
 
-        database = run_command.database
+        database = command_task_instance.database
         run = database.get_run(run_id)
         if run is not None:
+            if isinstance(run, dict):
+                run["execution_log"] = execution_log
+                run = Run(**dict(run))
+            elif isinstance(run, Run):
+                run.execution_log = execution_log
             run = database.update_run(run, Run.merge, 1)
-            run.execution_log = execution_log
-            run = database.update_run(run)
-
     return execution_log
