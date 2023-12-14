@@ -123,6 +123,8 @@ def test_workflow_url(run_request_validator):
            ["Not a relative path: '/absolute/path'"]
     assert run_request_validator.validate(request(workflow_url="../outside")) == \
            ["Normalized path points outside allowed root: '../outside'"]
+    assert run_request_validator.validate(request(workflow_url=12345))[1] == \
+           "Could not parse URI '12345'"
 
     forbidden_uris = map(lambda c: "this%cforbidden" % c, "'\"(){}[]$")
     # Note: No scheme ("file") is provided. The error message does not contain them. Whether the
@@ -149,6 +151,12 @@ def test_validate_attachment(run_request_validator):
         files = ImmutableMultiDict({"workflow_attachment": [wf_file1]})
         assert run_request_validator.validate(request(workflow_attachment=files)) == \
             ["At least one attachment filename is forbidden. Forbidden are: .nextflow, .snakemake"]
+
+    with open(os.path.join(os.getcwd(), "tests/wf5/allowed.txt"), "rb") as fp2:
+        wf_file2 = FileStorage(fp2)
+        wf_file2.filename = os.path.basename(wf_file2.filename)
+        file = ImmutableMultiDict({"workflow_attachment": [wf_file2]})
+        assert run_request_validator.validate_attachment(file) == []
 
 
 def test_validate_workflow_params(run_request_validator):
@@ -225,3 +233,25 @@ def test_validate_workflow_engine_parameters(run_request_validator):
                'workflow_type_version': '7.30.2',
                'workflow_url': 'file:tests/wf/Snakefile',
            }
+
+
+def test_bad_url(run_request_validator):
+    assert run_request_validator._validate_url(url=12345) == ["Could not parse URI '12345'"]
+    assert run_request_validator._validate_workflow_url(url=12345) == \
+        ["Could not parse URI '12345'"]
+    assert run_request_validator._validate_file_url_path(url=12345) == \
+        ["Could not parse URI '12345'"]
+
+
+def test_validate_invalid_run_id(run_request_validator):
+    assert run_request_validator.invalid_run_id(run_id="test_id") == "UUID expected. Got: 'test_id'"
+
+
+def test_validate_url_invalid_scheme(run_request_validator):
+    assert run_request_validator.validate(request(workflow_url="ftp://example.com")) == \
+        ["Only 'file:' (relative) and 'trs:' are allowed in workflow URIs: 'ftp://example.com'"]
+
+
+def test_validate_rundir_tag_missing_run_dir(run_request_validator_rundir):
+    assert run_request_validator_rundir.validate(request(tags='{}')) == \
+        ["'run_dir' tag is required and missing"]

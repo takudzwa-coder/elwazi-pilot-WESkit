@@ -25,7 +25,7 @@ from weskit.classes.executor2.Executor import ExecutionSettings
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.utils import format_timestamp, get_current_timestamp
-
+from weskit.exceptions import DatabaseOperationError
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +90,11 @@ def run_command(
                 run_id: UUID,
                 executor: Any,
                 database: Database):
+
     start_time = datetime.now()
+
     command_task_instance = command_task_instance['command_task_instance']
+
     if command.workdir is None:
         raise RuntimeError(f"No working directory defined for command: {command}")
     else:
@@ -167,13 +170,18 @@ def run_command(
             json.dump(execution_log, fh)
             print("\n", file=fh)
 
-        database = command_task_instance.database
-        run = database.get_run(run_id)
-        if run is not None:
-            if isinstance(run, dict):
-                run["execution_log"] = execution_log
-                run = Run(**dict(run))
-            elif isinstance(run, Run):
-                run.execution_log = execution_log
-            run = database.update_run(run, Run.merge, 1)
+        try:
+            database = command_task_instance.database
+            run = database.get_run(run_id)
+            if run is not None:
+                if isinstance(run, dict):
+                    run["execution_log"] = execution_log
+                    run = Run(**dict(run))
+                elif isinstance(run, Run):
+                    run.execution_log = execution_log
+                run = database.update_run(run, Run.merge, 1)
+            logger.info(f"Database updated with execution_log" f"'{run_id}'")
+        except Exception as e:
+            logger.error(f"Error during database update: {str(e)}")
+            raise DatabaseOperationError("Attempted to update database" f"'{run_id}'")
     return execution_log

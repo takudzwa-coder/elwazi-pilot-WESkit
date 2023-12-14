@@ -41,10 +41,11 @@ class RunRequestValidator(object):
         for attachment in workflow_attachment_files:
             norm_filenames = os.path.normpath(str(attachment.filename))
             if str(norm_filenames).lower() in forbidden_filenames:
-                return ["At least one attachment filename is forbidden. Forbidden are: " +
-                        ", ".join(forbidden_filenames)]
-        else:
-            return []
+                message = ["At least one attachment filename is forbidden. Forbidden are: " +
+                           ", ".join(forbidden_filenames)]
+            else:
+                message = []
+        return message
 
     def validate(self,
                  data: dict) \
