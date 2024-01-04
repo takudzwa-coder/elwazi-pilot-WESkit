@@ -213,12 +213,6 @@ class MockObservedExecutionState(ObservedExecutionState[str]):
                  previous_state: ExecutionState[str]):
         super().__init__(execution_id, external_state, previous_state)
 
-    def add_observation(self, new_state: ForeignState[str]) -> None:
-        super().add_observation(new_state)
-
-    def close(self, external_state: ForeignState[str]) -> None:
-        super().close(external_state)
-
     @property
     def is_terminal(self) -> bool:
         return self.last_known_foreign_state.is_terminal
@@ -232,9 +226,6 @@ class MockExecutionState(ExecutionState[str]):
     @property
     def is_terminal(self) -> bool:
         return False
-
-    def close(self, external_state: ForeignState[str]) -> None:
-        super().close(external_state)
 
     @property
     def lifetime(self) -> Optional[timedelta]:

@@ -13,6 +13,7 @@ from test_utils import get_mock_run
 from weskit.classes.Run import Run
 from weskit.classes.ProcessingStage import ProcessingStage
 from weskit.utils import updated
+from weskit.classes.Database import AbstractDatabase
 
 
 @pytest.mark.slow
@@ -111,14 +112,14 @@ def test_delete_run(test_database):
     assert find_run is None
 
 
-class MockDatabase:
+class MockDatabase(AbstractDatabase):
     def __init__(self):
         self.runs = {}
 
     def initialize(self) -> None:
         pass
 
-    def get_run(self, run_id: uuid.UUID) -> Optional[Run]:
+    def get_run(self, run_id: uuid.UUID, **kwargs) -> Optional[Run]:
         return self.runs.get(run_id)
 
     def get_runs(self, query) -> List[Run]:

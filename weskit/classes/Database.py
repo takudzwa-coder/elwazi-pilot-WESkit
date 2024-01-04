@@ -26,10 +26,6 @@ class AbstractDatabase(ABC):
         pass
 
     @abstractmethod
-    def aggregate_runs(self, pipeline) -> dict:
-        pass
-
-    @abstractmethod
     def get_run(self, run_id: uuid.UUID, **kwargs) -> Optional[Run]:
         pass
 
@@ -42,10 +38,6 @@ class AbstractDatabase(ABC):
         pass
 
     @abstractmethod
-    def count_states(self) -> List[Any]:
-        pass
-
-    @abstractmethod
     def create_run_id(self) -> uuid.UUID:
         pass
 
@@ -54,11 +46,11 @@ class AbstractDatabase(ABC):
         pass
 
     @abstractmethod
-    def update_run(self, run, resolution_fun=None, max_tries=1) -> Run:
+    def update_run(self, run: Run, resolution_fun=None, max_tries=1) -> Run:
         pass
 
     @abstractmethod
-    def delete_run(self, run) -> bool:
+    def delete_run(self, run: Run) -> bool:
         pass
 
 
@@ -110,9 +102,6 @@ class Database(AbstractDatabase):
         return self.db.get_collection("run",
                                       codec_options=CodecOptions(
                                           uuid_representation=UuidRepresentation.STANDARD))
-
-    def aggregate_runs(self, pipeline):
-        return dict(self._runs.aggregate(pipeline))
 
     def get_run(self, run_id: uuid.UUID, **kwargs) -> Optional[Run]:
         run_data = self._runs.find_one(

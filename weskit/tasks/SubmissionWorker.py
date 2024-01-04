@@ -4,27 +4,27 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from abc import ABCMeta
 from datetime import datetime
-from typing import Any
+from typing import Union, Callable
 from celery import Task
 from pathlib import Path
 from uuid import UUID
 from werkzeug.utils import cached_property
-from functools import wraps
 
-from weskit.classes.Database import Database
+from asyncio import AbstractEventLoop
+from weskit.classes.Database import Database, AbstractDatabase
 from weskit.classes.Run import Run
 from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor2.Executor import ExecutionSettings
+from weskit.classes.executor2.Executor import ExecutionSettings, Executor
+from weskit.classes.executor.Executor import Executor as Executor_old
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
-from weskit.utils import format_timestamp, get_current_timestamp
+from weskit.utils import format_timestamp, get_current_timestamp, get_event_loop
 from weskit.exceptions import DatabaseOperationError
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,11 @@ class CommandTask(Task, metaclass=ABCMeta):
 
     See https://celery-safwan.readthedocs.io/en/latest/userguide/tasks.html#instantiation
     """
+
+    @cached_property
+    def event_loop(self) -> AbstractEventLoop:
+        return get_event_loop()
+
     @cached_property
     def config(self):
         config = read_config()
@@ -53,54 +58,70 @@ class CommandTask(Task, metaclass=ABCMeta):
     # get_executor needs to be adjusted in the future
     # it descriminates between the old and the new executor API
     @cached_property
-    def executor(self) -> Any:
+    def executor(self) -> Union[Executor_old, Executor]:
+        logger.info("Determine executor for celery task")
         return get_executor(self.executor_type,
                             login_parameters=self.config["executor"]["login"]
                             if self.executor_type.needs_login_credentials
                             else None,
-                            event_loop=None)
+                            event_loop=self.event_loop)
 
     @cached_property
     def database(self):
+        logger.info("Get database connection for celery task")
         database_url = os.getenv("WESKIT_DATABASE_URL")
         return Database(database_url, "WES")
 
-
-def custom_run_command(task_func):
-    @wraps(task_func)
-    def wrapper(*args, **kwargs):
-        # Create an instance of CommandTask with executor and database
-        command_task_instance = CommandTask()
-        command_task_instance.executor = kwargs["executor"]
-        command_task_instance.database = kwargs["database"]
-        # Call the original task function with the modified CommandTask instance
-        return task_func({'command_task_instance': command_task_instance}, *args, **kwargs)
-
-    return wrapper
+    def run_sync(self, async_fun: Callable, *args, **kwargs):
+        try:
+            state = self.event_loop.run_until_complete(async_fun(*args, **kwargs))
+            return state
+        except Exception as e:
+            logger.error(f"Error in run_sync: {str(e)}")
+            raise
 
 
-@celery_app.task
-@custom_run_command
-def run_command(
-                command_task_instance,
-                command: ShellCommand,
-                execution_settings: ExecutionSettings,
-                worker_context: PathContext,
-                executor_context: PathContext,
-                run_id: UUID,
-                executor: Any,
-                database: Database):
+async def run_command_impl(task: Task,
+                           shell_command: ShellCommand,
+                           execution_settings: ExecutionSettings,
+                           executor_context: PathContext,
+                           executor: Union[Executor_old, Executor],
+                           start_time):
+
+    workdir = shell_command.workdir
+    if workdir is None:
+        raise RuntimeError(f"workdir should be set: {workdir}")
+    # Example async await call.
+    state = await task.executor.execute(
+            execution_id=WESkitExecutionId(),
+            command=shell_command,
+            stdout_file=executor_context.stdout_file(workdir, start_time),
+            stderr_file=executor_context.stderr_file(workdir, start_time),
+            settings=execution_settings
+        )
+    return state
+
+
+@celery_app.task(base=CommandTask)
+async def run_command(task: Task,
+                      command: ShellCommand,
+                      execution_settings: ExecutionSettings,
+                      worker_context: PathContext,
+                      executor_context: PathContext,
+                      run_id: UUID,
+                      executor: Union[Executor_old, Executor],
+                      database: AbstractDatabase,
+                      event_loop=None
+                      ):
 
     start_time = datetime.now()
-
-    command_task_instance = command_task_instance['command_task_instance']
 
     if command.workdir is None:
         raise RuntimeError(f"No working directory defined for command: {command}")
     else:
         workdir = command.workdir
 
-    if command_task_instance.executor_type.executes_engine_remotely:
+    if run_command.executor_type.executes_engine_remotely:
         logger.info(
             f"Running command in {worker_context.run_dir(workdir)} (worker) = "
             f"{executor_context.run_dir(workdir)} (executor): {repr(command.command)}"
@@ -126,23 +147,24 @@ def run_command(
         log_dir = worker_context.log_dir(workdir, start_time)
         logger.info(f"Creating log-dir {log_dir}")
         os.makedirs(log_dir)
-        if command_task_instance.executor_type.executes_engine_locally or \
-           command_task_instance.config["executor"]["login"]["hostname"] == "localhost":
+
+        if run_command.executor_type.executes_engine_locally or \
+           run_command.config["executor"]["login"]["hostname"] == "localhost":
             shell_command.environment = {**dict(os.environ), **shell_command.environment}
         else:
             pass
+        task.run_sync(
+            run_command_impl,
+            task,
+            shell_command,
+            execution_settings,
+            executor_context,
+            executor,
+            start_time)
 
-        executor = command_task_instance.executor
-
-        executor.execute(
-            execution_id=WESkitExecutionId(),
-            command=shell_command,
-            stdout_file=executor_context.stdout_file(workdir, start_time),
-            stderr_file=executor_context.stderr_file(workdir, start_time),
-            settings=execution_settings
-        )
     except Exception as e:
         logger.error(f"Error during execution: {str(e)}")
+        print(f"Exception details: {e}")
         raise
     finally:
         # The execution context is the run-directory. It is used to create all paths to be reported
@@ -166,12 +188,8 @@ def run_command(
             "log_file": str(rundir_context.execution_log_file(Path("."), start_time)),
             "output_files": None
         }
-        with open(worker_context.execution_log_file(workdir, start_time), "w") as fh:
-            json.dump(execution_log, fh)
-            print("\n", file=fh)
 
         try:
-            database = command_task_instance.database
             run = database.get_run(run_id)
             if run is not None:
                 if isinstance(run, dict):
