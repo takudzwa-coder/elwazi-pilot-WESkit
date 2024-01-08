@@ -11,11 +11,10 @@ from datetime import datetime
 from typing import Union, Callable
 from celery import Task
 from pathlib import Path
-from uuid import UUID
 from werkzeug.utils import cached_property
 
 from asyncio import AbstractEventLoop
-from weskit.classes.Database import Database, AbstractDatabase
+from weskit.classes.Database import Database
 from weskit.classes.Run import Run
 from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 from weskit.classes.PathContext import PathContext
@@ -82,10 +81,10 @@ class CommandTask(Task, metaclass=ABCMeta):
 
 
 async def run_command_impl(task: Task,
+                           execution_id: WESkitExecutionId,
                            shell_command: ShellCommand,
                            execution_settings: ExecutionSettings,
                            executor_context: PathContext,
-                           executor: Union[Executor_old, Executor],
                            start_time):
 
     workdir = shell_command.workdir
@@ -93,7 +92,7 @@ async def run_command_impl(task: Task,
         raise RuntimeError(f"workdir should be set: {workdir}")
     # Example async await call.
     state = await task.executor.execute(
-            execution_id=WESkitExecutionId(),
+            execution_id=execution_id,
             command=shell_command,
             stdout_file=executor_context.stdout_file(workdir, start_time),
             stderr_file=executor_context.stderr_file(workdir, start_time),
@@ -108,9 +107,7 @@ async def run_command(task: Task,
                       execution_settings: ExecutionSettings,
                       worker_context: PathContext,
                       executor_context: PathContext,
-                      run_id: UUID,
-                      executor: Union[Executor_old, Executor],
-                      database: AbstractDatabase,
+                      run_id: WESkitExecutionId,
                       event_loop=None
                       ):
 
@@ -156,10 +153,10 @@ async def run_command(task: Task,
         task.run_sync(
             run_command_impl,
             task,
+            run_id,
             shell_command,
             execution_settings,
             executor_context,
-            executor,
             start_time)
 
     except Exception as e:
@@ -190,14 +187,14 @@ async def run_command(task: Task,
         }
 
         try:
-            run = database.get_run(run_id)
+            run = task.database.get_run(run_id)
             if run is not None:
                 if isinstance(run, dict):
                     run["execution_log"] = execution_log
                     run = Run(**dict(run))
                 elif isinstance(run, Run):
                     run.execution_log = execution_log
-                run = database.update_run(run, Run.merge, 1)
+                run = task.database.update_run(run, Run.merge, 1)
             logger.info(f"Database updated with execution_log" f"'{run_id}'")
         except Exception as e:
             logger.error(f"Error during database update: {str(e)}")

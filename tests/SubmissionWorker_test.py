@@ -7,9 +7,7 @@ from pathlib import Path
 import pytest
 from abc import ABCMeta
 from werkzeug.utils import cached_property
-from typing import Callable
 
-from asyncio import AbstractEventLoop
 from weskit import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
@@ -17,29 +15,33 @@ from weskit.tasks.SubmissionWorker import run_command
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
 from Executor2_test import MockExecutor
-from Database_test import MockDatabase, mock_run_data
-from weskit.utils import get_event_loop
+from Database_test import MockDatabase
 from weskit.tasks.SubmissionWorker import CommandTask
+from weskit.classes.ProcessingStage import ProcessingStage
 
 
-@pytest.fixture
-def mock_executor():
-    return MockExecutor(id=WESkitExecutionId(), log_dir_base='/path/to/log')
+mock_run_data = {
+    "id": WESkitExecutionId(),
+    "processing_stage": ProcessingStage.RUN_CREATED,
+    "request_time": None,
+    "user_id": "test_id",
+    "request": {
+        "workflow_url": "",
+        "workflow_params": '{"text":"hello_world"}'
+    },
+    "exit_code": None,
+    "sub_dir": None
+}
 
-
-@pytest.fixture
-def mock_database():
-    return MockDatabase()
+mock_run_data_2 = mock_run_data.copy()
+mock_run_data_2["id"] = WESkitExecutionId()
+mock_run_data_2["processing_stage"] = ProcessingStage.FINISHED_EXECUTION
 
 
 class CommandTaskMock(CommandTask, metaclass=ABCMeta):
     """
     Mock implementation of CommandTask.
     """
-
-    @cached_property
-    def event_loop(self) -> AbstractEventLoop:
-        return get_event_loop()
 
     @cached_property
     def executor(self):
@@ -51,20 +53,15 @@ class CommandTaskMock(CommandTask, metaclass=ABCMeta):
         # Mocked database connection for testing
         return MockDatabase()
 
-    def run_sync(self, async_fun: Callable, *args, **kwargs):
-        return self.event_loop.run_until_complete(async_fun(*args, **kwargs))
-
 
 @pytest.mark.asyncio
-async def test_submission_worker_run_command(mock_executor,
-                                             mock_database,
-                                             temporary_dir,
+async def test_submission_worker_run_command(temporary_dir,
                                              test_config):
 
     task = CommandTaskMock()
 
     run = Run(**mock_run_data)
-    mock_database.insert_run(run)
+    task.database.insert_run(run)
 
     # Create a SubmissionWorker instance
     command = ["echo", "hello world", ss(">"), "x"]
@@ -83,11 +80,9 @@ async def test_submission_worker_run_command(mock_executor,
         executor_context=context,
         execution_settings=ExecutionSettings(),
         run_id=run.id,
-        executor=mock_executor,
-        database=mock_database,
         event_loop=None
         )
 
-    run = mock_database.get_run(run.id)
+    run = task.database.get_run(run.id)
     assert run.execution_log != {}
     assert run.processing_stage == 'RUN_CREATED'

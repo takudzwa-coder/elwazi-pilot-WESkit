@@ -123,7 +123,8 @@ class MockDatabase(AbstractDatabase):
         return self.runs.get(run_id)
 
     def get_runs(self, query) -> List[Run]:
-        return [run for run in self.runs.values() if query.get("id") == run["id"]]
+        return [run_data for run_data in self.runs.values()
+                if query.get("id") == dict(run_data).get("id") or not query]
 
     def create_run_id(self) -> uuid.UUID:
         run_id = uuid.uuid4()
