@@ -17,9 +17,9 @@ from weskit.memory_units import Memory, Unit
 
 
 def test_engine_parameter():
-    a1 = EngineParameter({"a"})
-    a2 = EngineParameter({"a"})
-    b = EngineParameter({"b"})
+    a1 = EngineParameter({"a"}, "test")
+    a2 = EngineParameter({"a"}, "test")
+    b = EngineParameter({"b"}, "test")
     assert a1 == a2
     assert a1 != b
 
@@ -27,9 +27,9 @@ def test_engine_parameter():
 
 
 def test_engine_parameter_index():
-    p1 = EngineParameter({"a", "b"})
-    p2 = EngineParameter({"a", "c"})
-    p3 = EngineParameter({"c", "d"})
+    p1 = EngineParameter({"a", "b"}, "test")
+    p2 = EngineParameter({"a", "c"}, "test")
+    p3 = EngineParameter({"c", "d"}, "test")
 
     idx = ParameterIndex([p1, p3])
     assert idx.all == [p1, p3]
@@ -49,7 +49,7 @@ def test_engine_parameter_index():
 
 
 def test_actual_parameter():
-    param = EngineParameter({"a"})
+    param = EngineParameter({"a"}, "test")
     a1 = ActualEngineParameter(param, "1")
     assert a1.param == param
     assert a1.value == "1"
@@ -75,14 +75,22 @@ def test_create_snakemake():
          {"name": "wms-monitor-arg", "value": "12345", "api": True}]
     )
     assert engine.default_params == [
-        ActualEngineParameter(EngineParameter({"cores"}), "2", True),
-        ActualEngineParameter(EngineParameter({"use-singularity"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"use-conda"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"profile"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"tes"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"resume"}), "FALSE", True),
-        ActualEngineParameter(EngineParameter({"wms-monitor"}), "http://127.0.0.1:5000", True),
-        ActualEngineParameter(EngineParameter({"wms-monitor-arg"}), "12345", True)
+        ActualEngineParameter(EngineParameter(
+                {"cores"}, "SMK(cli:--cores %s)"), "2", True),
+        ActualEngineParameter(EngineParameter(
+            {"use-singularity"}, "SMK(cli:--use-singularity bool)"), "TRUE", True),
+        ActualEngineParameter(EngineParameter(
+            {"use-conda"}, "SMK(cli:--use-conda bool)"), "TRUE", True),
+        ActualEngineParameter(EngineParameter(
+            {"profile"}, "SMK(cli:--profile %s)"), "TRUE", True),
+        ActualEngineParameter(EngineParameter(
+            {"tes"}, "SMK(cli:--tes %s)"), "TRUE", True),
+        ActualEngineParameter(EngineParameter(
+            {"resume"}, "NFL(cli:-resume bool), SMK(cli:--forceall bool)"), "FALSE", True),
+        ActualEngineParameter(EngineParameter(
+            {"wms-monitor"}, "SMK(cli:--wms-monitor %s)"), "http://127.0.0.1:5000", True),
+        ActualEngineParameter(EngineParameter(
+            {"wms-monitor-arg"}, "SMK(cli:--wms-monitor-arg %s)"), "12345", True)
     ]
     assert engine.name() == "SMK"
 
@@ -298,17 +306,29 @@ def test_create_nextflow():
          ]
     )
     assert engine.default_params == [
-        ActualEngineParameter(EngineParameter({"engine-environment"}), "/path/to/script", False),
-        ActualEngineParameter(EngineParameter({"max-memory"}), "2G", False),
-        ActualEngineParameter(EngineParameter({"trace"}), "TRUE", True),
-        ActualEngineParameter(EngineParameter({"report"}), "T", True),
-        ActualEngineParameter(EngineParameter({"graph"}), "Y", True),
-        ActualEngineParameter(EngineParameter({"timeline"}), "True", True),
-        ActualEngineParameter(EngineParameter({"resume"}), "True", True),
-        ActualEngineParameter(EngineParameter({"with-tower"}), "True", True),
-        ActualEngineParameter(EngineParameter({"tower-access-token"}), "hfdsjhfdskl", True),
-        ActualEngineParameter(EngineParameter({"nxf-assets"}), "/path/dir", True),
-        ActualEngineParameter(EngineParameter({"workflow-revision"}), "/path/to/repo/", True)
+        ActualEngineParameter(EngineParameter(
+            {"engine-environment"}, "file name of the engine environment 'file.sh'"),
+            "/path/to/script", False),
+        ActualEngineParameter(EngineParameter(
+            {"max-memory"}, "NFL(env:NXF_OPTS=-Xmx%sm)"), "2G", False),
+        ActualEngineParameter(EngineParameter(
+            {"trace"}, "NFL(cli:-with-trace bool)"), "TRUE", True),
+        ActualEngineParameter(EngineParameter(
+            {"report"},  "NFL(cli:-with-report bool)"), "T", True),
+        ActualEngineParameter(EngineParameter(
+            {"graph"}, "NFL(cli:-with-dag bool)"), "Y", True),
+        ActualEngineParameter(EngineParameter(
+            {"timeline"}, "NFL(cli:-with-timeline bool)"), "True", True),
+        ActualEngineParameter(EngineParameter(
+            {"resume"}, "NFL(cli:-resume bool), SMK(cli:--forceall bool)"), "True", True),
+        ActualEngineParameter(EngineParameter(
+            {"with-tower"}, "NFL(cli:-with-tower bool)"), "True", True),
+        ActualEngineParameter(EngineParameter(
+            {"tower-access-token"}, "NFL(env:TOWER_ACCESS_TOKEN=%s)"), "hfdsjhfdskl", True),
+        ActualEngineParameter(EngineParameter(
+            {"nxf-assets"}, "NFL(env:NFX_ASSETS=%s)"), "/path/dir", True),
+        ActualEngineParameter(EngineParameter(
+            {"workflow-revision"}, "NFL(cli:-r %s)"), "/path/to/repo/", True)
     ]
     assert engine.name() == "NFL"
 
@@ -440,7 +460,7 @@ def test_wrapper_command():
 
 
 def test_forbidden_parameter():
-    param = EngineParameter({"a"})
+    param = EngineParameter({"a"}, "test")
     a1 = ActualEngineParameter(param, "1")
     # Snakemake
     with pytest.raises(ValueError):
