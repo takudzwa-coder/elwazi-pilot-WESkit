@@ -100,9 +100,10 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"job-name"}, "custom job name"),
     EngineParameter({"max-runtime"}, "max. runtime of the process"),
     EngineParameter({"engine-environment"}, "file name of the engine environment 'file.sh'"),
-    EngineParameter({"accounting-name"}, "Project Name"),
-    EngineParameter({"group"}, "job group"),
-    EngineParameter({"queue"}, "queue name"),
+    EngineParameter(
+        {"accounting-name"}, "Identifier used by the executor accounting, e.g. project name"),
+    EngineParameter({"group"}, "executor job group"),
+    EngineParameter({"queue"}, "executor queue name"),
     EngineParameter({"max-memory"}, "NFL(env:NXF_OPTS=-Xmx%sm)"),
     EngineParameter({"trace"}, "NFL(cli:-with-trace bool)"),
     EngineParameter({"timeline"}, "NFL(cli:-with-timeline bool)"),
@@ -128,7 +129,8 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"workflow-revision"}, "NFL(cli:-r %s)"),
     EngineParameter({"wms-monitor"}, "SMK(cli:--wms-monitor %s)"),
     EngineParameter({"wms-monitor-arg"}, "SMK(cli:--wms-monitor-arg %s)"),
-    EngineParameter({"conda-prefix"}, "SMK(cli:--conda-prefix %s)"),
+    EngineParameter(
+        {"conda-prefix"}, "SMK(cli:--conda-prefix %s) together with task-conda-envs-path"),
     EngineParameter({"git-dir"}, "SMK(env:GIT_DIR=%s)"),
 ])
 
