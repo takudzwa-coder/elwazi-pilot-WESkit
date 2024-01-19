@@ -20,6 +20,7 @@ from weskit.celery_app import celery_app, read_config, update_celery_config_from
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor2.Executor import ExecutionSettings, Executor
+from weskit.classes.executor2.ExecutionState import Start
 from weskit.classes.executor.Executor import Executor as Executor_old
 from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
@@ -81,35 +82,11 @@ class CommandTask(Task, metaclass=ABCMeta):
 
 
 async def run_command_impl(task: Task,
-                           execution_id: WESkitExecutionId,
-                           shell_command: ShellCommand,
+                           command: ShellCommand,
                            execution_settings: ExecutionSettings,
+                           worker_context: PathContext,
                            executor_context: PathContext,
-                           start_time):
-
-    workdir = shell_command.workdir
-    if workdir is None:
-        raise RuntimeError(f"workdir should be set: {workdir}")
-    # Example async await call.
-    state = await task.executor.execute(
-            execution_id=execution_id,
-            command=shell_command,
-            stdout_file=executor_context.stdout_file(workdir, start_time),
-            stderr_file=executor_context.stderr_file(workdir, start_time),
-            settings=execution_settings
-        )
-    return state
-
-
-@celery_app.task(base=CommandTask)
-async def run_command(task: Task,
-                      command: ShellCommand,
-                      execution_settings: ExecutionSettings,
-                      worker_context: PathContext,
-                      executor_context: PathContext,
-                      run_id: WESkitExecutionId,
-                      event_loop=None
-                      ):
+                           run_id: WESkitExecutionId):
 
     start_time = datetime.now()
 
@@ -118,7 +95,7 @@ async def run_command(task: Task,
     else:
         workdir = command.workdir
 
-    if run_command.executor_type.executes_engine_remotely:
+    if task.executor_type.executes_engine_remotely:
         logger.info(
             f"Running command in {worker_context.run_dir(workdir)} (worker) = "
             f"{executor_context.run_dir(workdir)} (executor): {repr(command.command)}"
@@ -140,25 +117,27 @@ async def run_command(task: Task,
         environment=command.environment
     )
 
+    if workdir is None:
+        raise RuntimeError(f"workdir should be set: {workdir}")
     try:
         log_dir = worker_context.log_dir(workdir, start_time)
         logger.info(f"Creating log-dir {log_dir}")
         os.makedirs(log_dir)
 
-        if run_command.executor_type.executes_engine_locally or \
-           run_command.config["executor"]["login"]["hostname"] == "localhost":
+        if task.executor_type.executes_engine_locally or \
+           task.config["executor"]["login"]["hostname"] == "localhost":
             shell_command.environment = {**dict(os.environ), **shell_command.environment}
         else:
             pass
-        task.run_sync(
-            run_command_impl,
-            task,
-            run_id,
-            shell_command,
-            execution_settings,
-            executor_context,
-            start_time)
 
+    # Example async await call.
+        await task.executor.execute(
+            execution_id=run_id,
+            command=shell_command,
+            stdout_file=executor_context.stdout_file(workdir, start_time),
+            stderr_file=executor_context.stderr_file(workdir, start_time),
+            settings=execution_settings
+        )
     except Exception as e:
         logger.error(f"Error during execution: {str(e)}")
         print(f"Exception details: {e}")
@@ -190,9 +169,11 @@ async def run_command(task: Task,
             run = task.database.get_run(run_id)
             if run is not None:
                 if isinstance(run, dict):
+                    run["execution_state"] = Start(run_id)
                     run["execution_log"] = execution_log
                     run = Run(**dict(run))
                 elif isinstance(run, Run):
+                    run.execution_state = Start(run_id)
                     run.execution_log = execution_log
                 run = task.database.update_run(run, Run.merge, 1)
             logger.info(f"Database updated with execution_log" f"'{run_id}'")
@@ -200,3 +181,20 @@ async def run_command(task: Task,
             logger.error(f"Error during database update: {str(e)}")
             raise DatabaseOperationError("Attempted to update database" f"'{run_id}'")
     return execution_log
+
+
+@celery_app.task(base=CommandTask)
+async def run_command(execution_id: WESkitExecutionId,
+                      command: ShellCommand,
+                      execution_settings: ExecutionSettings,
+                      worker_context: PathContext,
+                      executor_context: PathContext,
+                      run_id: WESkitExecutionId
+                      ):
+
+    run_command.run_sync(run_command_impl,
+                         command,
+                         execution_settings,
+                         worker_context,
+                         executor_context,
+                         run_id)

@@ -317,7 +317,6 @@ class Start(ExecutionState[S]):
         return self._execution_id
 
     @property
-    @abstractmethod
     def is_terminal(self) -> bool:
         return False
 

@@ -11,7 +11,7 @@ from werkzeug.utils import cached_property
 from weskit import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
-from weskit.tasks.SubmissionWorker import run_command
+from weskit.tasks.SubmissionWorker import run_command_impl
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
 from Executor2_test import MockExecutor
@@ -46,7 +46,7 @@ class CommandTaskMock(CommandTask, metaclass=ABCMeta):
     @cached_property
     def executor(self):
         # Mocked executor for testing
-        return MockExecutor(id=WESkitExecutionId(), log_dir_base='/path/to/log')
+        return MockExecutor(id=mock_run_data["id"])
 
     @cached_property
     def database(self):
@@ -73,14 +73,13 @@ async def test_submission_worker_run_command(temporary_dir,
     command_obj = ShellCommand(command=command, workdir=workdir)
 
     # Run the command
-    await run_command(
+    await run_command_impl(
         task,
-        command=command_obj,
-        worker_context=context,
-        executor_context=context,
-        execution_settings=ExecutionSettings(),
         run_id=run.id,
-        event_loop=None
+        command=command_obj,
+        execution_settings=ExecutionSettings(),
+        worker_context=context,
+        executor_context=context
         )
 
     run = task.database.get_run(run.id)
