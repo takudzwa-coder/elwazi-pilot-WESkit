@@ -28,6 +28,7 @@ executor:
   type: "local"
 #  remote_data_dir: "/tmp"
 #  remote_workflows_dir: "/tmp"
+#  singularity_containers_dir: "/tmp"
 #  login:
 #    username: "user"
 #    hostname: "localhost"
