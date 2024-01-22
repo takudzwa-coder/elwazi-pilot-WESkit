@@ -23,11 +23,11 @@ def append_optional_values_to_command(command_output, parameter, file_name, resu
 
 
 def load_input_data(testcase):
-    return json.load(open("tests/executor2/command-data/input.json")).get(testcase)
+    return json.load(open("tests/classes/executor2/command-data/input.json")).get(testcase)
 
 
 def load_output_data(testcase):
-    return json.load(open("tests/executor2/command-data/output.json")).get(testcase)
+    return json.load(open("tests/classes/executor2/command-data/output.json")).get(testcase)
 
 
 def parse_optional_file(file_name):

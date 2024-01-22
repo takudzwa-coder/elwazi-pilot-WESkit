@@ -13,6 +13,7 @@ from uuid import UUID
 from weskit.serializer import to_json, from_json
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ProcessingStage import ProcessingStage
+from weskit.classes.executor2.ExecutionState import ExecutionState
 from weskit.utils import format_timestamp, from_formatted_timestamp, updated
 from weskit.utils import mop
 
@@ -37,6 +38,7 @@ class Run:
                  rundir_rel_workflow_path: Optional[Path] = None,
                  outputs: Dict[str, List[str]] = {},
                  execution_log: Optional[Dict[str, Any]] = None,
+                 execution_state: Optional[ExecutionState] = None,
                  processing_stage: ProcessingStage = ProcessingStage.RUN_CREATED,
                  start_time: Optional[datetime] = None,
                  task_logs: Optional[list] = None,
@@ -62,6 +64,7 @@ class Run:
         else:
             self.execution_log = execution_log
         self.__processing_stage = processing_stage
+        self.__execution_state = execution_state
         self.start_time = start_time
         self.task_logs = task_logs
         self.stdout = stdout
@@ -177,6 +180,7 @@ class Run:
             copy.stderr = Run._merge_field("stderr", self_d, other_d, None)
             copy.execution_log = Run._merge_field("execution_log", self_d, other_d, {})
             copy.task_logs = Run._merge_field("task_logs", self_d, other_d, [])
+            copy.execution_state = Run._merge_field("execution_state", self_d, other_d, None)
 
             # Fields with special rules
             copy.outputs = Run._merge_outputs(copy.outputs, other.outputs)
@@ -194,7 +198,8 @@ class Run:
                          rundir_rel_workflow_path=mop(result["rundir_rel_workflow_path"], str),
                          request_time=mop(result["request_time"], format_timestamp),
                          start_time=mop(result["start_time"], format_timestamp),
-                         processing_stage=result["processing_stage"].name)
+                         processing_stage=result["processing_stage"].name,
+                         execution_state=result["execution_state"])
         return result
 
     @staticmethod
@@ -208,7 +213,8 @@ class Run:
                        rundir_rel_workflow_path=mop(values["rundir_rel_workflow_path"], Path),
                        request_time=mop(values["request_time"], from_formatted_timestamp),
                        start_time=mop(values["start_time"], from_formatted_timestamp),
-                       processing_stage=ProcessingStage.from_string(values["processing_stage"]))
+                       processing_stage=ProcessingStage.from_string(values["processing_stage"]),
+                       execution_state=values["execution_state"])
         return Run(**args)
 
     def __eq__(self, other):
@@ -231,6 +237,7 @@ class Run:
             "outputs": self.outputs,
             "execution_log": self.execution_log,
             "processing_stage": self.processing_stage,
+            "execution_state": self.execution_state,
             "start_time": self.start_time,
             "task_logs": self.task_logs,
             "stdout": self.stdout,
@@ -321,6 +328,14 @@ class Run:
             logger.debug("Updating stage of %s: %s -> %s" %
                          (self.id, self.__processing_stage.name, stage.name))
             self.__processing_stage = self.__processing_stage.progress_to(stage)
+
+    @property
+    def execution_state(self) -> Optional[ExecutionState]:
+        return self.__execution_state
+
+    @execution_state.setter
+    def execution_state(self, state: ExecutionState):
+        self.__execution_state = state
 
     @property
     def outputs(self) -> Dict[str, List[str]]:

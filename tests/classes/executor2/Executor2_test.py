@@ -14,7 +14,8 @@ from time import sleep
 from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.classes.executor2.ExecutionState import (ExecutionState,
-                                                     ObservedExecutionState)
+                                                     ObservedExecutionState,
+                                                     NonTerminalExecutionState)
 from weskit.classes.executor2.ForeignState import ForeignState
 from weskit.classes.executor2.ProcessId import WESkitExecutionId, ProcessId, Identifier
 from weskit.classes.executor2.Executor import Executor, ExecutionSettings, ExecutionResult
@@ -57,15 +58,14 @@ class MockExecutor(Executor[int]):
                             pid: Optional[int] = None) -> Optional[ExecutionState[int]]:
         return self.execution_states.get(current_state.execution_id)
 
-    async def get_result(self, state: ObservedExecutionState[int]) -> ExecutionResult[int]:
-        return ExecutionResult(
-            command=ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder")),
-            stdout_url=None,
-            stderr_url=None,
-            stdin_url=None,
-            state=state,
-            start_time=state.created_at,
-            end_time=state.created_at
+    async def get_result(self, state: ObservedExecutionState[int]) \
+            -> NonTerminalExecutionState[int]:
+        return NonTerminalExecutionState(
+            execution_id=state.execution_id,
+            foreign_state=ForeignState(ProcessId("12345", "localhost"),
+                                       state=None,
+                                       observed_at=datetime.now()),
+            previous_state=state
         )
 
     async def kill(self,
@@ -110,14 +110,9 @@ class MockStorageAccessor(StorageAccessor):
         return [Path("file1.txt"), Path("file2.txt"), Path("subdir")]
 
 
-# The following line test the MockExecutor class
-@pytest.fixture
-def executor():
-    return MockExecutor(id=WESkitExecutionId(), log_dir_base='/path/to/log')
-
-
 @pytest.mark.asyncio
-async def test_execute(executor):
+async def test_execute():
+    executor = MockExecutor(id=WESkitExecutionId())
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
     state = await executor.execute(execution_id, command)
@@ -129,7 +124,8 @@ async def test_execute(executor):
 
 
 @pytest.mark.asyncio
-async def test_get_status(executor):
+async def test_get_status():
+    executor = MockExecutor(id=WESkitExecutionId())
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
     await executor.execute(execution_id, command)
@@ -143,7 +139,8 @@ async def test_get_status(executor):
 
 
 @pytest.mark.asyncio
-async def test_update_status(executor):
+async def test_update_status():
+    executor = MockExecutor(id=WESkitExecutionId())
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
     state = await executor.execute(execution_id, command)
@@ -158,7 +155,8 @@ async def test_update_status(executor):
 
 
 @pytest.mark.asyncio
-async def test_get_result(executor):
+async def test_get_result():
+    executor = MockExecutor(id=WESkitExecutionId())
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
     state = await executor.execute(execution_id, command)
@@ -194,8 +192,8 @@ async def test_get_result(executor):
 
 
 @pytest.mark.asyncio
-async def test_wait(executor):
-
+async def test_wait():
+    executor = MockExecutor(id=WESkitExecutionId())
     execution_id = WESkitExecutionId()
     command = ShellCommand(["bash", "-c", "echo"], Path("/path/to/folder"))
     state = await executor.execute(execution_id, command)

@@ -38,14 +38,13 @@ class RunRequestValidator(object):
     def validate_attachment(self, data: ImmutableMultiDict[str, FileStorage]) -> List[str]:
         forbidden_filenames = (".nextflow", ".snakemake")
         workflow_attachment_files = data.getlist("workflow_attachment")
+        messages: List[str] = []
         for attachment in workflow_attachment_files:
             norm_filenames = os.path.normpath(str(attachment.filename))
             if str(norm_filenames).lower() in forbidden_filenames:
-                return ["At least one attachment filename is forbidden. Forbidden are: " +
-                        ", ".join(forbidden_filenames)]
-            else:
-                return []
-        return []
+                messages.append("At least one attachment filename is forbidden. Forbidden are: " +
+                                ", ".join(forbidden_filenames))
+        return messages
 
     def validate(self,
                  data: dict) \

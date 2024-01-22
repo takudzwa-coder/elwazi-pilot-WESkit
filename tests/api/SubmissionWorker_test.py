@@ -14,8 +14,9 @@ from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.tasks.SubmissionWorker import run_command_impl
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
-from Executor2_test import MockExecutor
-from Database_test import MockDatabase
+from weskit.classes.executor2.ExecutionState import Start
+from classes.executor2.Executor2_test import MockExecutor
+from classes.Database_test import MockDatabase
 from weskit.tasks.SubmissionWorker import CommandTask
 from weskit.classes.ProcessingStage import ProcessingStage
 
@@ -55,8 +56,8 @@ class CommandTaskMock(CommandTask, metaclass=ABCMeta):
 
 
 @pytest.mark.asyncio
-async def test_submission_worker_run_command(temporary_dir,
-                                             test_config):
+async def test_submission_worker(temporary_dir,
+                                 test_config):
 
     task = CommandTaskMock()
 
@@ -75,13 +76,14 @@ async def test_submission_worker_run_command(temporary_dir,
     # Run the command
     await run_command_impl(
         task,
-        run_id=run.id,
         command=command_obj,
         execution_settings=ExecutionSettings(),
         worker_context=context,
-        executor_context=context
+        executor_context=context,
+        run_id=run.id
         )
 
     run = task.database.get_run(run.id)
     assert run.execution_log != {}
     assert run.processing_stage == 'RUN_CREATED'
+    assert isinstance(run.execution_state, Start)

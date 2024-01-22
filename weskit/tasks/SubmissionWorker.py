@@ -130,7 +130,6 @@ async def run_command_impl(task: Task,
         else:
             pass
 
-    # Example async await call.
         await task.executor.execute(
             execution_id=run_id,
             command=shell_command,
@@ -184,8 +183,7 @@ async def run_command_impl(task: Task,
 
 
 @celery_app.task(base=CommandTask)
-async def run_command(execution_id: WESkitExecutionId,
-                      command: ShellCommand,
+async def run_command(command: ShellCommand,
                       execution_settings: ExecutionSettings,
                       worker_context: PathContext,
                       executor_context: PathContext,

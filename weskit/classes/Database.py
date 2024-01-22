@@ -34,7 +34,7 @@ class AbstractDatabase(ABC):
         pass
 
     @abstractmethod
-    def list_run_ids_and_stages_and_times(self, user_id) -> List[Dict[str, str]]:
+    def list_run_ids_and_stages_and_times(self, user_id: str) -> List[Dict[str, str]]:
         pass
 
     @abstractmethod
@@ -46,7 +46,11 @@ class AbstractDatabase(ABC):
         pass
 
     @abstractmethod
-    def update_run(self, run: Run, resolution_fun=None, max_tries=1) -> Run:
+    def update_run(self,
+                   run: Run,
+                   resolution_fun: Optional[Callable[[Run, Run], Run]] = None,
+                   max_tries: int = 1) \
+            -> Run:
         pass
 
     @abstractmethod
