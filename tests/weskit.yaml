@@ -151,7 +151,6 @@ workflow_engines:
     "23.04.1-singularity": 
       container:
          type: "singularity"
-         containers_dir: "/tmp"
       default_parameters: &default_nfl_engine_parameters
         - name: "engine-environment"
           value: null
@@ -226,7 +225,6 @@ workflow_engines:
     "7.30.2-singularity":
       container:
          type: singularity
-         containers_dir: "/tmp"
       default_parameters: &default_smk_engine_parameters
         - name: "engine-environment"
           value: null
