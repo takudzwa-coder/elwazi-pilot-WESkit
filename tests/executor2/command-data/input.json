@@ -1,0 +1,62 @@
+{
+    "eval_success_stdout_stderr_env": {
+        "workDir": "./",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "envFile": "file://command-data/environment_file.txt",
+        "stderrFile": "file://command-data/stderr",
+        "stdoutFile": "file://command-data/stdout",
+        "stdinFile": "file:///dev/null",
+        "command": "echo hallo; echo du > /dev/stderr; exit 1"
+    },
+    "eval_success_stdout_stderr": {
+        "workDir": "./",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "stderrFile": "file://command-data/stderr",
+        "stdoutFile": "file://command-data/stdout",
+        "stdinFile": "file:///dev/null",
+        "command": "echo hallo; echo du > /dev/stderr; exit 1"
+    },
+    "eval_success": {
+        "workDir": "./",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "command": "echo hallo; echo du > /dev/stderr; exit 1"
+    },
+    "no_work_dir": {
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "stderrFile": "file://command-data/stderr",
+        "stdoutFile": "file://command-data/stdout",
+        "stdinFile": "file:///dev/null",
+        "command": "'echo hallo ; echo du > /dev/stderr ; exit 1'"
+    },
+    "incorrect_stderr_schema": {
+        "workDir": "",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "stderrFile": "command-data/stderr",
+        "stdoutFile": "file://command-data/stdout",
+        "stdinFile": "file:///dev/null",
+        "command": "'echo hallo ; echo du > /dev/stderr ; exit 1'"
+    },
+    "incorrect_stdout_schema": {
+        "workDir": "",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "stderrFile": "file://command-data/stderr",
+        "stdoutFile": "https://command-data/stdout",
+        "stdinFile": "file:///dev/null",
+        "command": "'echo hallo ; echo du > /dev/stderr ; exit 1'"
+    },
+    "incorrect_stdin_schema": {
+        "workDir": "",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "stderrFile": "file://command-data/stderr",
+        "stdoutFile": "file://command-data/stdout",
+        "stdinFile": "fil:///dev/null",
+        "command": "'echo hallo ; echo du > /dev/stderr ; exit 1'"
+    }
+}

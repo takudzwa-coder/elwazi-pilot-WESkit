@@ -140,7 +140,7 @@ class ShellCommand:
 
         source /path/to/script && do --something
 
-        The ampersands can be marked as kw("&&") when constructing the command. Then the quoted
+        The ampersands can be marked as ss("&&") when constructing the command. Then the quoted
         representation will by
 
         'source' '/path/to/script/' && 'do' '--something'
