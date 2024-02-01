@@ -1,0 +1,33 @@
+{
+    "eval_success_stdout_stderr_env": {
+        "workDir": "./",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "envFile": "/environment_file.txt",
+        "stderrFile": "/stderr",
+        "stdoutFile": "/stdout",
+        "stdinFile": "/dev/null",
+        "command": "echo hallo; echo du > /dev/stderr; exit 1"
+    },
+    "eval_success_stdout_stderr": {
+        "workDir": "./",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "stderrFile": "/stderr",
+        "stdoutFile": "/stdout",
+        "stdinFile": "/dev/null",
+        "command": "echo hallo; echo du > /dev/stderr; exit 1"
+    },
+    "eval_success": {
+        "workDir": "./",
+        "logDir": "eval_success_stdout_stderr",
+        "wrapperDir": "weskit/classes/executor2/resources",
+        "command": "echo hallo; echo du > /dev/stderr; exit 1"
+    },
+    "no_work_dir": {
+        "error": "No workdir for command. Currently only support commands with defined workdir."
+    },
+    "incorrect_url_schema": {
+        "error": "Executor only accepts file:// URLs for stdin/stdout/stderr."
+    }
+}
