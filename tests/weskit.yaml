@@ -297,9 +297,6 @@ workflow_engines:
         - name: "wms-monitor-arg"
           api: false
           type: "str"
-        - name: "git-dir"
-          api: true
-          type: "Optional[Path]"
     "7.30.2":
       default_parameters: *default_smk_engine_parameters
 

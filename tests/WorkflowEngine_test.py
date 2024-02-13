@@ -119,8 +119,7 @@ def test_command_with_default_parameters():
          {"name": "task-conda-envs-path", "value": "some/relative/path/", "api": True},
          {"name": "task-home", "value": "/tmp", "api": True},
          {"name": "wms-monitor", "value": "http://127.0.0.1:5000", "api": True},
-         {"name": "wms-monitor-arg", "value": "12345", "api": True},
-         {"name": "git-dir", "value": "/path/to/git", "api": True}
+         {"name": "wms-monitor-arg", "value": "12345", "api": True}
          ]
     )
 
@@ -131,8 +130,7 @@ def test_command_with_default_parameters():
                              {"data-aws-access-key-id": "GyCCggXpRpKQ3hBB",
                               "data-aws-secret-access-key": "basTuIRppYhACCdXS6yYZb1XhUTksJPq",
                               "task-conda-envs-path": "some/relative/path/",
-                              "task-home": "/tmp",
-                              "git-dir": "/path/to/git"})
+                              "task-home": "/tmp"})
     assert command.command == ['snakemake',
                                '--snakefile', '/some/path',
                                '--cores', '2',
@@ -146,7 +144,7 @@ def test_command_with_default_parameters():
                                '--wms-monitor-arg', '12345',
                                '--configfile', '/some/config.yaml',
                                '--envvars', "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
-                               "CONDA_ENVS_PATH", "HOME", "GIT_DIR"
+                               "CONDA_ENVS_PATH", "HOME"
                                ]
 
     assert command.environment == {
@@ -155,7 +153,6 @@ def test_command_with_default_parameters():
         'CONDA_ENVS_PATH': 'some/relative/path/',
         'HOME': '/tmp',
         "WESKIT_WORKFLOW_ENGINE": "SMK=7.30.2",
-        "GIT_DIR": "/path/to/git",
         "WESKIT_WORKFLOW_PATH": "/some/path"
     }
     assert command.workdir == Path("/some/workdir")

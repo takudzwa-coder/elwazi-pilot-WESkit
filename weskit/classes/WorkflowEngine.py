@@ -242,8 +242,7 @@ class Snakemake(ActualWorkflowEngine):
                                               "prefix_conda_envs_path",
                                               "wms-monitor",
                                               "wms-monitor-arg",
-                                              "conda-prefix",
-                                              "git-dir"})
+                                              "conda-prefix"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
@@ -275,8 +274,7 @@ class Snakemake(ActualWorkflowEngine):
             "data-aws-secret-access-key": "AWS_SECRET_ACCESS_KEY",
             "task-conda-pkgs-dir": "CONDA_PKGS_DIRS",
             "task-conda-envs-path": "CONDA_ENVS_PATH",
-            "task-home": "HOME",
-            "git-dir": "GIT_DIR"
+            "task-home": "HOME"
         }
 
     def _environment(self,

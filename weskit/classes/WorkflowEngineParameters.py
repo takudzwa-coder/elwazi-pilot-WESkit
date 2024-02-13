@@ -131,7 +131,6 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"wms-monitor-arg"}, "SMK(cli:--wms-monitor-arg %s)"),
     EngineParameter(
         {"conda-prefix"}, "SMK(cli:--conda-prefix %s) together with task-conda-envs-path"),
-    EngineParameter({"git-dir"}, "SMK(env:GIT_DIR=%s)"),
 ])
 
 
