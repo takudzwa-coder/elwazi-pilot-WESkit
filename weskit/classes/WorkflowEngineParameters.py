@@ -97,6 +97,11 @@ class ParameterIndex(Generic[P]):
 # the usage of similar parameter names for all workflows. We may, for instance, also add ontology
 # terms and term IDs.
 
+# For a comprehensive description of the Snakemake parameters
+# that are used for cloud execution see:
+# https://snakemake.readthedocs.io/en/v7.31.1/executing/cloud.html#execution
+# Note: Snakemake parameters may have changed since version >= 8
+
 # acronyms: NFL = Nextflow, SMK = Snakemake
 KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"job-name"}, "optional job name"),
