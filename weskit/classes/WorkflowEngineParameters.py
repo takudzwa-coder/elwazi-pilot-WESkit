@@ -19,7 +19,7 @@ class EngineParameter:
         self._names = frozenset(names)
 
     # Additional constraint
-        if len("\n".join(description).rstrip()) == 0:
+        if len(description.strip()) == 0:
             raise ValueError("Description must not be empty.")
         self._description = description
 
@@ -96,12 +96,15 @@ class ParameterIndex(Generic[P]):
 # (Yet,) Static configuration of allowed parameters. We have this global "database" to promote
 # the usage of similar parameter names for all workflows. We may, for instance, also add ontology
 # terms and term IDs.
+
+# acronyms: NFL = Nextflow, SMK = Snakemake
 KNOWN_PARAMS = ParameterIndex([
-    EngineParameter({"job-name"}, "custom job name"),
+    EngineParameter({"job-name"}, "optional job name"),
     EngineParameter({"max-runtime"}, "max. runtime of the process"),
-    EngineParameter({"engine-environment"}, "file name of the engine environment 'file.sh'"),
     EngineParameter(
-        {"accounting-name"}, "Identifier used by the executor accounting, e.g. project name"),
+        {"engine-environment"}, "optional file path, sourced before starting the engine process"),
+    EngineParameter(
+        {"accounting-name"}, "identifier used by the executor accounting, e.g. project name"),
     EngineParameter({"group"}, "executor job group"),
     EngineParameter({"queue"}, "executor queue name"),
     EngineParameter({"max-memory"}, "NFL(env:NXF_OPTS=-Xmx%sm)"),
@@ -148,14 +151,13 @@ class ActualEngineParameter(EngineParameter):
                  value: Optional[str] = None,
                  api_parameter: bool = False):
 
-        self._names = frozenset(param.names)
         self._param = param
         self._value = value
         self._api_parameter = api_parameter
 
     @property
     def names(self) -> FrozenSet[str]:
-        return self._names
+        return self._param.names
 
     @property
     def is_api_parameter(self) -> bool:
