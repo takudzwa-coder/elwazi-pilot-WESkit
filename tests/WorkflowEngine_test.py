@@ -304,7 +304,8 @@ def test_create_nextflow():
     )
     assert engine.default_params == [
         ActualEngineParameter(EngineParameter(
-            {"engine-environment"}, "file name of the engine environment 'file.sh'"),
+            {"engine-environment"},
+            "optional file path, sourced before starting the engine process"),
             "/path/to/script", False),
         ActualEngineParameter(EngineParameter(
             {"max-memory"}, "NFL(env:NXF_OPTS=-Xmx%sm)"), "2G", False),
