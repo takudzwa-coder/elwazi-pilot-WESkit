@@ -84,6 +84,5 @@ async def test_submission_worker(temporary_dir,
         )
 
     run = task.database.get_run(run.id)
-    assert run.execution_log != {}
-    assert run.processing_stage == 'RUN_CREATED'
+    assert run.execution_log.cmd == command
     assert isinstance(run.execution_state, Start)

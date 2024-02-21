@@ -76,7 +76,7 @@ class MockExecutor(Executor[int]):
 
     async def wait(self, state: ExecutionState[int]) -> None:
         # Waiting by sleeping for a short time
-        sleep(2)
+        sleep(0.01)
 
     @property
     def storage(self) -> StorageAccessor:
@@ -121,6 +121,8 @@ async def test_execute():
     assert state.created_at is not None
     assert state.is_terminal is False
     assert state.lifetime != 0
+    assert state.is_terminal is False
+    assert state.lifetime != 0
 
 
 @pytest.mark.asyncio
@@ -136,6 +138,7 @@ async def test_get_status():
     assert current_state.is_terminal is False
     assert current_state.lifetime != 0
     assert current_state.execution_id == execution_id
+    assert current_state.execution_id != WESkitExecutionId()
 
 
 @pytest.mark.asyncio
@@ -199,10 +202,11 @@ async def test_wait():
     state = await executor.execute(execution_id, command)
 
     start = datetime.now()
+    # wait 0.01 seconds
     await executor.wait(state)
     end = datetime.now()
-    time_diff = end.second - start.second
-    assert time_diff == 2
+    time_diff = end.microsecond - start.microsecond
+    assert 10000 <= time_diff <= 20000
 
 
 class MockObservedExecutionState(ObservedExecutionState[str]):

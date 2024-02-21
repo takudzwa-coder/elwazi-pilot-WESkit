@@ -24,7 +24,7 @@ def get_executor(executor_type: EngineExecutorType,
                  login_parameters: dict,
                  event_loop: Optional[AbstractEventLoop]) -> Executor:
     executor: Executor
-    executor_info = "".join(f"executor = {executor_type.name}")
+    executor_info = f"executor = {executor_type.name}"
     if executor_type.needs_login_credentials:
         if login_parameters is not None:
             connection = RetryableSshConnection(**login_parameters)
