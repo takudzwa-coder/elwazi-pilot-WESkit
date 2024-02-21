@@ -16,7 +16,7 @@ from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
 from weskit.classes.executor2.ExecutionState import Start
 from classes.executor2.Executor2_test import MockExecutor
-from classes.Database_test import MockDatabase
+from weskit.classes.AbstractDatabase import MockDatabase
 from weskit.tasks.SubmissionWorker import CommandTask
 from weskit.classes.ProcessingStage import ProcessingStage
 
