@@ -15,7 +15,7 @@ from weskit.tasks.SubmissionWorker import run_command_impl
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
 from weskit.classes.executor2.ExecutionState import Start
-from classes.executor2.Executor2_test import MockExecutor
+from weskit.classes.executor2.Executor import MockExecutor
 from weskit.classes.AbstractDatabase import MockDatabase
 from weskit.tasks.SubmissionWorker import CommandTask
 from weskit.classes.ProcessingStage import ProcessingStage
@@ -84,5 +84,5 @@ async def test_submission_worker(temporary_dir,
         )
 
     run = task.database.get_run(run.id)
-    assert run.execution_log.cmd == command
+    assert run.execution_log["cmd"] == ['echo', 'hello world', '>', 'x']
     assert isinstance(run.execution_state, Start)

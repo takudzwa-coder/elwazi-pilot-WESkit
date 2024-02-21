@@ -108,6 +108,20 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
         return str(cls.__name__)
 
 
+class MockExecutionState(ExecutionState[str]):
+
+    def __init__(self, execution_id: WESkitExecutionId, created_at: Optional[datetime] = None):
+        super().__init__(execution_id, created_at)
+
+    @property
+    def is_terminal(self) -> bool:
+        return False
+
+    @property
+    def lifetime(self) -> Optional[timedelta]:
+        return datetime.now() - self.created_at
+
+
 class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
     """
     An `ObservedExecutionState` is modelled by a list of observations (`ForeignState`) and always
