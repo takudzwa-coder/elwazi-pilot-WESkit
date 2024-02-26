@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 def get_executor(executor_type: EngineExecutorType,
                  login_parameters: dict,
                  event_loop: Optional[AbstractEventLoop]) -> Executor:
+    """ Get the executor for the given executor type.
+        Though SSHExecutor, LsfExecutor, SlurmExecutor, KubernetesExecutor
+        are not ready yet.
+    """
     executor: Executor
     executor_info = f"executor = {executor_type.name}"
     if executor_type.needs_login_credentials:

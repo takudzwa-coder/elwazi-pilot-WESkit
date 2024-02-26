@@ -17,8 +17,7 @@ from typing import Optional, TypeVar, Generic, ClassVar
 from urllib3.util.url import Url
 
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor2.ExecutionState import (ExecutionState,
-                                                     ObservedExecutionState)
+from weskit.classes.executor2.ExecutionState import ExecutionState, ObservedExecutionState
 from weskit.classes.executor2.ProcessId import WESkitExecutionId, ProcessId, Identifier
 from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.memory_units import Memory

@@ -29,6 +29,7 @@ mock_run_data = {
     "stdout": "uri",
     "stderr": "uri",
     "execution_log": {"some": "thing"},
+    "state_log": {"some": "state_log"},
     "task_logs": ["something"],
     "outputs": {
         "group_a": ["file_a1"],
@@ -116,6 +117,10 @@ def test_run_merge_throws_ambiguous_changes():
     run9 = Run(**updated(run_data, task_logs=["incompatible"]))
     with pytest.raises(RuntimeError):
         run1.merge(run9)
+
+    run10 = Run(**updated(run_data, state_log={"incompatible": "incompatible"}))
+    with pytest.raises(RuntimeError):
+        run1.merge(run10)
 
 
 def test_run_merge_merges_none():

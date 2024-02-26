@@ -12,7 +12,7 @@ from werkzeug.utils import cached_property
 from weskit import PathContext
 from weskit.classes.ShellCommand import ShellCommand, ss
 from weskit.classes.executor.Executor import ExecutionSettings
-from weskit.tasks.SubmissionWorker import run_command_impl
+from weskit.tasks.SubmissionWorker import run_command_impl, addID_to_run
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
 from weskit.tasks.SubmissionWorker import CommandTask
@@ -61,13 +61,21 @@ async def test_submission_worker(temporary_dir,
     run = Run(**mock_run_data)
     task.database.insert_run(run)
 
-    # Create a SubmissionWorker instance
+    # Add a WESkitExecutionId() to the run
+    addID_to_run(task, run_id=run.id)
+
+    # ID missing in current run dict
+    assert run.execution_id is None
+
+    run = task.database.get_run(run.id)
+    # ID present run from DB
+    assert isinstance(run.execution_id, WESkitExecutionId)
+
     command = ["echo", "hello world", ss(">"), "x"]
     context = PathContext(data_dir=Path(temporary_dir).parent,
                           workflows_dir=Path(temporary_dir),
                           singularity_containers_dir=Path(temporary_dir))
     workdir = Path(temporary_dir)
-
     command_obj = ShellCommand(command=command, workdir=workdir)
 
     # Run the command

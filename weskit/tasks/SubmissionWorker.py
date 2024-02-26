@@ -78,6 +78,21 @@ class CommandTask(Task, metaclass=ABCMeta):
             raise
 
 
+def addID_to_run(task: Task, run_id: UUID):
+    """ Add a WESkitExecutionId() to the run and update the database. """
+    try:
+        run = task.database.get_run(run_id)
+        if isinstance(run, dict):
+            run = Run(**dict(run))
+        if run is not None:
+            execution_id = WESkitExecutionId()
+            run.execution_id = execution_id
+            run = task.database.update_run(run, Run.merge, 1)
+    except Exception as e:
+        logger.error(f"Error during database update: {str(e)}")
+        raise
+
+
 async def run_command_impl(task: Task,
                            command: ShellCommand,
                            execution_settings: ExecutionSettings,
@@ -86,6 +101,7 @@ async def run_command_impl(task: Task,
                            run_id: UUID):
 
     start_time = datetime.now()
+
     workdir = command.workdir
 
     if workdir is None:
@@ -113,28 +129,20 @@ async def run_command_impl(task: Task,
         environment=command.environment
     )
 
+    log_dir = task.executor.log_dir_base
+    logger.info(f"Creating log-dir {log_dir}")
+    storage = task.executor.storage
+    await storage.create_dir(log_dir, exists_ok=False)
+
     try:
         run = task.database.get_run(run_id)
-        if isinstance(run, dict):
-            run = Run(**dict(run))
-        if run is not None:
-            execution_id = WESkitExecutionId()
-            run.execution_id = execution_id
-            run = task.database.update_run(run, Run.merge, 1)
-
-        log_dir = task.executor.log_dir_base
-        logger.info(f"Creating log-dir {log_dir}")
-        storage = task.executor.storage
-        await storage.create_dir(log_dir, exists_ok=False)
-
         state = await task.executor.execute(
-                        execution_id=execution_id,
+                        execution_id=run.execution_id,
                         command=shell_command,
                         stdout_file=executor_context.stdout_file(workdir, start_time),
                         stderr_file=executor_context.stderr_file(workdir, start_time),
                         settings=execution_settings
                        )
-        print(state)
     except Exception as e:
         logger.error(f"Error during execution: {str(e)}")
         print(f"Exception details: {e}")
@@ -159,8 +167,6 @@ async def run_command_impl(task: Task,
         }
 
         # Update run with ExecutionState information
-        print(f" State= str({state.name})")
-        print(task.executor.hostname)
         state_log = {
             "created_at": format_timestamp(state.created_at),
             "name": state.name,
@@ -173,7 +179,7 @@ async def run_command_impl(task: Task,
             run.execution_log = execution_log
             run.state_log = state_log
             run = task.database.update_run(run, Run.merge, 1)
-            logger.info(f"Database updated with execution_log and state_log '{run_id}'")
+            logger.info(f"Database updated with execution_log and state_log '{run.id}'")
         except Exception as e:
             logger.error(f"Error during database update: {str(e)}")
             raise
