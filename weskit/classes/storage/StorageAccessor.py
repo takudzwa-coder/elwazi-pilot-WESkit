@@ -78,29 +78,3 @@ class StorageAccessor(metaclass=ABCMeta):
         returned.
         """
         pass
-
-
-class MockStorageAccessor(StorageAccessor):
-
-    async def put(self, source: Path, target: Path,
-                  recurse: bool = False,
-                  dirs_exist_ok: bool = False) -> None:
-        print(f"Copying {source} to {target}")
-
-    async def get(self, source: Path, target: Path,
-                  recurse: bool = False,
-                  dirs_exist_ok: bool = False) -> None:
-        print(f"Copying {source} from {target}")
-
-    async def remove_file(self, target: Path) -> None:
-        print(f"Removing file at {target}")
-
-    async def create_dir(self, target: Path, mode=0o077, exists_ok=False) -> None:
-        print(f"Creating directory at {target}")
-
-    async def remove_dir(self, target: Path, recurse: bool = False) -> None:
-        print(f"Removing directory at {target}")
-
-    async def find(self, target: Path) -> List[Path]:
-        print(f"Finding files and subdirectories at {target}")
-        return [Path("file1.txt"), Path("file2.txt"), Path("subdir")]

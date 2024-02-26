@@ -12,6 +12,7 @@ from typing import Union, Callable
 from celery import Task
 from pathlib import Path
 from werkzeug.utils import cached_property
+from uuid import UUID
 
 from asyncio import AbstractEventLoop
 from weskit.classes.Database import Database
@@ -19,13 +20,11 @@ from weskit.classes.Run import Run
 from weskit.celery_app import celery_app, read_config, update_celery_config_from_env
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ShellCommand import ShellCommand
-from weskit.classes.executor2.Executor import ExecutionSettings, Executor
-from weskit.classes.executor2.ExecutionState import Start
-from weskit.classes.executor.Executor import Executor as Executor_old
-from weskit.classes.EngineExecutor import get_executor, EngineExecutorType
+from weskit.classes.executor2.Executor import ExecutionSettings
+from weskit.classes.EngineExecutor import get_executor
+from weskit.classes.EngineExecutorType import EngineExecutorType
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
-from weskit.utils import format_timestamp, get_current_timestamp, get_event_loop
-from weskit.exceptions import DatabaseOperationError
+from weskit.utils import get_event_loop, format_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +54,8 @@ class CommandTask(Task, metaclass=ABCMeta):
     def executor_type(self) -> EngineExecutorType:
         return EngineExecutorType.from_string(self.config["executor"]["type"])
 
-    # get_executor needs to be adjusted in the future
-    # it descriminates between the old and the new executor API
     @cached_property
-    def executor(self) -> Union[Executor_old, Executor]:
+    def executor(self):
         logger.info("Determine executor for celery task")
         return get_executor(self.executor_type,
                             login_parameters=self.config["executor"]["login"]
@@ -86,14 +83,13 @@ async def run_command_impl(task: Task,
                            execution_settings: ExecutionSettings,
                            worker_context: PathContext,
                            executor_context: PathContext,
-                           run_id: WESkitExecutionId):
+                           run_id: UUID):
 
     start_time = datetime.now()
+    workdir = command.workdir
 
-    if command.workdir is None:
+    if workdir is None:
         raise RuntimeError(f"No working directory defined for command: {command}")
-    else:
-        workdir = command.workdir
 
     if task.executor_type.executes_engine_remotely:
         logger.info(
@@ -117,26 +113,28 @@ async def run_command_impl(task: Task,
         environment=command.environment
     )
 
-    if workdir is None:
-        raise RuntimeError(f"workdir should be set: {workdir}")
     try:
-        log_dir = worker_context.log_dir(workdir, start_time)
+        run = task.database.get_run(run_id)
+        if isinstance(run, dict):
+            run = Run(**dict(run))
+        if run is not None:
+            execution_id = WESkitExecutionId()
+            run.execution_id = execution_id
+            run = task.database.update_run(run, Run.merge, 1)
+
+        log_dir = task.executor.log_dir_base
         logger.info(f"Creating log-dir {log_dir}")
-        os.makedirs(log_dir)
+        storage = task.executor.storage
+        await storage.create_dir(log_dir, exists_ok=False)
 
-        if task.executor_type.executes_engine_locally or \
-           task.config["executor"]["login"]["hostname"] == "localhost":
-            shell_command.environment = {**dict(os.environ), **shell_command.environment}
-        else:
-            pass
-
-        await task.executor.execute(
-            execution_id=run_id,
-            command=shell_command,
-            stdout_file=executor_context.stdout_file(workdir, start_time),
-            stderr_file=executor_context.stderr_file(workdir, start_time),
-            settings=execution_settings
-        )
+        state = await task.executor.execute(
+                        execution_id=execution_id,
+                        command=shell_command,
+                        stdout_file=executor_context.stdout_file(workdir, start_time),
+                        stderr_file=executor_context.stderr_file(workdir, start_time),
+                        settings=execution_settings
+                       )
+        print(state)
     except Exception as e:
         logger.error(f"Error during execution: {str(e)}")
         print(f"Exception details: {e}")
@@ -146,17 +144,13 @@ async def run_command_impl(task: Task,
         # relative to the run-directory.
         rundir_context = PathContext(Path("."), Path("."), Path("."))
 
-        # After the submission the job is in the queue. The job is not yet running or finished.
-        # Therefore the exit_code is None
-        exit_code = None
-
         execution_log = {
             "start_time": format_timestamp(start_time),
             "cmd": [str(el) for el in command.command],
             "env": command.environment,
             "workdir": str(workdir),
-            "end_time": get_current_timestamp(),
-            "exit_code": exit_code,
+            "end_time": None,
+            "exit_code": None,
             "stdout_file": str(rundir_context.stdout_file(Path("."), start_time)),
             "stderr_file": str(rundir_context.stderr_file(Path("."), start_time)),
             "log_dir": str(rundir_context.log_dir(Path("."), start_time)),
@@ -164,22 +158,25 @@ async def run_command_impl(task: Task,
             "output_files": None
         }
 
+        # Update run with ExecutionState information
+        print(f" State= str({state.name})")
+        print(task.executor.hostname)
+        state_log = {
+            "created_at": format_timestamp(state.created_at),
+            "name": state.name,
+            "is_closed": state.is_closed,
+            "lifetime": str(state.lifetime),
+            "executor_name": str(task.executor.hostname)
+        }
+
         try:
-            run = task.database.get_run(run_id)
-            if run is not None:
-                if isinstance(run, dict):
-                    run["execution_state"] = Start(run_id)
-                    run["execution_log"] = execution_log
-                    run = Run(**dict(run))
-                elif isinstance(run, Run):
-                    run.execution_state = Start(run_id)
-                    run.execution_log = execution_log
-                run = task.database.update_run(run, Run.merge, 1)
-            logger.info(f"Database updated with execution_log" f"'{run_id}'")
+            run.execution_log = execution_log
+            run.state_log = state_log
+            run = task.database.update_run(run, Run.merge, 1)
+            logger.info(f"Database updated with execution_log and state_log '{run_id}'")
         except Exception as e:
             logger.error(f"Error during database update: {str(e)}")
-            raise DatabaseOperationError("Attempted to update database" f"'{run_id}'")
-    return execution_log
+            raise
 
 
 @celery_app.task(base=CommandTask)
@@ -187,7 +184,7 @@ async def run_command(command: ShellCommand,
                       execution_settings: ExecutionSettings,
                       worker_context: PathContext,
                       executor_context: PathContext,
-                      run_id: WESkitExecutionId
+                      run_id: Union[UUID, str]
                       ):
 
     run_command.run_sync(run_command_impl,
@@ -195,4 +192,4 @@ async def run_command(command: ShellCommand,
                          execution_settings,
                          worker_context,
                          executor_context,
-                         run_id)
+                         run_id,)

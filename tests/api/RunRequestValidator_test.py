@@ -145,14 +145,15 @@ def test_multiple_validations(run_request_validator_rundir):
 
 
 def test_validate_attachment(run_request_validator):
-    with open(os.path.join(os.getcwd(), "tests/wf5/.Snakemake"), "rb") as fp1:
+    with open("tests/wf5/.Snakemake", "rb") as fp1:
         wf_file1 = FileStorage(fp1)
         wf_file1.filename = os.path.basename(wf_file1.filename)
         files = ImmutableMultiDict({"workflow_attachment": [wf_file1]})
         assert run_request_validator.validate(request(workflow_attachment=files)) == \
             ["At least one attachment filename is forbidden. Forbidden are: .nextflow, .snakemake"]
 
-    with open(os.path.join(os.getcwd(), "tests/wf5/allowed.txt"), "rb") as fp2:
+    # test allowed file name
+    with open("tests/wf5/allowed.txt", "rb") as fp2:
         wf_file2 = FileStorage(fp2)
         wf_file2.filename = os.path.basename(wf_file2.filename)
         file = ImmutableMultiDict({"workflow_attachment": [wf_file2]})
@@ -248,8 +249,8 @@ def test_validate_invalid_run_id(run_request_validator):
 
 
 def test_validate_url_invalid_scheme(run_request_validator):
-    assert run_request_validator.validate(request(workflow_url="ftp://example.com")) == \
-        ["Only 'file:' (relative) and 'trs:' are allowed in workflow URIs: 'ftp://example.com'"]
+    assert run_request_validator.validate(request(workflow_url="https://example.com")) == \
+        ["Only 'file:' (relative) and 'trs:' are allowed in workflow URIs: 'https://example.com'"]
 
 
 def test_validate_rundir_tag_missing_run_dir(run_request_validator_rundir):

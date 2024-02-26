@@ -13,7 +13,7 @@ from uuid import UUID
 from weskit.serializer import to_json, from_json
 from weskit.classes.PathContext import PathContext
 from weskit.classes.ProcessingStage import ProcessingStage
-from weskit.classes.executor2.ExecutionState import ExecutionState
+from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.utils import format_timestamp, from_formatted_timestamp, updated
 from weskit.utils import mop
 
@@ -38,7 +38,8 @@ class Run:
                  rundir_rel_workflow_path: Optional[Path] = None,
                  outputs: Dict[str, List[str]] = {},
                  execution_log: Optional[Dict[str, Any]] = None,
-                 execution_state: Optional[ExecutionState] = None,
+                 execution_id: Optional[WESkitExecutionId] = None,
+                 state_log: Optional[Dict[str, Any]] = None,
                  processing_stage: ProcessingStage = ProcessingStage.RUN_CREATED,
                  start_time: Optional[datetime] = None,
                  task_logs: Optional[list] = None,
@@ -64,7 +65,11 @@ class Run:
         else:
             self.execution_log = execution_log
         self.__processing_stage = processing_stage
-        self.__execution_state = execution_state
+        self.__execution_id = execution_id
+        if state_log is None:
+            self.state_log = {}
+        else:
+            self.__state_log = state_log
         self.start_time = start_time
         self.task_logs = task_logs
         self.stdout = stdout
@@ -156,6 +161,7 @@ class Run:
         if self.id != other.id or \
                 self.request_time != other.request_time or \
                 self.request != other.request or \
+                self.execution_id != other.execution_id or \
                 self.user_id != other.user_id:
             # db_version is not tested, because the whole point of merge is to resolve concurrent
             # modifications.
@@ -180,7 +186,7 @@ class Run:
             copy.stderr = Run._merge_field("stderr", self_d, other_d, None)
             copy.execution_log = Run._merge_field("execution_log", self_d, other_d, {})
             copy.task_logs = Run._merge_field("task_logs", self_d, other_d, [])
-            copy.execution_state = Run._merge_field("execution_state", self_d, other_d, None)
+            copy.state_log = Run._merge_field("state_log", self_d, other_d, {})
 
             # Fields with special rules
             copy.outputs = Run._merge_outputs(copy.outputs, other.outputs)
@@ -199,7 +205,7 @@ class Run:
                          request_time=mop(result["request_time"], format_timestamp),
                          start_time=mop(result["start_time"], format_timestamp),
                          processing_stage=result["processing_stage"].name,
-                         execution_state=result["execution_state"])
+                         state_log=to_json(self.state_log))
         return result
 
     @staticmethod
@@ -214,7 +220,7 @@ class Run:
                        request_time=mop(values["request_time"], from_formatted_timestamp),
                        start_time=mop(values["start_time"], from_formatted_timestamp),
                        processing_stage=ProcessingStage.from_string(values["processing_stage"]),
-                       execution_state=values["execution_state"])
+                       state_log=from_json(values["state_log"]))
         return Run(**args)
 
     def __eq__(self, other):
@@ -237,7 +243,8 @@ class Run:
             "outputs": self.outputs,
             "execution_log": self.execution_log,
             "processing_stage": self.processing_stage,
-            "execution_state": self.execution_state,
+            "execution_id": self.__execution_id,
+            "state_log": self.state_log,
             "start_time": self.start_time,
             "task_logs": self.task_logs,
             "stdout": self.stdout,
@@ -312,7 +319,10 @@ class Run:
 
     @property
     def exit_code(self) -> Optional[int]:
-        return self.execution_log.get("exit_code", None)
+        if self.execution_log == '{}':
+            return None
+        else:
+            return self.execution_log.get("exit_code", None)
 
     @exit_code.setter
     def exit_code(self, exit_code: Optional[int]):
@@ -330,12 +340,20 @@ class Run:
             self.__processing_stage = self.__processing_stage.progress_to(stage)
 
     @property
-    def execution_state(self) -> Optional[ExecutionState]:
-        return self.__execution_state
+    def execution_id(self) -> Optional[WESkitExecutionId]:
+        return self.__execution_id
 
-    @execution_state.setter
-    def execution_state(self, state: ExecutionState):
-        self.__execution_state = state
+    @execution_id.setter
+    def execution_id(self, execution_id: WESkitExecutionId):
+        self.__execution_id = execution_id
+
+    @property
+    def state_log(self) -> Dict[str, Any]:
+        return self.__state_log
+
+    @state_log.setter
+    def state_log(self, state_log: Dict[str, Any]):
+        self.__state_log = state_log
 
     @property
     def outputs(self) -> Dict[str, List[str]]:

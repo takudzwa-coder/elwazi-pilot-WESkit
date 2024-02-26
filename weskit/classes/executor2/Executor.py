@@ -12,8 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from signal import Signals
-from typing import Optional, TypeVar, Generic, ClassVar, Dict
-from time import sleep
+from typing import Optional, TypeVar, Generic, ClassVar
 
 from urllib3.util.url import Url
 
@@ -21,9 +20,7 @@ from weskit.classes.ShellCommand import ShellCommand
 from weskit.classes.executor2.ExecutionState import (ExecutionState,
                                                      ObservedExecutionState)
 from weskit.classes.executor2.ProcessId import WESkitExecutionId, ProcessId, Identifier
-from weskit.classes.storage.StorageAccessor import StorageAccessor, MockStorageAccessor
-from weskit.classes.executor2.ExecutionState import NonTerminalExecutionState, MockExecutionState
-from weskit.classes.executor2.ForeignState import ForeignState
+from weskit.classes.storage.StorageAccessor import StorageAccessor
 from weskit.memory_units import Memory
 from weskit.serializer import decode_json
 
@@ -326,64 +323,3 @@ class Executor(Generic[S], metaclass=ABCMeta):
         via SSH, via NFS, or S3.
         """
         pass
-
-
-class MockExecutor(Executor[int]):
-    def __init__(self, id: Identifier[str], log_dir_base: Optional[Path] = None):
-        super().__init__(id, log_dir_base)
-        self.execution_states: Dict[WESkitExecutionId, ExecutionState] = {}
-
-    @property
-    def hostname(self) -> str:
-        return "localhost"
-
-    async def execute(self,
-                      execution_id: WESkitExecutionId,
-                      command: ShellCommand,
-                      stdout_file: Optional[Url] = None,
-                      stderr_file: Optional[Url] = None,
-                      stdin_file: Optional[Url] = None,
-                      settings: Optional[ExecutionSettings] = None,
-                      **kwargs) -> ExecutionState[int]:
-
-        state: ExecutionState = MockExecutionState(execution_id,
-                                                   created_at=datetime.now())
-        self.execution_states[execution_id] = state
-        return state
-
-    async def get_status(self,
-                         execution_id: WESkitExecutionId,
-                         log_dir: Optional[Url] = None,
-                         pid: Optional[int] = None) -> Optional[ExecutionState[int]]:
-        return self.execution_states.get(execution_id)
-
-    async def update_status(self,
-                            current_state: ExecutionState[int],
-                            log_dir: Optional[Url] = None,
-                            pid: Optional[int] = None) -> Optional[ExecutionState[int]]:
-        return self.execution_states.get(current_state.execution_id)
-
-    async def get_result(self, state: ObservedExecutionState[int]) \
-            -> NonTerminalExecutionState[int]:
-        return NonTerminalExecutionState(
-            execution_id=state.execution_id,
-            foreign_state=ForeignState(ProcessId("12345", "localhost"),
-                                       state=None,
-                                       observed_at=datetime.now()),
-            previous_state=state
-        )
-
-    async def kill(self,
-                   state: ExecutionState[int],
-                   signal: Signals) -> bool:
-        # Send killing signal to process
-        return True
-
-    async def wait(self, state: ExecutionState[int]) -> None:
-        # Waiting by sleeping for a short time
-        sleep(0.01)
-
-    @property
-    def storage(self) -> MockStorageAccessor:
-        mock_accessor = MockStorageAccessor()
-        return mock_accessor

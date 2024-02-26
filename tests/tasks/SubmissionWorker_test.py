@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from abc import ABCMeta
+import uuid
 from werkzeug.utils import cached_property
 
 from weskit import PathContext
@@ -14,15 +15,15 @@ from weskit.classes.executor.Executor import ExecutionSettings
 from weskit.tasks.SubmissionWorker import run_command_impl
 from weskit.classes.executor2.ProcessId import WESkitExecutionId
 from weskit.classes.Run import Run
-from weskit.classes.executor2.ExecutionState import Start
-from weskit.classes.executor2.Executor import MockExecutor
-from weskit.classes.AbstractDatabase import MockDatabase
 from weskit.tasks.SubmissionWorker import CommandTask
 from weskit.classes.ProcessingStage import ProcessingStage
 
+from MockExecutor_test import MockExecutor
+from Database_test import MockDatabase
+
 
 mock_run_data = {
-    "id": WESkitExecutionId(),
+    "id": uuid.uuid4(),
     "processing_stage": ProcessingStage.RUN_CREATED,
     "request_time": None,
     "user_id": "test_id",
@@ -33,10 +34,6 @@ mock_run_data = {
     "exit_code": None,
     "sub_dir": None
 }
-
-mock_run_data_2 = mock_run_data.copy()
-mock_run_data_2["id"] = WESkitExecutionId()
-mock_run_data_2["processing_stage"] = ProcessingStage.FINISHED_EXECUTION
 
 
 class CommandTaskMock(CommandTask, metaclass=ABCMeta):
@@ -84,5 +81,9 @@ async def test_submission_worker(temporary_dir,
         )
 
     run = task.database.get_run(run.id)
+    assert run.id == mock_run_data["id"]
     assert run.execution_log["cmd"] == ['echo', 'hello world', '>', 'x']
-    assert isinstance(run.execution_state, Start)
+    assert isinstance(run.execution_id, WESkitExecutionId)
+    assert run.processing_stage == "RUN_CREATED"
+    assert run.state_log["executor_name"] == "MockExecutor"
+    assert run.state_log["is_closed"] is False

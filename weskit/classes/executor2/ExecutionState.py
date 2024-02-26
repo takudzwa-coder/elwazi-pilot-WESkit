@@ -30,7 +30,7 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
        simplified state graph. The external job management decides, which state labels correspond
        to which `ExecutionState`.
     2. State tracking. A single `ExecutionState` may correspond to a sequence of observed foreign
-       states. We allow ta add all observations that map to one `ExecutionState`. State transitions
+       states. We allow to add all observations that map to one `ExecutionState`. State transitions
        to a new `ExecutionState` are then explicitly modeled as new `ExecutionState` instance.
 
     Note: There is no unknown `ExecutionState`. If the `ForeignState` was unknown/unobserved for
@@ -108,20 +108,6 @@ class ExecutionState(Generic[S], metaclass=ABCMeta):
         return str(cls.__name__)
 
 
-class MockExecutionState(ExecutionState[str]):
-
-    def __init__(self, execution_id: WESkitExecutionId, created_at: Optional[datetime] = None):
-        super().__init__(execution_id, created_at)
-
-    @property
-    def is_terminal(self) -> bool:
-        return False
-
-    @property
-    def lifetime(self) -> Optional[timedelta]:
-        return datetime.now() - self.created_at
-
-
 class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
     """
     An `ObservedExecutionState` is modelled by a list of observations (`ForeignState`) and always
@@ -185,7 +171,7 @@ class ObservedExecutionState(ExecutionState[S], metaclass=ABCMeta):
     def last_known_foreign_state(self) -> ForeignState[S]:
         """
         Return the last known state (i.e. not UnKnownForeignState). If the process was
-        successfully submitted then there is also at a last known state (at least `Pending`).
+        successfully submitted then there is also a last known state (at least `Pending`).
         """
         for state in reversed(self.foreign_states):
             if state.is_known:
