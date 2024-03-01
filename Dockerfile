@@ -2,7 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM registry.gitlab.com/one-touch-pipeline/weskit/api/base:master
+ARG baseImage=registry.gitlab.com/one-touch-pipeline/weskit/api/base:master
+FROM ${baseImage}
 
 LABEL maintainer="Philip R. Kensche <p.kensche@dkfz.de>"
 LABEL org.opencontainers.image.source="https://registry.gitlab.com/one-touch-pipeline/weskit/api"
