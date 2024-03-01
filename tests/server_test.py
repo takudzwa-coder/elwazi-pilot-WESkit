@@ -599,6 +599,58 @@ class TestWithHeaderToken:
         # ]
 
     @pytest.mark.integration
+    def test_fail_run(self,
+                      test_client,
+                      OIDC_credentials):
+        data = {}
+        data["workflow_params"] = '{"blah": "hello world"}'
+        data["workflow_url"] = "file:tests/wf1/Snakefile"
+        data["workflow_type"] = "SMK"
+        data["workflow_type_version"] = "7.30.2"
+        data["workflow_engine_parameters"] = """
+        {
+            "max-memory": "150m",
+            "max-runtime": "00:01:00",
+            "accounting-name": "projectX",
+            "job-name": "testjob",
+            "group": "testgroup",
+            "queue": "testqueue"
+        }
+        """
+        submission_response = test_client.post(
+            "/ga4gh/wes/v1/runs",
+            data=data,
+            content_type="multipart/form-data",
+            headers=OIDC_credentials.headerToken)
+        assert submission_response.status_code == 200
+
+        run_id = submission_response.json["run_id"]
+
+        # Status request.
+        status_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
+                                          headers=OIDC_credentials.headerToken)
+
+        # retrieve the RunLog before job finished
+        log_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}",
+                                       headers=OIDC_credentials.headerToken)
+        assert log_response.json["run_log"]["exit_code"] is None
+
+        status_start_time = time.time()
+        while status_response.json["state"] != "EXECUTOR_ERROR":
+            # workflow still running
+            assert is_within_timeout(status_start_time, 20), "Timeout requesting status"
+            time.sleep(1)
+            status_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}/status",
+                                              headers=OIDC_credentials.headerToken)
+
+        # Now, retrieve the RunLog.
+        log_response = test_client.get(f"/ga4gh/wes/v1/runs/{run_id}",
+                                       headers=OIDC_credentials.headerToken)
+
+        assert log_response.status_code == 200, log_response.json
+        assert log_response.json["run_log"]["exit_code"] == 1
+
+    @pytest.mark.integration
     def test_get_runs(self,
                       test_client,
                       test_run,

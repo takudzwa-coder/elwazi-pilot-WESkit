@@ -100,11 +100,11 @@ def execution_log_to_run_log(run: Run) -> dict:
     return {
         # It is not clear from the documentation or discussion what the "workflow name" should be
         # We use the path to the workflow file (workflow_url) for now.
-        "name": run.request["workflow_url"],
-        "cmd": run.execution_log["cmd"],
-        "start_time": run.execution_log["start_time"],
-        "end_time": run.execution_log["end_time"],
-        "stdout": run.execution_log["stdout_file"],
-        "stderr": run.execution_log["stderr_file"],
-        "exit_code": run.execution_log["exit_code"]
+        "name": run.request.get("workflow_url", None),
+        "cmd": run.execution_log.get("cmd", None),
+        "start_time": run.execution_log.get("start_time", None),
+        "end_time": run.execution_log.get("end_time", None),
+        "stdout": run.execution_log.get("stdout_file", None),
+        "stderr": run.execution_log.get("stderr_file", None),
+        "exit_code": run.execution_log.get("exit_code", None)
     }
