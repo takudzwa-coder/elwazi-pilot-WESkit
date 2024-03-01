@@ -338,7 +338,8 @@ class Nextflow(ActualWorkflowEngine):
                                               "with-tower",
                                               "tower-access-token",
                                               "nxf-assets",
-                                              "workflow-revision"})
+                                              "workflow-revision",
+                                              "profile"})
                                    .union([list(par.names)[0] for par in super(Nextflow, cls).
                                           known_parameters().all]))
 
@@ -388,6 +389,7 @@ class Nextflow(ActualWorkflowEngine):
             result += self._argument_param(param, "nxf-work", "-w")
             result += self._optional_param(param, "with-tower", "-with-tower")
             result += self._argument_param(param, "workflow-revision", "-r")
+            result += self._argument_param(param, "profile", "-profile")
         return result
 
     def command(self,

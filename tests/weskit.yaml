@@ -218,6 +218,9 @@ workflow_engines:
           api: false
           value: null
           type: str
+        - name: "profile"
+          api: false
+          type: "Optional[str]"
     "23.04.1":
       default_parameters: *default_nfl_engine_parameters
 

@@ -82,7 +82,7 @@ def test_create_snakemake():
         ActualEngineParameter(EngineParameter(
             {"use-conda"}, "SMK(cli:--use-conda bool)"), "TRUE", True),
         ActualEngineParameter(EngineParameter(
-            {"profile"}, "SMK(cli:--profile %s)"), "TRUE", True),
+            {"profile"}, "NFL(cli:-profile %s), SMK(cli:--profile %s)"), "TRUE", True),
         ActualEngineParameter(EngineParameter(
             {"tes"}, "SMK(cli:--tes %s)"), "TRUE", True),
         ActualEngineParameter(EngineParameter(
@@ -299,7 +299,8 @@ def test_create_nextflow():
          {"name": "with-tower", "value": "True", "api": True},
          {"name": "tower-access-token", "value": "hfdsjhfdskl", "api": True},
          {"name": "nxf-assets", "value": "/path/dir", "api": True},
-         {"name": "workflow-revision", "value": "/path/to/repo/", "api": True}
+         {"name": "workflow-revision", "value": "/path/to/repo/", "api": True},
+         {"name": "profile", "value": "PROFILE", "api": True},
          ]
     )
     assert engine.default_params == [
@@ -326,7 +327,9 @@ def test_create_nextflow():
         ActualEngineParameter(EngineParameter(
             {"nxf-assets"}, "NFL(env:NFX_ASSETS=%s)"), "/path/dir", True),
         ActualEngineParameter(EngineParameter(
-            {"workflow-revision"}, "NFL(cli:-r %s)"), "/path/to/repo/", True)
+            {"workflow-revision"}, "NFL(cli:-r %s)"), "/path/to/repo/", True),
+        ActualEngineParameter(EngineParameter(
+            {"profile"}, "NFL(cli:-profile %s), SMK(cli:--profile %s)"), "PROFILE", True),
     ]
     assert engine.name() == "NFL"
 
@@ -344,7 +347,8 @@ def test_create_nextflow():
                                 '-with-timeline',
                                 '-resume',
                                 '-with-tower',
-                                '-r', '/path/to/repo/']
+                                '-r', '/path/to/repo/',
+                                '-profile', 'PROFILE']
     assert created1.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",
@@ -368,7 +372,8 @@ def test_create_nextflow():
                                 '-params-file', '/the/config.file',
                                 '-resume',
                                 '-with-tower',
-                                '-r', '/path/to/repo/']
+                                '-r', '/path/to/repo/',
+                                '-profile', 'PROFILE']
     assert created2.environment == {
         "NXF_OPTS": "-Xmx2048m",
         "WESKIT_WORKFLOW_ENGINE": "NFL=23.04.1",

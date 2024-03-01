@@ -122,7 +122,7 @@ KNOWN_PARAMS = ParameterIndex([
     EngineParameter({"use-singularity"}, "SMK(cli:--use-singularity bool)"),
     EngineParameter({"use-conda"}, "SMK(cli:--use-conda bool)"),
     EngineParameter({"resume"}, "NFL(cli:-resume bool), SMK(cli:--forceall bool)"),
-    EngineParameter({"profile"}, "SMK(cli:--profile %s)"),
+    EngineParameter({"profile"}, "NFL(cli:-profile %s), SMK(cli:--profile %s)"),
     EngineParameter({"tes"}, "SMK(cli:--tes %s)"),
     EngineParameter({"jobs"}, "SMK(cli:--jobs %s)"),
     EngineParameter({"data-aws-access-key-id"}, "SMK(env:AWS_ACCESS_KEY_ID=%s)"),
