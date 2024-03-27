@@ -14,6 +14,8 @@ from weskit.oidc.Decorators import login_required
 from weskit.api.RunStatus import RunStatus
 from weskit.classes.ProcessingStage import ProcessingStage
 
+from weskit.api.DrsUrlResolver import drsUrlRersover
+
 bp = Blueprint("wes", __name__)
 
 
@@ -186,7 +188,11 @@ def RunWorkflow(*args, **kwargs):
                 "msg": "Malformed request: Empty form data",
                 "status_code": 400
             }, 400
-
+            
+        #DRS URL resolve
+        
+        data = drsUrlRersover(data)
+            
         validator = current_app.request_validators["run_request"]
         validation_result = validator.validate(data)
         if isinstance(validation_result, list):
