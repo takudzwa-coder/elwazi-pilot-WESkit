@@ -68,7 +68,7 @@ class WorkflowInfo:
         to be downloaded ind installed and essentially is mapped by the TRS to an HTTP request
 
         https://<server>:<port>/<base_path>/tools/<id>/versions/<version>/<type>/<workflow_path>
-
+        
         The primary_rel_path is the path to the primary workflow file that will be used to execute
         the workflow. This may be, e.g. "main.nf" or "Snakefile".
         """
@@ -94,7 +94,7 @@ class WorkflowInfo:
                               ", ".join(trs_type_to_workflow_engine_id.keys()))
 
         return WorkflowInfo(server=parsed_uri.hostname,
-                            port=parsed_uri.port,
+                            port=str(parsed_uri.port),
                             name=name,
                             version=version,
                             type=type,
@@ -119,6 +119,7 @@ class WorkflowInstallationMetadata:
         :param workflow_file: Path to workflow file to execute, relative to workflow_dir.
                               Defaults to primary file.
         """
+        
         self._workflow_base_dir = workflow_base_dir
         self._workflow_dir = workflow_dir
         self._workflow_info = workflow_info
@@ -155,15 +156,26 @@ class TrsWorkflowInstaller:
                  trs_client: TRSClient,
                  workflow_base_dir: Path,
                  max_lock_time: timedelta = timedelta(minutes=3)):
+        
         self.workflow_base_dir = workflow_base_dir
         self._trs_client = trs_client
+        
         self._max_lock_time: timedelta = max_lock_time
+        
+        #dockstore temp fix
+        # split url, fix for dockstore /api/ga4gh/trs url
+        endpoint_url = self._trs_client.uri.rsplit("/")
+        if endpoint_url[2].rsplit(":")[0] == "dockstore.org":
+               endpoint_url.insert(3,"api")
+               endpoint_url = "/".join(endpoint_url)
+        
+        self._trs_client.uri = endpoint_url
 
     def _file_base_components(self, workflow_info: WorkflowInfo) -> List[str]:
         return [
             workflow_info.name,
             workflow_info.version,
-            workflow_info.type,
+            workflow_info.type, ##trial, type is repeated in URL
             workflow_info.workflow_engine_id]
 
     def temporary_workflow_zip(self, workflow_info: WorkflowInfo) -> Path:
@@ -186,12 +198,14 @@ class TrsWorkflowInstaller:
             # Various response types possible (request.Response, Path (outfile), None, str,
             # requests.models.Response, ModelMetaclass, List[ModelMetaclass]). A perfect example
             # of why dynamic typing sucks.
+        
             response = \
                 self._trs_client.get_files(type=workflow_info.type,
                                            id=workflow_info.name,
                                            version_id=workflow_info.version,
                                            format="zip",
                                            outfile=zip_file)
+                
             # We try to check for errors, but from the get_files() code it seems unclear, where
             # `Error` could be produced. Instead, `outfile` seems to be returned in case of errors.
             # Let's hope the exceptions cover the important cases and postpone changing TRS-cli
