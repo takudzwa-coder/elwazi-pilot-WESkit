@@ -14,22 +14,12 @@ class EngineParameter:
     """
 
     def __init__(self,
-                 names: Union[Set[str], FrozenSet[str]],
-                 description: str):
+                 names: Union[Set[str], FrozenSet[str]]):
         self._names = frozenset(names)
-
-    # Additional constraint
-        if len(description.strip()) == 0:
-            raise ValueError("Description must not be empty.")
-        self._description = description
 
     @property
     def names(self) -> FrozenSet[str]:
         return self._names
-
-    @property
-    def description(self) -> str:
-        return self._description
 
     # EngineParameter is an immutable value type. So we redefine object identity as value identity
     # and the hash key (for dictionaries) based on the values only.
@@ -96,49 +86,38 @@ class ParameterIndex(Generic[P]):
 # (Yet,) Static configuration of allowed parameters. We have this global "database" to promote
 # the usage of similar parameter names for all workflows. We may, for instance, also add ontology
 # terms and term IDs.
-
-# For a comprehensive description of the Snakemake parameters
-# that are used for cloud execution see:
-# https://snakemake.readthedocs.io/en/v7.31.1/executing/cloud.html#execution
-# Note: Snakemake parameters may have changed since version >= 8
-
-# acronyms: NFL = Nextflow, SMK = Snakemake
 KNOWN_PARAMS = ParameterIndex([
-    EngineParameter({"job-name"}, "optional job name"),
-    EngineParameter({"max-runtime"}, "max. runtime of the process"),
-    EngineParameter(
-        {"engine-environment"}, "optional file path, sourced before starting the engine process"),
-    EngineParameter(
-        {"accounting-name"}, "identifier used by the executor accounting, e.g. project name"),
-    EngineParameter({"group"}, "executor job group"),
-    EngineParameter({"queue"}, "executor queue name"),
-    EngineParameter({"max-memory"}, "NFL(env:NXF_OPTS=-Xmx%sm)"),
-    EngineParameter({"trace"}, "NFL(cli:-with-trace bool)"),
-    EngineParameter({"timeline"}, "NFL(cli:-with-timeline bool)"),
-    EngineParameter({"report"}, "NFL(cli:-with-report bool)"),
-    EngineParameter({"tempdir"}, "NFL(-Djava.io.tmpdir)"),
-    EngineParameter({"graph"}, "NFL(cli:-with-dag bool)"),
-    EngineParameter({"cores"}, "SMK(cli:--cores %s)"),
-    EngineParameter({"use-singularity"}, "SMK(cli:--use-singularity bool)"),
-    EngineParameter({"use-conda"}, "SMK(cli:--use-conda bool)"),
-    EngineParameter({"resume"}, "NFL(cli:-resume bool), SMK(cli:--forceall bool)"),
-    EngineParameter({"profile"}, "SMK(cli:--profile %s)"),
-    EngineParameter({"tes"}, "SMK(cli:--tes %s)"),
-    EngineParameter({"jobs"}, "SMK(cli:--jobs %s)"),
-    EngineParameter({"data-aws-access-key-id"}, "SMK(env:AWS_ACCESS_KEY_ID=%s)"),
-    EngineParameter({"data-aws-secret-access-key"}, "SMK(env:AWS_SECRET_ACCESS_KEY=%s)"),
-    EngineParameter({"task-conda-pkgs-dir"}, "SMK(env:CONDA_PKGS_DIRS=%s)"),
-    EngineParameter({"task-conda-envs-path"}, "SMK(env:CONDA_ENVS_PATH=%s)"),
-    EngineParameter({"task-home"}, "SMK(env:HOME=%s)"),
-    EngineParameter({"nxf-work"}, "NFL(cli:-w %s)"),
-    EngineParameter({"with-tower"}, "NFL(cli:-with-tower bool)"),
-    EngineParameter({"tower-access-token"}, "NFL(env:TOWER_ACCESS_TOKEN=%s)"),
-    EngineParameter({"nxf-assets"}, "NFL(env:NFX_ASSETS=%s)"),
-    EngineParameter({"workflow-revision"}, "NFL(cli:-r %s)"),
-    EngineParameter({"wms-monitor"}, "SMK(cli:--wms-monitor %s)"),
-    EngineParameter({"wms-monitor-arg"}, "SMK(cli:--wms-monitor-arg %s)"),
-    EngineParameter(
-        {"conda-prefix"}, "SMK(cli:--conda-prefix %s) together with task-conda-envs-path"),
+    EngineParameter({"engine-environment"}),
+    EngineParameter({"trace"}),
+    EngineParameter({"timeline"}),
+    EngineParameter({"report"}),
+    EngineParameter({"tempdir"}),
+    EngineParameter({"graph"}),
+    EngineParameter({"job-name"}),
+    EngineParameter({"max-memory"}),
+    EngineParameter({"cores"}),
+    EngineParameter({"accounting-name"}),
+    EngineParameter({"group"}),
+    EngineParameter({"queue"}),
+    EngineParameter({"max-runtime"}),
+    EngineParameter({"use-singularity"}),
+    EngineParameter({"use-conda"}),
+    EngineParameter({"resume"}),
+    EngineParameter({"profile"}),
+    EngineParameter({"tes"}),
+    EngineParameter({"jobs"}),
+    EngineParameter({"data-aws-access-key-id"}),
+    EngineParameter({"data-aws-secret-access-key"}),
+    EngineParameter({"task-conda-pkgs-dir"}),
+    EngineParameter({"task-conda-envs-path"}),
+    EngineParameter({"task-home"}),
+    EngineParameter({"nxf-work"}),
+    EngineParameter({"with-tower"}),
+    EngineParameter({"tower-access-token"}),
+    EngineParameter({"nxf-assets"}),
+    EngineParameter({"workflow-revision"}),
+    EngineParameter({"wms-monitor"}),
+    EngineParameter({"wms-monitor-arg"})
 ])
 
 
@@ -155,14 +134,10 @@ class ActualEngineParameter(EngineParameter):
                  param: EngineParameter,
                  value: Optional[str] = None,
                  api_parameter: bool = False):
-
+        super().__init__(names=param.names)
         self._param = param
         self._value = value
         self._api_parameter = api_parameter
-
-    @property
-    def names(self) -> FrozenSet[str]:
-        return self._param.names
 
     @property
     def is_api_parameter(self) -> bool:

@@ -169,7 +169,7 @@ class RunRequestValidator(object):
         except Exception as ex:
             logger.warning(f"Exception during file URL validation: {ex}")
             result += ["Could not parse URI '%s'" % url]
-
+            
         return result
 
     def _validate_workflow_url(self, url: str) -> List[str]:

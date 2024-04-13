@@ -241,8 +241,7 @@ class Snakemake(ActualWorkflowEngine):
                                               "task-home",
                                               "prefix_conda_envs_path",
                                               "wms-monitor",
-                                              "wms-monitor-arg",
-                                              "conda-prefix"})
+                                              "wms-monitor-arg"})
                                    .union([list(par.names)[0] for par in super(Snakemake, cls).
                                           known_parameters().all]))
 
@@ -259,7 +258,6 @@ class Snakemake(ActualWorkflowEngine):
             result += self._argument_param(param, "jobs", "--jobs")
             result += self._argument_param(param, "wms-monitor", "--wms-monitor")
             result += self._argument_param(param, "wms-monitor-arg", "--wms-monitor-arg")
-            result += self._argument_param(param, "conda-prefix", "--conda-prefix")
         return result
 
     # For submission of the workload tasks to e.g. the TES server or a container,

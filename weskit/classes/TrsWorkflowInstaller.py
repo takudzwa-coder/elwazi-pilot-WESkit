@@ -159,15 +159,16 @@ class TrsWorkflowInstaller:
         
         self.workflow_base_dir = workflow_base_dir
         self._trs_client = trs_client
-        
+       
         self._max_lock_time: timedelta = max_lock_time
         
         #dockstore temp fix
-        # split url, fix for dockstore /api/ga4gh/trs url
+        # split url
         endpoint_url = self._trs_client.uri.rsplit("/")
         if endpoint_url[2].rsplit(":")[0] == "dockstore.org":
                endpoint_url.insert(3,"api")
                endpoint_url = "/".join(endpoint_url)
+               print("endpoint URL:", endpoint_url)
         
         self._trs_client.uri = endpoint_url
 
@@ -198,7 +199,7 @@ class TrsWorkflowInstaller:
             # Various response types possible (request.Response, Path (outfile), None, str,
             # requests.models.Response, ModelMetaclass, List[ModelMetaclass]). A perfect example
             # of why dynamic typing sucks.
-        
+            
             response = \
                 self._trs_client.get_files(type=workflow_info.type,
                                            id=workflow_info.name,
