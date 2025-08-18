@@ -28,4 +28,7 @@ uwsgi_server/certs
 !uwsgi_server/certs/.keep
 tests/remote.yaml
 /builds/
-/tests/
+/tests/data/
+/tests/test_data/
+/tests/workflows/
+/tests/playground/
