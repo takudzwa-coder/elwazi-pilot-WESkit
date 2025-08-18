@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: weskit
+name: weskit_playground
 channels:
   - bioconda
   - conda-forge

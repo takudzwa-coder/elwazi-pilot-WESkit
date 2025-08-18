@@ -19,8 +19,8 @@ ARG no_proxy="$NO_PROXY"
 # Changing the user id or name
 ARG USER=weskit
 ARG GROUP=weskit
-ARG USER_ID="35671"
-ARG USER_GID="35671"
+ARG USER_ID="taku"
+ARG USER_GID="taku"
 USER root
 
 RUN if grep -q '^ID=alpine$' /etc/os-release; then \

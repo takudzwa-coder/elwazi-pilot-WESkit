@@ -214,6 +214,9 @@ workflow_engines:
               type:
                 type: string
                 required: true
+              containers_dir:
+                type: string
+                required: true
           default_parameters:
             type: list
             default: []

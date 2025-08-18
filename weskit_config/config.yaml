@@ -1,0 +1,218 @@
+## Flask configuration values
+## (see https://flask.palletsprojects.com/en/1.1.x/config/#builtin-configuration-values)
+
+# Enable this during running of tests
+DEBUG: true
+
+# development | production
+ENV: &environment development
+
+# Enable this during running of tests.
+TESTING: true
+
+# Use a custom workdir for each run. This needs to be defined by tags field in request
+require_workdir_tag: false
+
+# 'executor' defines where the workflow engine is executed. Allowed values are
+# "ssh", "ssh_lsf", "ssh_slurm", "local", "local_lsf", and "local_slurm"
+#
+# Remote executors (all but "local") need a remote_data_dir. This is the corresponding value for
+# WESKIT_DATA, but located on the remote filesystem. "remote_data_dir" is ignored if the executor
+# type is set to "local". If any of the executors involving SSH is used, additionally "login" is
+# is needed, but is ignored for all "local" executor types.
+executor:
+  type: "local"
+#  remote_data_dir: "/tmp"
+#  remote_workflows_dir: "/tmp"
+#  login:
+#    username: "user"
+#    hostname: "localhost"
+#    port: 22
+#    knownhosts_file: "~/.ssh/known_hosts"
+#    keyfile: "~/.ssh/weskit_cluster_test_rsa"
+#    keyfile_passphrase: ""
+#    retry_options:  # Optional
+#       wait_exponential:
+#         multiplier: 1
+#         min: 4
+#         max: 300
+#       wait_random:
+#         min: 0
+#         max: 1
+#       stop_after_attempt: 5
+
+
+static_service_info:
+
+  # URL of the contact for the provider of this service, e.g. a link to a contact form (RFC 3986
+  # format), or an email (RFC 2368 format).
+  contact_url:
+    mailto:your@email.de
+
+  supported_filesystem_protocols:
+    - file
+    - S3
+
+  # A web page URL with human-readable instructions on how to get an authorization token for use
+  # with a specific WES endpoint.
+  auth_instructions_url: "https://somewhere.org"
+
+  tags:
+    tag1: value1
+    tag2: value2
+
+
+workflow_engines:
+
+  # Note the "type" fields for the default parameters are optional and free text string. To express
+  # the accepted value range for the parameter for the client, however, the existing examples use
+  # the following syntax:
+  #
+  # * Use Python type annotation syntax.
+  # * The default, if the "type" field is omitted here, is "str", which means unparsed.
+  # * Strings to be accepted by specific processing are suggested to be written as
+  #   `str validFor Python.fully.qualified.processing_function($)`
+  #   where the `$` denotes the parameter that will be used to process the parameter. The `$`
+  #   can be omitted if the parse function takes the string as first or only parameter.
+  # * A regular expression matching exactly the allowed values.
+  #
+  # Valid parameter values:
+  # * `Optional[str]`: null (JSON, YAML) or any string
+  # * `Optional[str valid for Python.pathlib.Path]`: null or a string that is understood by Path
+  #
+  # The code that does the processing can be found in the `WorkflowEngine` subclasses. It is not
+  # interpreted in any way.
+  #
+  NFL:
+    "22.10.0":
+      default_parameters:
+        - name: "engine-environment"
+          value: null
+          api: false
+          type: "Optional[str]"
+        - name: "max-memory"
+          value: "256m"
+          # api: false       # By default `false`
+          type: "Optional[str validFor Python.memory_units.Memory.from_str]"
+        - name: "max-runtime"
+          value: "05:00"
+          api: false
+          type: "Optional[str validFor Python.tempora.parse_timedelta]"
+        - name: "accounting-name"
+          api: true
+          type: "Optional[str]"
+        - name: "job-name"
+          api: true
+          type: "Optional[str]"
+        - name: "group"
+          api: true
+          type: "Optional[str]"
+        - name: "queue"
+          api: true
+          type: "Optional[str]"
+        - name: "tempdir"
+          value: "/tmp"
+          api: false
+          type: "str validFor Python.pathlib.Path"
+        - name: "trace"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "timeline"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "graph"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "report"
+          value: "true"
+          api: true
+          type: "bool"
+        - name: "profile"
+          api: true
+          type: "Optional[str]"         
+
+  SMK:
+    "6.10.0":
+      default_parameters:
+        - name: "engine-environment"
+          value: null
+          api: true
+          type: "Optional[str]"
+        - name: "cores"
+          value: "1"
+          api: false
+          type: "Optional[int]"
+        - name: "max-memory"
+          value: "100m"
+          api: true
+          type: "Optional[str validFor Python.memory_units.Memory.from_str($)]"
+        - name: "max-runtime"
+          value: "05:00"
+          api: true
+          type: "Optional[str validFor Python.tempora.parse_timedelta($)]"
+        - name: "accounting-name"
+          api: true
+          type: "Optional[str]"
+        - name: "job-name"
+          api: true
+          type: "Optional[str]"
+        - name: "group"
+          api: true
+          type: "Optional[str]"
+        - name: "queue"
+          api: true
+          type: "Optional[str]"
+        - name: "use-conda"
+          api: false
+          type: "bool"
+          value: "false"
+        - name: "use-singularity"
+          api: false
+          type: "bool"
+          value: "false"
+        - name: "profile"
+          api: false
+          type: "Optional[str]"
+        - name: "tes"
+          api: false
+          type: "Optional[Url]"
+        # - name: "data_aws_access_key_id"
+        #   api: false
+        #   type: "Optional[str]"
+        # - name: "data_aws_secret_access_key"
+        #   api: false
+        #   type: "Optional[str]"
+        # - name: "task_conda_pkgs_dir"
+          # api: false
+          # type: "Optional[Path]"
+        # - name: "task_conda_envs_path"
+        #   api: false
+        #   type: "Optional[Path]"
+        #   value: "conda_envs/"
+        # - name: "task_home"
+        #   api: false
+        #   type: "Optional[Path]"
+        # - name: "forceall"
+        #   api: true
+        #   type: "bool"
+        #   value: "false"
+        - name: "jobs"
+          api: false
+          type: "Optional[int]"
+
+cors:
+  enabled: false
+
+login:
+  enabled: false
+
+# Celery configuration. Use keys and values according to
+# https://docs.celeryproject.org/en/stable/userguide/configuration.html#configuration
+#
+# Note: CELERY_RESULT_BACKEND/RESULT_BACKEND, and BROKER_URL have *lower* priority.
+#
+# Note: The default configuration is in api/weskit/celeryconfig.py.
+celery: {}

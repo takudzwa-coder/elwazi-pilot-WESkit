@@ -62,7 +62,8 @@ class WorkflowEngine(metaclass=ABCMeta):
                                               "cores",
                                               "group",
                                               "queue",
-                                              "accounting-name"}))
+                                              "accounting-name",
+                                              "profile"})) ##added profile
 
     def _engine_environment_setup(self,
                                   params: List[ActualEngineParameter]) \
@@ -141,7 +142,7 @@ class WorkflowEngine(metaclass=ABCMeta):
         """
         result: Dict[EngineParameter, Optional[str]] = {}
         for name, value in run_params.items():
-            parameter = self.known_parameters()[name]
+            parameter = self.known_parameters()[name] ##known_parameters() is a method of WorkflowEngine class
             result[parameter] = None if value is None else str(value)
         return result
 
@@ -160,7 +161,7 @@ class WorkflowEngine(metaclass=ABCMeta):
             p: ActualEngineParameter(p, v) for p, v in self._normalize_and_check(run_params).items()
         }
         result: List[ActualEngineParameter] = []
-        for default_param in self.default_params:
+        for default_param in self.default_params: 
             if default_param.is_api_parameter:
                 result += [checked_run_params.get(default_param.param, default_param)]
             else:
@@ -203,7 +204,7 @@ class WorkflowEngine(metaclass=ABCMeta):
             walltime=mop(get_value(parameter_idx.get("max-runtime")), parse_timedelta),
             memory=mop(get_value(parameter_idx.get("max-memory")), Memory.from_str),
             queue=get_value(parameter_idx.get("queue")),
-            cores=mop(get_value(parameter_idx.get("cores")), int))
+            cores=mop(get_value(parameter_idx.get("cores")), int)) ##to revisit this line
 
 
 class ActualWorkflowEngine(WorkflowEngine, metaclass=ABCMeta):
@@ -253,7 +254,7 @@ class Snakemake(ActualWorkflowEngine):
             result += self._optional_param(param, "use-singularity", "--use-singularity")
             result += self._optional_param(param, "use-conda", "--use-conda")
             result += self._optional_param(param, "resume", "--forceall", invert=True)
-            result += self._argument_param(param, "profile", "--profile")
+            result += self._optional_param(param, "profile", "-profile")
             result += self._argument_param(param, "tes", "--tes")
             result += self._argument_param(param, "jobs", "--jobs")
             result += self._argument_param(param, "wms-monitor", "--wms-monitor")
@@ -325,7 +326,8 @@ class Nextflow(ActualWorkflowEngine):
 
     @classmethod
     def known_parameters(cls) -> ParameterIndex:
-        return KNOWN_PARAMS.subset(frozenset({"trace",
+        return KNOWN_PARAMS.subset(frozenset({"profile",
+                                              "trace",
                                               "report",
                                               "timeline",
                                               "graph",
@@ -378,14 +380,17 @@ class Nextflow(ActualWorkflowEngine):
         """
         result = []
         for param in parameters:
+            
             result += self._optional_param(param, "trace", "-with-trace")
             result += self._optional_param(param, "report", "-with-report")
             result += self._optional_param(param, "timeline", "-with-timeline")
             result += self._optional_param(param, "graph", "-with-dag")
             result += self._optional_param(param, "resume", "-resume")
             result += self._argument_param(param, "nxf-work", "-w")
+            result += self._argument_param(param, "profile", "-profile")
             result += self._optional_param(param, "with-tower", "-with-tower")
             result += self._argument_param(param, "workflow-revision", "-r")
+            
         return result
 
     def command(self,
@@ -394,7 +399,9 @@ class Nextflow(ActualWorkflowEngine):
                 config_files: List[Path],
                 engine_params: Dict[str, Optional[str]])\
             -> ShellCommand:
+                
         parameters = self._effective_run_params(engine_params)
+        
         command = super()._engine_environment_setup(parameters)
         command += ["nextflow"] +\
             self._command_params(parameters) +\

@@ -32,3 +32,4 @@ tests/remote.yaml
 /tests/test_data/
 /tests/workflows/
 /tests/playground/
+*.sh

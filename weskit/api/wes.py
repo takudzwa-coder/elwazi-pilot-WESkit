@@ -189,12 +189,13 @@ def RunWorkflow(*args, **kwargs):
                 "status_code": 400
             }, 400
             
-        #DRS URL resolve
-        
+        # #DRS URL resolve
         data = drsUrlResolver(data)
-            
+        # print("Post-resolver...") ##taku's trace, post-resolver    
+        # print(data) ##taku's trace, post-resolver    
         validator = current_app.request_validators["run_request"]
         validation_result = validator.validate(data)
+        
         if isinstance(validation_result, list):
             return {
                 "msg": "Malformed request: {}".format(validation_result),
@@ -204,6 +205,9 @@ def RunWorkflow(*args, **kwargs):
             run = current_app.manager.\
                 create_and_insert_run(validated_request=validation_result,
                                       user_id=ctx.user.id)
+                
+        print("RunWorkflow....run??") ##taku's trace
+        print(run) ##taku's trace
 
         logger.info("Preparing execution %s" % run.id)
         run = current_app.manager.\

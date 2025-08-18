@@ -394,6 +394,10 @@ class Manager:
                     workdir=run.sub_dir,
                     config_files=config_files,
                     engine_params=run.request.get("workflow_engine_parameters", {}))
+            
+        print("Command: ", command)
+        print("Command: ", command.command)
+        print("workflow_engine_parameters: ", run.request.get("workflow_engine_parameters", {})) ##taku's trace
 
         execution_settings: ExecutionSettings = \
             self.workflow_engines[workflow_type][workflow_type_version].\

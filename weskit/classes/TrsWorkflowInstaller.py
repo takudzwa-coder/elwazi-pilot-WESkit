@@ -167,9 +167,11 @@ class TrsWorkflowInstaller:
         endpoint_url = self._trs_client.uri.rsplit("/")
         if endpoint_url[2].rsplit(":")[0] == "dockstore.org":
                endpoint_url.insert(3,"api")
-               endpoint_url = "/".join(endpoint_url)
+            #    endpoint_url = "/".join(endpoint_url)
                print("endpoint URL:", endpoint_url)
         
+        endpoint_url = "/".join(endpoint_url)
+        print("endpoint URL:", endpoint_url)
         self._trs_client.uri = endpoint_url
 
     def _file_base_components(self, workflow_info: WorkflowInfo) -> List[str]:
